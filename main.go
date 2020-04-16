@@ -39,6 +39,8 @@ var oFlag = flag.String("o", "", "html generation output folder")
 var hFlag = flag.Bool("h", false, "show help")
 var helpFlag = flag.Bool("help", false, "show help")
 
+// var versionFlag = flag.String("version", "", "show version info")
+
 func printUsage(out io.Writer) {
 	fmt.Fprintf(out, `Usage:
 	%[1]v [options] [arguments]
