@@ -275,7 +275,11 @@ func Gen(outputDir string, args []string, printUsage func(io.Writer)) {
 	}()
 
 	// page saver
+	numPages, numBytes := 0, 0
 	for pg := range pages {
+		numPages++
+		numBytes += len(pg.Content)
+
 		path := filepath.Join(outputDir, pg.FilePath)
 		path = strings.Replace(path, "/", string(filepath.Separator), -1)
 		path = strings.Replace(path, "\\", string(filepath.Separator), -1)
@@ -288,6 +292,8 @@ func Gen(outputDir string, args []string, printUsage func(io.Writer)) {
 			log.Fatalln("Write file error:", err)
 		}
 
-		log.Println(pg.FilePath, len(pg.Content))
+		log.Printf("Generated %s (size: %d).", pg.FilePath, len(pg.Content))
 	}
+
+	log.Printf("Done (%d pages are generated and %d bytes are written).", numPages, numBytes)
 }
