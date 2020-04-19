@@ -46,7 +46,7 @@ func (ds *docServer) sourceCodePage(w http.ResponseWriter, r *http.Request, srcP
 }
 
 func (ds *docServer) buildSourceCodePage(result *SourceFileAnalyzeResult) []byte {
-	page := newHtmlPage(ds.currentTranslation.Text_SourceCode()+": "+result.FilePath, ds.currentTheme.Name())
+	page := NewHtmlPage(ds.currentTranslation.Text_SourceCode()+": "+result.FilePath, ds.currentTheme.Name(), false)
 
 	// ToDo: the belonging package section is not essential.
 	//       We can put a link in "package pkg",
@@ -85,12 +85,13 @@ func (ds *docServer) buildSourceCodePage(result *SourceFileAnalyzeResult) []byte
 	fmt.Fprintf(page, `
 
 <span class="title">%s</span>
-	<a href="/pkg:%[2]s">%[2]s</a>
+	<a href="%s">%s</a>
 </code></pre>
 
 <hr/>
 `,
 		ds.currentTranslation.Text_BelongingPackage(),
+		buildPageHref("pkg", result.PkgPath, false, "", nil),
 		result.PkgPath,
 	)
 
@@ -1106,7 +1107,8 @@ func (v *AstVisitor) handleIdent(ident *ast.Ident) {
 	}
 
 	if pkgName, ok := obj.(*types.PkgName); ok {
-		v.buildIdentifier(start, end, -1, "/pkg:"+pkgName.Imported().Path())
+		//v.buildIdentifier(start, end, -1, "/pkg:"+pkgName.Imported().Path())
+		v.buildIdentifier(start, end, -1, buildPageHref("pkg", pkgName.Imported().Path(), false, "", nil))
 		return
 	}
 
@@ -1114,7 +1116,8 @@ func (v *AstVisitor) handleIdent(ident *ast.Ident) {
 	if objPPkg == nil {
 		if obj.Parent() == types.Universe {
 			//log.Println(fmt.Sprintf("ppkg for identifier %s (%v) is not found", ident.Name, obj))
-			v.buildIdentifier(start, end, -1, "/pkg:builtin#name-"+obj.Name())
+			//v.buildIdentifier(start, end, -1, "/pkg:builtin#name-"+obj.Name())
+			v.buildIdentifier(start, end, -1, buildPageHref("pkg", "builtin", false, "", nil)+"#name-"+obj.Name())
 
 			// ToDo: link to runtime.panic/recover/...
 			return
@@ -1132,7 +1135,8 @@ func (v *AstVisitor) handleIdent(ident *ast.Ident) {
 	//	//log.Println("============== objPkgPath=", objPkgPath)
 	// Yes, it is ok to check "unsafe" only here.
 	if objPkgPath == "unsafe" {
-		v.buildIdentifier(start, end, -1, "/pkg:"+objPkgPath+"#name-"+obj.Name())
+		//v.buildIdentifier(start, end, -1, "/pkg:"+objPkgPath+"#name-"+obj.Name())
+		v.buildIdentifier(start, end, -1, buildPageHref("pkg", objPkgPath, false, "", nil)+"#name-"+obj.Name())
 		return
 	}
 
@@ -1230,7 +1234,8 @@ func (v *AstVisitor) handleIdent(ident *ast.Ident) {
 			// For non-embedded ones, click to show reference list.
 		case scp.Parent() == types.Universe: // package-level elements
 			if obj.Exported() {
-				v.buildIdentifier(start, end, -1, "/pkg:"+objPkgPath+"#name-"+obj.Name())
+				//v.buildIdentifier(start, end, -1, "/pkg:"+objPkgPath+"#name-"+obj.Name())
+				v.buildIdentifier(start, end, -1, buildPageHref("pkg", objPkgPath, false, "", nil)+"#name-"+obj.Name())
 				return
 			} else {
 				// ToDo: open reference list page
@@ -1249,22 +1254,32 @@ func (v *AstVisitor) handleIdent(ident *ast.Ident) {
 }
 
 func buildSrouceCodeLineLink(analyzer *code.CodeAnalyzer, p token.Position) string {
-	return "/src:" + analyzer.OriginalGoSourceFile(p.Filename) + "#line-" + strconv.Itoa(p.Line)
+	//return "/src:" + analyzer.OriginalGoSourceFile(p.Filename) + "#line-" + strconv.Itoa(p.Line)
+	return buildPageHref("src", analyzer.OriginalGoSourceFile(p.Filename), false, "", nil) + "#line-" + strconv.Itoa(p.Line)
 }
 
-func (ds *docServer) writeSrouceCodeLineLink(page *htmlPage, p token.Position, text, class string) {
+func (ds *docServer) writeSrouceCodeLineLink(page *htmlPage, p token.Position, text, class string, inGenModeRootPages bool) {
 	if class != "" {
 		class = fmt.Sprintf(` class="%s"`, class)
 	}
-	fmt.Fprintf(page, `<a href="/src:%s#line-%d"%s>%s</a>`, ds.analyzer.OriginalGoSourceFile(p.Filename), p.Line, class, text)
+	//fmt.Fprintf(page, `<a href="/src:%s#line-%d"%s>%s</a>`, ds.analyzer.OriginalGoSourceFile(p.Filename), p.Line, class, text)
+
+	fmt.Fprintf(page, `<a href="`)
+	buildPageHref("src", ds.analyzer.OriginalGoSourceFile(p.Filename), inGenModeRootPages, "", page)
+	fmt.Fprintf(page, `#line-%d"%s>%s</a>`, p.Line, class, text)
 }
 
 func (ds *docServer) writeSrouceCodeFileLink(page *htmlPage, sourceFilename string) {
-	fmt.Fprintf(page, `<a href="/src:%[1]s">%[1]s</a>`, ds.analyzer.OriginalGoSourceFile(sourceFilename))
+	originalFile := ds.analyzer.OriginalGoSourceFile(sourceFilename)
+	//fmt.Fprintf(page, `<a href="/src:%[1]s">%[1]s</a>`, originalFile)
+	buildPageHref("src", originalFile, false, originalFile, page)
 }
 
 func (ds *docServer) writeSourceCodeDocLink(page *htmlPage, sourceFilename string) {
-	fmt.Fprintf(page, `<a href="/src:%s#doc">d-&gt;</a> `, ds.analyzer.OriginalGoSourceFile(sourceFilename))
+	originalFile := ds.analyzer.OriginalGoSourceFile(sourceFilename)
+	//fmt.Fprintf(page, `<a href="/src:%s#doc">d-&gt;</a> `, originalFile)
+	buildPageHref("src", originalFile, false, "d-&gt;", page, "doc")
+	page.WriteByte(' ')
 }
 
 func BuildLineOffsets(content []byte, onlyStatLineCount bool) (int, []int) {

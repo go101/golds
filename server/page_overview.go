@@ -30,7 +30,7 @@ func (ds *docServer) overviewPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ds *docServer) buildOverviewPage(overview *Overview) []byte {
-	page := newHtmlPage(ds.currentTranslation.Text_Overview(), ds.currentTheme.Name())
+	page := NewHtmlPage(ds.currentTranslation.Text_Overview(), ds.currentTheme.Name(), true)
 	fmt.Fprintf(page, `
 <pre><code><span style="font-size:xx-large;">%s</span></code>
 
@@ -39,14 +39,14 @@ func (ds *docServer) buildOverviewPage(overview *Overview) []byte {
 		ds.currentTranslation.Text_PackageList(len(overview.Packages)),
 	)
 
-	ds.writePackagesForListing(page, overview.Packages, true)
+	ds.writePackagesForListing(page, overview.Packages, true, true)
 
 	page.WriteString("</pre>")
 
 	return page.Done()
 }
 
-func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*PackageForListing, writeAnchorTarget bool) {
+func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*PackageForListing, writeAnchorTarget, inGenModeRootPages bool) {
 	const MainPkgArrow = "m-&gt;"
 	const MainPkgArrowCharCount = 3
 	const MinPrefixSpacesCount = 3
@@ -75,7 +75,7 @@ func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*Package
 			}
 			if mainPos.IsValid() {
 				//mainPos.Line += ds.analyzer.SourceFileLineOffset(mainPos.Filename)
-				ds.writeSrouceCodeLineLink(page, mainPos, MainPkgArrow, "")
+				ds.writeSrouceCodeLineLink(page, mainPos, MainPkgArrow, "", true)
 			} else {
 				page.WriteString(MainPkgArrow)
 			}
@@ -89,14 +89,16 @@ func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*Package
 		}
 
 		if pkg.Prefix != "" {
-			fmt.Fprintf(page,
-				`<a href="/pkg:%s" class="path-duplicate">%s</a>`,
-				pkg.Path, pkg.Prefix)
+			//fmt.Fprintf(page,
+			//	`<a href="/pkg:%s" class="path-duplicate">%s</a>`,
+			//	pkg.Path, pkg.Prefix)
+			buildPageHref("pkg", pkg.Path, inGenModeRootPages, pkg.Prefix, page)
 		}
 		if pkg.Remaining != "" {
-			fmt.Fprintf(page,
-				`<a href="/pkg:%s">%s</a>`,
-				pkg.Path, pkg.Remaining)
+			//fmt.Fprintf(page,
+			//	`<a href="/pkg:%s">%s</a>`,
+			//	pkg.Path, pkg.Remaining)
+			buildPageHref("pkg", pkg.Path, inGenModeRootPages, pkg.Remaining, page)
 		}
 		page.WriteString(`</code>`)
 		if writeAnchorTarget {

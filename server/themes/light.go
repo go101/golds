@@ -68,6 +68,12 @@ code .lit-string {color: #a66;}
 code .keyword {color: brown;}
 code .comment {color: green; font-style: italic;}
 
-
+#gen-footer {
+	margin-top: 8px;
+	text-align: center;
+	font-size: small;
+	color: #555;
+	border-top: 1px solid #888;
+}
 `
 }

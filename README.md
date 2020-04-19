@@ -260,6 +260,7 @@ todo:
 * asParams/asResults lists exclude the methods of unexported types.
 * align asTypeOf items: sort by value | sort by position | sort by name
 * better cgo support, parse c code.
+  * use original Go files and parse c files
   * https://godoc.org/github.com/cznic/cc#example-Statement
     https://pkg.go.dev/github.com/cznic/cc/v2?tab=doc
   * https://github.com/xlab/c-for-go
@@ -273,6 +274,7 @@ todo:
 * code search
 * handle the case of when a method sourced from several different original ones by embedding.
   Their docs might be a little different.
+* Alias to a type in another package, asOutputList, type is not bold displayed.
 
 * "go/doc": doc.Examples(...)
 * when finding selector shadowing, need to consider unexported names needing package import pathes, ...
@@ -290,3 +292,6 @@ todo:
 * stat: n interfaces, m structs, ... (on overview and package detail pages)
   * as parameters/results of N functions
   * embedding in n types
+* docs.go101.org/pkg:xxx
+                /src:xxx
+                /index.html

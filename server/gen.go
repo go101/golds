@@ -1,34 +1,229 @@
 package server
 
 import (
+	"container/list"
 	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"sync"
 
 	"go101.org/gold/code"
 )
 
-var (
-	// These variables are not guarded by mutex.
-	// They must be set at initialization phase.
-	collectPagePaths = false
-	useRelativePaths = false // true for not browsing from browsers
+/*
+To simplify the implementation, in generation mode, page hrefs are like
+	index.html
+	pages/pkg-12345.html
+	pages/dep-12345.html
+	pages/src-123456.html
+*/
 
-	pagePaths chan string
-)
-
-func registerPagePath(path string) string {
-	if collectPagePaths {
-		pagePaths <- path
+func writePageGenerationInfo(page *htmlPage) {
+	if !genMode {
+		return
 	}
+
+	page.WriteString(`
+<div id="gen-footer">
+(Generated with Gold.)
+</div>
+`)
 }
 
-func Gen(port string, args []string, printUsage func(io.Writer)) {
-	collectPagePaths = true
-	pagePaths = make(chan string, 1024)
+func init() {
+	enabledHtmlGenerationMod()
+}
 
+func enabledHtmlGenerationMod() {
+	genMode = true
+	pageHrefList = list.New()
+	resHrefs = make(map[string]map[string]int, 8)
+
+}
+
+var (
+	genMode        bool
+	pageHrefList   *list.List // elements are *string
+	resHrefs       map[string]map[string]int
+	pageHrefsMutex sync.Mutex // in fact, for the current implementation, the lock is not essential
+)
+
+type genPageInfo struct {
+	HrefPath string
+	FilePath string
+}
+
+func registerPageHref(info genPageInfo) {
+	pageHrefsMutex.Lock()
+	defer pageHrefsMutex.Unlock()
+	pageHrefList.PushBack(&info)
+}
+
+func nextPageToLoad() (info *genPageInfo) {
+	pageHrefsMutex.Lock()
+	defer pageHrefsMutex.Unlock()
+	if front := pageHrefList.Front(); front != nil {
+		info = front.Value.(*genPageInfo)
+		pageHrefList.Remove(front)
+	}
+	return
+}
+
+// Return the id and whether or not the id is just registered.
+func resHrefID(resType, resName string) (int, bool) {
+	pageHrefsMutex.Lock()
+	defer pageHrefsMutex.Unlock()
+	hrefs := resHrefs[resType]
+	if hrefs == nil {
+		hrefs = make(map[string]int, 1024*10)
+		resHrefs[resType] = hrefs
+	}
+	id, ok := hrefs[resName]
+	if !ok {
+		id = len(hrefs)
+		hrefs[resName] = id
+	}
+	return id, !ok
+}
+
+var resType2ExtTable = map[string]string{
+	"":    ".html",
+	"pkg": ".html",
+	"dep": ".html",
+	"src": ".html",
+	"mod": ".html",
+	"css": ".css",
+	"jvs": ".js",
+}
+
+// If page is not nil, write the href directly into page (write the full <a...</a> if linkText is not blank).
+// Otherwise, build the href as a string and return it (only the href part).
+// inRootPage is for generation mode only. inRootPage==false means in "pages/xxx" pages.
+// Note: fragments is only meaningful when page != nil.
+func buildPageHref(resType, resName string, inRootPages bool, linkText string, page *htmlPage, fragments ...string) (r string) {
+
+	writePageLink := func(writeHref func()) {
+		if linkText != "" {
+			page.WriteString(`<a href="`)
+		}
+		writeHref()
+		if len(fragments) > 0 {
+			page.WriteByte('#')
+			for _, fm := range fragments {
+				page.WriteString(fm)
+			}
+		}
+		if linkText != "" {
+			page.WriteString(`">`)
+			page.WriteString(linkText)
+			page.WriteString(`</a>`)
+		}
+	}
+
+	if genMode {
+		var needRegisterHref = false
+		var id int
+
+		if resType == "" {
+			if resName != "" {
+				panic("should not now")
+			}
+			_, needRegisterHref = resHrefID("", resName)
+			if page != nil {
+				writePageLink(func() {
+					if !inRootPages {
+						page.WriteString("index.html")
+					} else {
+						page.WriteString("../index.html")
+					}
+				})
+			} else {
+				if inRootPages {
+					r = "index" + resType2ExtTable[resType]
+				} else {
+					r = "../index" + resType2ExtTable[resType]
+				}
+			}
+		} else {
+			id, needRegisterHref = resHrefID(resType, resName)
+			if page != nil {
+				writePageLink(func() {
+					if inRootPages {
+						page.WriteString("pages/")
+					}
+					page.WriteString(resType)
+					page.WriteByte('-')
+					page.WriteString(strconv.Itoa(id))
+					page.WriteString(".html")
+				})
+			} else {
+				if inRootPages {
+					r = "pages/" + resType + "-" + strconv.Itoa(id) + resType2ExtTable[resType]
+				} else {
+					r = resType + "-" + strconv.Itoa(id) + resType2ExtTable[resType]
+				}
+			}
+		}
+
+		if needRegisterHref {
+			var hrefNotForGenerating, filePath string
+			if resType == "" {
+				hrefNotForGenerating = "/" + resName
+				filePath = "index" + resType2ExtTable[resType]
+			} else {
+				hrefNotForGenerating = "/" + resType + ":" + resName
+				filePath = "pages/" + resType + "-" + strconv.Itoa(id) + resType2ExtTable[resType]
+			}
+			registerPageHref(genPageInfo{
+				HrefPath: hrefNotForGenerating,
+				FilePath: filePath,
+			})
+		}
+	} else {
+		if resType == "" {
+			if page != nil {
+				writePageLink(func() {
+					page.WriteByte('/')
+					page.WriteString(resName)
+				})
+			} else {
+				r = "/" + resName
+			}
+		} else {
+			if page != nil {
+				writePageLink(func() {
+					page.WriteByte('/')
+					page.WriteString(resType)
+					page.WriteByte(':')
+					page.WriteString(resName)
+				})
+			} else {
+				r = "/" + resType + ":" + resName
+			}
+		}
+	}
+
+	return
+}
+
+func Gen(outputDir string, args []string, printUsage func(io.Writer)) {
+	log.SetFlags(log.Lshortfile)
+
+	// ...
+
+	enabledHtmlGenerationMod()
+
+	outputDir = strings.TrimRight(outputDir, "\\/")
+	outputDir = strings.Replace(outputDir, "/", string(filepath.Separator), -1)
+	outputDir = strings.Replace(outputDir, "\\", string(filepath.Separator), -1)
+
+	// ...
 	ds := &docServer{
 		phase:    Phase_Unprepared,
 		analyzer: &code.CodeAnalyzer{},
@@ -36,52 +231,63 @@ func Gen(port string, args []string, printUsage func(io.Writer)) {
 	ds.changeSettings("", "")
 	ds.analyze(args, printUsage)
 
+	// ...
 	fakeServer := httptest.NewServer(http.HandlerFunc(ds.ServeHTTP))
 	defer fakeServer.Close()
-	//log.Println(fakeServer.URL)
-	root := fakeServer.URL
 
+	// ...
 	type Page struct {
-		Path    string
-		Content []byte
+		FilePath string
+		Content  []byte
 	}
-	pages := make(chan Page, 32)
-	registerPagePath("/")
-	const NumClients = 5
-	idleClients := make(chan struct{}, NumClients)
 
-	for range [NumClients]struct{}{} {
-		go func() {
-			for {
-				select {
-				default:
-					idleClients <- struct{}{}
-					if len(idleClients) == cap(idleClients) {
-						return
-					}
+	var pages = make(chan Page, 8)
 
-				case path := <-pagePaths:
-					res, err := http.Get(root + path)
-					if err != nil {
-						log.Fatal(err)
-					}
+	buildPageHref("", "", true, "", nil) // the overview page
 
-					content, err := ioutil.ReadAll(res.Body)
-					res.Body.Close()
-					if err != nil {
-						log.Fatal(err)
-					}
+	// stat orso number of pages, print about progress in writing.
 
-					pages <- Page{
-						Path:    path,
-						Content: content,
-					}
-				}
+	// page loader
+	go func() {
+		for {
+			info := nextPageToLoad()
+			if info == nil {
+				break
 			}
-		}()
-	}
 
+			res, err := http.Get(fakeServer.URL + info.HrefPath)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			content, err := ioutil.ReadAll(res.Body)
+			res.Body.Close()
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			pages <- Page{
+				FilePath: info.FilePath,
+				Content:  content,
+			}
+		}
+		close(pages)
+	}()
+
+	// page saver
 	for pg := range pages {
-		_ = pg
+		path := filepath.Join(outputDir, pg.FilePath)
+		path = strings.Replace(path, "/", string(filepath.Separator), -1)
+		path = strings.Replace(path, "\\", string(filepath.Separator), -1)
+
+		if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+			log.Fatalln("Mkdir error:", err)
+		}
+
+		if err := ioutil.WriteFile(path, pg.Content, 0644); err != nil {
+			log.Fatalln("Write file error:", err)
+		}
+
+		log.Println(pg.FilePath, len(pg.Content))
 	}
 }

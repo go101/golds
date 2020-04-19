@@ -103,8 +103,8 @@ func (ds *docServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch prefix, path := path[:4], path[4:]; prefix {
 	default:
 		w.WriteHeader(http.StatusNotFound)
-	case "mod:": // module
-		ds.modulePage(w, r, path)
+	//case "mod:": // module
+	//	ds.modulePage(w, r, path)
 	case "pkg:": // package
 		ds.packageDetailsPage(w, r, path)
 	case "dep:": // dependency

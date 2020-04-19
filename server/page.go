@@ -45,9 +45,9 @@ type htmlPage struct {
 	trans Translation
 }
 
-func newHtmlPage(title string, themeName string) *htmlPage {
+func NewHtmlPage(title, themeName string, inGenModeRootPages bool) *htmlPage {
 	var page htmlPage
-	page.Grow(256 * 1024)
+	page.Grow(4 * 1024 * 1024)
 
 	fmt.Fprintf(&page, `<!DOCTYPE html>
 <html>
@@ -56,15 +56,21 @@ func newHtmlPage(title string, themeName string) *htmlPage {
 <meta http-equiv="X-UA-Compatible" content="IE=edge">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>%s</title>
-<link href="/css:%s.css" rel="stylesheet">
-<script src="/jvs:gold.js"></script>
+<link href="%s" rel="stylesheet">
+<script src="%s"></script>
 <body><div>
-`, title, themeName)
+`,
+		title,
+		buildPageHref("css", themeName, inGenModeRootPages, "", nil),
+		buildPageHref("jvs", "gold", inGenModeRootPages, "", nil),
+	)
 
 	return &page
 }
 
 func (page *htmlPage) Done() []byte {
+	writePageGenerationInfo(page)
+
 	page.WriteString(`</div></body></html>`)
 	return append([]byte(nil), page.Bytes()...)
 }

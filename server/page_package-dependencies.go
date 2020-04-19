@@ -91,7 +91,7 @@ func (ds *docServer) buildPackageDependenciesData(pkgPath string) *PackageDepend
 }
 
 func (ds *docServer) buildPackageDependenciesPage(depInfo *PackageDependencyInfo) []byte {
-	page := newHtmlPage(ds.currentTranslation.Text_DependencyRelations()+": "+depInfo.ImportPath, ds.currentTheme.Name())
+	page := NewHtmlPage(ds.currentTranslation.Text_DependencyRelations()+": "+depInfo.ImportPath, ds.currentTheme.Name(), false)
 
 	fmt.Fprintf(page, `
 <pre><code><span style="font-size:xx-large;">package <b>%s</b></span>
@@ -101,19 +101,20 @@ func (ds *docServer) buildPackageDependenciesPage(depInfo *PackageDependencyInfo
 
 	fmt.Fprintf(page, `
 <span class="title">%s</span>
-	<a href="/pkg:%[2]s">%[2]s</a>`,
+	<a href="%s">%s</a>`,
 		ds.currentTranslation.Text_ImportPath(),
+		buildPageHref("pkg", depInfo.ImportPath, false, "", nil),
 		depInfo.ImportPath,
 	)
 
 	if len(depInfo.Imports) > 0 {
 		fmt.Fprint(page, "\n\n", `<span class="title">`, ds.currentTranslation.Text_Imports(), `</span>`)
-		ds.writePackagesForListing(page, depInfo.Imports, false)
+		ds.writePackagesForListing(page, depInfo.Imports, false, false)
 	}
 
 	if len(depInfo.ImportedBys) > 0 {
 		fmt.Fprint(page, "\n\n", `<span class="title" id="imported-by">`, ds.currentTranslation.Text_ImportedBy(), `</span>`)
-		ds.writePackagesForListing(page, depInfo.ImportedBys, false)
+		ds.writePackagesForListing(page, depInfo.ImportedBys, false, false)
 	}
 
 	return page.Done()
