@@ -2316,10 +2316,29 @@ func NewPackageAnalyzeResult() *PackageAnalyzeResult {
 	}
 }
 
-// ToDo: better to maintain a global sourceFilePath => SourceFileInfo table?
-func (r *PackageAnalyzeResult) SourceFileInfo(srcPath string) *SourceFileInfo {
+func (r *PackageAnalyzeResult) SourceFileInfoByBareFilename(bareFilename string) *SourceFileInfo {
 	for _, info := range r.SourceFiles {
-		if info.OriginalGoFile == srcPath {
+		//if info.OriginalGoFile == srcPath {
+		//	return &info
+		//}
+		//if info.GeneratedFile == srcPath {
+		//	return &info
+		//}
+		if info.BareFilename == bareFilename {
+			return &info
+		}
+		if info.BareGeneratedFilename == bareFilename {
+			return &info
+		}
+	}
+	return nil
+}
+
+// ToDo: better to maintain a global sourceFilePath => SourceFileInfo table?
+//func (r *PackageAnalyzeResult) SourceFileInfo(srcPath string) *SourceFileInfo {
+func (r *PackageAnalyzeResult) SourceFileInfoByFilePath(srcPath string) *SourceFileInfo {
+	for _, info := range r.SourceFiles {
+		if info.OriginalFile == srcPath {
 			return &info
 		}
 		if info.GeneratedFile == srcPath {

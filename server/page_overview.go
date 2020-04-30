@@ -30,7 +30,7 @@ func (ds *docServer) overviewPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ds *docServer) buildOverviewPage(overview *Overview) []byte {
-	page := NewHtmlPage(ds.currentTranslation.Text_Overview(), ds.currentTheme.Name(), true)
+	page := NewHtmlPage(ds.currentTranslation.Text_Overview(), ds.currentTheme.Name(), true, "", ResTypeNone)
 	fmt.Fprintf(page, `
 <pre><code><span style="font-size:xx-large;">%s</span></code>
 
@@ -75,7 +75,7 @@ func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*Package
 			}
 			if mainPos.IsValid() {
 				//mainPos.Line += ds.analyzer.SourceFileLineOffset(mainPos.Filename)
-				ds.writeSrouceCodeLineLink(page, mainPos, MainPkgArrow, "", true)
+				ds.writeSrouceCodeLineLink(page, pkg.Package, mainPos, MainPkgArrow, "", true)
 			} else {
 				page.WriteString(MainPkgArrow)
 			}
@@ -92,13 +92,13 @@ func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*Package
 			//fmt.Fprintf(page,
 			//	`<a href="/pkg:%s" class="path-duplicate">%s</a>`,
 			//	pkg.Path, pkg.Prefix)
-			buildPageHref("pkg", pkg.Path, inGenModeRootPages, pkg.Prefix, page)
+			buildPageHref(ResTypePackage, pkg.Path, inGenModeRootPages, pkg.Prefix, page)
 		}
 		if pkg.Remaining != "" {
 			//fmt.Fprintf(page,
 			//	`<a href="/pkg:%s">%s</a>`,
 			//	pkg.Path, pkg.Remaining)
-			buildPageHref("pkg", pkg.Path, inGenModeRootPages, pkg.Remaining, page)
+			buildPageHref(ResTypePackage, pkg.Path, inGenModeRootPages, pkg.Remaining, page)
 		}
 		page.WriteString(`</code>`)
 		if writeAnchorTarget {

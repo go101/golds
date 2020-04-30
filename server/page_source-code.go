@@ -12,15 +12,15 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
-	"path/filepath"
 	"strconv"
-	"strings"
 
 	"go101.org/gold/code"
 )
 
-func (ds *docServer) sourceCodePage(w http.ResponseWriter, r *http.Request, srcPath string) {
+func (ds *docServer) sourceCodePage(w http.ResponseWriter, r *http.Request, pkgPath, bareFilename string) {
 	w.Header().Set("Content-Type", "text/html")
+
+	log.Println(pkgPath, bareFilename)
 
 	ds.mutex.Lock()
 	defer ds.mutex.Unlock()
@@ -32,21 +32,33 @@ func (ds *docServer) sourceCodePage(w http.ResponseWriter, r *http.Request, srcP
 
 	// Browers will replace all \ in url to / automatically, so we need convert them back.
 	// Otherwise, the file will not be found on Windows.
-	srcPath = strings.ReplaceAll(srcPath, "/", string(filepath.Separator))
-	if ds.sourcePages[srcPath] == nil {
-		result, err := ds.analyzeSoureCode(srcPath)
+	//srcPath = strings.ReplaceAll(srcPath, "/", string(filepath.Separator))
+	//if ds.sourcePages[srcPath] == nil {
+	//	result, err := ds.analyzeSoureCode(srcPath)
+	//	if err != nil {
+	//		// ToDo: not found
+	//		fmt.Fprint(w, "Load file (", srcPath, ") error: ", err)
+	//		return
+	//	}
+	//	ds.sourcePages[srcPath] = ds.buildSourceCodePage(result)
+	//}
+	//w.Write(ds.sourcePages[srcPath])
+
+	pageKey := pkgPath + ":" + bareFilename
+	if ds.sourcePages[pageKey] == nil {
+		result, err := ds.analyzeSoureCode(pkgPath, bareFilename)
 		if err != nil {
 			// ToDo: not found
-			fmt.Fprint(w, "Load file (", srcPath, ") error: ", err)
+			fmt.Fprint(w, "Load file (", bareFilename, ") in ", pkgPath, " error: ", err)
 			return
 		}
-		ds.sourcePages[srcPath] = ds.buildSourceCodePage(result)
+		ds.sourcePages[pageKey] = ds.buildSourceCodePage(result)
 	}
-	w.Write(ds.sourcePages[srcPath])
+	w.Write(ds.sourcePages[pageKey])
 }
 
 func (ds *docServer) buildSourceCodePage(result *SourceFileAnalyzeResult) []byte {
-	page := NewHtmlPage(ds.currentTranslation.Text_SourceCode()+": "+result.FilePath, ds.currentTheme.Name(), false)
+	page := NewHtmlPage(ds.currentTranslation.Text_SourceCode()+": "+result.OriginalPath, ds.currentTheme.Name(), false, result.OriginalPath, ResTypeSource)
 
 	// ToDo: the belonging package section is not essential.
 	//       We can put a link in "package pkg",
@@ -59,7 +71,7 @@ func (ds *docServer) buildSourceCodePage(result *SourceFileAnalyzeResult) []byte
 	//       might be cached temp file which path/filename is not expected.)
 	// ToDo: use css fix the file path bar.
 
-	realFilePath := result.FilePath
+	realFilePath := result.OriginalPath
 	if result.GeneratedPath != "" {
 		realFilePath = result.GeneratedPath
 	}
@@ -72,13 +84,13 @@ func (ds *docServer) buildSourceCodePage(result *SourceFileAnalyzeResult) []byte
 		realFilePath,
 	)
 
-	if result.GeneratedPath != "" && result.GeneratedPath != result.FilePath {
+	if result.GeneratedPath != "" && result.GeneratedPath != result.OriginalPath {
 		fmt.Fprintf(page, `
 
 <span class="title">%s</span>
 	%s`,
 			ds.currentTranslation.Text_GeneratedFrom(),
-			result.FilePath,
+			result.OriginalPath,
 		)
 	}
 
@@ -91,7 +103,7 @@ func (ds *docServer) buildSourceCodePage(result *SourceFileAnalyzeResult) []byte
 <hr/>
 `,
 		ds.currentTranslation.Text_BelongingPackage(),
-		buildPageHref("pkg", result.PkgPath, false, "", nil),
+		buildPageHref(ResTypePackage, result.PkgPath, false, "", nil),
 		result.PkgPath,
 	)
 
@@ -145,7 +157,8 @@ func (ds *docServer) buildSourceCodePage(result *SourceFileAnalyzeResult) []byte
 
 type SourceFileAnalyzeResult struct {
 	PkgPath       string
-	FilePath      string
+	BareFilename  string
+	OriginalPath  string
 	GeneratedPath string
 	Lines         []string
 	NumRatios     int32
@@ -544,7 +557,7 @@ func (v *AstVisitor) tryToHandleSomeSpecialNodes(beforeNode ast.Node) {
 			if fPosition.IsValid() {
 				start := v.pkg.PPkg.Fset.PositionFor(node.Pos(), false)
 				end := v.pkg.PPkg.Fset.PositionFor(node.End(), false)
-				v.buildText(start, end, "", buildSrouceCodeLineLink(v.dataAnalyzer, fPosition))
+				v.buildText(start, end, "", buildSrouceCodeLineLink(v.dataAnalyzer, v.dataAnalyzer.RuntimePackage(), fPosition))
 			}
 		}
 
@@ -1055,7 +1068,7 @@ func (v *AstVisitor) handleBasicLit(basicLit *ast.BasicLit) {
 }
 
 func (v *AstVisitor) handleSelectKeyword(selectPos token.Pos, fPosition token.Position) {
-	v.handleToken(selectPos, token.SELECT.String(), "keyword", buildSrouceCodeLineLink(v.dataAnalyzer, fPosition))
+	v.handleToken(selectPos, token.SELECT.String(), "keyword", buildSrouceCodeLineLink(v.dataAnalyzer, v.dataAnalyzer.RuntimePackage(), fPosition))
 }
 
 func (v *AstVisitor) handleKeyword(pos token.Pos, tok token.Token) {
@@ -1108,7 +1121,7 @@ func (v *AstVisitor) handleIdent(ident *ast.Ident) {
 
 	if pkgName, ok := obj.(*types.PkgName); ok {
 		//v.buildIdentifier(start, end, -1, "/pkg:"+pkgName.Imported().Path())
-		v.buildIdentifier(start, end, -1, buildPageHref("pkg", pkgName.Imported().Path(), false, "", nil))
+		v.buildIdentifier(start, end, -1, buildPageHref(ResTypePackage, pkgName.Imported().Path(), false, "", nil))
 		return
 	}
 
@@ -1117,7 +1130,7 @@ func (v *AstVisitor) handleIdent(ident *ast.Ident) {
 		if obj.Parent() == types.Universe {
 			//log.Println(fmt.Sprintf("ppkg for identifier %s (%v) is not found", ident.Name, obj))
 			//v.buildIdentifier(start, end, -1, "/pkg:builtin#name-"+obj.Name())
-			v.buildIdentifier(start, end, -1, buildPageHref("pkg", "builtin", false, "", nil)+"#name-"+obj.Name())
+			v.buildIdentifier(start, end, -1, buildPageHref(ResTypePackage, "builtin", false, "", nil)+"#name-"+obj.Name())
 
 			// ToDo: link to runtime.panic/recover/...
 			return
@@ -1136,7 +1149,7 @@ func (v *AstVisitor) handleIdent(ident *ast.Ident) {
 	// Yes, it is ok to check "unsafe" only here.
 	if objPkgPath == "unsafe" {
 		//v.buildIdentifier(start, end, -1, "/pkg:"+objPkgPath+"#name-"+obj.Name())
-		v.buildIdentifier(start, end, -1, buildPageHref("pkg", objPkgPath, false, "", nil)+"#name-"+obj.Name())
+		v.buildIdentifier(start, end, -1, buildPageHref(ResTypePackage, objPkgPath, false, "", nil)+"#name-"+obj.Name())
 		return
 	}
 
@@ -1235,7 +1248,7 @@ func (v *AstVisitor) handleIdent(ident *ast.Ident) {
 		case scp.Parent() == types.Universe: // package-level elements
 			if obj.Exported() {
 				//v.buildIdentifier(start, end, -1, "/pkg:"+objPkgPath+"#name-"+obj.Name())
-				v.buildIdentifier(start, end, -1, buildPageHref("pkg", objPkgPath, false, "", nil)+"#name-"+obj.Name())
+				v.buildIdentifier(start, end, -1, buildPageHref(ResTypePackage, objPkgPath, false, "", nil)+"#name-"+obj.Name())
 				return
 			} else {
 				// ToDo: open reference list page
@@ -1248,37 +1261,67 @@ func (v *AstVisitor) handleIdent(ident *ast.Ident) {
 		return
 	}
 
-	v.buildIdentifier(start, end, -1, buildSrouceCodeLineLink(v.dataAnalyzer, objPos))
+	v.buildIdentifier(start, end, -1, buildSrouceCodeLineLink(v.dataAnalyzer, objPkg, objPos))
 
 	return
 }
 
-func buildSrouceCodeLineLink(analyzer *code.CodeAnalyzer, p token.Position) string {
+func buildSrouceCodeLineLink(analyzer *code.CodeAnalyzer, pkg *code.Package, p token.Position) string {
 	//return "/src:" + analyzer.OriginalGoSourceFile(p.Filename) + "#line-" + strconv.Itoa(p.Line)
-	return buildPageHref("src", analyzer.OriginalGoSourceFile(p.Filename), false, "", nil) + "#line-" + strconv.Itoa(p.Line)
+	//return buildPageHref(ResTypeSource, analyzer.OriginalGoSourceFile(p.Filename), false, "", nil) + "#line-" + strconv.Itoa(p.Line)
+
+	var sourceFilename string
+	fileInfo := pkg.SourceFileInfoByFilePath(p.Filename)
+	if fileInfo == nil {
+		log.Printf("! file info for %s in package %s is not found", p.Filename, pkg.Path())
+	} else {
+		sourceFilename = fileInfo.BareFilename
+		if sourceFilename == "" {
+			sourceFilename = fileInfo.BareGeneratedFilename
+		}
+	}
+
+	return buildPageHref(ResTypeSource, pkg.Path()+"/"+sourceFilename, false, "", nil) + "#line-" + strconv.Itoa(p.Line)
 }
 
-func (ds *docServer) writeSrouceCodeLineLink(page *htmlPage, p token.Position, text, class string, inGenModeRootPages bool) {
+func (ds *docServer) writeSrouceCodeLineLink(page *htmlPage, pkg *code.Package, p token.Position, text, class string, inGenModeRootPages bool) {
 	if class != "" {
 		class = fmt.Sprintf(` class="%s"`, class)
 	}
 	//fmt.Fprintf(page, `<a href="/src:%s#line-%d"%s>%s</a>`, ds.analyzer.OriginalGoSourceFile(p.Filename), p.Line, class, text)
 
+	//fmt.Fprintf(page, `<a href="`)
+	//buildPageHref(ResTypeSource, ds.analyzer.OriginalGoSourceFile(p.Filename), inGenModeRootPages, "", page)
+	//fmt.Fprintf(page, `#line-%d"%s>%s</a>`, p.Line, class, text)
+
+	var sourceFilename string
+	fileInfo := pkg.SourceFileInfoByFilePath(p.Filename)
+	if fileInfo == nil {
+		log.Printf("! file info for %s in package %s is not found", p.Filename, pkg.Path())
+	} else {
+		sourceFilename = fileInfo.BareFilename
+		if sourceFilename == "" {
+			sourceFilename = fileInfo.BareGeneratedFilename
+		}
+	}
+
 	fmt.Fprintf(page, `<a href="`)
-	buildPageHref("src", ds.analyzer.OriginalGoSourceFile(p.Filename), inGenModeRootPages, "", page)
+	buildPageHref(ResTypeSource, pkg.Path()+"/"+sourceFilename, inGenModeRootPages, "", page)
 	fmt.Fprintf(page, `#line-%d"%s>%s</a>`, p.Line, class, text)
 }
 
-func (ds *docServer) writeSrouceCodeFileLink(page *htmlPage, sourceFilename string) {
-	originalFile := ds.analyzer.OriginalGoSourceFile(sourceFilename)
-	//fmt.Fprintf(page, `<a href="/src:%[1]s">%[1]s</a>`, originalFile)
-	buildPageHref("src", originalFile, false, originalFile, page)
+func (ds *docServer) writeSrouceCodeFileLink(page *htmlPage, pkg *code.Package, sourceFilename string) {
+	//originalFile := ds.analyzer.OriginalGoSourceFile(sourceFilename)
+	////fmt.Fprintf(page, `<a href="/src:%[1]s">%[1]s</a>`, originalFile)
+	//buildPageHref(ResTypeSource, originalFile, false, originalFile, page)
+	buildPageHref(ResTypeSource, pkg.Path()+"/"+sourceFilename, false, sourceFilename, page)
 }
 
-func (ds *docServer) writeSourceCodeDocLink(page *htmlPage, sourceFilename string) {
-	originalFile := ds.analyzer.OriginalGoSourceFile(sourceFilename)
-	//fmt.Fprintf(page, `<a href="/src:%s#doc">d-&gt;</a> `, originalFile)
-	buildPageHref("src", originalFile, false, "d-&gt;", page, "doc")
+func (ds *docServer) writeSourceCodeDocLink(page *htmlPage, pkg *code.Package, sourceFilename string) {
+	//originalFile := ds.analyzer.OriginalGoSourceFile(sourceFilename)
+	////fmt.Fprintf(page, `<a href="/src:%s#doc">d-&gt;</a> `, originalFile)
+	//buildPageHref(ResTypeSource, originalFile, false, "d-&gt;", page, "doc")
+	buildPageHref(ResTypeSource, pkg.Path()+"/"+sourceFilename, false, "d-&gt;", page, "doc")
 	page.WriteByte(' ')
 }
 
@@ -1315,11 +1358,10 @@ func BuildLineOffsets(content []byte, onlyStatLineCount bool) (int, []int) {
 }
 
 // Need locking before calling this function.
-func (ds *docServer) analyzeSoureCode(srcPath string) (*SourceFileAnalyzeResult, error) {
-	//srcFile, ok := ds.analyzer.SourceFileByPath(srcPath)
-	pkg, ok := ds.analyzer.SourceFile2Package(srcPath)
-	if !ok {
-		return nil, errors.New("not found: " + srcPath)
+func (ds *docServer) analyzeSoureCode(pkgPath, bareFilename string) (*SourceFileAnalyzeResult, error) {
+	pkg, ok := ds.analyzer.PackageByPath(pkgPath)
+	if !ok || pkg == nil {
+		return nil, errors.New("package not found")
 	}
 
 	//log.Println("==================== ", srcPath)
@@ -1327,14 +1369,15 @@ func (ds *docServer) analyzeSoureCode(srcPath string) (*SourceFileAnalyzeResult,
 
 	//ds.analyzer.BuildCgoFileMappings(pkg)
 
-	var fileInfo = pkg.SourceFileInfo(srcPath)
+	var fileInfo = pkg.SourceFileInfoByBareFilename(bareFilename)
+	if fileInfo == nil {
+		return nil, errors.New("file not found")
+	}
 
-	//if fileInfo == nil { // non-go files
-	//	return nil, errors.New("file information not found: " + srcPath)
-	//}
-
-	generatedFilePath := srcPath
-	filePath := srcPath
+	//generatedFilePath := srcPath
+	//filePath := srcPath
+	generatedFilePath := fileInfo.GeneratedFile
+	filePath := fileInfo.OriginalFile
 	if fileInfo != nil && fileInfo.GeneratedFile != "" {
 		filePath = fileInfo.GeneratedFile
 		if fileInfo.GeneratedFile == generatedFilePath {
@@ -1357,7 +1400,8 @@ func (ds *docServer) analyzeSoureCode(srcPath string) (*SourceFileAnalyzeResult,
 
 		result = &SourceFileAnalyzeResult{
 			PkgPath:       pkg.Path(),
-			FilePath:      srcPath,
+			BareFilename:  bareFilename,
+			OriginalPath:  filePath,
 			GeneratedPath: generatedFilePath,
 			Lines:         make([]string, 0, lineCount),
 		}
@@ -1417,13 +1461,13 @@ func (ds *docServer) analyzeSoureCode(srcPath string) (*SourceFileAnalyzeResult,
 			info:         pkg.PPkg.TypesInfo,
 			content:      content,
 
-			goFilePath: srcPath,
+			goFilePath: filePath,
 			//goFileContentOffset: fileInfo.GoFileContentOffset,
 			//goFileLineOffset:    fileInfo.GoFileLineOffset,
 
 			result: &SourceFileAnalyzeResult{
 				PkgPath:       pkg.Path(),
-				FilePath:      srcPath,
+				OriginalPath:  filePath,
 				GeneratedPath: generatedFilePath,
 				Lines:         make([]string, 0, file.LineCount()),
 				DocStartLine:  docStartLine,
@@ -1451,7 +1495,7 @@ func (ds *docServer) analyzeSoureCode(srcPath string) (*SourceFileAnalyzeResult,
 		astVisitor.finish()
 
 		if n := astVisitor.specialAstNodes.Len(); n > 0 {
-			log.Println("!!!", srcPath, "has still", n, "special ast node(s) not handled yet.")
+			log.Println("!!!", filePath, "has still", n, "special ast node(s) not handled yet.")
 		}
 
 		result = astVisitor.result

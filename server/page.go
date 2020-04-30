@@ -8,6 +8,17 @@ import (
 	"runtime"
 )
 
+type pageResType string
+
+const (
+	ResTypeNone       pageResType = ""
+	ResTypePackage    pageResType = "pkg"
+	ResTypeDependency pageResType = "dep"
+	ResTypeSource     pageResType = "src"
+	ResTypeCSS        pageResType = "css"
+	ResTypeJS         pageResType = "jvs"
+)
+
 func OpenBrowser(url string) error {
 	var cmd string
 	var args []string
@@ -43,10 +54,14 @@ type htmlPage struct {
 	bytes.Buffer
 	theme *Theme
 	trans Translation
+
+	// The two are for generation mode to compute relative paths.
+	pagePath string
+	resType  pageResType
 }
 
-func NewHtmlPage(title, themeName string, inGenModeRootPages bool) *htmlPage {
-	var page htmlPage
+func NewHtmlPage(title, themeName string, inGenModeRootPages bool, path string, resType pageResType) *htmlPage {
+	page := htmlPage{resType: resType, pagePath: path}
 	page.Grow(4 * 1024 * 1024)
 
 	fmt.Fprintf(&page, `<!DOCTYPE html>
@@ -61,8 +76,8 @@ func NewHtmlPage(title, themeName string, inGenModeRootPages bool) *htmlPage {
 <body><div>
 `,
 		title,
-		buildPageHref("css", themeName, inGenModeRootPages, "", nil),
-		buildPageHref("jvs", "gold", inGenModeRootPages, "", nil),
+		buildPageHref(ResTypeCSS, themeName, inGenModeRootPages, "", nil),
+		buildPageHref(ResTypeJS, "gold", inGenModeRootPages, "", nil),
 	)
 
 	return &page

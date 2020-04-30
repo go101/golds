@@ -18,6 +18,8 @@ NoJS friendly, though richer experiences when JS is enabled.
   go101.org/articles
   go101.org/static
 
+https://github.com/golang/go/issues/34527
+
 Package details:
 * overall
   * click to show/hide docs directly udnerlying each resource

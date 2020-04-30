@@ -43,7 +43,7 @@ func (ds *docServer) packageDetailsPage(w http.ResponseWriter, r *http.Request, 
 }
 
 func (ds *docServer) buildPackageDetailsPage(pkg *PackageDetails) []byte {
-	page := NewHtmlPage(ds.currentTranslation.Text_Package()+": "+pkg.ImportPath, ds.currentTheme.Name(), false)
+	page := NewHtmlPage(ds.currentTranslation.Text_Package()+": "+pkg.ImportPath, ds.currentTheme.Name(), false, pkg.ImportPath, ResTypePackage)
 
 	fmt.Fprintf(page, `
 <pre><code><span style="font-size:xx-large;">package <b>%s</b></span>
@@ -67,7 +67,7 @@ func (ds *docServer) buildPackageDetailsPage(pkg *PackageDetails) []byte {
 	%s`,
 			ds.currentTranslation.Text_DependencyRelations(),
 			//ds.currentTranslation.Text_ImportStat(int(pkg.NumDeps), int(pkg.NumDepedBys), "/dep:"+pkg.ImportPath),
-			ds.currentTranslation.Text_ImportStat(int(pkg.NumDeps), int(pkg.NumDepedBys), buildPageHref("dep", pkg.ImportPath, false, "", nil)),
+			ds.currentTranslation.Text_ImportStat(int(pkg.NumDeps), int(pkg.NumDepedBys), buildPageHref(ResTypeDependency, pkg.ImportPath, false, "", nil)),
 		)
 	}
 
@@ -77,11 +77,11 @@ func (ds *docServer) buildPackageDetailsPage(pkg *PackageDetails) []byte {
 		for _, info := range pkg.Files {
 			page.WriteString("\n\t")
 			if info.HasDocs {
-				ds.writeSourceCodeDocLink(page, info.FilePath)
+				ds.writeSourceCodeDocLink(page, pkg.Package, info.Filename)
 			} else {
 				page.WriteString("    ")
 			}
-			ds.writeSrouceCodeFileLink(page, info.FilePath)
+			ds.writeSrouceCodeFileLink(page, pkg.Package, info.Filename)
 		}
 	}
 
@@ -225,7 +225,7 @@ Done:
 }
 
 type FileInfo struct {
-	FilePath string
+	Filename string
 	HasDocs  bool
 }
 
@@ -306,10 +306,10 @@ func (ds *docServer) buildPackageDetailsData(pkgPath string) *PackageDetails {
 
 	for i := range pkg.SourceFiles {
 		info := &pkg.SourceFiles[i]
-		if info.OriginalGoFile != "" {
+		if info.OriginalFile != "" {
 			files = append(files, FileInfo{
-				FilePath: info.OriginalGoFile,
-				HasDocs:  info.AstFile.Doc != nil,
+				Filename: info.BareFilename,
+				HasDocs:  info.AstFile != nil && info.AstFile.Doc != nil,
 			})
 		}
 
@@ -324,9 +324,11 @@ func (ds *docServer) buildPackageDetailsData(pkgPath string) *PackageDetails {
 		//	_, lineStartOffsets[info.OriginalGoFile] = BuildLineOffsets(content, false)
 		//}
 	}
-	for _, path := range pkg.PPkg.OtherFiles {
-		files = append(files, FileInfo{FilePath: path})
-	}
+
+	// Now, these file are also put into pkg.SourceFiles.
+	//for _, path := range pkg.PPkg.OtherFiles {
+	//	files = append(files, FileInfo{FilePath: path})
+	//}
 
 	// ...
 	var valueResources = make([]code.ValueResource, 0,
@@ -630,7 +632,7 @@ func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pk
 			fmt.Fprintf(page, `<a href="`)
 			//page.WriteString("/pkg:")
 			//page.WriteString(v.Package().Path())
-			buildPageHref("pkg", v.Package().Path(), false, "", page)
+			buildPageHref(ResTypePackage, v.Package().Path(), false, "", page)
 		} else {
 			fmt.Fprintf(page, `<a href="`)
 		}
@@ -658,7 +660,7 @@ func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pk
 				if v.Package() != pkg {
 					//fmt.Fprintf(page, `(*<a href="/pkg:%[1]s#name-%[2]s">%[2]s</a>).`, v.Package().Path(), typeId.Name)
 					page.WriteString("(*")
-					buildPageHref("pkg", v.Package().Path(), false, typeId.Name, page, "name-", typeId.Name)
+					buildPageHref(ResTypePackage, v.Package().Path(), false, typeId.Name, page, "name-", typeId.Name)
 					page.WriteString(").")
 				} else {
 					fmt.Fprintf(page, `(*<a href="#name-%[1]s">%[1]s</a>).`, typeId.Name)
@@ -666,19 +668,19 @@ func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pk
 			} else {
 				if v.Package() != pkg {
 					//fmt.Fprintf(page, `<a href="/pkg:%[1]s#name-%[2]s">%[2]s</a>.`, v.Package().Path(), typeId.Name)
-					buildPageHref("pkg", v.Package().Path(), false, typeId.Name, page, "name-", typeId.Name)
+					buildPageHref(ResTypePackage, v.Package().Path(), false, typeId.Name, page, "name-", typeId.Name)
 				} else {
 					fmt.Fprintf(page, `<a href="#name-%[1]s">%[1]s</a>.`, typeId.Name)
 				}
 			}
 
-			ds.writeSrouceCodeLineLink(page, pos, v.Name(), "", false)
+			ds.writeSrouceCodeLineLink(page, v.Package(), pos, v.Name(), "", false)
 
 			WriteTypeEx(page, res.AstDecl.Type, res.Pkg.PPkg.TypesInfo, false, recvParam, lvi)
 		} else {
 			if v.Package() != pkg {
 				//fmt.Fprintf(page, `<a href="/pkg:%[1]s#name-%[2]s">%[2]s</a>`, v.Package().Path(), v.Name())
-				buildPageHref("pkg", v.Package().Path(), false, v.Name(), page, "name-", v.Name())
+				buildPageHref(ResTypePackage, v.Package().Path(), false, v.Name(), page, "name-", v.Name())
 			} else {
 				fmt.Fprintf(page, `<a href="#name-%[1]s">%[1]s</a>`, v.Name())
 			}
@@ -767,7 +769,7 @@ func writeTypeForListing(page *htmlPage, t *TypeForListing, pkg *code.Package, i
 		fmt.Fprintf(page, `<a href="`)
 		//page.WriteString("/pkg:")
 		//page.WriteString(t.Pkg.Path())
-		buildPageHref("pkg", t.Pkg.Path(), false, "", page)
+		buildPageHref(ResTypePackage, t.Pkg.Path(), false, "", page)
 	} else {
 		fmt.Fprintf(page, `<a href="`)
 	}
@@ -874,7 +876,7 @@ func (ds *docServer) writeFieldForListing(page *htmlPage, sel *FieldForListing) 
 		if i < sel.numDuplicatedMiddlesWithLast {
 			class = "path-duplicate"
 		}
-		ds.writeSrouceCodeLineLink(page, pos, fld.Name, class, false)
+		ds.writeSrouceCodeLineLink(page, fld.Pkg, pos, fld.Name, class, false)
 		page.WriteByte('.')
 	}
 	selField := sel.Field
@@ -883,7 +885,7 @@ func (ds *docServer) writeFieldForListing(page *htmlPage, sel *FieldForListing) 
 	}
 	pos := sel.Position()
 	//pos.Line += ds.analyzer.SourceFileLineOffset(pos.Filename)
-	ds.writeSrouceCodeLineLink(page, pos, selField.Name, "", false)
+	ds.writeSrouceCodeLineLink(page, sel.Pkg(), pos, selField.Name, "", false)
 	page.WriteByte(' ')
 	WriteType(page, selField.AstField.Type, selField.Pkg.PPkg.TypesInfo, true)
 }
@@ -900,7 +902,7 @@ func (ds *docServer) writeMethodForListing(page *htmlPage, sel *code.Selector) {
 	}
 	pos := sel.Position()
 	//pos.Line += ds.analyzer.SourceFileLineOffset(pos.Filename)
-	ds.writeSrouceCodeLineLink(page, pos, setMethod.Name, "", false)
+	ds.writeSrouceCodeLineLink(page, sel.Pkg(), pos, setMethod.Name, "", false)
 	if setMethod.AstFunc != nil {
 		WriteType(page, setMethod.AstFunc.Type, setMethod.Pkg.PPkg.TypesInfo, false)
 	} else {
@@ -933,7 +935,7 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, res code.Resource, f
 		panic("should not")
 	case *code.TypeName:
 		page.WriteString(" type ")
-		ds.writeSrouceCodeLineLink(page, pos, res.Name(), "", false)
+		ds.writeSrouceCodeLineLink(page, res.Package(), pos, res.Name(), "", false)
 		// ToDo: also wirte non-alais src type.
 		// ToDo: use a custom formatter to avoid multiple line and too long src type strings.
 		if writeType && res.Alias != nil {
@@ -942,7 +944,7 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, res code.Resource, f
 		}
 	case *code.Constant:
 		page.WriteString("const ")
-		ds.writeSrouceCodeLineLink(page, pos, res.Name(), "", false)
+		ds.writeSrouceCodeLineLink(page, res.Package(), pos, res.Name(), "", false)
 
 		btt, ok := res.TType().Underlying().(*types.Basic)
 		if !ok {
@@ -956,7 +958,7 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, res code.Resource, f
 		page.WriteString(res.Val().String())
 	case *code.Variable:
 		page.WriteString("  var ")
-		ds.writeSrouceCodeLineLink(page, pos, res.Name(), "", false)
+		ds.writeSrouceCodeLineLink(page, res.Package(), pos, res.Name(), "", false)
 		if writeType {
 			page.WriteByte(' ')
 			page.WriteString(res.TType().String())
@@ -984,7 +986,7 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, res code.Resource, f
 				panic("should not")
 			}
 		}
-		ds.writeSrouceCodeLineLink(page, pos, res.Name(), "", false)
+		ds.writeSrouceCodeLineLink(page, res.Package(), pos, res.Name(), "", false)
 		if writeType {
 			WriteType(page, res.AstDecl.Type, res.Pkg.PPkg.TypesInfo, false)
 		}

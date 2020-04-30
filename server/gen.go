@@ -31,26 +31,26 @@ func writePageGenerationInfo(page *htmlPage) {
 
 	page.WriteString(`
 <div id="gen-footer">
-(Generated with Gold.)
+(Generated with <a href="https://github.com/go101/gold/">Gold</a>)
 </div>
 `)
 }
 
 func init() {
-	enabledHtmlGenerationMod()
+	//enabledHtmlGenerationMod()
 }
 
 func enabledHtmlGenerationMod() {
 	genMode = true
 	pageHrefList = list.New()
-	resHrefs = make(map[string]map[string]int, 8)
+	resHrefs = make(map[pageResType]map[string]int, 8)
 
 }
 
 var (
 	genMode        bool
 	pageHrefList   *list.List // elements are *string
-	resHrefs       map[string]map[string]int
+	resHrefs       map[pageResType]map[string]int
 	pageHrefsMutex sync.Mutex // in fact, for the current implementation, the lock is not essential
 )
 
@@ -76,7 +76,7 @@ func nextPageToLoad() (info *genPageInfo) {
 }
 
 // Return the id and whether or not the id is just registered.
-func resHrefID(resType, resName string) (int, bool) {
+func resHrefID(resType pageResType, resName string) (int, bool) {
 	pageHrefsMutex.Lock()
 	defer pageHrefsMutex.Unlock()
 	hrefs := resHrefs[resType]
@@ -92,7 +92,7 @@ func resHrefID(resType, resName string) (int, bool) {
 	return id, !ok
 }
 
-var resType2ExtTable = map[string]string{
+var resType2ExtTable = map[pageResType]string{
 	"":    ".html",
 	"pkg": ".html",
 	"dep": ".html",
@@ -102,11 +102,35 @@ var resType2ExtTable = map[string]string{
 	"jvs": ".js",
 }
 
+type resPathInfo struct {
+	resType    pageResType
+	resPath    string
+	subResType pageResType
+	subResPath string
+}
+
+func (curRes *resPathInfo) buildPageHref(linkedRes resPathInfo, fragments ...string) string {
+	// ToDo
+	return ""
+}
+
+// ToDo:
+// path prefixes should be removed from srouce file paths.
+// * project root path
+// * module cache root path
+// * GOPATH src roots
+// * GOROOT src root
+// This results handledPath.
+//
+// src:handledPath will be hashed as the generated path, or not.
+
 // If page is not nil, write the href directly into page (write the full <a...</a> if linkText is not blank).
 // Otherwise, build the href as a string and return it (only the href part).
 // inRootPage is for generation mode only. inRootPage==false means in "pages/xxx" pages.
 // Note: fragments is only meaningful when page != nil.
-func buildPageHref(resType, resName string, inRootPages bool, linkText string, page *htmlPage, fragments ...string) (r string) {
+//
+// ToDo: improve the design.
+func buildPageHref(resType pageResType, resName string, inRootPages bool, linkText string, page *htmlPage, fragments ...string) (r string) {
 
 	writePageLink := func(writeHref func()) {
 		if linkText != "" {
@@ -130,7 +154,7 @@ func buildPageHref(resType, resName string, inRootPages bool, linkText string, p
 		var needRegisterHref = false
 		var id int
 
-		if resType == "" {
+		if resType == "" { // homepages
 			if resName != "" {
 				panic("should not now")
 			}
@@ -150,23 +174,23 @@ func buildPageHref(resType, resName string, inRootPages bool, linkText string, p
 					r = "../index" + resType2ExtTable[resType]
 				}
 			}
-		} else {
+		} else { // resource pages
 			id, needRegisterHref = resHrefID(resType, resName)
 			if page != nil {
 				writePageLink(func() {
 					if inRootPages {
 						page.WriteString("pages/")
 					}
-					page.WriteString(resType)
+					page.WriteString(string(resType))
 					page.WriteByte('-')
 					page.WriteString(strconv.Itoa(id))
 					page.WriteString(".html")
 				})
 			} else {
 				if inRootPages {
-					r = "pages/" + resType + "-" + strconv.Itoa(id) + resType2ExtTable[resType]
+					r = "pages/" + string(resType) + "-" + strconv.Itoa(id) + resType2ExtTable[resType]
 				} else {
-					r = resType + "-" + strconv.Itoa(id) + resType2ExtTable[resType]
+					r = string(resType) + "-" + strconv.Itoa(id) + resType2ExtTable[resType]
 				}
 			}
 		}
@@ -177,8 +201,8 @@ func buildPageHref(resType, resName string, inRootPages bool, linkText string, p
 				hrefNotForGenerating = "/" + resName
 				filePath = "index" + resType2ExtTable[resType]
 			} else {
-				hrefNotForGenerating = "/" + resType + ":" + resName
-				filePath = "pages/" + resType + "-" + strconv.Itoa(id) + resType2ExtTable[resType]
+				hrefNotForGenerating = "/" + string(resType) + ":" + resName
+				filePath = "pages/" + string(resType) + "-" + strconv.Itoa(id) + resType2ExtTable[resType]
 			}
 			registerPageHref(genPageInfo{
 				HrefPath: hrefNotForGenerating,
@@ -199,12 +223,12 @@ func buildPageHref(resType, resName string, inRootPages bool, linkText string, p
 			if page != nil {
 				writePageLink(func() {
 					page.WriteByte('/')
-					page.WriteString(resType)
+					page.WriteString(string(resType))
 					page.WriteByte(':')
 					page.WriteString(resName)
 				})
 			} else {
-				r = "/" + resType + ":" + resName
+				r = "/" + string(resType) + ":" + resName
 			}
 		}
 	}

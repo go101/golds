@@ -23,14 +23,15 @@ type CodeAnalyzer struct {
 	packageTable map[string]*Package
 	packageList  []*Package
 	builtinPkg   *Package
-	//sourceFile2PackageTable  map[string]SourceFile
-	sourceFile2PackageTable         map[string]*Package
-	generatedFile2OriginalFileTable map[string]string
 
 	// This one is removed now. We should use FileSet.PositionFor.
 	//sourceFileLineOffsetTable map[string]int32
 
 	//=== Will be fulfilled in analyse phase ===
+
+	//sourceFile2PackageTable  map[string]SourceFile
+	sourceFile2PackageTable         map[string]*Package
+	generatedFile2OriginalFileTable map[string]string
 
 	// *types.Type -> *TypeInfo
 	lastTypeIndex       uint32
@@ -104,6 +105,11 @@ func (d *CodeAnalyzer) OriginalGoSourceFile(filename string) string {
 
 func (d *CodeAnalyzer) RuntimeFunctionCodePosition(f string) token.Position {
 	return d.runtimeFuncPositions[f]
+}
+
+func (d *CodeAnalyzer) RuntimePackage() *Package {
+	runtimePkg, _ := d.PackageByPath("runtime")
+	return runtimePkg
 }
 
 func (d *CodeAnalyzer) Id1(p *types.Package, name string) string {

@@ -95,26 +95,31 @@ func (ds *docServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Min valid path length is 5.
-	if len(path) < 5 {
+	if len(path) < 5 || path[3] != ':' {
 		fmt.Fprint(w, "Invalid url")
 		return
 	}
 
-	switch prefix, path := path[:4], path[4:]; prefix {
-	default:
+	switch resType, resPath := pageResType(path[:3]), path[4:]; resType {
+	default: // ResTypeNone
 		w.WriteHeader(http.StatusNotFound)
+	case ResTypeCSS: // "css"
+		ds.cssFile(w, r, resPath)
+	case ResTypeJS: // "jvs"
+		ds.javascriptFile(w, r, resPath)
 	//case "mod:": // module
 	//	ds.modulePage(w, r, path)
-	case "pkg:": // package
-		ds.packageDetailsPage(w, r, path)
-	case "dep:": // dependency
-		ds.packageDependenciesPage(w, r, path)
-	case "src:": // source file
-		ds.sourceCodePage(w, r, path)
-	case "css:": // css file
-		ds.cssFile(w, r, path)
-	case "jvs:": // javascript file
-		ds.javascriptFile(w, r, path)
+	case ResTypePackage: // "pkg"
+		ds.packageDetailsPage(w, r, resPath)
+	case ResTypeDependency: // "dep"
+		ds.packageDependenciesPage(w, r, resPath)
+	case ResTypeSource: // "src"
+		index := strings.LastIndex(resPath, "/")
+		if index < 0 {
+			ds.sourceCodePage(w, r, "", resPath)
+		} else {
+			ds.sourceCodePage(w, r, resPath[:index], resPath[index+1:])
+		}
 	}
 }
 
