@@ -20,7 +20,7 @@ import (
 func (ds *docServer) sourceCodePage(w http.ResponseWriter, r *http.Request, pkgPath, bareFilename string) {
 	w.Header().Set("Content-Type", "text/html")
 
-	log.Println(pkgPath, bareFilename)
+	//log.Println(pkgPath, bareFilename)
 
 	ds.mutex.Lock()
 	defer ds.mutex.Unlock()
@@ -58,7 +58,7 @@ func (ds *docServer) sourceCodePage(w http.ResponseWriter, r *http.Request, pkgP
 }
 
 func (ds *docServer) buildSourceCodePage(result *SourceFileAnalyzeResult) []byte {
-	page := NewHtmlPage(ds.currentTranslation.Text_SourceCode()+": "+result.OriginalPath, ds.currentTheme.Name(), false, result.OriginalPath, ResTypeSource)
+	page := NewHtmlPage(ds.currentTranslation.Text_SourceCode(result.PkgPath, result.BareFilename), ds.currentTheme.Name(), pagePathInfo{ResTypeSource, result.PkgPath + "/" + result.BareFilename})
 
 	// ToDo: the belonging package section is not essential.
 	//       We can put a link in "package pkg",
@@ -76,22 +76,30 @@ func (ds *docServer) buildSourceCodePage(result *SourceFileAnalyzeResult) []byte
 		realFilePath = result.GeneratedPath
 	}
 
-	fmt.Fprintf(page, `
-
+	if genMode {
+		fmt.Fprintf(page, `
 <pre><code><span class="title">%s</span>
 	%s`,
-		ds.currentTranslation.Text_SourceFilePath(),
-		realFilePath,
-	)
-
-	if result.GeneratedPath != "" && result.GeneratedPath != result.OriginalPath {
+			ds.currentTranslation.Text_SourceFilePath(),
+			result.BareFilename,
+		)
+	} else {
 		fmt.Fprintf(page, `
+<pre><code><span class="title">%s</span>
+	%s`,
+			ds.currentTranslation.Text_SourceFilePath(),
+			realFilePath,
+		)
+
+		if result.OriginalPath != "" && result.OriginalPath != realFilePath {
+			fmt.Fprintf(page, `
 
 <span class="title">%s</span>
 	%s`,
-			ds.currentTranslation.Text_GeneratedFrom(),
-			result.OriginalPath,
-		)
+				ds.currentTranslation.Text_GeneratedFrom(),
+				result.OriginalPath,
+			)
+		}
 	}
 
 	fmt.Fprintf(page, `
@@ -103,7 +111,7 @@ func (ds *docServer) buildSourceCodePage(result *SourceFileAnalyzeResult) []byte
 <hr/>
 `,
 		ds.currentTranslation.Text_BelongingPackage(),
-		buildPageHref(ResTypePackage, result.PkgPath, false, "", nil),
+		buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, result.PkgPath}, nil, ""),
 		result.PkgPath,
 	)
 
@@ -451,6 +459,8 @@ func CompareStringsInversely(a, b string) (r int) {
 
 // ToDo: write to page directly.
 type AstVisitor struct {
+	currentPathInfo pagePathInfo
+
 	dataAnalyzer *code.CodeAnalyzer
 	pkg          *code.Package
 	fset         *token.FileSet
@@ -557,7 +567,7 @@ func (v *AstVisitor) tryToHandleSomeSpecialNodes(beforeNode ast.Node) {
 			if fPosition.IsValid() {
 				start := v.pkg.PPkg.Fset.PositionFor(node.Pos(), false)
 				end := v.pkg.PPkg.Fset.PositionFor(node.End(), false)
-				v.buildText(start, end, "", buildSrouceCodeLineLink(v.dataAnalyzer, v.dataAnalyzer.RuntimePackage(), fPosition))
+				v.buildText(start, end, "", buildSrouceCodeLineLink(v.currentPathInfo, v.dataAnalyzer, v.dataAnalyzer.RuntimePackage(), fPosition))
 			}
 		}
 
@@ -1068,7 +1078,7 @@ func (v *AstVisitor) handleBasicLit(basicLit *ast.BasicLit) {
 }
 
 func (v *AstVisitor) handleSelectKeyword(selectPos token.Pos, fPosition token.Position) {
-	v.handleToken(selectPos, token.SELECT.String(), "keyword", buildSrouceCodeLineLink(v.dataAnalyzer, v.dataAnalyzer.RuntimePackage(), fPosition))
+	v.handleToken(selectPos, token.SELECT.String(), "keyword", buildSrouceCodeLineLink(v.currentPathInfo, v.dataAnalyzer, v.dataAnalyzer.RuntimePackage(), fPosition))
 }
 
 func (v *AstVisitor) handleKeyword(pos token.Pos, tok token.Token) {
@@ -1121,7 +1131,7 @@ func (v *AstVisitor) handleIdent(ident *ast.Ident) {
 
 	if pkgName, ok := obj.(*types.PkgName); ok {
 		//v.buildIdentifier(start, end, -1, "/pkg:"+pkgName.Imported().Path())
-		v.buildIdentifier(start, end, -1, buildPageHref(ResTypePackage, pkgName.Imported().Path(), false, "", nil))
+		v.buildIdentifier(start, end, -1, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, pkgName.Imported().Path()}, nil, ""))
 		return
 	}
 
@@ -1130,7 +1140,7 @@ func (v *AstVisitor) handleIdent(ident *ast.Ident) {
 		if obj.Parent() == types.Universe {
 			//log.Println(fmt.Sprintf("ppkg for identifier %s (%v) is not found", ident.Name, obj))
 			//v.buildIdentifier(start, end, -1, "/pkg:builtin#name-"+obj.Name())
-			v.buildIdentifier(start, end, -1, buildPageHref(ResTypePackage, "builtin", false, "", nil)+"#name-"+obj.Name())
+			v.buildIdentifier(start, end, -1, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, "builtin"}, nil, "")+"#name-"+obj.Name())
 
 			// ToDo: link to runtime.panic/recover/...
 			return
@@ -1149,7 +1159,7 @@ func (v *AstVisitor) handleIdent(ident *ast.Ident) {
 	// Yes, it is ok to check "unsafe" only here.
 	if objPkgPath == "unsafe" {
 		//v.buildIdentifier(start, end, -1, "/pkg:"+objPkgPath+"#name-"+obj.Name())
-		v.buildIdentifier(start, end, -1, buildPageHref(ResTypePackage, objPkgPath, false, "", nil)+"#name-"+obj.Name())
+		v.buildIdentifier(start, end, -1, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, objPkgPath}, nil, "")+"#name-"+obj.Name())
 		return
 	}
 
@@ -1248,7 +1258,7 @@ func (v *AstVisitor) handleIdent(ident *ast.Ident) {
 		case scp.Parent() == types.Universe: // package-level elements
 			if obj.Exported() {
 				//v.buildIdentifier(start, end, -1, "/pkg:"+objPkgPath+"#name-"+obj.Name())
-				v.buildIdentifier(start, end, -1, buildPageHref(ResTypePackage, objPkgPath, false, "", nil)+"#name-"+obj.Name())
+				v.buildIdentifier(start, end, -1, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, objPkgPath}, nil, "")+"#name-"+obj.Name())
 				return
 			} else {
 				// ToDo: open reference list page
@@ -1261,12 +1271,12 @@ func (v *AstVisitor) handleIdent(ident *ast.Ident) {
 		return
 	}
 
-	v.buildIdentifier(start, end, -1, buildSrouceCodeLineLink(v.dataAnalyzer, objPkg, objPos))
+	v.buildIdentifier(start, end, -1, buildSrouceCodeLineLink(v.currentPathInfo, v.dataAnalyzer, objPkg, objPos))
 
 	return
 }
 
-func buildSrouceCodeLineLink(analyzer *code.CodeAnalyzer, pkg *code.Package, p token.Position) string {
+func buildSrouceCodeLineLink(currentPathInfo pagePathInfo, analyzer *code.CodeAnalyzer, pkg *code.Package, p token.Position) string {
 	//return "/src:" + analyzer.OriginalGoSourceFile(p.Filename) + "#line-" + strconv.Itoa(p.Line)
 	//return buildPageHref(ResTypeSource, analyzer.OriginalGoSourceFile(p.Filename), false, "", nil) + "#line-" + strconv.Itoa(p.Line)
 
@@ -1281,7 +1291,7 @@ func buildSrouceCodeLineLink(analyzer *code.CodeAnalyzer, pkg *code.Package, p t
 		}
 	}
 
-	return buildPageHref(ResTypeSource, pkg.Path()+"/"+sourceFilename, false, "", nil) + "#line-" + strconv.Itoa(p.Line)
+	return buildPageHref(currentPathInfo, pagePathInfo{ResTypeSource, pkg.Path() + "/" + sourceFilename}, nil, "") + "#line-" + strconv.Itoa(p.Line)
 }
 
 func (ds *docServer) writeSrouceCodeLineLink(page *htmlPage, pkg *code.Package, p token.Position, text, class string, inGenModeRootPages bool) {
@@ -1306,7 +1316,7 @@ func (ds *docServer) writeSrouceCodeLineLink(page *htmlPage, pkg *code.Package, 
 	}
 
 	fmt.Fprintf(page, `<a href="`)
-	buildPageHref(ResTypeSource, pkg.Path()+"/"+sourceFilename, inGenModeRootPages, "", page)
+	buildPageHref(page.PathInfo, pagePathInfo{ResTypeSource, pkg.Path() + "/" + sourceFilename}, page, "")
 	fmt.Fprintf(page, `#line-%d"%s>%s</a>`, p.Line, class, text)
 }
 
@@ -1314,14 +1324,14 @@ func (ds *docServer) writeSrouceCodeFileLink(page *htmlPage, pkg *code.Package, 
 	//originalFile := ds.analyzer.OriginalGoSourceFile(sourceFilename)
 	////fmt.Fprintf(page, `<a href="/src:%[1]s">%[1]s</a>`, originalFile)
 	//buildPageHref(ResTypeSource, originalFile, false, originalFile, page)
-	buildPageHref(ResTypeSource, pkg.Path()+"/"+sourceFilename, false, sourceFilename, page)
+	buildPageHref(page.PathInfo, pagePathInfo{ResTypeSource, pkg.Path() + "/" + sourceFilename}, page, sourceFilename)
 }
 
 func (ds *docServer) writeSourceCodeDocLink(page *htmlPage, pkg *code.Package, sourceFilename string) {
 	//originalFile := ds.analyzer.OriginalGoSourceFile(sourceFilename)
 	////fmt.Fprintf(page, `<a href="/src:%s#doc">d-&gt;</a> `, originalFile)
 	//buildPageHref(ResTypeSource, originalFile, false, "d-&gt;", page, "doc")
-	buildPageHref(ResTypeSource, pkg.Path()+"/"+sourceFilename, false, "d-&gt;", page, "doc")
+	buildPageHref(page.PathInfo, pagePathInfo{ResTypeSource, pkg.Path() + "/" + sourceFilename}, page, "d-&gt;", "doc")
 	page.WriteByte(' ')
 }
 
@@ -1374,13 +1384,15 @@ func (ds *docServer) analyzeSoureCode(pkgPath, bareFilename string) (*SourceFile
 		return nil, errors.New("file not found")
 	}
 
+	//log.Printf("%#v", fileInfo)
+
 	//generatedFilePath := srcPath
 	//filePath := srcPath
 	generatedFilePath := fileInfo.GeneratedFile
 	filePath := fileInfo.OriginalFile
 	if fileInfo != nil && fileInfo.GeneratedFile != "" {
 		filePath = fileInfo.GeneratedFile
-		if fileInfo.GeneratedFile == generatedFilePath {
+		if fileInfo.GeneratedFile == fileInfo.OriginalFile {
 			generatedFilePath = ""
 		}
 	}
@@ -1393,7 +1405,7 @@ func (ds *docServer) analyzeSoureCode(pkgPath, bareFilename string) (*SourceFile
 	//log.Println("===================== filePath=", filePath)
 
 	var result *SourceFileAnalyzeResult
-	if fileInfo == nil {
+	if fileInfo.AstFile == nil {
 		//log.Println("fileInfo == nil")
 
 		lineCount, _ := BuildLineOffsets(content, true)
@@ -1401,7 +1413,7 @@ func (ds *docServer) analyzeSoureCode(pkgPath, bareFilename string) (*SourceFile
 		result = &SourceFileAnalyzeResult{
 			PkgPath:       pkg.Path(),
 			BareFilename:  bareFilename,
-			OriginalPath:  filePath,
+			OriginalPath:  fileInfo.OriginalFile,
 			GeneratedPath: generatedFilePath,
 			Lines:         make([]string, 0, lineCount),
 		}
@@ -1454,6 +1466,8 @@ func (ds *docServer) analyzeSoureCode(pkgPath, bareFilename string) (*SourceFile
 		}
 
 		astVisitor = &AstVisitor{
+			currentPathInfo: pagePathInfo{ResTypeSource, pkg.Path() + "/" + bareFilename},
+
 			dataAnalyzer: ds.analyzer,
 			pkg:          pkg,
 			fset:         pkg.PPkg.Fset,
@@ -1467,7 +1481,8 @@ func (ds *docServer) analyzeSoureCode(pkgPath, bareFilename string) (*SourceFile
 
 			result: &SourceFileAnalyzeResult{
 				PkgPath:       pkg.Path(),
-				OriginalPath:  filePath,
+				BareFilename:  bareFilename,
+				OriginalPath:  fileInfo.OriginalFile,
 				GeneratedPath: generatedFilePath,
 				Lines:         make([]string, 0, file.LineCount()),
 				DocStartLine:  docStartLine,

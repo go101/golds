@@ -32,7 +32,9 @@ func (*English) Text_RequireStat(numRequires, numRequiredBys int) string {
 // package details page: type details
 ///////////////////////////////////////////////////////////////////
 
-func (*English) Text_Package() string { return "Package" }
+func (*English) Text_Package(pkgPath string) string {
+	return fmt.Sprintf("Package: %s", pkgPath)
+}
 
 func (*English) Text_BelongingPackage() string { return "Belonging Package" }
 
@@ -122,7 +124,13 @@ func (*English) Text_References(num int) string {
 // package dependencies page
 ///////////////////////////////////////////////////////////////////
 
-func (*English) Text_DependencyRelations() string { return "Dependency Relation" }
+func (*English) Text_DependencyRelations(pkgPath string) string {
+	if pkgPath == "" {
+		return "Dependency Relation" // used in package details page
+	} else {
+		return fmt.Sprintf("Dependency Relation: %s", pkgPath)
+	}
+}
 
 func (*English) Text_Imports() string { return "Imports" }
 
@@ -132,8 +140,10 @@ func (*English) Text_ImportedBy() string { return "Imported By" }
 // source code page
 ///////////////////////////////////////////////////////////////////
 
-func (*English) Text_SourceCode() string { return "Source" }
+func (*English) Text_SourceCode(pkgPath, bareFilename string) string {
+	return fmt.Sprintf("Source: %s in package %s", bareFilename, pkgPath)
+}
 
-func (*English) Text_SourceFilePath() string { return "Source File Path" }
+func (*English) Text_SourceFilePath() string { return "Source File" }
 
 func (*English) Text_GeneratedFrom() string { return "Generated From" }

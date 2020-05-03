@@ -91,7 +91,7 @@ func (ds *docServer) buildPackageDependenciesData(pkgPath string) *PackageDepend
 }
 
 func (ds *docServer) buildPackageDependenciesPage(depInfo *PackageDependencyInfo) []byte {
-	page := NewHtmlPage(ds.currentTranslation.Text_DependencyRelations()+": "+depInfo.ImportPath, ds.currentTheme.Name(), false, depInfo.ImportPath, ResTypeDependency)
+	page := NewHtmlPage(ds.currentTranslation.Text_DependencyRelations(depInfo.ImportPath), ds.currentTheme.Name(), pagePathInfo{ResTypeDependency, depInfo.ImportPath})
 
 	fmt.Fprintf(page, `
 <pre><code><span style="font-size:xx-large;">package <b>%s</b></span>
@@ -103,7 +103,7 @@ func (ds *docServer) buildPackageDependenciesPage(depInfo *PackageDependencyInfo
 <span class="title">%s</span>
 	<a href="%s">%s</a>`,
 		ds.currentTranslation.Text_ImportPath(),
-		buildPageHref(ResTypePackage, depInfo.ImportPath, false, "", nil),
+		buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, depInfo.ImportPath}, nil, ""),
 		depInfo.ImportPath,
 	)
 

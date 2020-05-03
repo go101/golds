@@ -55,13 +55,16 @@ type htmlPage struct {
 	theme *Theme
 	trans Translation
 
-	// The two are for generation mode to compute relative paths.
-	pagePath string
-	resType  pageResType
+	PathInfo pagePathInfo
 }
 
-func NewHtmlPage(title, themeName string, inGenModeRootPages bool, path string, resType pageResType) *htmlPage {
-	page := htmlPage{resType: resType, pagePath: path}
+type pagePathInfo struct {
+	resType pageResType
+	resPath string
+}
+
+func NewHtmlPage(title, themeName string, currentPageInfo pagePathInfo) *htmlPage {
+	page := htmlPage{PathInfo: currentPageInfo}
 	page.Grow(4 * 1024 * 1024)
 
 	fmt.Fprintf(&page, `<!DOCTYPE html>
@@ -76,8 +79,8 @@ func NewHtmlPage(title, themeName string, inGenModeRootPages bool, path string, 
 <body><div>
 `,
 		title,
-		buildPageHref(ResTypeCSS, themeName, inGenModeRootPages, "", nil),
-		buildPageHref(ResTypeJS, "gold", inGenModeRootPages, "", nil),
+		buildPageHref(currentPageInfo, pagePathInfo{ResTypeCSS, themeName}, nil, ""),
+		buildPageHref(currentPageInfo, pagePathInfo{ResTypeJS, "gold"}, nil, ""),
 	)
 
 	return &page
@@ -88,4 +91,22 @@ func (page *htmlPage) Done() []byte {
 
 	page.WriteString(`</div></body></html>`)
 	return append([]byte(nil), page.Bytes()...)
+}
+
+func (page *htmlPage) writePageLink(writeHref func(), linkText string, fragments ...string) {
+	if linkText != "" {
+		page.WriteString(`<a href="`)
+	}
+	writeHref()
+	if len(fragments) > 0 {
+		page.WriteByte('#')
+		for _, fm := range fragments {
+			page.WriteString(fm)
+		}
+	}
+	if linkText != "" {
+		page.WriteString(`">`)
+		page.WriteString(linkText)
+		page.WriteString(`</a>`)
+	}
 }

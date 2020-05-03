@@ -278,6 +278,7 @@ todo:
   Their docs might be a little different.
 * Alias to a type in another package, asOutputList, type is not bold displayed.
 
+
 * "go/doc": doc.Examples(...)
 * when finding selector shadowing, need to consider unexported names needing package import pathes, ...
 * func (x, y int): len(params []ast.Field) == 1, len(params[0].Names) == 2
@@ -294,6 +295,7 @@ todo:
 * stat: n interfaces, m structs, ... (on overview and package detail pages)
   * as parameters/results of N functions
   * embedding in n types
+* add a RoughLastestSubmitTime, if the time is earlier than time.Now for one months, notify ...
 * docs.go101.org/pkg:xxx
                 /src:xxx
                 /index.html

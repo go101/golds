@@ -45,17 +45,15 @@ type Translation interface {
 	Text_RequireStat(numRequires, numRequiredBys int) string // to use
 
 	// package details page
-	Text_Package() string
+	Text_Package(pkgPath string) string
 	Text_BelongingPackage() string // also used in source code page
 	Text_ImportPath() string
-	Text_DependencyRelations() string // also used in package dependencoes page
 	Text_ImportStat(numImports, numImportedBys int, depPageURL string) string
 	Text_InvolvedFiles(num int) string
 	Text_ExportedValues(num int) string
 	Text_ExportedTypeNames(num int) string
 	Text_UnexportedTypeNames(num int) string // to use
 
-	// package details page: type details
 	Text_Fields(num int) string
 	Text_Methods(num int) string
 	Text_ImplementedBy(num int) string
@@ -66,11 +64,12 @@ type Translation interface {
 	Text_References(num int) string
 
 	// package dependencies page
+	Text_DependencyRelations(pkgPath string) string // also used in package details page with a blank argument.
 	Text_Imports() string
 	Text_ImportedBy() string
 
 	// source code page
-	Text_SourceCode() string
+	Text_SourceCode(pkgPath, bareFilename string) string
 	Text_SourceFilePath() string
 	Text_GeneratedFrom() string
 }

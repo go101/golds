@@ -47,19 +47,19 @@ func (d *CodeAnalyzer) CollectSourceFiles() {
 			panic(fmt.Sprintf("!!! len(pkg.PPkg.CompiledGoFiles) != len(pkg.PPkg.Syntax), %d:%d, %s", len(pkg.PPkg.CompiledGoFiles), len(pkg.PPkg.Syntax), pkg.Path()))
 		}
 
+		for _, path := range pkg.PPkg.OtherFiles {
+			d.sourceFile2PackageTable[path] = pkg
+		}
+
 		for _, path := range pkg.PPkg.CompiledGoFiles {
 			d.sourceFile2PackageTable[path] = pkg
 		}
 
 		for _, path := range pkg.PPkg.GoFiles {
 			if _, ok := d.sourceFile2PackageTable[path]; !ok {
-				log.Println("! in GoFiles but not CompiledGoFiles:", path)
+				//log.Println("! in GoFiles but not CompiledGoFiles:", path)
 				d.sourceFile2PackageTable[path] = pkg
 			}
-		}
-
-		for _, path := range pkg.PPkg.OtherFiles {
-			d.sourceFile2PackageTable[path] = pkg
 		}
 
 		d.BuildCgoFileMappings(pkg)
@@ -172,15 +172,6 @@ func (d *CodeAnalyzer) BuildCgoFileMappings(pkg *Package) {
 
 	pkg.SourceFiles = make([]SourceFileInfo, 0, len(pkg.PPkg.CompiledGoFiles))
 
-	for _, path := range pkg.PPkg.OtherFiles {
-		pkg.SourceFiles = append(pkg.SourceFiles,
-			SourceFileInfo{
-				BareFilename: filepath.Base(path),
-				OriginalFile: path,
-			},
-		)
-	}
-
 	for i, compiledFile := range pkg.PPkg.CompiledGoFiles {
 		if strings.HasSuffix(compiledFile, ".go") {
 			// ToDo: verify compiledFile must be also in  pkg.PPkg.GoFiles
@@ -217,4 +208,13 @@ func (d *CodeAnalyzer) BuildCgoFileMappings(pkg *Package) {
 	//	log.Println("===", info.OriginalGoFile)
 	//	log.Println("   ", info.GeneratedFile, info.GoFileContentOffset)
 	//}
+
+	for _, path := range pkg.PPkg.OtherFiles {
+		pkg.SourceFiles = append(pkg.SourceFiles,
+			SourceFileInfo{
+				BareFilename: filepath.Base(path),
+				OriginalFile: path,
+			},
+		)
+	}
 }

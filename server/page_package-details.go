@@ -43,7 +43,7 @@ func (ds *docServer) packageDetailsPage(w http.ResponseWriter, r *http.Request, 
 }
 
 func (ds *docServer) buildPackageDetailsPage(pkg *PackageDetails) []byte {
-	page := NewHtmlPage(ds.currentTranslation.Text_Package()+": "+pkg.ImportPath, ds.currentTheme.Name(), false, pkg.ImportPath, ResTypePackage)
+	page := NewHtmlPage(ds.currentTranslation.Text_Package(pkg.ImportPath), ds.currentTheme.Name(), pagePathInfo{ResTypePackage, pkg.ImportPath})
 
 	fmt.Fprintf(page, `
 <pre><code><span style="font-size:xx-large;">package <b>%s</b></span>
@@ -55,7 +55,7 @@ func (ds *docServer) buildPackageDetailsPage(pkg *PackageDetails) []byte {
 <span class="title">%s</span>
 	<a href="%s#pkg-%d">%s</a>`,
 		ds.currentTranslation.Text_ImportPath(),
-		buildPageHref("", "", false, "", nil),
+		buildPageHref(page.PathInfo, pagePathInfo{ResTypeNone, ""}, nil, ""),
 		pkg.Index,
 		pkg.ImportPath,
 	)
@@ -65,9 +65,9 @@ func (ds *docServer) buildPackageDetailsPage(pkg *PackageDetails) []byte {
 
 <span class="title">%s</span>
 	%s`,
-			ds.currentTranslation.Text_DependencyRelations(),
+			ds.currentTranslation.Text_DependencyRelations(""),
 			//ds.currentTranslation.Text_ImportStat(int(pkg.NumDeps), int(pkg.NumDepedBys), "/dep:"+pkg.ImportPath),
-			ds.currentTranslation.Text_ImportStat(int(pkg.NumDeps), int(pkg.NumDepedBys), buildPageHref(ResTypeDependency, pkg.ImportPath, false, "", nil)),
+			ds.currentTranslation.Text_ImportStat(int(pkg.NumDeps), int(pkg.NumDepedBys), buildPageHref(page.PathInfo, pagePathInfo{ResTypeDependency, pkg.ImportPath}, nil, "")),
 		)
 	}
 
@@ -632,7 +632,7 @@ func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pk
 			fmt.Fprintf(page, `<a href="`)
 			//page.WriteString("/pkg:")
 			//page.WriteString(v.Package().Path())
-			buildPageHref(ResTypePackage, v.Package().Path(), false, "", page)
+			buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, v.Package().Path()}, page, "")
 		} else {
 			fmt.Fprintf(page, `<a href="`)
 		}
@@ -660,7 +660,7 @@ func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pk
 				if v.Package() != pkg {
 					//fmt.Fprintf(page, `(*<a href="/pkg:%[1]s#name-%[2]s">%[2]s</a>).`, v.Package().Path(), typeId.Name)
 					page.WriteString("(*")
-					buildPageHref(ResTypePackage, v.Package().Path(), false, typeId.Name, page, "name-", typeId.Name)
+					buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, v.Package().Path()}, page, typeId.Name, "name-", typeId.Name)
 					page.WriteString(").")
 				} else {
 					fmt.Fprintf(page, `(*<a href="#name-%[1]s">%[1]s</a>).`, typeId.Name)
@@ -668,7 +668,7 @@ func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pk
 			} else {
 				if v.Package() != pkg {
 					//fmt.Fprintf(page, `<a href="/pkg:%[1]s#name-%[2]s">%[2]s</a>.`, v.Package().Path(), typeId.Name)
-					buildPageHref(ResTypePackage, v.Package().Path(), false, typeId.Name, page, "name-", typeId.Name)
+					buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, v.Package().Path()}, page, typeId.Name, "name-", typeId.Name)
 				} else {
 					fmt.Fprintf(page, `<a href="#name-%[1]s">%[1]s</a>.`, typeId.Name)
 				}
@@ -680,7 +680,7 @@ func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pk
 		} else {
 			if v.Package() != pkg {
 				//fmt.Fprintf(page, `<a href="/pkg:%[1]s#name-%[2]s">%[2]s</a>`, v.Package().Path(), v.Name())
-				buildPageHref(ResTypePackage, v.Package().Path(), false, v.Name(), page, "name-", v.Name())
+				buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, v.Package().Path()}, page, v.Name(), "name-", v.Name())
 			} else {
 				fmt.Fprintf(page, `<a href="#name-%[1]s">%[1]s</a>`, v.Name())
 			}
@@ -769,7 +769,7 @@ func writeTypeForListing(page *htmlPage, t *TypeForListing, pkg *code.Package, i
 		fmt.Fprintf(page, `<a href="`)
 		//page.WriteString("/pkg:")
 		//page.WriteString(t.Pkg.Path())
-		buildPageHref(ResTypePackage, t.Pkg.Path(), false, "", page)
+		buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, t.Pkg.Path()}, page, "")
 	} else {
 		fmt.Fprintf(page, `<a href="`)
 	}

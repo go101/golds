@@ -9,7 +9,6 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -76,7 +75,7 @@ func nextPageToLoad() (info *genPageInfo) {
 }
 
 // Return the id and whether or not the id is just registered.
-func resHrefID(resType pageResType, resName string) (int, bool) {
+func resHrefID(resType pageResType, resPath string) (int, bool) {
 	pageHrefsMutex.Lock()
 	defer pageHrefsMutex.Unlock()
 	hrefs := resHrefs[resType]
@@ -84,10 +83,10 @@ func resHrefID(resType pageResType, resName string) (int, bool) {
 		hrefs = make(map[string]int, 1024*10)
 		resHrefs[resType] = hrefs
 	}
-	id, ok := hrefs[resName]
+	id, ok := hrefs[resPath]
 	if !ok {
 		id = len(hrefs)
-		hrefs[resName] = id
+		hrefs[resPath] = id
 	}
 	return id, !ok
 }
@@ -102,16 +101,17 @@ var resType2ExtTable = map[pageResType]string{
 	"jvs": ".js",
 }
 
-type resPathInfo struct {
-	resType    pageResType
-	resPath    string
-	subResType pageResType
-	subResPath string
+var dotdotslashes = strings.Repeat("../", 256)
+
+func DotDotSlashes(count int) string {
+	return dotdotslashes[:count*3]
 }
 
-func (curRes *resPathInfo) buildPageHref(linkedRes resPathInfo, fragments ...string) string {
-	// ToDo
-	return ""
+func RelativePath(a, b string) string {
+	var c = FindPackageCommonPrefixPaths(a, b)
+	a = a[len(c):]
+	n := strings.Count(a, "/")
+	return DotDotSlashes(n) + b[len(c):]
 }
 
 // ToDo:
@@ -130,107 +130,77 @@ func (curRes *resPathInfo) buildPageHref(linkedRes resPathInfo, fragments ...str
 // Note: fragments is only meaningful when page != nil.
 //
 // ToDo: improve the design.
-func buildPageHref(resType pageResType, resName string, inRootPages bool, linkText string, page *htmlPage, fragments ...string) (r string) {
+func buildPageHref(currentPageInfo, linkedPageInfo pagePathInfo, page *htmlPage, linkText string, fragments ...string) (r string) {
+	if genMode {
+		goto Generate
+	}
 
-	writePageLink := func(writeHref func()) {
-		if linkText != "" {
-			page.WriteString(`<a href="`)
+	if linkedPageInfo.resType == ResTypeNone {
+		if linkedPageInfo.resPath != "" {
+			panic("should not now")
 		}
-		writeHref()
-		if len(fragments) > 0 {
-			page.WriteByte('#')
-			for _, fm := range fragments {
-				page.WriteString(fm)
-			}
+		if page != nil {
+			page.writePageLink(func() {
+				page.WriteByte('/')
+				page.WriteString(linkedPageInfo.resPath)
+			}, linkText, fragments...)
+		} else {
+			r = "/" + linkedPageInfo.resPath
 		}
-		if linkText != "" {
-			page.WriteString(`">`)
-			page.WriteString(linkText)
-			page.WriteString(`</a>`)
+	} else {
+		if page != nil {
+			page.writePageLink(func() {
+				page.WriteByte('/')
+				page.WriteString(string(linkedPageInfo.resType))
+				page.WriteByte(':')
+				page.WriteString(linkedPageInfo.resPath)
+			}, linkText, fragments...)
+		} else {
+			r = "/" + string(linkedPageInfo.resType) + ":" + linkedPageInfo.resPath
 		}
 	}
 
-	if genMode {
-		var needRegisterHref = false
-		var id int
+	return
 
-		if resType == "" { // homepages
-			if resName != "" {
+Generate:
+
+	var makeHref = func(pathInfo pagePathInfo) string {
+		if pathInfo.resType == ResTypeNone { // homepages
+			if pathInfo.resPath != "" {
 				panic("should not now")
 			}
-			_, needRegisterHref = resHrefID("", resName)
-			if page != nil {
-				writePageLink(func() {
-					if !inRootPages {
-						page.WriteString("index.html")
-					} else {
-						page.WriteString("../index.html")
-					}
-				})
-			} else {
-				if inRootPages {
-					r = "index" + resType2ExtTable[resType]
-				} else {
-					r = "../index" + resType2ExtTable[resType]
-				}
-			}
-		} else { // resource pages
-			id, needRegisterHref = resHrefID(resType, resName)
-			if page != nil {
-				writePageLink(func() {
-					if inRootPages {
-						page.WriteString("pages/")
-					}
-					page.WriteString(string(resType))
-					page.WriteByte('-')
-					page.WriteString(strconv.Itoa(id))
-					page.WriteString(".html")
-				})
-			} else {
-				if inRootPages {
-					r = "pages/" + string(resType) + "-" + strconv.Itoa(id) + resType2ExtTable[resType]
-				} else {
-					r = string(resType) + "-" + strconv.Itoa(id) + resType2ExtTable[resType]
-				}
-			}
+			return "index" + resType2ExtTable[pathInfo.resType]
+		} else {
+
+			return string(pathInfo.resType) + "/" + pathInfo.resPath + resType2ExtTable[pathInfo.resType]
+		}
+	}
+
+	var _, needRegisterHref = resHrefID(linkedPageInfo.resType, linkedPageInfo.resPath)
+	var currentHref = makeHref(currentPageInfo)
+	var generatedHref = makeHref(linkedPageInfo)
+	var relativeHref = RelativePath(currentHref, generatedHref)
+
+	if page != nil {
+		page.writePageLink(func() {
+			page.WriteString(relativeHref)
+		}, linkText, fragments...)
+	} else {
+		r = relativeHref
+	}
+
+	if needRegisterHref {
+		var hrefNotForGenerating string
+		if linkedPageInfo.resType == ResTypeNone {
+			hrefNotForGenerating = "/" + linkedPageInfo.resPath
+		} else {
+			hrefNotForGenerating = "/" + string(linkedPageInfo.resType) + ":" + linkedPageInfo.resPath
 		}
 
-		if needRegisterHref {
-			var hrefNotForGenerating, filePath string
-			if resType == "" {
-				hrefNotForGenerating = "/" + resName
-				filePath = "index" + resType2ExtTable[resType]
-			} else {
-				hrefNotForGenerating = "/" + string(resType) + ":" + resName
-				filePath = "pages/" + string(resType) + "-" + strconv.Itoa(id) + resType2ExtTable[resType]
-			}
-			registerPageHref(genPageInfo{
-				HrefPath: hrefNotForGenerating,
-				FilePath: filePath,
-			})
-		}
-	} else {
-		if resType == "" {
-			if page != nil {
-				writePageLink(func() {
-					page.WriteByte('/')
-					page.WriteString(resName)
-				})
-			} else {
-				r = "/" + resName
-			}
-		} else {
-			if page != nil {
-				writePageLink(func() {
-					page.WriteByte('/')
-					page.WriteString(string(resType))
-					page.WriteByte(':')
-					page.WriteString(resName)
-				})
-			} else {
-				r = "/" + string(resType) + ":" + resName
-			}
-		}
+		registerPageHref(genPageInfo{
+			HrefPath: hrefNotForGenerating,
+			FilePath: generatedHref,
+		})
 	}
 
 	return
@@ -267,7 +237,7 @@ func Gen(outputDir string, args []string, printUsage func(io.Writer)) {
 
 	var pages = make(chan Page, 8)
 
-	buildPageHref("", "", true, "", nil) // the overview page
+	buildPageHref(pagePathInfo{ResTypeNone, ""}, pagePathInfo{ResTypeNone, ""}, nil, "") // the overview page
 
 	// stat orso number of pages, print about progress in writing.
 
