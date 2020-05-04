@@ -27,16 +27,16 @@ func main() {
 	}
 
 	if o := *genFlag; o != "" {
-		server.Gen(o, flag.Args(), printUsage)
+		server.Gen(o, flag.Args(), printUsage, RoughBuildTime)
 		return
 	}
 
-	server.Run(*portFlag, flag.Args(), printUsage)
+	server.Run(*portFlag, flag.Args(), printUsage, RoughBuildTime)
 }
 
 var hFlag = flag.Bool("h", false, "show help")
 var helpFlag = flag.Bool("help", false, "show help")
-var genFlag = flag.String("output", "", "html generation output folder")
+var genFlag = flag.String("gen", "", "html generation output folder")
 var portFlag = flag.String("port", "56789", "preferred server port")
 
 // var versionFlag = flag.String("version", "", "show version info")
@@ -65,5 +65,6 @@ Examples:
 		Show docs of the package in the current directory.
 	%[1]v ./...
 		Show docs of the package and sub-packages in the current directory.
-`, os.Args[0])
+`,
+		os.Args[0])
 }

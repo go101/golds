@@ -17,7 +17,8 @@ func (ds *docServer) overviewPage(w http.ResponseWriter, r *http.Request) {
 	ds.mutex.Lock()
 	defer ds.mutex.Unlock()
 
-	if ds.phase < Phase_Parsed {
+	//if ds.phase < Phase_Parsed {
+	if ds.phase < Phase_Analyzed {
 		writeAutoRefreshHTML(w, r)
 		return
 	}
@@ -39,6 +40,12 @@ func (ds *docServer) buildOverviewPage(overview *Overview) []byte {
 		ds.currentTranslation.Text_PackageList(len(overview.Packages)),
 	)
 
+	if genMode {
+		ds.writeUpdateGoldBlock(page)
+	}
+
+	ds.writeStatsBlock(page, &overview.Stats)
+
 	ds.writePackagesForListing(page, overview.Packages, true, true)
 
 	page.WriteString("</pre>")
@@ -58,7 +65,7 @@ func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*Package
 
 	for i, pkg := range packages {
 		if writeAnchorTarget {
-			fmt.Fprintf(page, `<div class="anchor" id="pkg-%d">`, pkg.Index)
+			fmt.Fprintf(page, `<div class="anchor" id="pkg-%s">`, pkg.Path)
 		} else {
 			page.WriteByte('\n')
 		}
@@ -107,8 +114,22 @@ func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*Package
 	}
 }
 
+func (ds *docServer) writeUpdateGoldBlock(page *htmlPage) {
+	// ds.roughBuildTime
+}
+
+func (ds *docServer) writeStatsBlock(page *htmlPage, stats *code.Stats) {
+	// Front page:
+	// * N typed recorded, in which M are nameds, P are exporteds.
+	// * Z aliases. K exported.
+	// * X interfaces (Y nameds),
+	// Main packages: ...
+}
+
 type Overview struct {
 	Packages []*PackageForListing
+
+	code.Stats
 }
 
 type PackageForListing struct {

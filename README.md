@@ -1,5 +1,13 @@
 gold - Go local docs server.
 
+Sell points:
+* show implementions
+* show promoted selectors, even on unexported embedded fields.
+* rich code view experience
+* JavaScript-off friendly
+
+The HTML generation feature is for distributed docs.
+
 It is really a problem that gcc is needed to show std package docs.
   Need mention: https://github.com/golang/go/wiki/WindowsBuild
 
@@ -237,10 +245,19 @@ todo:
 * (done) // 调换次序
 	log.Println("[analyze packages 4...]")
 	methedCache := d.analyzePackages_FindImplementations()
+* (done) html generatioon
+* (done) link to go.dev/pkg/xxx (shortcut)
 
-	log.Println("[analyze packages 4...]")
-	d.analyzePackages_CollectSelectors()
 
+* value: find other values with the same type
+* type: find convertible/assignable types
+* type: as fields of
+  for interface: subset of
+  for non-interface: embedded by
+* unnamed type: find all occurences, as inputs/outputs/fields of ...
+* interface embed overlapping interfaces, a mehtod might have several doc sources
+* method: sjhow whether or not is promoted
+* when click function/variable/constant declaration, show reference list.
 * for all exported values, filter: func | var | const | group by type | ...
 * cgo on mac: how to?
 * crash: /src:/home/d630/projects@asiainfo/aif/dfplatform/servicebroker/server/apis.go
@@ -277,16 +294,14 @@ todo:
 * handle the case of when a method sourced from several different original ones by embedding.
   Their docs might be a little different.
 * Alias to a type in another package, asOutputList, type is not bold displayed.
-
-
+* more type stats:
+  embedding in n types
 * "go/doc": doc.Examples(...)
+
+
 * when finding selector shadowing, need to consider unexported names needing package import pathes, ...
 * func (x, y int): len(params []ast.Field) == 1, len(params[0].Names) == 2
   ast.Struct.Fields is alike. Check the uses!
-* generator
-* link to go.dev/pkg/xxx (shortcut)
-* MUST add "two weeks not update. Update now?"
-  To prepare for future golf promotion.
 * shortcuts:
   * ~, Backspace: back
   * HOME: to overview page
@@ -294,8 +309,11 @@ todo:
   * 
 * stat: n interfaces, m structs, ... (on overview and package detail pages)
   * as parameters/results of N functions
-  * embedding in n types
 * add a RoughLastestSubmitTime, if the time is earlier than time.Now for one months, notify ...
-* docs.go101.org/pkg:xxx
-                /src:xxx
-                /index.html
+  "two weeks not update. Update now?: to prepare for future golf promotion etc.
+* adjust pkg details page, even simpler, ...
+* rearrange code ...
+* tests
+* js loading in pages
+* css style
+

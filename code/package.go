@@ -1,1227 +1,833 @@
 package code
 
 import (
-	"fmt"
 	"go/ast"
-	"go/build"
-	"go/parser"
 	"go/token"
 	"go/types"
 	"log"
-	"os"
 	"strings"
 
 	"golang.org/x/tools/go/packages"
-	"golang.org/x/tools/go/types/typeutil"
 )
 
-type CodeAnalyzer struct {
-	allModules []*Module
-	stdModule  *Module
 
-	//stdPackages  map[string]struct{}
-	packageTable map[string]*Package
-	packageList  []*Package
-	builtinPkg   *Package
-
-	// This one is removed now. We should use FileSet.PositionFor.
-	//sourceFileLineOffsetTable map[string]int32
-
-	//=== Will be fulfilled in analyse phase ===
-
-	//sourceFile2PackageTable  map[string]SourceFile
-	sourceFile2PackageTable         map[string]*Package
-	generatedFile2OriginalFileTable map[string]string
-
-	// *types.Type -> *TypeInfo
-	lastTypeIndex       uint32
-	ttype2TypeInfoTable typeutil.Map
-	allTypeInfos        []*TypeInfo
-
-	// Package-level declared type names.
-	lastTypeNameIndex uint32
-	allTypeNameTable  map[string]*TypeName
-
-	// Position info of some runtime functions.
-	runtimeFuncPositions map[string]token.Position
-
-	// Refs of unnamed types, type names, variables, functions, ...
-	// Why not put []RefPos in TypeInfo, Variable, ...?
-	refPositions map[interface{}][]RefPos
-
-	// Not concurrent safe.
-	tempTypeLookup map[uint32]struct{}
-
-	forbidRegisterTypes bool // for debug
+type Module struct {
+	Dir     string
+	Root    string // root import path
+	Version string
 }
 
-// Please reset it after using.
-func (d *CodeAnalyzer) tempTypeLookupTable() map[uint32]struct{} {
-	if d.tempTypeLookup == nil {
-		d.tempTypeLookup = make(map[uint32]struct{}, 1024)
-	}
-	return d.tempTypeLookup
+type Package struct {
+	Index int
+	PPkg  *packages.Package
+
+	Mod      *Module
+	Deps     []*Package
+	DepLevel int // 0 means the level is not determined yet
+	DepedBys []*Package
+
+	// This field might be shared with PackageForDisplay
+	// for concurrenct reads.
+	*PackageAnalyzeResult
 }
 
-func (d *CodeAnalyzer) resetTempTypeLookupTable() {
-	// the gc compiler optimize this
-	for k := range d.tempTypeLookup {
-		delete(d.tempTypeLookup, k)
+func (p *Package) Path() string {
+	return p.PPkg.PkgPath // might be prefixed with "vendor/", which is different from import path.
+}
+
+type PackageAnalyzeResult struct {
+	AllTypeNames []*TypeName
+	AllFunctions []*Function
+	AllVariables []*Variable
+	AllConstants []*Constant
+	AllImports   []*Import
+	SourceFiles  []SourceFileInfo
+}
+
+func NewPackageAnalyzeResult() *PackageAnalyzeResult {
+	// ToDo: maybe it is better to run a statistic phase firstly,
+	// so that the length of each slice will get knowledged.
+	return &PackageAnalyzeResult{
+		AllTypeNames: make([]*TypeName, 0, 64),
+		AllFunctions: make([]*Function, 0, 64),
+		AllVariables: make([]*Variable, 0, 64),
+		AllConstants: make([]*Constant, 0, 64),
+		AllImports:   make([]*Import, 0, 64),
 	}
 }
 
-func (d *CodeAnalyzer) NumPackages() int {
-	return len(d.packageList)
+func (r *PackageAnalyzeResult) SourceFileInfoByBareFilename(bareFilename string) *SourceFileInfo {
+	for _, info := range r.SourceFiles {
+		//if info.OriginalGoFile == srcPath {
+		//	return &info
+		//}
+		//if info.GeneratedFile == srcPath {
+		//	return &info
+		//}
+		if info.BareFilename == bareFilename {
+			return &info
+		}
+		if info.BareGeneratedFilename == bareFilename {
+			return &info
+		}
+	}
+	return nil
 }
 
-func (d *CodeAnalyzer) PackageAt(i int) *Package {
-	return d.packageList[i]
+// ToDo: better to maintain a global sourceFilePath => SourceFileInfo table?
+//func (r *PackageAnalyzeResult) SourceFileInfo(srcPath string) *SourceFileInfo {
+func (r *PackageAnalyzeResult) SourceFileInfoByFilePath(srcPath string) *SourceFileInfo {
+	for _, info := range r.SourceFiles {
+		if info.OriginalFile == srcPath {
+			return &info
+		}
+		if info.GeneratedFile == srcPath {
+			return &info
+		}
+	}
+	return nil
 }
 
-func (d *CodeAnalyzer) PackageByPath(path string) (*Package, bool) {
-	pkg, ok := d.packageTable[path]
-	return pkg, ok
+type RefPos struct {
+	Pkg *Package
+	Pos token.Pos
 }
 
-func (d *CodeAnalyzer) NumSourceFiles() int {
-	return len(d.sourceFile2PackageTable) // including generated files and non-go files
+type AstNode struct {
+	Pkg  *Package
+	Node ast.Node
 }
 
-func (d *CodeAnalyzer) SourceFile2Package(path string) (*Package, bool) {
-	srcFile, ok := d.sourceFile2PackageTable[path]
-	return srcFile, ok
+type Resource interface {
+	Name() string
+	Exported() bool
+	//IndexString() string
+	Documentation() string
+	Comment() string
+	Position() token.Position
+	Package() *Package
 }
 
-//func (d *CodeAnalyzer) SourceFileLineOffset(path string) int {
-//	return int(d.sourceFileLineOffsetTable[path])
+type ValueResource interface {
+	Resource
+	TType() types.Type // The result should not be used in comparisons.
+	TypeInfo(d *CodeAnalyzer) *TypeInfo
+}
+
+type Attribute uint32
+
+const (
+	// Runtime only flags.
+	analyseCompleted Attribute = 1 << (31 - iota)
+	directSelectorsCollected
+	promotedSelectorsCollected
+
+	// Higher bits are for runtime-only flags.
+	AtributesPersistentMask Attribute = (1 << 25) - 1
+
+	// Caching individual packages seperately might be not a good idea.
+	// There are many complexities here.
+	// * implementation relations become larger along with more packages are involved.
+	// Caching by arguments starting packages, as one file, is simpler.
+
+	// For functions, type aliases and named types.
+	Builtin Attribute = 1 << 0
+
+	// For type aliases and named types.
+	Embeddable    Attribute = 1 << 1
+	PtrEmbeddable Attribute = 1 << 2
+
+	// For unnamed struct and interface types.
+	HasUnexporteds Attribute = 1 << 3
+
+	// For all types.
+	Defined    Attribute = 1 << 4
+	Comparable Attribute = 1 << 5
+
+	// For channel types.
+	Sendable   Attribute = 1 << 6
+	Receivable Attribute = 1 << 7
+
+	// For funcitons.
+	Variadic Attribute = 1 << 8
+)
+
+type TypeSource struct {
+	TypeName    *TypeName
+	UnnamedType *TypeInfo
+}
+
+//func (ts *TypeSource) Denoting(d *CodeAnalyzer) *TypeInfo {
+//	if ts.UnnamedType != nil {
+//		return ts.UnnamedType
+//	}
+//	return ts.TypeName.Denoting(d)
 //}
 
-func (d *CodeAnalyzer) OriginalGoSourceFile(filename string) string {
-	if f, ok := d.generatedFile2OriginalFileTable[filename]; ok {
-		return f
+type TypeName struct {
+	// One and only one of the two is nil.
+	Alias *TypeAlias
+	Named *TypeInfo
+
+	//index uint32 // the global index
+
+	// ToDo: simplify the source defintion.
+	// Four kinds of sources to affect promoted selectors:
+	// 1. typename
+	// 2. *typename
+	// 3. unnamed type
+	// 4. *unname type
+	Source     TypeSource
+	StarSource *TypeSource
+
+	UsePositions []token.Position
+
+	*types.TypeName
+
+	index uint32 // ToDo: any useful?
+
+	Pkg     *Package // some duplicated with types.TypeName.Pkg(), except builtin types
+	AstDecl *ast.GenDecl
+	AstSpec *ast.TypeSpec
+}
+
+//func (tn *TypeName) IndexString() string {
+//	var b strings.Builder
+//
+//	b.WriteString(tn.Name())
+//	if tn.Alias != nil {
+//		b.WriteString(" = ")
+//	} else {
+//		b.WriteString(" ")
+//	}
+//	WriteType(&b, tn.AstSpec.Type, tn.Pkg.PPkg.TypesInfo, true)
+//
+//	return b.String()
+//}
+
+//func (tn *TypeName) Id() string {
+//	return tn.obj.Id()
+//}
+
+//func (tn *TypeName) Name() string {
+//	return tn.obj.Name()
+//}
+
+func (tn *TypeName) Exported() bool {
+	if tn.Pkg.Path() == "builtin" {
+		return !token.IsExported(tn.Name())
 	}
-	return filename
+	return tn.TypeName.Exported()
 }
 
-func (d *CodeAnalyzer) RuntimeFunctionCodePosition(f string) token.Position {
-	return d.runtimeFuncPositions[f]
+func (tn *TypeName) Position() token.Position {
+	return tn.Pkg.PPkg.Fset.PositionFor(tn.AstSpec.Name.Pos(), false)
 }
 
-func (d *CodeAnalyzer) RuntimePackage() *Package {
-	runtimePkg, _ := d.PackageByPath("runtime")
-	return runtimePkg
+func (tn *TypeName) Documentation() string {
+	//doc := tn.AstDecl.Doc.Text()
+	//if t := tn.AstSpec.Doc.Text(); t != "" {
+	//	doc = doc + "\n\n" + t
+	//}
+	//return doc
+	doc := tn.AstSpec.Doc.Text()
+	if doc == "" {
+		doc = tn.AstDecl.Doc.Text()
+	}
+	return doc
 }
 
-func (d *CodeAnalyzer) Id1(p *types.Package, name string) string {
-	if p == nil {
-		p = d.builtinPkg.PPkg.Types
+func (tn *TypeName) Comment() string {
+	return tn.AstSpec.Comment.Text()
+}
+
+func (tn *TypeName) Package() *Package {
+	return tn.Pkg
+}
+
+//func (tn *TypeName) Comment() string {
+//	return tn.AstSpec.Comment.Text()
+//}
+
+//func (tn *TypeName) Denoting(d *CodeAnalyzer) *TypeInfo {
+//	if tn.Named != nil {
+//		return tn.Named
+//	}
+//
+//	if tn.StarSource != nil {
+//		return d.RegisterType(types.NewPointer(tn.StarSource.Denoting(d).TT))
+//	}
+//
+//	return tn.Source.Denoting(d)
+//}
+
+func (tn *TypeName) Denoting() *TypeInfo {
+	if tn.Named != nil {
+		return tn.Named
 	}
 
-	return types.Id(p, name)
+	return tn.Alias.Denoting
 }
 
-func (d *CodeAnalyzer) Id1b(pkg *Package, name string) string {
-	if pkg == nil {
-		return d.Id1(nil, name)
-	}
+//func (tn *TypeName) Underlying(d *CodeAnalyzer) *TypeInfo {
+//	if tn.StarSource != nil || tn.Source.UnnamedType != nil {
+//		return tn.Denoting(d)
+//	}
+//	return tn.Source.TypeName.Underlying(d)
+//}
 
-	return d.Id1(pkg.PPkg.Types, name)
+type TypeAlias struct {
+	Denoting *TypeInfo
+
+	// For named and basic types.
+	TypeName *TypeName
+
+	// Builtin, Embeddable.
+	attributes Attribute
 }
 
-func (d *CodeAnalyzer) Id2(p *types.Package, name string) string {
-	if p == nil {
-		p = d.builtinPkg.PPkg.Types
-	}
+//func (a *TypeAlias) Embeddable() bool {
+//	var tc = a.Denoting.Common()
+//	if tc.Attributes&Embeddable != 0 {
+//		return true
+//	}
+//	if tc.Kind != Pointer {
+//		return false
+//	}
+//	if _, ok := a.Denoting.(*Type_Named); !ok {
+//		return false
+//	}
+//	tc = a.Denoting.(*Type_Pointer).Common()
+//	return tc.Kind&(Ptr|Interface) == 0
+//}
 
-	return p.Path() + "." + name
+type TypeInfo struct {
+	TT types.Type
+
+	Underlying *TypeInfo
+
+	//Implements     []*TypeInfo
+	///StarImplements []*TypeInfo // if TT is neither pointer nor interface.
+	Implements []Implementation
+
+	// For interface types.
+	ImplementedBys []*TypeInfo
+
+	// For builtin and unnamed types only.
+	Aliases []*TypeAlias
+
+	// For named and basic types.
+	TypeName *TypeName
+
+	// For unnamed types.
+	UsePositions []token.Position
+
+	// For unnamed interfaces and structs, this field must be nil.
+	//Pkg *Package // Looks this field is never used. (It really should not exist in this type.)
+
+	// Including promoted ones. For struct types only.
+	// * For named types, only explicitly declared methods are included.
+	//   The field is only built for T. (*T).DirectSelectors is always nil.
+	// * For named interface types, all explicitly specified methods and embedded types (as fields).
+	// * For unnamed struct types, only direct fields. Only built for strct{...}, not for *struct{...}.
+	DirectSelectors []*Selector
+
+	// All methods, including extended/promoted ones.
+	AllMethods []*Selector
+
+	// All fields, including promoted ones.
+	AllFields []*Selector
+
+	// Including promoted ones. For both T and *T.
+	//Methods []*Method
+
+	// For .TypeName != nil
+	AsTypesOf   []ValueResource // variables and constants
+	AsInputsOf  []ValueResource // variables and functions
+	AsOutputsOf []ValueResource // variables and functions
+	// ToDo: register variables (of function types) for AsInputsOf and AsOutputsOf
+
+	attributes Attribute // ToDo: fill the bits
+
+	// The global type index. It will be
+	// used in calculating method signatures.
+	// ToDo: check if it is problematic to allow index == 0.
+	index uint32
+
+	// Used in several scenarios.
+	counter uint32
+	//counter2 int32
 }
 
-func (d *CodeAnalyzer) Id2b(pkg *Package, name string) string {
-	if pkg == nil {
-		return d.Id2(nil, name)
-	}
-
-	return d.Id2(pkg.PPkg.Types, name)
+type Implementation struct {
+	Impler    *TypeInfo // a struct or named type (same as the owner), or a pointer to such a type
+	Interface *TypeInfo // an interface type
 }
 
-// Declared functions.
-func (d *CodeAnalyzer) RegisterFunction(f *Function) {
-	// meaningful?
+type Import struct {
+	*types.PkgName
+
+	Pkg     *Package // some duplicated with types.PkgName.Pkg()
+	AstDecl *ast.GenDecl
+	AstSpec *ast.ImportSpec
 }
 
-// The registered name must be a package-level name.
-func (d *CodeAnalyzer) RegisterTypeName(tn *TypeName) {
-	if d.allTypeNameTable == nil {
-		d.allTypeNameTable = make(map[string]*TypeName, 4096)
-	}
-	tn.index = d.lastTypeNameIndex
-	d.lastTypeNameIndex++
-	if name := tn.Name(); name != "_" {
-		//d.allTypeNameTable[tn.Id()] = tn
-		// Unify the id generations.
-		// !!! For builtin types, tn.TypeName.Pkg() == nil
-		//d.allTypeNameTable[types.Id(tn.TypeName.Pkg(), tn.TypeName.Name())] = tn
+type Constant struct {
+	*types.Const
 
-		//d.allTypeNameTable[types.Id(tn.Pkg.PPkg.Types, tn.TypeName.Name())] = tn
-		d.allTypeNameTable[d.Id2b(tn.Pkg, tn.TypeName.Name())] = tn
-
-		//log.Println(">>>", types.Id(tn.Pkg.PPkg.Types, tn.TypeName.Name()))
-	}
+	Type    *TypeInfo
+	Pkg     *Package // some duplicated with types.Const.Pkg()
+	AstDecl *ast.GenDecl
+	AstSpec *ast.ValueSpec
 }
 
-func (d *CodeAnalyzer) RegisterType(t types.Type) *TypeInfo {
-	typeInfo, _ := d.ttype2TypeInfoTable.At(t).(*TypeInfo)
-	if typeInfo == nil {
-		if d.forbidRegisterTypes {
-			log.Println("=================================", t)
+func (c *Constant) Position() token.Position {
+	for _, n := range c.AstSpec.Names {
+		if n.Name == c.Name() {
+			return c.Pkg.PPkg.Fset.PositionFor(n.Pos(), false)
 		}
-
-		//d.lastTypeIndex++ // the old design
-		typeInfo = &TypeInfo{TT: t, index: d.lastTypeIndex}
-		d.ttype2TypeInfoTable.Set(t, typeInfo)
-		if d.allTypeInfos == nil {
-			d.allTypeInfos = make([]*TypeInfo, 0, 8192)
-
-			// The old design ensure all type index > 0,
-			// which maight be an unnecesary design.
-			//d.allTypeInfos = append(d.allTypeInfos, nil)
-		}
-		d.lastTypeIndex++ // the new design
-		d.allTypeInfos = append(d.allTypeInfos, typeInfo)
-
-		switch t := t.(type) {
-		case *types.Named:
-			//typeInfo.Name = t.Obj().Name()
-
-			underlying := d.RegisterType(t.Underlying())
-			typeInfo.Underlying = underlying
-			//underlying.Underlying = underlying // already done
-		default:
-			typeInfo.Underlying = typeInfo
-		}
-
-		switch t.Underlying().(type) {
-		case *types.Pointer:
-			// The exception is to avoid infinite pointer depth.
-		case *types.Interface:
-			// Pointers of interfaces are not important.
-		default:
-			// *T might have methods if T is neigher an interface nor pointer type.
-			d.RegisterType(types.NewPointer(t))
-		}
 	}
-	return typeInfo
+	panic("should not")
 }
 
-func (d *CodeAnalyzer) RetrieveTypeName(t *TypeInfo) (*TypeName, bool) {
-	if tn := t.TypeName; tn != nil {
-		return tn, false
+func (c *Constant) Documentation() string {
+	doc := c.AstSpec.Doc.Text()
+	if doc == "" {
+		doc = c.AstDecl.Doc.Text()
 	}
-
-	if ptt, ok := t.TT.(*types.Pointer); ok {
-		bt := d.RegisterType(ptt.Elem())
-		if btn := bt.TypeName; btn != nil {
-			return btn, true
-		}
-
-		if _, ok := bt.TT.(*types.Named); ok {
-			panic("the base type must have been registered before calling this function")
-		}
-	}
-
-	return nil, false
+	return doc
 }
 
-func (d *CodeAnalyzer) CleanImplements(self *TypeInfo) []Implementation {
-	// remove:
-	// * self
-	// * unnameds whose underlied names are also in the list (or are self)
-	// The ones in internal packages are kept.
-
-	typeLookupTable := d.tempTypeLookupTable()
-	defer d.resetTempTypeLookupTable()
-
-	if itt, ok := self.TT.Underlying().(*types.Interface); ok {
-		typeLookupTable[self.index] = struct{}{}
-		ut := d.RegisterType(itt)
-		typeLookupTable[ut.index] = struct{}{}
-	}
-
-	implements := make([]Implementation, 0, len(self.Implements))
-	for _, impl := range self.Implements {
-		it := impl.Interface
-		if it.TypeName == nil {
-			continue
-		}
-		if _, ok := typeLookupTable[it.index]; ok {
-			continue
-		}
-		typeLookupTable[it.index] = struct{}{}
-		ut := d.RegisterType(it.TT.Underlying())
-		typeLookupTable[ut.index] = struct{}{}
-		implements = append(implements, impl)
-	}
-	for _, impl := range self.Implements {
-		it := impl.Interface
-		if it.TypeName != nil {
-			continue
-		}
-		if _, ok := typeLookupTable[it.index]; ok {
-			continue
-		}
-		implements = append(implements, impl)
-	}
-
-	return implements
+func (c *Constant) Comment() string {
+	return c.AstSpec.Comment.Text()
 }
 
-func (d *CodeAnalyzer) iterateTypenames(typeLiteral ast.Expr, pkg *Package, onTypeName func(*TypeInfo)) {
-	switch node := typeLiteral.(type) {
+func (c *Constant) Package() *Package {
+	return c.Pkg
+}
+
+func (c *Constant) Exported() bool {
+	if c.Pkg.Path() == "builtin" {
+		return !token.IsExported(c.Name())
+	}
+	return c.Const.Exported()
+}
+
+func (c *Constant) TType() types.Type {
+	return c.Const.Type()
+}
+
+func (c *Constant) TypeInfo(d *CodeAnalyzer) *TypeInfo {
+	if c.Type == nil {
+		c.Type = d.RegisterType(c.TType())
+	}
+	return c.Type
+}
+
+//func (c *Constant) IndexString() string {
+//	btt, ok := c.Type().(*types.Basic)
+//	if !ok {
+//		panic("constant should be always of basic type")
+//	}
+//	isTyped := btt.Info()&types.IsUntyped == 0
+//
+//	var b strings.Builder
+//
+//	b.WriteString(c.Name())
+//	if isTyped {
+//		b.WriteByte(' ')
+//		b.WriteString(c.Type().String())
+//	}
+//	b.WriteString(" = ")
+//	b.WriteString(c.Val().String())
+//
+//	return b.String()
+//}
+
+type Variable struct {
+	*types.Var
+
+	Type    *TypeInfo
+	Pkg     *Package // some duplicated with types.Var.Pkg()
+	AstDecl *ast.GenDecl
+	AstSpec *ast.ValueSpec
+}
+
+func (v *Variable) Position() token.Position {
+	for _, n := range v.AstSpec.Names {
+		if n.Name == v.Name() {
+			return v.Pkg.PPkg.Fset.PositionFor(n.Pos(), false)
+		}
+	}
+	panic("should not")
+}
+
+func (v *Variable) Documentation() string {
+	doc := v.AstSpec.Doc.Text()
+	if doc == "" {
+		doc = v.AstDecl.Doc.Text()
+	}
+	return doc
+}
+
+func (v *Variable) Comment() string {
+	return v.AstSpec.Comment.Text()
+}
+
+func (v *Variable) Package() *Package {
+	return v.Pkg
+}
+
+func (v *Variable) Exported() bool {
+	if v.Pkg.Path() == "builtin" {
+		return !token.IsExported(v.Name())
+	}
+	return v.Var.Exported()
+}
+
+func (v *Variable) TType() types.Type {
+	return v.Var.Type()
+}
+
+func (v *Variable) TypeInfo(d *CodeAnalyzer) *TypeInfo {
+	if v.Type == nil {
+		v.Type = d.RegisterType(v.TType())
+	}
+	return v.Type
+}
+
+//func (v *Variable) IndexString() string {
+//	var b strings.Builder
+//
+//	b.WriteString(v.Name())
+//	b.WriteByte(' ')
+//	b.WriteString(v.Type().String())
+//
+//	s := b.String()
+//	println(s)
+//	return s
+//}
+
+type Function struct {
+	*types.Func
+	*types.Builtin // for builtin functions
+
+	// Builtin, Variadic.
+	attributes Attribute
+
+	// ToDo: maintain parameter and result TypeInfos, for performance.
+
+	// ToDo
+	fSigIndex uint32 // as package function
+	mSigIndex uint32 // as method, (ToDo: make 0 as invalid function index)
+
+	Type    *TypeInfo
+	Pkg     *Package // some duplicated with types.Func.Pkg(), except builtin functions
+	AstDecl *ast.FuncDecl
+}
+
+func (f *Function) Name() string {
+	if f.Func != nil {
+		return f.Func.Name()
+	}
+	return f.Builtin.Name()
+}
+
+func (f *Function) Exported() bool {
+	if f.Builtin != nil {
+		return true
+	}
+	if f.Pkg.Path() == "builtin" {
+		return !token.IsExported(f.Name())
+	}
+	return f.Func.Exported()
+}
+
+func (f *Function) Position() token.Position {
+	return f.Pkg.PPkg.Fset.PositionFor(f.AstDecl.Name.Pos(), false)
+}
+
+func (f *Function) Documentation() string {
+	// ToDo: html escape
+	return f.AstDecl.Doc.Text()
+}
+
+func (f *Function) Comment() string {
+	return ""
+}
+
+func (f *Function) Package() *Package {
+	return f.Pkg
+}
+
+func (f *Function) TType() types.Type {
+	if f.Func != nil {
+		return f.Func.Type()
+	}
+	return f.Builtin.Type()
+}
+
+func (f *Function) TypeInfo(d *CodeAnalyzer) *TypeInfo {
+	if f.Type == nil {
+		f.Type = d.RegisterType(f.TType())
+	}
+	return f.Type
+}
+
+func (f *Function) IsMethod() bool {
+	return f.Func != nil && f.Func.Type().(*types.Signature).Recv() != nil
+}
+
+func (f *Function) String() string {
+	if f.Func != nil {
+		return f.Func.String()
+	}
+	return f.Builtin.String()
+}
+
+//func (f *Function) IndexString() string {
+//	var b strings.Builder
+//	b.WriteString(f.Name())
+//	b.WriteByte(' ')
+//	WriteType(&b, f.AstDecl.Type, f.Pkg.PPkg.TypesInfo, true)
+//	return b.String()
+//}
+
+// Please make sure the Funciton is a method when calling this method.
+func (f *Function) ReceiverTypeName() (paramField *ast.Field, typeIdent *ast.Ident, isStar bool) {
+	if f.AstDecl.Recv == nil {
+		panic("should not")
+	}
+	if len(f.AstDecl.Recv.List) != 1 {
+		panic("should not")
+	}
+
+	paramField = f.AstDecl.Recv.List[0]
+	switch expr := paramField.Type.(type) {
 	default:
-		panic(fmt.Sprintf("unexpected ast expression. %T : %v", node, node))
+		panic("should not")
 	case *ast.Ident:
-		tt := pkg.PPkg.TypesInfo.TypeOf(node)
-		if tt == nil {
-			if pkg.Path() == "unsafe" {
-				return
-			}
-			log.Println("node:", node.Name)
-		}
-		typeInfo := d.RegisterType(tt)
-		if typeInfo.TypeName == nil {
-			//panic("not a named type")
-			return // it might be an alias to an unnamed type
-			// ToDo: also collect functions for such aliases.
-		}
-		onTypeName(typeInfo)
-	case *ast.SelectorExpr:
-		d.iterateTypenames(node.Sel, pkg, onTypeName)
-	case *ast.ParenExpr:
-		d.iterateTypenames(node.X, pkg, onTypeName)
+		typeIdent = expr
+		isStar = false
+		return
 	case *ast.StarExpr:
-		d.iterateTypenames(node.X, pkg, onTypeName)
-	case *ast.ArrayType:
-		d.iterateTypenames(node.Elt, pkg, onTypeName)
-	case *ast.Ellipsis: // ...Ele
-		d.iterateTypenames(node.Elt, pkg, onTypeName)
-	case *ast.MapType:
-		d.iterateTypenames(node.Key, pkg, onTypeName)
-		d.iterateTypenames(node.Value, pkg, onTypeName)
-	case *ast.ChanType:
-		d.iterateTypenames(node.Value, pkg, onTypeName)
-	// To avoid return too much weak-related results, the following types are ignored now.
-	case *ast.FuncType:
-	case *ast.StructType:
-	case *ast.InterfaceType:
-	}
-}
-
-func (d *CodeAnalyzer) lookForAndRegisterUnnamedInterfaceAndStructTypes(typeLiteral ast.Node, pkg *Package) {
-	switch node := typeLiteral.(type) {
-	default:
-		panic(fmt.Sprintf("unexpected ast expression. %T : %v", node, node))
-	case *ast.BadExpr:
-		log.Println("encounter BadExpr:", node)
-	case *ast.Ident, *ast.SelectorExpr:
-		// named types and basic types will be registered from other routes.
-	case *ast.ParenExpr:
-		d.lookForAndRegisterUnnamedInterfaceAndStructTypes(node.X, pkg)
-	case *ast.StarExpr:
-		d.lookForAndRegisterUnnamedInterfaceAndStructTypes(node.X, pkg)
-	case *ast.ArrayType:
-		d.lookForAndRegisterUnnamedInterfaceAndStructTypes(node.Elt, pkg)
-	case *ast.Ellipsis: // ...Ele
-		d.lookForAndRegisterUnnamedInterfaceAndStructTypes(node.Elt, pkg)
-	case *ast.ChanType:
-		d.lookForAndRegisterUnnamedInterfaceAndStructTypes(node.Value, pkg)
-	case *ast.FuncType:
-		for _, field := range node.Params.List {
-			d.lookForAndRegisterUnnamedInterfaceAndStructTypes(field.Type, pkg)
+		tid, ok := expr.X.(*ast.Ident)
+		if !ok {
+			panic("should not")
 		}
-		if node.Results != nil {
-			for _, field := range node.Results.List {
-				d.lookForAndRegisterUnnamedInterfaceAndStructTypes(field.Type, pkg)
-			}
-		}
-	case *ast.MapType:
-		d.lookForAndRegisterUnnamedInterfaceAndStructTypes(node.Key, pkg)
-		d.lookForAndRegisterUnnamedInterfaceAndStructTypes(node.Value, pkg)
-	case *ast.StructType:
-		tv := pkg.PPkg.TypesInfo.Types[node]
-		typeInfo := d.RegisterType(tv.Type)
-		d.registerDirectFields(typeInfo, node, pkg)
-	case *ast.InterfaceType:
-		tv := pkg.PPkg.TypesInfo.Types[node]
-		typeInfo := d.RegisterType(tv.Type)
-		d.registerExplicitlySpecifiedMethods(typeInfo, node, pkg)
-	}
-
-	// ToDo: don't use the std go/types and go/pacakges packages.
-	//       Now, uint8 and byte are treated as two types by go/types.
-	//       Write a custom one tailored for docs and code analyzing.
-	//       Run "go mod tidy" before running gold using the custom packages
-	//       to ensure all modules are cached locally.
-}
-
-func (d *CodeAnalyzer) registerDirectFields(typeInfo *TypeInfo, astStructNode *ast.StructType, pkg *Package) {
-	if (typeInfo.attributes & directSelectorsCollected) != 0 {
+		typeIdent = tid
+		isStar = true
 		return
 	}
-	typeInfo.attributes |= directSelectorsCollected
+}
 
-	register := func(field *Field) {
-		if field.Name == "-" {
-			panic("impossible")
-		}
-		if !token.IsExported(field.Name) {
-			field.Pkg = pkg
-			if pkg == d.builtinPkg {
-				field.Pkg = nil
-			}
-		}
-		if typeInfo.DirectSelectors == nil {
-			typeInfo.DirectSelectors = make([]*Selector, 0, 16)
-		}
-		sel := &Selector{
-			Id:    d.Id1b(field.Pkg, field.Name),
-			Field: field,
-		}
-		typeInfo.DirectSelectors = append(typeInfo.DirectSelectors, sel)
-	}
+// ToDo: not use types.NewMethodSet or typesutil.MethodSet().
+//       Implement it from scratch instead.
+//type Method struct {
+//	*types.Func // receiver is ignored
+//
+//	SignatureIndex uint32
+//
+//	PointerReceiverOnly bool
+//
+//	// The embedded type names in full form.
+//	// Nil means this method is not obtained through embedding.
+//	SelectorChain []Embedded
+//
+//	astFunc *ast.FuncDecl
+//}
 
-	for _, field := range astStructNode.Fields.List {
-		if len(field.Names) == 0 {
-			var id string
+type MethodSignature struct {
+	Name string // must be an identifier other than "_"
+	Pkg  string // the import path, for unepxorted method names only
 
-			var isStar = false
-			for ok, node := true, field.Type; ok; ok = isStar {
-				switch expr := node.(type) {
-				default:
-					panic("not an embedded field but should be. type: " + fmt.Sprintf("%T", expr))
-				case *ast.Ident:
-					//id = d.Id1b(pkg, expr.Name) // incorrect for builtin typenames
+	//InOutTypes []int32 // global type indexes
+	InOutTypes string
 
-					tn := pkg.PPkg.TypesInfo.Uses[expr]
-					id = d.Id2(tn.Pkg(), expr.Name)
+	NumInOutAndVariadic int
+}
 
-				case *ast.SelectorExpr:
-					srcObj := pkg.PPkg.TypesInfo.ObjectOf(expr.X.(*ast.Ident))
-					srcPkg := srcObj.(*types.PkgName)
-					id = d.Id2(srcPkg.Imported(), expr.Sel.Name)
-				case *ast.StarExpr:
-					if isStar {
-						panic("bad embedded field **T.")
-					}
+//// The lower bits of each Embedded is an index to the global TypeName table.
+//// The global TypeName table comtains all type aliases and defined types.
+//// The highest bit indicates whether or not the embedding for is *T or not.
+//type Embedded uint32
+//
+//type Field struct {
+//	*types.Var
+//
+//	// The info is contained in the above types.Var field.
+//	//Owner *TypeInfo // must be a (non-defined) struct type
+//
+//	// The embedded type names in full form.
+//	// Nil means this is a non-embedded field.
+//	SelectorChain []Embedded
+//
+//	astList  *ast.FieldList
+//	astField *ast.Field
+//}
+//
+//type Method struct {
+//	*types.Func // object denoted by x.f
+//
+//	SelectorChain []Embedded
+//
+//	astFunc *ast.FuncDecl
+//}
 
-					node = expr.X
-					isStar = true
-					continue
-				}
+type EmbedMode uint8
 
-				break
-			}
+const (
+	EmbedMode_None EmbedMode = iota
+	EmbedMode_Direct
+	EmbedMode_Indirect
+)
 
-			tn := d.allTypeNameTable[id]
-			if tn == nil {
-				panic("TypeName for " + id + " not found")
-			}
+type Field struct {
+	astStruct    *ast.StructType
+	AstField     *ast.Field
+	astInterface *ast.InterfaceType // for embedding interface in interface
 
-			//if tn.Name() == "_" {
-			//	continue
-			//}
+	Pkg  *Package // nil for exported
+	Name string
+	Type *TypeInfo
 
-			fieldTypeInfo := tn.Named
-			if fieldTypeInfo == nil {
-				fieldTypeInfo = tn.Alias.Denoting
-			}
-			embedMode := EmbedMode_Direct
-			if isStar {
-				fieldTypeInfo = d.RegisterType(types.NewPointer(fieldTypeInfo.TT))
-				embedMode = EmbedMode_Indirect
-			}
+	Tag  string
+	Mode EmbedMode
+}
 
-			var tag string
-			if field.Tag != nil {
-				tag = field.Tag.Value
-			}
+func (fld *Field) Position() token.Position {
+	return fld.Pkg.PPkg.Fset.PositionFor(fld.AstField.Pos(), false)
+}
 
-			register(&Field{
-				Pkg:  pkg,
-				Name: tn.Name(),
-				Type: fieldTypeInfo,
-				Mode: embedMode,
-				Tag:  tag,
+type Method struct {
+	AstFunc      *ast.FuncDecl      // for concrete methods
+	astInterface *ast.InterfaceType // for interface methods
+	AstField     *ast.Field         // for interface methods
 
-				astStruct: astStructNode,
-				AstField:  field,
-			})
+	Pkg  *Package // nil for exported
+	Name string
+	Type *TypeInfo // ToDo: use custom struct including PointerRecv instead.
 
-			continue
-		}
+	PointerRecv bool // duplicated info, for faster access
+}
 
-		d.lookForAndRegisterUnnamedInterfaceAndStructTypes(field.Type, pkg)
+func (mthd *Method) Position() token.Position {
+	return mthd.Pkg.PPkg.Fset.PositionFor(mthd.AstFunc.Pos(), false)
+}
 
-		tv := pkg.PPkg.TypesInfo.Types[field.Type]
+type EmbeddedField struct {
+	*Field
+	Prev *EmbeddedField
+}
 
-		//todo: if field.Type is an interface or struct, or pointer to interface or struct, collect direct selectors.
-		//or even disassenble any complex types and look for struct and interface types.
+type SelectorCond uint8
 
-		fieldTypeInfo := d.RegisterType(tv.Type)
-		var tag string
-		if field.Tag != nil {
-			tag = field.Tag.Value
-		}
+const (
+	SelectorCond_Normal SelectorCond = iota
+	SelectorCond_Hidden
+)
 
-		for _, ident := range field.Names {
-			if ident.Name == "_" {
-				continue
-			}
+type Selector struct {
+	Id string
 
-			register(&Field{
-				Pkg:  pkg,
-				Name: ident.Name,
-				Type: fieldTypeInfo,
-				Mode: EmbedMode_None,
-				Tag:  tag,
+	// One and only one of the two is nil.
+	*Field
+	*Method
 
-				astStruct: astStructNode,
-				AstField:  field,
-			})
-		}
+	// EmbeddedField is nil means this is not an promoted selector.
+	//EmbeddedFields []*Field
+
+	EmbeddingChain *EmbeddedField // in the inverse order
+	Depth          uint16         // the chain length
+	Indirect       bool           // whether the chain contains indirects or not
+
+	// colliding or shadowed susposed promoted selector?
+	//shadowed bool // used in collecting phase.
+	cond SelectorCond
+}
+
+func (s *Selector) Reset() {
+	*s = Selector{}
+}
+
+func (s *Selector) Position() token.Position {
+	if s.Field != nil {
+		return s.Field.Pkg.PPkg.Fset.PositionFor(s.Field.AstField.Pos(), false)
+	} else if s.Method.AstFunc != nil { // method declaration
+		return s.Method.Pkg.PPkg.Fset.PositionFor(s.Method.AstFunc.Pos(), false)
+	} else { // if s.Method.AstField != nil //initerface method specification
+		return s.Method.Pkg.PPkg.Fset.PositionFor(s.Method.AstField.Pos(), false)
 	}
 }
 
-func (d *CodeAnalyzer) registerParameterAndResultTypes(astFunc *ast.FuncType, pkg *Package) {
-	//log.Println("=========================", f.Pkg.Path(), f.Name())
-
-	if astFunc.Params != nil {
-		for _, fld := range astFunc.Params.List {
-			tt := pkg.PPkg.TypesInfo.TypeOf(fld.Type)
-			if tt == nil {
-				log.Println("tt is nil!")
-				continue
-			}
-			d.RegisterType(tt)
-		}
-	}
-
-	if astFunc.Results != nil {
-		for _, fld := range astFunc.Results.List {
-			tt := pkg.PPkg.TypesInfo.TypeOf(fld.Type)
-			if tt == nil {
-				log.Println("tt is nil!")
-				continue
-			}
-			d.RegisterType(tt)
-		}
+func (s *Selector) Name() string {
+	if s.Field != nil {
+		return s.Field.Name
+	} else {
+		return s.Method.Name
 	}
 }
 
-// ToDo: also register function variables?
-// This funciton is to ensure that the selectors of unnamed types are all confirmed before comfirming selectors for all types.
-func (d *CodeAnalyzer) registerUnnamedInterfaceAndStructTypesFromParametersAndResults(astFunc *ast.FuncType, pkg *Package) {
-	//log.Println("=========================", f.Pkg.Path(), f.Name())
-
-	if astFunc.Params != nil {
-		for _, fld := range astFunc.Params.List {
-			d.lookForAndRegisterUnnamedInterfaceAndStructTypes(fld.Type, pkg)
-		}
-	}
-
-	if astFunc.Results != nil {
-		for _, fld := range astFunc.Results.List {
-			d.lookForAndRegisterUnnamedInterfaceAndStructTypes(fld.Type, pkg)
-		}
+func (s *Selector) Pkg() *Package {
+	if s.Field != nil {
+		return s.Field.Pkg
+	} else {
+		return s.Method.Pkg
 	}
 }
 
-// ToDo: now interface{Error() string} and interface{error} will be viewed as one TypeInfo
-func (d *CodeAnalyzer) registerExplicitlySpecifiedMethods(typeInfo *TypeInfo, astInterfaceNode *ast.InterfaceType, pkg *Package) {
-	//if (typeInfo.attributes & directSelectorsCollected) != 0 {
-	//	return
-	//}
+//func (s *Selector) Depth() int {
+//	return len(s.EmbeddedFields)
+//}
 
-	// The logic of the above three lines is not right as it looks.
-	// In the current go/* packages implementation, "interface{A}" and "type A interface {M{}}"
-	// will be viewed as identicial types. If they are passed by the above order to this function, ...
-	// So now the above three lines are disabled.
-
-	// Another detail is that, unlike embedded fields, the embedded type names in an interface type can be identical.
-
-	typeInfo.attributes |= directSelectorsCollected
-
-	registerMethod := func(method *Method) {
-		if method.Name == "-" {
-			panic("impossible")
-		}
-		if !token.IsExported(method.Name) {
-			method.Pkg = pkg
-			if pkg == d.builtinPkg {
-				method.Pkg = nil
-			}
-		}
-
-		if typeInfo.DirectSelectors == nil {
-			typeInfo.DirectSelectors = make([]*Selector, 0, 16)
-		}
-
-		newId := d.Id1b(method.Pkg, method.Name)
-
-		for _, old := range typeInfo.DirectSelectors {
-			// A method and some field names can be the same.
-			if old.Id == newId && old.Method != nil {
-				// See the comment at the starting of the function.
-				return
-			}
-		}
-
-		sel := &Selector{
-			Id:     newId,
-			Method: method,
-		}
-		typeInfo.DirectSelectors = append(typeInfo.DirectSelectors, sel)
+func (s *Selector) PointerReceiverOnly() bool {
+	if s.Method == nil {
+		panic("not a method selector")
 	}
 
-	// ToDo: since Go 1.14, two same name interface names can be embedded together.
-	registerField := func(field *Field) {
-		if field.Name == "-" {
-			panic("impossible")
-		}
-		if !token.IsExported(field.Name) {
-			field.Pkg = pkg
-			if pkg == d.builtinPkg {
-				field.Pkg = nil
-			}
-		}
+	return !s.Indirect && s.Method.PointerRecv
+}
 
-		if typeInfo.DirectSelectors == nil {
-			typeInfo.DirectSelectors = make([]*Selector, 0, 16)
-		}
+func (s *Selector) String() string {
+	return EmbededFieldsPath(s.EmbeddingChain, nil, s.Name(), s.Field != nil)
+}
 
-		newId := d.Id1b(field.Pkg, field.Name)
-
-		// Two embedded types in an interface type can have an identical name.
-		//for _, old := range typeInfo.DirectSelectors {
-		//	if old.Id == newId {
-		//		// See the comment at the starting of the function.
-		//		return
-		//	}
-		//}
-
-		sel := &Selector{
-			Id:    newId,
-			Field: field,
-		}
-		typeInfo.DirectSelectors = append(typeInfo.DirectSelectors, sel)
-	}
-
-	//log.Println("!!!!!! registerExplicitlySpecifiedMethods:", typeInfo)
-
-	for _, method := range astInterfaceNode.Methods.List {
-		if len(method.Names) == 0 {
-			//log.Println("   embed")
-			//continue // embed interface type. ToDo
-
-			var id string
-			switch expr := method.Type.(type) {
-			default:
-				panic("not a valid embedding interface type name")
-			case *ast.Ident:
-				ttn := pkg.PPkg.TypesInfo.Uses[expr]
-				id = d.Id2(ttn.Pkg(), ttn.Name())
-			case *ast.SelectorExpr:
-				srcObj := pkg.PPkg.TypesInfo.ObjectOf(expr.X.(*ast.Ident))
-				srcPkg := srcObj.(*types.PkgName)
-				id = d.Id2(srcPkg.Imported(), expr.Sel.Name)
-			}
-
-			tn := d.allTypeNameTable[id]
-			if tn == nil {
-				panic("TypeName for " + id + " not found")
-			}
-
-			fieldTypeInfo := tn.Named
-			if fieldTypeInfo == nil {
-				fieldTypeInfo = tn.Alias.Denoting
-			}
-			embedMode := EmbedMode_Direct
-
-			//if strings.Index(id, "image") >= 0 {
-			//log.Println("!!!!!!!!!!! ", id, fieldTypeInfo)
-			//}
-
-			registerField(&Field{
-				Pkg:  pkg,
-				Name: tn.Name(),
-				Type: fieldTypeInfo,
-				Mode: embedMode,
-
-				astInterface: astInterfaceNode,
-				AstField:     method,
-			})
-
+func EmbededFieldsPath(embedding *EmbeddedField, b *strings.Builder, selName string, isField bool) (r string) {
+	if embedding == nil {
+		if isField {
+			return "[field] " + selName
 		} else {
-			//log.Println("   method")
-			if len(method.Names) != 1 {
-				panic(fmt.Sprint("number of method names is not 1: ", len(method.Names), method.Names))
-			}
-
-			ident := method.Names[0]
-			if ident.Name == "_" {
-				continue
-			}
-
-			tv := pkg.PPkg.TypesInfo.Types[method.Type]
-			methodTypeInfo := d.RegisterType(tv.Type)
-			if pkg == d.builtinPkg && ident.Name == "Error" {
-				// The special handling is to correctly find all implementations of the builtin "error" type.
-				errorUnderlyingType := types.Universe.Lookup("error").(*types.TypeName).Type().Underlying().(*types.Interface)
-				methodTypeInfo = d.RegisterType(errorUnderlyingType.Method(0).Type())
-			}
-
-			registerMethod(&Method{
-				Pkg:  pkg,
-				Name: ident.Name,
-				Type: methodTypeInfo,
-
-				PointerRecv: false,
-
-				astInterface: astInterfaceNode,
-				AstField:     method,
-			})
-
-			astFunc, ok := method.Type.(*ast.FuncType)
-			if !ok {
-				panic("should not")
-			}
-			d.registerUnnamedInterfaceAndStructTypesFromParametersAndResults(astFunc, pkg)
-			d.registerParameterAndResultTypes(astFunc, pkg)
+			return "[method] " + selName
 		}
 	}
-	//log.Println("       registerExplicitlySpecifiedMethods:", len(typeInfo.DirectSelectors))
-}
-
-// ToDo: to loop parameter and result lists and use AST to constract custom methods.
-func (d *CodeAnalyzer) registerExplicitlyDeclaredMethod(f *Function) {
-	funcObj, funcDecl, pkg := f.Func, f.AstDecl, f.Pkg
-
-	funcName := funcObj.Name()
-	if funcName == "-" {
-		return
-	}
-
-	sig := funcObj.Type().(*types.Signature)
-	recv := sig.Recv()
-	if recv == nil {
-		return
-	}
-
-	d.registerUnnamedInterfaceAndStructTypesFromParametersAndResults(f.AstDecl.Type, f.Pkg)
-	d.registerParameterAndResultTypes(f.AstDecl.Type, f.Pkg)
-
-	recvTT := recv.Type()
-	var baseTT *types.Named
-	var ptrRecv bool
-	switch tt := recvTT.(type) {
-	case *types.Named:
-		baseTT = tt
-		ptrRecv = false
-	case *types.Pointer:
-		baseTT = tt.Elem().(*types.Named)
-		ptrRecv = true
-	default:
-		panic("impossible")
-	}
-
-	// ToDo: using sig.Params() and sig.Results() instead of funcObj.Type()
-
-	typeInfo := d.RegisterType(baseTT)
-	if typeInfo.DirectSelectors == nil {
-		selectors := make([]*Selector, 0, 16)
-		typeInfo.DirectSelectors = selectors
-	}
-	method := &Method{
-		Pkg:         pkg, // ToDo: research why must set it?
-		Name:        funcName,
-		Type:        d.RegisterType(funcObj.Type()),
-		PointerRecv: ptrRecv,
-		AstFunc:     funcDecl,
-	}
-	if !token.IsExported(funcName) {
-		method.Pkg = pkg
-		if pkg == d.builtinPkg {
-			method.Pkg = nil
-		}
-	}
-	sel := &Selector{
-		Id:     d.Id1b(method.Pkg, method.Name),
-		Method: method,
-	}
-	typeInfo.DirectSelectors = append(typeInfo.DirectSelectors, sel)
-}
-
-// ToDo: also register function variables?
-func (d *CodeAnalyzer) registerFunctionForInvolvedTypeNames(f *Function) {
-	fType := f.AstDecl.Type
-
-	//log.Println("=========================", f.Pkg.Path(), f.Name())
-
-	if fType.Params != nil {
-		for _, fld := range fType.Params.List {
-			d.iterateTypenames(fld.Type, f.Pkg, func(t *TypeInfo) {
-				if t.TypeName == nil {
-					panic("shoud not")
-				}
-				//if t.Pkg == nil {
-				//	log.Println("================", f.Pkg.Path(), t.TT)
-				//}
-				if t.TypeName.Pkg.Path() == "builtin" {
-					return
-				}
-				if t.AsInputsOf == nil {
-					t.AsInputsOf = make([]ValueResource, 0, 4)
-				}
-				t.AsInputsOf = append(t.AsInputsOf, f)
-			})
-		}
-	}
-
-	if fType.Results != nil {
-		for _, fld := range fType.Results.List {
-			d.iterateTypenames(fld.Type, f.Pkg, func(t *TypeInfo) {
-				if t.TypeName == nil {
-					panic("shoud not")
-				}
-				//if t.Pkg == nil {
-				//	log.Println("================", f.Pkg.Path(), t.TT)
-				//}
-				if t.TypeName.Pkg.Path() == "builtin" {
-					return
-				}
-				if t.AsOutputsOf == nil {
-					t.AsOutputsOf = make([]ValueResource, 0, 4)
-				}
-				t.AsOutputsOf = append(t.AsOutputsOf, f)
-			})
-		}
-	}
-}
-
-func (d *CodeAnalyzer) registerValueForItsTypeName(res ValueResource) {
-	t := res.TypeInfo(d)
-	if t.TypeName == nil {
-		return
-	}
-
-	if t.AsTypesOf == nil {
-		t.AsTypesOf = make([]ValueResource, 0, 4)
-	}
-	t.AsTypesOf = append(t.AsTypesOf, res)
-}
-
-func (d *CodeAnalyzer) BuildMethodSignatureFromFuncObject(funcObj *types.Func) MethodSignature {
-	funcSig, ok := funcObj.Type().(*types.Signature)
-	if !ok {
-		panic(funcObj.Id() + "'s type is not types.Signature")
-	}
-
-	methodName, pkgImportPath := funcObj.Id(), ""
-	if !token.IsExported(methodName) {
-		pkgImportPath = funcObj.Pkg().Path()
-	}
-
-	return d.BuildMethodSignatureFromFunctionSignature(funcSig, methodName, pkgImportPath)
-}
-
-// pkgImportPath should be only passed for unexported method names.
-func (d *CodeAnalyzer) BuildMethodSignatureFromFunctionSignature(funcSig *types.Signature, methodName string, pkgImportPath string) MethodSignature {
-	if pkgImportPath != "" {
-		if token.IsExported(methodName) {
-			//panic("bad argument: " + pkgImportPath + "." + methodName)
-			// ToDo: handle this case gracefully.
-			//log.Println("bad argument: " + pkgImportPath + "." + methodName)
-			pkgImportPath = ""
-		} else if pkgImportPath == "builtin" {
-			log.Println("bad argument: " + pkgImportPath + "." + methodName)
-			pkgImportPath = ""
-		}
-	}
-
-	var b strings.Builder
-	var writeTypeIndex = func(index uint32) {
-		b.WriteByte(byte((index >> 24) & 0xFF))
-		b.WriteByte(byte((index >> 16) & 0xFF))
-		b.WriteByte(byte((index >> 8) & 0xFF))
-		b.WriteByte(byte((index >> 0) & 0xFF))
-	}
-
-	params, results := funcSig.Params(), funcSig.Results()
-
-	n := 4 * (params.Len() + results.Len())
-	b.Grow(n)
-
-	//inouts := make([]byte, n)
-	//cursor := 0
-	for i := params.Len() - 1; i >= 0; i-- {
-		typeIndex := d.RegisterType(params.At(i).Type()).index
-		//binary.LittleEndian.PutUint32(inouts[cursor:], typeIndex)
-		//cursor += 4
-		writeTypeIndex(typeIndex)
-	}
-	for i := results.Len() - 1; i >= 0; i-- {
-		typeIndex := d.RegisterType(results.At(i).Type()).index
-		//binary.LittleEndian.PutUint32(inouts[cursor:], typeIndex)
-		//cursor += 4
-		writeTypeIndex(typeIndex)
-	}
-
-	counts := params.Len()<<16 | results.Len()
-	if funcSig.Variadic() {
-		counts = -counts
-	}
-
-	//log.Println("?? full name:", funcObj.Id())
-	//log.Println("   counts:   ", counts)
-	//log.Println("   inouts:   ", inouts)
-
-	return MethodSignature{
-		//InOutTypes:          string(inouts),
-		InOutTypes:          b.String(),
-		NumInOutAndVariadic: counts,
-		Name:                methodName,
-		Pkg:                 pkgImportPath,
-	}
-}
-
-func avoidCheckFuncBody(fset *token.FileSet, parseFilename string, _ []byte) (*ast.File, error) {
-	var src interface{}
-	mode := parser.ParseComments // | parser.AllErrors
-	file, err := parser.ParseFile(fset, parseFilename, src, mode)
-	if file == nil {
-		return nil, err
-	}
-	for _, decl := range file.Decls {
-		if fd, ok := decl.(*ast.FuncDecl); ok {
-			fd.Body = nil
-		}
-	}
-	return file, nil
-}
-
-func collectPPackages(ppkgs []*packages.Package) map[string]*packages.Package {
-	var allPPkgs = make(map[string]*packages.Package, 1000)
-	var regPkgs func(ppkg *packages.Package)
-	regPkgs = func(ppkg *packages.Package) {
-		if _, present := allPPkgs[ppkg.PkgPath]; present {
-			return
-		}
-		allPPkgs[ppkg.PkgPath] = ppkg
-		for _, p := range ppkg.Imports {
-			regPkgs(p)
-		}
-	}
-
-	for _, ppkg := range ppkgs {
-		regPkgs(ppkg)
-	}
-
-	return allPPkgs
-}
-
-func collectStdPackages() ([]*packages.Package, error) {
-	log.Println("[collect std packages ...]")
-	defer log.Println("[collect std packages done]")
-
-	var configForCollectStdPkgs = &packages.Config{
-		Tests: false,
-	}
-
-	return packages.Load(configForCollectStdPkgs, "std")
-}
-
-func (d *CodeAnalyzer) ParsePackages(args ...string) bool {
-
-	stdPPkgs, err := collectStdPackages()
-	if err != nil {
-		log.Fatal("failed to collect std packages: ", err)
-	}
-
-	log.Println("[parse packages ...], args:", args)
-
-	// ToDo: check cache to avoid parsing again.
-
-	var configForParsing = &packages.Config{
-		Mode: packages.NeedName | packages.NeedImports | packages.NeedDeps |
-			packages.NeedTypes | packages.NeedExportsFile | packages.NeedFiles |
-			packages.NeedCompiledGoFiles | packages.NeedTypesSizes |
-			packages.NeedSyntax | packages.NeedTypesInfo,
-		Tests: false, // ToDo: parse tests
-
-		//Logf: func(format string, args ...interface{}) {
-		//	log.Println("================================================\n", args)
-		//},
-
-		ParseFile: func(fset *token.FileSet, filename string, src []byte) (*ast.File, error) {
-			defer log.Println("parsed", filename)
-			const mode = parser.AllErrors | parser.ParseComments
-			return parser.ParseFile(fset, filename, src, mode)
-		},
-
-		// Reasons to disable this:
-		// 1. to surpress "imported but not used" errors
-		// 2. to implemente "voew code" and "jump to definition" features.
-		// It looks the memory comsumed will be doubled.
-		//ParseFile: avoidCheckFuncBody,
-
-		//       NeedTypes: NeedTypes adds Types, Fset, and IllTyped.
-		//       Why can't only Fset be got?
-		// ToDo: modify go/packages code to not use go/types.
-		//       use ast only and build type info tailored for docs and code reading.
-		//       But it looks NeedTypes doesn't consume much more memory, so ...
-		//       And, go/types can be used to verify the correctness of the custom implementaion.
-	}
-
-	ppkgs, err := packages.Load(configForParsing, args...)
-	if err != nil {
-		log.Println("packages.Load (parse packages):", err)
-		return false
-	}
-
-	var hasErrors bool
-	for _, ppkg := range ppkgs {
-		switch ppkg.PkgPath {
-		case "builtin":
-			// skip "illegal cycle in declaration of int" alike errors.
-		//case "unsafe":
-		default:
-			// ToDo: how to judge "imported but not used" errors?
-
-			if packages.PrintErrors([]*packages.Package{ppkg}) > 0 {
-				hasErrors = true
-			}
-		}
-	}
-	if hasErrors {
-		log.Fatal("exit for above errors")
-	}
-
-	var allPPkgs = collectPPackages(ppkgs)
-	d.packageList = make([]*Package, 0, len(allPPkgs))
-	d.packageTable = make(map[string]*Package, len(allPPkgs))
-
-	//if len(d.packageList) != len(allPPkgs) {
-	//	//panic("package counts not match! " + strconv.Itoa(len(d.packageList)) + " != " + strconv.Itoa(len(allPPkgs)))
-	//}
-
-	//if len(d.packageTable) != len(allPPkgs) {
-	//	//panic("package counts not match! " + strconv.Itoa(len(d.packageTable)) + " != " + strconv.Itoa(len(allPPkgs)))
-	//}
-
-	// It looks the AST info of the parsed "unsafe" package is blank.
-	// So we fill the info manually to simplify some implementations later.
-	if unsafePPkg, builtinPPkg := allPPkgs["unsafe"], allPPkgs["builtin"]; unsafePPkg != nil && builtinPPkg != nil {
-		//log.Println("====== 111", unsafePPkg.Fset.Base(), builtinPPkg.Fset.Base(), allPPkgs["bytes"].Fset.Base())
-		fillUnsafePackage(unsafePPkg, builtinPPkg)
-	}
-
-	//var packageListChanged = false
-	for path, ppkg := range allPPkgs {
-		pkg := d.packageTable[ppkg.PkgPath]
-		if pkg == nil {
-			//packageListChanged = true
-
-			pkg := &Package{PPkg: ppkg}
-			d.packageTable[path] = pkg
-			d.packageList = append(d.packageList, pkg)
-
-			//log.Println("     [parsed]", path)
+	if b == nil {
+		b = &strings.Builder{}
+		if isField {
+			b.WriteString("[field] ")
 		} else {
-			pkg.PPkg = ppkg
-
-			log.Println("     [parsed]", path, "(duplicated?)")
+			b.WriteString("[method] ")
 		}
-		//if len(ppkg.Errors) > 0 {
-		//	for _, err := range ppkg.Errors {
-		//		log.Printf("          error: %#v", err)
-		//	}
-		//}
+		defer func() {
+			b.WriteString(selName)
+			r = b.String()
+		}()
 	}
-	d.builtinPkg = d.packageTable["builtin"]
-
-	var pkgNumDepedBys = make(map[*Package]uint32, len(allPPkgs))
-	for _, pkg := range d.packageList {
-		pkg.Deps = make([]*Package, 0, len(pkg.PPkg.Imports))
-		//for path := range pkg.PPkg.Imports // the path never starts with "vendor/"
-		for _, ppkg := range pkg.PPkg.Imports {
-			path := ppkg.PkgPath // may start with "vendor/"
-			depPkg := d.packageTable[path]
-			if depPkg == nil {
-				panic("ParsePackages: dependency package " + path + " not found")
-			}
-			pkg.Deps = append(pkg.Deps, depPkg)
-			pkgNumDepedBys[depPkg]++
-		}
+	if p := embedding.Prev; p != nil {
+		EmbededFieldsPath(p, b, "", isField)
 	}
-	for _, pkg := range d.packageList {
-		pkg.DepedBys = make([]*Package, 0, pkgNumDepedBys[pkg])
+	if embedding.Field.Mode == EmbedMode_Indirect {
+		b.WriteByte('*')
 	}
-	for _, pkg := range d.packageList {
-		for _, dep := range pkg.Deps {
-			dep.DepedBys = append(dep.DepedBys, pkg)
-		}
-	}
-
-	log.Println("[parse packages done]")
-
-	// Confirm std packages.
-	d.stdModule = &Module{
-		Dir:     "",
-		Root:    "",
-		Version: "", // ToDo
-	}
-	estimatedNumMods := 1 + len(d.packageList)/3
-	d.allModules = make([]*Module, estimatedNumMods)
-	d.allModules = append(d.allModules, d.stdModule)
-
-	for _, ppkg := range stdPPkgs {
-		pkg := d.packageTable[ppkg.PkgPath]
-		if pkg != nil {
-			pkg.Mod = d.stdModule
-		}
-	}
-
-	return true
+	b.WriteString(embedding.Field.Name)
+	b.WriteByte('.')
+	return
 }
 
-// Go 1.14: added go/build.Context.Dir, ..., some convienient to not use go/types and go/packages?
-
-// ToDo: use go/doc to retrieve package docs
-
-// ToDo: don't load builtin pacakge, construct a custom builtin package manually instead.
-
-// ToDo: make some special handling in unsafe package page creation.
-
-func fillUnsafePackage(unsafePPkg *packages.Package, builtinPPkg *packages.Package) {
-	intType := builtinPPkg.Types.Scope().Lookup("int").Type()
-
-	//log.Println("====== 000", unsafePPkg.PkgPath)
-	//log.Println("====== 222", unsafePPkg.Fset.PositionFor(token.Pos(0), false))
-
-	buildPkg, err := build.Import("unsafe", "", build.FindOnly)
-	if err != nil {
-		log.Fatal(fmt.Errorf("build.Import: %w", err))
+func PrintSelectors(title string, selectors []*Selector) {
+	log.Printf("%s (%d)\n", title, len(selectors))
+	for _, sel := range selectors {
+		log.Println("  ", sel)
 	}
-
-	filter := func(fi os.FileInfo) bool {
-		return strings.HasSuffix(fi.Name(), ".go") && !strings.HasSuffix(fi.Name(), "_test.go")
-	}
-
-	//log.Println("====== 333", buildPkg.Dir)
-	fset := token.NewFileSet()
-	astPkgs, err := parser.ParseDir(fset, buildPkg.Dir, filter, parser.ParseComments)
-	if err != nil {
-		log.Fatal(fmt.Errorf("parser.ParseDir: %w", err))
-	}
-
-	astPkg := astPkgs["unsafe"]
-	if astPkg == nil {
-		log.Fatal("ast package for unsafe is not found")
-	}
-
-	// It is strange that unsafePPkg.Fset is not blank
-	// (it looks all parsed packages (by go/Packages.Load) share the same FileSet)
-	// even if unsafePPkg.GoFiles and unsafePPkg.Syntax (and more) are both blank.
-	// This is why the current function tries to fill them.
-	unsafePPkg.TypesInfo.Defs = make(map[*ast.Ident]types.Object)
-	unsafePPkg.TypesInfo.Types = make(map[ast.Expr]types.TypeAndValue)
-	unsafePPkg.Fset = fset
-
-	var artitraryExpr, intExpr ast.Expr
-	var artitraryType types.Type
-
-	for filename, astFile := range astPkg.Files {
-		unsafePPkg.GoFiles = append(unsafePPkg.GoFiles, filename)
-		unsafePPkg.CompiledGoFiles = append(unsafePPkg.CompiledGoFiles, filename)
-		//log.Println("unsafe filename:", filename)
-		unsafePPkg.Syntax = append(unsafePPkg.Syntax, astFile)
-		//unsafePPkg.Fset.AddFile(filename, unsafePPkg.Fset.Base(), int(astFile.End()-astFile.Pos()))
-		//log.Println("====== 444", filename, unsafePPkg.Fset.Base(), int(astFile.End()-astFile.Pos()))
-
-		for _, decl := range astFile.Decls {
-			if fd, ok := decl.(*ast.FuncDecl); ok {
-				//if fd.Name.IsExported() {
-				//	log.Printf("     func declaration: %s", fd.Name.Name)
-				//}
-
-				obj := types.Unsafe.Scope().Lookup(fd.Name.Name)
-				if obj == nil {
-					panic(fd.Name.Name + " is not found in unsafe scope")
-				}
-
-				unsafePPkg.TypesInfo.Defs[fd.Name] = obj
-				continue
-			}
-
-			gn, ok := decl.(*ast.GenDecl)
-			if !ok || gn.Tok != token.TYPE {
-				continue
-			}
-
-			for _, spec := range gn.Specs {
-				typeSpec := spec.(*ast.TypeSpec)
-				//if typeSpec.Name.IsExported() {
-				//	log.Printf("     type declaration: %s", typeSpec.Name.Name)
-				//}
-
-				obj := types.Unsafe.Scope().Lookup(typeSpec.Name.Name)
-				typeObj, _ := obj.(*types.TypeName)
-				switch typeSpec.Name.Name {
-				default:
-					panic("Unexpected type name in unsafe: " + typeSpec.Name.Name)
-				case "Pointer":
-					if typeObj == nil {
-						panic("a non-nil type object for unsafe.Pointer is expected")
-					}
-					artitraryExpr = typeSpec.Type
-				case "ArbitraryType":
-					intExpr = typeSpec.Type
-					if typeObj != nil {
-						panic("a nil type object for ArbitraryType is expected")
-					}
-					log.Println("    ", typeSpec.Name.Name, "is not found in unsafe scope. Create one manually.")
-
-					log.Printf("%T %T\n", intType, intType.Underlying())
-
-					// ToDo:
-					// The last argument is nil is because the creations of
-					// the following two objects depend on each other.
-					// ;(, Maybe I have not found the right solution.
-					typeObj = types.NewTypeName(typeSpec.Pos(), types.Unsafe, typeSpec.Name.Name, nil)
-					unsafePPkg.Types.Scope().Insert(typeObj)
-					artitraryType = types.NewNamed(typeObj, intType.Underlying(), nil)
-				}
-
-				// new declared type (source type will be set below)
-				unsafePPkg.TypesInfo.Defs[typeSpec.Name] = typeObj
-			}
-		}
-
-		// ToDo: how init and _ functions are parsed.
-	}
-
-	if artitraryExpr == nil {
-		panic("artitraryExpr is nil")
-	}
-
-	if intExpr == nil {
-		panic("intExpr is nil")
-	}
-
-	if artitraryType == nil {
-		panic("artitraryType is nil")
-	}
-
-	// source types
-	unsafePPkg.TypesInfo.Types[intExpr] = types.TypeAndValue{Type: intType}
-	unsafePPkg.TypesInfo.Types[artitraryExpr] = types.TypeAndValue{Type: artitraryType}
 }
+
+// ToDo: use go/doc package

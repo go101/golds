@@ -69,7 +69,7 @@ code .keyword {color: brown;}
 code .comment {color: green; font-style: italic;}
 
 #gen-footer {
-	margin-top: 8px;
+	padding-top: 5px;
 	text-align: center;
 	font-size: small;
 	color: #555;

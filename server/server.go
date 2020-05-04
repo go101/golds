@@ -14,6 +14,8 @@ import (
 	"time"
 
 	"go101.org/gold/code"
+
+	"go101.org/gold/util"
 )
 
 func init() {
@@ -22,7 +24,7 @@ func init() {
 
 const (
 	Phase_Unprepared = iota
-	Phase_Parsed
+	//Phase_Parsed     // todo: remove, useless now.
 	Phase_Analyzed
 )
 
@@ -44,9 +46,12 @@ type docServer struct {
 	//
 	currentTheme       Theme
 	currentTranslation Translation
+
+	//
+	roughBuildTime time.Time
 }
 
-func Run(port string, args []string, printUsage func(io.Writer)) {
+func Run(port string, args []string, printUsage func(io.Writer), roughBuildTime string) {
 	log.SetFlags(log.Lshortfile)
 
 	ds := &docServer{
@@ -67,6 +72,8 @@ NextTry:
 		log.Fatal(err)
 	}
 
+	ds.parseRoughBuildTime(roughBuildTime)
+
 	go ds.analyze(args, printUsage)
 
 	err = OpenBrowser(fmt.Sprintf("http://localhost:%v", port))
@@ -80,6 +87,15 @@ NextTry:
 		WriteTimeout: 5 * time.Second,
 		ReadTimeout:  5 * time.Second,
 	}).Serve(l)
+}
+
+func (ds *docServer) parseRoughBuildTime(roughBuildTime string) {
+	var err error
+	ds.roughBuildTime, err = time.Parse("2006-01-02", roughBuildTime)
+	if err != nil {
+		log.Printf("! parse rough build time (%s) error: %s", roughBuildTime, err)
+		ds.roughBuildTime = time.Now()
+	}
 }
 
 func (ds *docServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -124,6 +140,11 @@ func (ds *docServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ds *docServer) analyze(args []string, printUsage func(io.Writer)) {
+	var stopWatch = util.NewStopWatch()
+	defer func() {
+		log.Println("Total analyzation time:", stopWatch.Duration())
+	}()
+
 	if len(args) == 0 {
 		args = []string{"."}
 	} else if len(args) == 1 && args[0] == "std" {
@@ -150,11 +171,11 @@ Start:
 		return
 	}
 
-	{
-		ds.mutex.Lock()
-		ds.phase = Phase_Parsed
-		ds.mutex.Unlock()
-	}
+	//{
+	//	ds.mutex.Lock()
+	//	ds.phase = Phase_Parsed
+	//	ds.mutex.Unlock()
+	//}
 
 	ds.analyzer.AnalyzePackages()
 	ds.analyzer.CollectSourceFiles()

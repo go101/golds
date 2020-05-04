@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"go101.org/gold/code"
 )
@@ -29,21 +30,14 @@ func writePageGenerationInfo(page *htmlPage) {
 	}
 
 	page.WriteString(`
-<div id="gen-footer">
+<pre id="gen-footer">
 (Generated with <a href="https://github.com/go101/gold/">Gold</a>)
-</div>
+</pre>
 `)
 }
 
 func init() {
-	//enabledHtmlGenerationMod()
-}
-
-func enabledHtmlGenerationMod() {
-	genMode = true
-	pageHrefList = list.New()
-	resHrefs = make(map[pageResType]map[string]int, 8)
-
+	//enabledHtmlGenerationMod() // debug
 }
 
 var (
@@ -52,6 +46,13 @@ var (
 	resHrefs       map[pageResType]map[string]int
 	pageHrefsMutex sync.Mutex // in fact, for the current implementation, the lock is not essential
 )
+
+func enabledHtmlGenerationMod() {
+	genMode = true
+	pageHrefList = list.New()
+	resHrefs = make(map[pageResType]map[string]int, 8)
+
+}
 
 type genPageInfo struct {
 	HrefPath string
@@ -206,7 +207,7 @@ Generate:
 	return
 }
 
-func Gen(outputDir string, args []string, printUsage func(io.Writer)) {
+func Gen(outputDir string, args []string, printUsage func(io.Writer), roughBuildTime string) {
 	log.SetFlags(log.Lshortfile)
 
 	// ...
@@ -216,12 +217,14 @@ func Gen(outputDir string, args []string, printUsage func(io.Writer)) {
 	outputDir = strings.TrimRight(outputDir, "\\/")
 	outputDir = strings.Replace(outputDir, "/", string(filepath.Separator), -1)
 	outputDir = strings.Replace(outputDir, "\\", string(filepath.Separator), -1)
+	outputDir = filepath.Join(outputDir, "generated-"+time.Now().UTC().Format("20060102150405"))
 
 	// ...
 	ds := &docServer{
 		phase:    Phase_Unprepared,
 		analyzer: &code.CodeAnalyzer{},
 	}
+	ds.parseRoughBuildTime(roughBuildTime)
 	ds.changeSettings("", "")
 	ds.analyze(args, printUsage)
 

@@ -38,6 +38,14 @@ func (*English) Text_Package(pkgPath string) string {
 
 func (*English) Text_BelongingPackage() string { return "Belonging Package" }
 
+func (*English) Text_PackageDocsLinksOnOtherWebsites(pkgPath string, isStdPkg bool) string {
+	if isStdPkg {
+		return fmt.Sprintf(` (on <a href="https://pkg.go.dev/%[1]s" target="_blank">go.dev</a> and <a href="https://golang.org/pkg/%[1]s/" target="_blank">golang.org</a>)`, pkgPath)
+	} else {
+		return fmt.Sprintf(` (on <a href="https://pkg.go.dev/%s" target="_blank">go.dev</a>)`, pkgPath)
+	}
+}
+
 func (*English) Text_ImportPath() string { return "Import Path" }
 
 func (*English) Text_ImportStat(numImports, numImportedBys int, depPageURL string) string {

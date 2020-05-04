@@ -47,6 +47,7 @@ type Translation interface {
 	// package details page
 	Text_Package(pkgPath string) string
 	Text_BelongingPackage() string // also used in source code page
+	Text_PackageDocsLinksOnOtherWebsites(pkgPath string, isStdPkg bool) string
 	Text_ImportPath() string
 	Text_ImportStat(numImports, numImportedBys int, depPageURL string) string
 	Text_InvolvedFiles(num int) string

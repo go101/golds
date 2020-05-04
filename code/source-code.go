@@ -8,6 +8,8 @@ import (
 	"log"
 	"path/filepath"
 	"strings"
+
+	"go101.org/gold/util"
 )
 
 //type SourceFile struct {
@@ -17,6 +19,11 @@ import (
 //}
 
 func (d *CodeAnalyzer) CollectSourceFiles() {
+	var stopWatch = util.NewStopWatch()
+	defer func() {
+		log.Println("CollectSourceFiles:", stopWatch.Duration())
+	}()
+
 	//log.Println("=================== CollectSourceFiles")
 
 	//d.sourceFile2PackageTable = make(map[string]SourceFile, len(d.packageList)*5)
