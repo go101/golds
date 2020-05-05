@@ -34,10 +34,8 @@ func (ds *docServer) buildOverviewPage(overview *Overview) []byte {
 	page := NewHtmlPage(ds.currentTranslation.Text_Overview(), ds.currentTheme.Name(), pagePathInfo{ResTypeNone, ""})
 	fmt.Fprintf(page, `
 <pre><code><span style="font-size:xx-large;">%s</span></code>
-
-<code><span class="title">%s</span></code>`,
+`,
 		ds.currentTranslation.Text_Overview(),
-		ds.currentTranslation.Text_PackageList(len(overview.Packages)),
 	)
 
 	if genMode {
@@ -45,6 +43,11 @@ func (ds *docServer) buildOverviewPage(overview *Overview) []byte {
 	}
 
 	ds.writeStatsBlock(page, &overview.Stats)
+
+	fmt.Fprintf(page, `
+<code><span class="title">%s</span></code>`,
+		ds.currentTranslation.Text_PackageList(len(overview.Packages)),
+	)
 
 	ds.writePackagesForListing(page, overview.Packages, true, true)
 

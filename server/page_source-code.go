@@ -270,7 +270,7 @@ func WriteType(w io.Writer, typeLit ast.Expr, info *types.Info, funcKeywordNeede
 
 type ListedValueInfo struct {
 	codePkg     *code.Package // the package in which the value is declared
-	docPkg      *code.Package // the package in which "forType" is declared.
+	docPkg      *code.Package // the package in which "forType" is declared
 	forTypeName string
 }
 
@@ -288,6 +288,8 @@ func WriteTypeEx(w io.Writer, typeLit ast.Expr, info *types.Info, funcKeywordNee
 		w.Write(rightParen)
 	case *ast.Ident:
 		if lvi != nil {
+			// forTypeName should be in lvi.docPkg.
+			// lvi.forTypeName should never be builtin types.
 			isForTypeName := node.Name == lvi.forTypeName
 			obj := lvi.codePkg.PPkg.TypesInfo.ObjectOf(node)
 			_, ok := obj.(*types.TypeName)
@@ -300,10 +302,10 @@ func WriteTypeEx(w io.Writer, typeLit ast.Expr, info *types.Info, funcKeywordNee
 
 			if isForTypeName {
 				w.Write(BoldTagStart)
-			}
-			w.Write([]byte(node.Name))
-			if isForTypeName {
+				w.Write([]byte(node.Name))
 				w.Write(BoldTagEnd)
+			} else {
+				w.Write([]byte(node.Name))
 			}
 		} else {
 			w.Write([]byte(node.Name))

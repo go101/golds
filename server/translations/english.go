@@ -14,7 +14,9 @@ func (*English) LangTag() string { return "en" }
 
 func (*English) Text_Overview() string { return "Overview" }
 
-func (*English) Text_PackageList(num int) string { return "All Packages" }
+func (*English) Text_PackageList(num int) string {
+	return fmt.Sprintf("All Packages (%d)", num)
+}
 
 func (*English) Text_AllStats(stats map[string]int) string {
 	return "ToDo" // how many interfaces, ...

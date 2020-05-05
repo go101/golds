@@ -247,7 +247,9 @@ todo:
 	methedCache := d.analyzePackages_FindImplementations()
 * (done) html generatioon
 * (done) link to go.dev/pkg/xxx (shortcut)
-
+* (done) func (x, y int): len(params []ast.Field) == 1, len(params[0].Names) == 2
+  ast.Struct.Fields is alike. Check the uses!
+* (done) when finding selector shadowing, need to consider unexported names needing package import pathes, ...
 
 * value: find other values with the same type
 * type: find convertible/assignable types
@@ -272,10 +274,6 @@ todo:
 * support multi GOOS pages
 * also should embedding chain for method list
 * exported values: jump from code to details page, not highlight target.
-* shortcuts
-  ~ and backspace to back
-  -: expand to next level
-  +: collapse to next level
 * asParams/asResults lists exclude the methods of unexported types.
 * align asTypeOf items: sort by value | sort by position | sort by name
 * better cgo support, parse c code.
@@ -291,29 +289,24 @@ todo:
   by replacing make(t T, sizes ...int) T to make(T slice|map|channel, sizes ...int) T
 * example code run, run testing/banchmark
 * code search
-* handle the case of when a method sourced from several different original ones by embedding.
-  Their docs might be a little different.
 * Alias to a type in another package, asOutputList, type is not bold displayed.
 * more type stats:
   embedding in n types
 * "go/doc": doc.Examples(...)
+* sort packages by importedBy
 
-
-* when finding selector shadowing, need to consider unexported names needing package import pathes, ...
-* func (x, y int): len(params []ast.Field) == 1, len(params[0].Names) == 2
-  ast.Struct.Fields is alike. Check the uses!
-* shortcuts:
-  * ~, Backspace: back
-  * HOME: to overview page
-  * P: from code page to package detail page
-  * 
+* package details page: click an exported type, don't go to source page
 * stat: n interfaces, m structs, ... (on overview and package detail pages)
-  * as parameters/results of N functions
-* add a RoughLastestSubmitTime, if the time is earlier than time.Now for one months, notify ...
-  "two weeks not update. Update now?: to prepare for future golf promotion etc.
-* adjust pkg details page, even simpler, ...
-* rearrange code ...
 * tests
-* js loading in pages
+* comments
 * css style
+* js
+  * loading progress in pages
+  * shortcuts:
+    * ~, Backspace: back
+    * HOME: to overview page
+    * P: from code page to package detail page
+    * -: collapse value/type docs
+    * +: expand value/type docs
+  * two weeks not update. Update now?: to prepare for future golf promotion etc.
 

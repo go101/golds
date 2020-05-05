@@ -56,6 +56,7 @@ func (d *CodeAnalyzer) CollectSourceFiles() {
 
 		for _, path := range pkg.PPkg.OtherFiles {
 			d.sourceFile2PackageTable[path] = pkg
+			d.stats.Files++
 		}
 
 		for _, path := range pkg.PPkg.CompiledGoFiles {
@@ -67,9 +68,12 @@ func (d *CodeAnalyzer) CollectSourceFiles() {
 				//log.Println("! in GoFiles but not CompiledGoFiles:", path)
 				d.sourceFile2PackageTable[path] = pkg
 			}
+			d.stats.Files++
 		}
 
 		d.BuildCgoFileMappings(pkg)
+
+		//d.stats.Files += int32(len(pkg.SourceFiles))
 	}
 }
 

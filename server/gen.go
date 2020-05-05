@@ -31,7 +31,7 @@ func writePageGenerationInfo(page *htmlPage) {
 
 	page.WriteString(`
 <pre id="gen-footer">
-(Generated with <a href="https://github.com/go101/gold/">Gold</a>)
+Generated with <b>Gold</b> <sup>beta</sup> (to be released soon).
 </pre>
 `)
 }

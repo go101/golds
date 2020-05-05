@@ -6,6 +6,7 @@ import (
 	"go/token"
 	"go/types"
 	"log"
+	"reflect"
 	"strings"
 
 	"golang.org/x/tools/go/types/typeutil"
@@ -49,67 +50,58 @@ type CodeAnalyzer struct {
 	tempTypeLookup map[uint32]struct{}
 
 	forbidRegisterTypes bool // for debug
+
+	stats Stats
 }
+
+const KindCount = reflect.UnsafePointer + 1
 
 type Stats struct {
-	ExportedFunctions,
-	NonExportedFunctions,
+	//Packages, // available in other ways
+	Files,
+	//ToDo: stat code lines. Use the info in AstFile?
+	CodeLines,
+	BlankCodeLines,
+	CommentCodeLines,
 
-	ExportedVariables,
-	NonExportedVariables,
+	// To calculate imports per file.
+	// Deps per packages are available in other ways.
+	AstFiles,
+	Imports int32
+	FilesByImportCount [32]int32
 
-	ExportedConstants,
-	NonExportedConstants,
-
-	ExportedTypes,
+	// Types
+	ExportedNamedTypes,
 	ExportedTypeAliases,
-	NonExportedTypes,
-	NonExportedTypeAliases int32
+	NameStructTypesWithEmbeddingField int32
 
-	ExportedTypesByKind,
-	ExportedTypeAliasesByKind,
-	NonExportedTypesByKind,
-	NonExportedTypeAliasesByKind [KindCount]int32
+	ExportedNamedTypesByKind,
+	ExportedTypeAliasesByKind [KindCount]int32
 
-	ExportedFunctionsByParameterCount,
-	NonExportedFunctionsByParameterCount [8]int32
-	ExportedFunctionsByResultCount,
-	NonExportedFunctionsByResultCount [4]int32
+	NamedStructsByExportedFieldCount,
+	ExportedNamedInterfacesByMethodCount [16]int32 // the last element means (N-1)+
+
+	// Values
+	ExportedVariables,
+	ExportedConstants,
+	Functions,
+	ExportedFunctions,
+	Methods,
+	ExportedMethods int32
+
+	FunctionsByParameterCount,
+	MethodsByParameterCount [16]int32 // the last element means (N-1)+
+	FunctionsByResultCount,
+	MethodsByResultCount [6]int32 // the last element means (N-1)+
 }
 
-type Kind int
-
-const (
-	Invalid Kind = iota
-	Bool
-	Int
-	Int8
-	Int16
-	Int32
-	Int64
-	Uint
-	Uint8
-	Uint16
-	Uint32
-	Uint64
-	Uintptr
-	Float32
-	Float64
-	Complex64
-	Complex128
-	Array
-	Chan
-	Func
-	Interface
-	Map
-	Ptr
-	Slice
-	String
-	Struct
-	UnsafePointer
-
-	KindCount
-)
+func incSliceStat(stats []int32, index int) {
+	if index >= len(stats) {
+		stats[len(stats)-1]++
+	} else {
+		stats[index]++
+	}
+}
 
 // Please reset it after using.
 func (d *CodeAnalyzer) tempTypeLookupTable() map[uint32]struct{} {
@@ -826,13 +818,23 @@ func (d *CodeAnalyzer) registerExplicitlyDeclaredMethod(f *Function) {
 }
 
 // ToDo: also register function variables?
-func (d *CodeAnalyzer) registerFunctionForInvolvedTypeNames(f *Function) {
+// Return parameter and result counts.
+func (d *CodeAnalyzer) registerFunctionForInvolvedTypeNames(f *Function) (ins, outs int) {
+	notToReg := !f.Exported()
 	fType := f.AstDecl.Type
 
 	//log.Println("=========================", f.Pkg.Path(), f.Name())
 
 	if fType.Params != nil {
 		for _, fld := range fType.Params.List {
+			if n := len(fld.Names); n == 0 {
+				ins++
+			} else {
+				ins += n
+			}
+			if notToReg {
+				continue
+			}
 			d.iterateTypenames(fld.Type, f.Pkg, func(t *TypeInfo) {
 				if t.TypeName == nil {
 					panic("shoud not")
@@ -853,6 +855,14 @@ func (d *CodeAnalyzer) registerFunctionForInvolvedTypeNames(f *Function) {
 
 	if fType.Results != nil {
 		for _, fld := range fType.Results.List {
+			if n := len(fld.Names); n == 0 {
+				outs++
+			} else {
+				outs += n
+			}
+			if notToReg {
+				continue
+			}
 			d.iterateTypenames(fld.Type, f.Pkg, func(t *TypeInfo) {
 				if t.TypeName == nil {
 					panic("shoud not")
@@ -870,6 +880,8 @@ func (d *CodeAnalyzer) registerFunctionForInvolvedTypeNames(f *Function) {
 			})
 		}
 	}
+
+	return
 }
 
 func (d *CodeAnalyzer) registerValueForItsTypeName(res ValueResource) {

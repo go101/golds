@@ -1642,6 +1642,7 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 	registerFunction := func(f *Function) {
 		pkg.PackageAnalyzeResult.AllFunctions = append(pkg.PackageAnalyzeResult.AllFunctions, f)
 		d.RegisterFunction(f)
+		// function stats are moved to below
 	}
 
 	_ = registerFunction
@@ -1655,6 +1656,9 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 	// ToDo: use info.TypeOf, info.ObjectOf
 
 	for _, file := range pkg.PPkg.Syntax {
+		d.stats.AstFiles++
+		d.stats.Imports += int32(len(file.Imports))
+		incSliceStat(d.stats.FilesByImportCount[:], len(file.Imports))
 
 		//ast.Inspect(file, func(n ast.Node) bool {
 		//	log.Printf("%T\n", n)
@@ -1930,18 +1934,51 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 				continue
 			}
 		}
-		if f.Exported() {
-			d.registerFunctionForInvolvedTypeNames(f)
+
+		//if f.Exported() {
+		//	d.registerFunctionForInvolvedTypeNames(f)
+		//}
+		numParams, numResults := d.registerFunctionForInvolvedTypeNames(f)
+
+		if f.IsMethod() {
+			d.stats.Methods++
+			incSliceStat(d.stats.MethodsByParameterCount[:], numParams)
+			incSliceStat(d.stats.FunctionsByResultCount[:], numResults)
+		} else {
+			d.stats.Functions++
+			incSliceStat(d.stats.FunctionsByParameterCount[:], numParams)
+			incSliceStat(d.stats.MethodsByResultCount[:], numResults)
 		}
+		if f.Builtin != nil || token.IsExported(f.Name()) {
+			if f.IsMethod() {
+				d.stats.ExportedMethods++
+			} else {
+				d.stats.ExportedFunctions++
+			}
+		}
+	}
+	for _, tn := range pkg.PackageAnalyzeResult.AllTypeNames {
+		if isBuiltinPkg || tn.Exported() {
+			if tn.Alias != nil {
+				d.stats.ExportedTypeAliases++
+			} else {
+				d.stats.ExportedNamedTypes++
+			}
+		}
+	}
+	if isBuiltinPkg {
+		return
 	}
 	for _, v := range pkg.PackageAnalyzeResult.AllVariables {
 		if v.Exported() {
 			d.registerValueForItsTypeName(v)
+			d.stats.ExportedVariables++
 		}
 	}
 	for _, c := range pkg.PackageAnalyzeResult.AllConstants {
 		if c.Exported() {
 			d.registerValueForItsTypeName(c)
+			d.stats.ExportedConstants++
 		}
 	}
 }

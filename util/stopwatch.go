@@ -11,6 +11,7 @@ func NewStopWatch() *StopWatch {
 	return &StopWatch{start: time.Now()}
 }
 
+// Duration will reset the StopWatch.
 func (sw *StopWatch) Duration() (d time.Duration) {
 	now := time.Now()
 	d = now.Sub(sw.start)
