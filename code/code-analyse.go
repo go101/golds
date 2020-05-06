@@ -60,16 +60,22 @@ func (d *CodeAnalyzer) AnalyzePackages() {
 
 	d.forbidRegisterTypes = true
 
-	//methedCache := d.analyzePackages_FindImplementations_Old()
-	methedCache := d.analyzePackages_FindImplementations()
+	//methodCache := d.analyzePackages_FindImplementations_Old()
+	d.analyzePackages_FindImplementations()
+	methodCache := &typeutil.MethodSetCache{}
 
 	d.forbidRegisterTypes = false
 
 	log.Println("FindImplementations:", stopWatch.Duration())
 
 	// ...
-	//d.analyzePackages_CheckCollectSelectors(methedCache)
-	_ = methedCache
+
+	// This is a bug in std types.MethodSet implementation (Go SDK 1.14-)
+	// https://github.com/golang/go/issues/37081
+	//d.analyzePackages_CheckCollectSelectors(methodCache)
+	_ = methodCache
+
+	log.Println("CheckCollectSelectors:", stopWatch.Duration())
 
 	// log.Println("[analyze packages done]")
 }
@@ -104,7 +110,7 @@ func sortPackagesByDepLevels(pkgs []*Package) {
 	})
 }
 
-func (d *CodeAnalyzer) analyzePackages_FindImplementations() (resultMethodCache *typeutil.MethodSetCache) {
+func (d *CodeAnalyzer) analyzePackages_FindImplementations() { // (resultMethodCache *typeutil.MethodSetCache) {
 
 	//
 
@@ -172,10 +178,10 @@ func (d *CodeAnalyzer) analyzePackages_FindImplementations() (resultMethodCache 
 	//})
 
 	var lastMethodIndex uint32
-	var allMethods = make(map[MethodSignature]uint32, 8196)
+	var allInterfaceMethods = make(map[MethodSignature]uint32, 8196)
 	var method2TypeIndexes = make([][]uint32, 0, 8196)
-	var cache typeutil.MethodSetCache
-	resultMethodCache = &cache
+	//var cache typeutil.MethodSetCache
+	//resultMethodCache = &cache
 
 	interfaceUnderlyings.Iterate(func(_ types.Type, info interface{}) {
 		uiInfo := info.(*UnderlyingInterfaceInfo)
@@ -213,13 +219,13 @@ func (d *CodeAnalyzer) analyzePackages_FindImplementations() (resultMethodCache 
 				log.Println("             >> ", sel)
 			}
 
-			methodIndex, ok := allMethods[sig]
+			methodIndex, ok := allInterfaceMethods[sig]
 			if ok {
 				method2TypeIndexes[methodIndex] = append(method2TypeIndexes[methodIndex], uiInfo.t.index)
 			} else {
 				methodIndex = lastMethodIndex
 				lastMethodIndex++
-				allMethods[sig] = methodIndex
+				allInterfaceMethods[sig] = methodIndex
 
 				typeIndexes := make([]uint32, 0, 8)
 				typeIndexes = append(typeIndexes, uiInfo.t.index)
@@ -245,7 +251,7 @@ func (d *CodeAnalyzer) analyzePackages_FindImplementations() (resultMethodCache 
 		}
 	})
 
-	//log.Println("number of method signatures:", lastMethodIndex, len(allMethods), len(method2TypeIndexes))
+	//log.Println("number of method signatures:", lastMethodIndex, len(allInterfaceMethods), len(method2TypeIndexes))
 	//for methodIndex, typeIndexes := range method2TypeIndexes {
 	//	log.Println("     method#", methodIndex)
 	//	for _, typeIndex := range typeIndexes {
@@ -285,10 +291,14 @@ func (d *CodeAnalyzer) analyzePackages_FindImplementations() (resultMethodCache 
 			}
 
 			sig := d.BuildMethodSignatureFromFunctionSignature(funcSig, sel.Method.Name, pkgImportPath)
-			methodIndex, ok := allMethods[sig]
+			methodIndex, ok := allInterfaceMethods[sig]
 			//log.Println("333>>>", methodIndex, ok)
 			if ok {
-				method2TypeIndexes[methodIndex] = append(method2TypeIndexes[methodIndex], t.index)
+				pt := d.RegisterType(types.NewPointer(t.TT))
+				method2TypeIndexes[methodIndex] = append(method2TypeIndexes[methodIndex], pt.index)
+				if !sel.PointerReceiverOnly() {
+					method2TypeIndexes[methodIndex] = append(method2TypeIndexes[methodIndex], t.index)
+				}
 			}
 
 			//if len(selectors) == 1 {
@@ -305,7 +315,7 @@ func (d *CodeAnalyzer) analyzePackages_FindImplementations() (resultMethodCache 
 		}
 	}
 
-	//log.Println("number of interface method signatures:", lastMethodIndex, len(allMethods), len(method2TypeIndexes))
+	//log.Println("number of interface method signatures:", lastMethodIndex, len(allInterfaceMethods), len(method2TypeIndexes))
 	//for methodIndex, typeIndexes := range method2TypeIndexes {
 	//	log.Println("     method#", methodIndex)
 	//	for _, typeIndex := range typeIndexes {
@@ -524,7 +534,7 @@ func (d *CodeAnalyzer) analyzePackages_FindImplementations_Old() (resultMethodCa
 	//})
 
 	var lastMethodIndex uint32
-	var allMethods = make(map[MethodSignature]uint32, 8196)
+	var allInterfaceMethods = make(map[MethodSignature]uint32, 8196)
 	var method2TypeIndexes = make([][]uint32, 0, 8196)
 	var cache typeutil.MethodSetCache
 	resultMethodCache = &cache
@@ -548,13 +558,13 @@ func (d *CodeAnalyzer) analyzePackages_FindImplementations_Old() (resultMethodCa
 				log.Println("             >> ", sel)
 			}
 
-			methodIndex, ok := allMethods[sig]
+			methodIndex, ok := allInterfaceMethods[sig]
 			if ok {
 				method2TypeIndexes[methodIndex] = append(method2TypeIndexes[methodIndex], uiInfo.t.index)
 			} else {
 				methodIndex = lastMethodIndex
 				lastMethodIndex++
-				allMethods[sig] = methodIndex
+				allInterfaceMethods[sig] = methodIndex
 
 				typeIndexes := make([]uint32, 0, 8)
 				typeIndexes = append(typeIndexes, uiInfo.t.index)
@@ -568,7 +578,7 @@ func (d *CodeAnalyzer) analyzePackages_FindImplementations_Old() (resultMethodCa
 		}
 	})
 
-	//log.Println("number of method signatures:", lastMethodIndex, len(allMethods), len(method2TypeIndexes))
+	//log.Println("number of method signatures:", lastMethodIndex, len(allInterfaceMethods), len(method2TypeIndexes))
 	//for methodIndex, typeIndexes := range method2TypeIndexes {
 	//	log.Println("     method#", methodIndex)
 	//	for _, typeIndex := range typeIndexes {
@@ -596,7 +606,7 @@ func (d *CodeAnalyzer) analyzePackages_FindImplementations_Old() (resultMethodCa
 
 			sig := d.BuildMethodSignatureFromFuncObject(funcObj) // will not produce new type registrations for sure
 
-			methodIndex, ok := allMethods[sig]
+			methodIndex, ok := allInterfaceMethods[sig]
 			//log.Println("333>>>", methodIndex, ok)
 			if ok {
 				method2TypeIndexes[methodIndex] = append(method2TypeIndexes[methodIndex], t.index)
@@ -604,7 +614,7 @@ func (d *CodeAnalyzer) analyzePackages_FindImplementations_Old() (resultMethodCa
 		}
 	}
 
-	log.Println("number of interface method signatures:", lastMethodIndex, len(allMethods), len(method2TypeIndexes))
+	log.Println("number of interface method signatures:", lastMethodIndex, len(allInterfaceMethods), len(method2TypeIndexes))
 	//for methodIndex, typeIndexes := range method2TypeIndexes {
 	//	log.Println("     method#", methodIndex)
 	//	for _, typeIndex := range typeIndexes {
@@ -909,9 +919,10 @@ func (d *CodeAnalyzer) analyzePackages_CheckCollectSelectors(cache *typeutil.Met
 
 				if len(d.allTypeInfos) > typesCount {
 					//log.Println("> new types are added:", btt)
-				} else if ttset.Len() < num2 || bttset.Len() < num1 {
-					//} else if ttset.Len() != num2 || bttset.Len() != num1 {
-					// This is a bug in typeutil when computing methodset:
+					//} else if ttset.Len() < num2 || bttset.Len() < num1 {
+				} else if ttset.Len() != num2 || bttset.Len() != num1 {
+					// This is a bug in std types.MethodSet implementation (Go SDK 1.14-)
+					// https://github.com/golang/go/issues/37081
 
 					log.Println("      promoted selectors collected?", t.attributes|promotedSelectorsCollected != 0, bt.attributes|promotedSelectorsCollected != 0)
 					log.Println("      >>", bttset)

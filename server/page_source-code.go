@@ -269,8 +269,9 @@ func WriteType(w io.Writer, typeLit ast.Expr, info *types.Info, funcKeywordNeede
 }
 
 type ListedValueInfo struct {
-	codePkg     *code.Package // the package in which the value is declared
-	docPkg      *code.Package // the package in which "forType" is declared
+	codePkg *code.Package // the package in which the value is declared
+	docPkg  *code.Package // the package in which "forType" is declared
+
 	forTypeName string
 }
 

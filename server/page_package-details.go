@@ -5,6 +5,8 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+
+	//"go/ast"
 	"go/token"
 	"go/types"
 	"io"
@@ -941,9 +943,16 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, res code.Resource, f
 		ds.writeSrouceCodeLineLink(page, res.Package(), pos, res.Name(), "", false)
 		// ToDo: also wirte non-alais src type.
 		// ToDo: use a custom formatter to avoid multiple line and too long src type strings.
-		if writeType && res.Alias != nil {
-			page.WriteString(" = ")
-			page.WriteString(types.TypeString(res.Denoting().TT, types.RelativeTo(res.Package().PPkg.Types)))
+		if writeType {
+			if res.Alias != nil {
+				page.WriteString(" = ")
+				page.WriteString(types.TypeString(res.Denoting().TT, types.RelativeTo(res.Package().PPkg.Types)))
+				if _, ok := res.Denoting().TT.(*types.Named); ok {
+					WriteInterfaceText(page, res.Named.TT)
+				}
+			} else {
+				WriteInterfaceText(page, res.Named.TT)
+			}
 		}
 	case *code.Constant:
 		page.WriteString("const ")
@@ -1002,6 +1011,63 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, res code.Resource, f
 
 	//fmt.Fprint(page, ` <a href="#">{/}</a>`)
 }
+
+// Named and basic ones: linked.
+// Composited:
+func WriteInterfaceText(page *htmlPage, tt types.Type) {
+	if _, ok := tt.Underlying().(*types.Interface); ok {
+		page.WriteString(` <i>(interface)</i>`)
+	}
+}
+
+//var basicKind2ReflectKind = [...]reflect.Kind{
+//	types.Bool:          reflect.Bool,
+//	types.Int:           reflect.Int,
+//	types.Int8:          reflect.Int8,
+//	types.Int16:         reflect.Int16,
+//	types.Int32:         reflect.Int32,
+//	types.Int64:         reflect.Int64,
+//	types.Uint:          reflect.Uint,
+//	types.Uint8:         reflect.Uint8,
+//	types.Uint16:        reflect.Uint16,
+//	types.Uint32:        reflect.Uint32,
+//	types.Uint64:        reflect.Uint64,
+//	types.Uintptr:       reflect.Uintptr,
+//	types.Float32:       reflect.Float32,
+//	types.Float64:       reflect.Float64,
+//	types.Complex64:     reflect.Complex64,
+//	types.Complex128:    reflect.Complex128,
+//	types.String:        reflect.String,
+//	types.UnsafePointer: reflect.UnsafePointer,
+//}
+
+// Only write interface
+//func writeTypeKind(page *htmlPage, tt types.Type) {
+//	switch tt := tt.Underlying().(type) {
+//	default:
+//		panic(fmt.Sprintf("should not: %T", tt))
+//	case *types.Named:
+//		panic("should not")
+//	case *types.Basic:
+//		page.WriteString(basicKind2ReflectKind[tt.Kind()].String())
+//	case *types.Pointer:
+//		page.WriteString(reflect.Ptr.String())
+//	case *types.Struct:
+//		page.WriteString(reflect.Struct.String())
+//	case *types.Array:
+//		page.WriteString(reflect.Array.String())
+//	case *types.Slice:
+//		page.WriteString(reflect.Slice.String())
+//	case *types.Map:
+//		page.WriteString(reflect.Map.String())
+//	case *types.Chan:
+//		page.WriteString(reflect.Chan.String())
+//	case *types.Signature:
+//		page.WriteString(reflect.Func.String())
+//	case *types.Interface:
+//		page.WriteString(reflect.Interface.String())
+//	}
+//}
 
 //func (c *Constant) IndexString() string {
 //	btt, ok := c.Type().(*types.Basic)

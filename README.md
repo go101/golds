@@ -294,7 +294,11 @@ todo:
   embedding in n types
 * "go/doc": doc.Examples(...)
 * sort packages by importedBy
+* click "type" keyword to show the source of a type.
 
+
+
+* use Go tip test analyzePackages_CheckCollectSelectors
 * package details page: click an exported type, don't go to source page
 * stat: n interfaces, m structs, ... (on overview and package detail pages)
 * tests
