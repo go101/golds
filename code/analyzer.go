@@ -71,12 +71,13 @@ type Stats struct {
 	FilesByImportCount [32]int32
 
 	// Types
+	//NamedStructTypesWithEmbeddingField,
+	//NamedStructTypeFields
 	ExportedNamedTypes,
-	ExportedTypeAliases,
-	NameStructTypesWithEmbeddingField int32
+	ExportedTypeAliases int32
 
-	ExportedNamedTypesByKind,
-	ExportedTypeAliasesByKind [KindCount]int32
+	//ExportedTypeAliasesByKind
+	ExportedNamedTypesByKind [KindCount]int32
 
 	NamedStructsByExportedFieldCount,
 	ExportedNamedInterfacesByMethodCount [16]int32 // the last element means (N-1)+

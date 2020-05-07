@@ -1974,6 +1974,7 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 				d.stats.ExportedTypeAliases++
 			} else {
 				d.stats.ExportedNamedTypes++
+				d.stats.ExportedNamedTypesByKind[tn.Named.Kind()]++
 			}
 		}
 	}

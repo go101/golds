@@ -5,11 +5,11 @@ import (
 	"go/token"
 	"go/types"
 	"log"
+	"reflect"
 	"strings"
 
 	"golang.org/x/tools/go/packages"
 )
-
 
 type Module struct {
 	Dir     string
@@ -357,6 +357,72 @@ type TypeInfo struct {
 	// Used in several scenarios.
 	counter uint32
 	//counter2 int32
+}
+
+func (t *TypeInfo) Kind() reflect.Kind {
+	switch tt := t.TT.Underlying().(type) {
+	default:
+		log.Printf("unknown kind of type: %T", tt)
+		return reflect.Invalid
+	case *types.Basic:
+		switch bt := tt.Kind(); bt {
+		default:
+			log.Printf("bad basic kind: %v", bt)
+			return reflect.Invalid
+		case types.Bool:
+			return reflect.Bool
+		case types.Int:
+			return reflect.Int
+		case types.Int8:
+			return reflect.Int8
+		case types.Int16:
+			return reflect.Int16
+		case types.Int32:
+			return reflect.Int32
+		case types.Int64:
+			return reflect.Int64
+		case types.Uint:
+			return reflect.Uint
+		case types.Uint8:
+			return reflect.Uint8
+		case types.Uint16:
+			return reflect.Uint16
+		case types.Uint32:
+			return reflect.Uint32
+		case types.Uint64:
+			return reflect.Uint64
+		case types.Uintptr:
+			return reflect.Uintptr
+		case types.Float32:
+			return reflect.Float32
+		case types.Float64:
+			return reflect.Float64
+		case types.Complex64:
+			return reflect.Complex64
+		case types.Complex128:
+			return reflect.Complex128
+		case types.String:
+			return reflect.String
+		case types.UnsafePointer:
+			return reflect.UnsafePointer
+		}
+	case *types.Pointer:
+		return reflect.Ptr
+	case *types.Struct:
+		return reflect.Struct
+	case *types.Array:
+		return reflect.Array
+	case *types.Slice:
+		return reflect.Slice
+	case *types.Map:
+		return reflect.Map
+	case *types.Chan:
+		return reflect.Chan
+	case *types.Signature:
+		return reflect.Func
+	case *types.Interface:
+		return reflect.Interface
+	}
 }
 
 type Implementation struct {
