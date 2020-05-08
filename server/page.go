@@ -76,7 +76,7 @@ func NewHtmlPage(title, themeName string, currentPageInfo pagePathInfo) *htmlPag
 <title>%s</title>
 <link href="%s" rel="stylesheet">
 <script src="%s"></script>
-<body><div>
+<body onload="onPageLoaded()"><div>
 `,
 		title,
 		buildPageHref(currentPageInfo, pagePathInfo{ResTypeCSS, themeName}, nil, ""),

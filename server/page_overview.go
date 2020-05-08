@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"sort"
 	"strings"
+	"time"
 
 	"go101.org/gold/code"
 )
@@ -33,19 +34,19 @@ func (ds *docServer) overviewPage(w http.ResponseWriter, r *http.Request) {
 func (ds *docServer) buildOverviewPage(overview *Overview) []byte {
 	page := NewHtmlPage(ds.currentTranslation.Text_Overview(), ds.currentTheme.Name(), pagePathInfo{ResTypeNone, ""})
 	fmt.Fprintf(page, `
-<pre><code><span style="font-size:xx-large;">%s</span></code>
+<pre><code><span style="font-size:xx-large;">%s</span></code></pre>
 `,
 		ds.currentTranslation.Text_Overview(),
 	)
 
-	if genMode {
+	if !genMode {
 		ds.writeUpdateGoldBlock(page)
 	}
 
 	ds.writeStatsBlock(page, &overview.Stats)
 
 	fmt.Fprintf(page, `
-<code><span class="title">%s</span></code>`,
+<pre><code><span class="title">%s</span></code>`,
 		ds.currentTranslation.Text_PackageList(len(overview.Packages)),
 	)
 
@@ -118,7 +119,16 @@ func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*Package
 }
 
 func (ds *docServer) writeUpdateGoldBlock(page *htmlPage) {
-	// ds.roughBuildTime
+	d := time.Now().Sub(ds.roughBuildTime)
+	if true || d < time.Hour*24*30 {
+		page.WriteString(`
+<div id="to-update" class="gold-update hidden"><b>Gold</b> has not been updated for about one month. You may run <b>go get -u go101.org/gold</b> or <b><a href="/update">click here</a></b> to update it.</div>
+<div id="updating" class="gold-update hidden"><b>Gold</b> is being updated.</div>
+<div id="update-nothing" class="gold-update hidden">No new <b>Gold</b> versions are available.</div>
+<div id="update-failed" class="gold-update hidden">Failed to update <b>Gold</b>: </div>
+<div id="update-succeeded" class="gold-update hidden"><b>Gold</b> has been updated. You may restart the server to see the latest effect.</div>`,
+		)
+	}
 }
 
 func (ds *docServer) writeStatsBlock(page *htmlPage, stats *code.Stats) {

@@ -75,5 +75,9 @@ code .comment {color: green; font-style: italic;}
 	color: #555;
 	border-top: 1px solid #888;
 }
+
+.gold-update {text-align: center; font-size: small; border-top: 1px solid #D4D4D4; border-bottom: 1px solid #D4D4D4;}
+.hidden {display: none;}
+
 `
 }

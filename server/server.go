@@ -112,6 +112,9 @@ func (ds *docServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	// Min valid path length is 5.
 	if len(path) < 5 || path[3] != ':' {
+		if path == "update" {
+			// ...
+		}
 		fmt.Fprint(w, "Invalid url")
 		return
 	}
