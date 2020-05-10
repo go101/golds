@@ -34,10 +34,6 @@ type docServer struct {
 	analyzer *code.CodeAnalyzer
 
 	// Cached pages
-	// ToDo: cache body parts only.
-	//       Best not to cache the header parts:
-	//       * almost the same for all pages.
-	//       * theme may change.
 	packageListPage []byte
 	packagePages    map[string][]byte
 	sourcePages     map[string][]byte
@@ -48,7 +44,10 @@ type docServer struct {
 	currentTranslation Translation
 
 	//
-	roughBuildTime time.Time
+	roughBuildTime        time.Time
+	updateTip             int
+	cachedUpdateTip       int
+	newerVersionInstalled bool
 }
 
 func Run(port string, args []string, printUsage func(io.Writer), roughBuildTime string) {
@@ -113,8 +112,9 @@ func (ds *docServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Min valid path length is 5.
 	if len(path) < 5 || path[3] != ':' {
 		if path == "update" {
-			// ...
+			ds.UpdateGold(w, r)
 		}
+
 		fmt.Fprint(w, "Invalid url")
 		return
 	}

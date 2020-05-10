@@ -313,4 +313,9 @@ todo:
     * -: collapse value/type docs
     * +: expand value/type docs
   * two weeks not update. Update now?: to prepare for future golf promotion etc.
+  * filter values (var | const | func)
+    filter types (interfaces)
+    fitler packages (main | std)
+    sort packages (importedBys, most imports)
+    sort types (methods, used as parameters/results)
 

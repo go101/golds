@@ -30,6 +30,18 @@ func (*English) Text_RequireStat(numRequires, numRequiredBys int) string {
 	return fmt.Sprintf("requires %d modules, and required by %d.", numRequires, numRequiredBys)
 }
 
+func (*English) Text_UpdateTip(tipName string) string {
+	switch tipName {
+	case "ToUpdate":
+		return `<b>Gold</b> has not been updated for about one month. You may run <b>go get -u go101.org/gold</b> or <b><a href="/update">click here</a></b> to update it.`
+	case "Updating":
+		return `<b>Gold</b> is being updated.`
+	case "Updated":
+		return `<b>Gold</b> has been updated. You may restart the server to see the latest effect.`
+	}
+	return ""
+}
+
 ///////////////////////////////////////////////////////////////////
 // package details page: type details
 ///////////////////////////////////////////////////////////////////

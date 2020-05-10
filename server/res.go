@@ -43,6 +43,7 @@ type Translation interface {
 	Text_Modules() string                                    // to use
 	Text_BelongingModule() string                            // to use
 	Text_RequireStat(numRequires, numRequiredBys int) string // to use
+	Text_UpdateTip(tipName string) string                    // tip names: "ToUpdate", "Updating", "Updated"
 
 	// package details page
 	Text_Package(pkgPath string) string
