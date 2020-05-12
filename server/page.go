@@ -17,6 +17,7 @@ const (
 	ResTypeSource     pageResType = "src"
 	ResTypeCSS        pageResType = "css"
 	ResTypeJS         pageResType = "jvs"
+	ResTypeSVG        pageResType = "svg"
 )
 
 func OpenBrowser(url string) error {

@@ -4,5 +4,5 @@ import (
 	"net/http"
 )
 
-func (ds *docServer) updateAPI(w http.ResponseWriter, r *http.Request) {
+func (ds *docServer) loadAPI(w http.ResponseWriter, r *http.Request) {
 }

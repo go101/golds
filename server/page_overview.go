@@ -104,16 +104,20 @@ func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*Package
 		}
 
 		if pkg.Prefix != "" {
-			//fmt.Fprintf(page,
-			//	`<a href="/pkg:%s" class="path-duplicate">%s</a>`,
-			//	pkg.Path, pkg.Prefix)
-			buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, pkg.Path}, page, pkg.Prefix)
+			fmt.Fprintf(page,
+				`<a href="%s" class="path-duplicate">%s</a>`,
+				buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, pkg.Path}, nil, ""),
+				pkg.Prefix,
+			)
+
 		}
 		if pkg.Remaining != "" {
-			//fmt.Fprintf(page,
-			//	`<a href="/pkg:%s">%s</a>`,
-			//	pkg.Path, pkg.Remaining)
-			buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, pkg.Path}, page, pkg.Remaining)
+			fmt.Fprintf(page,
+				`<a href="%s">%s</a>`,
+				buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, pkg.Path}, nil, ""),
+				pkg.Remaining,
+			)
+
 		}
 		page.WriteString(`</code>`)
 		if writeAnchorTarget {

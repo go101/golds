@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"log"
@@ -29,8 +30,12 @@ const (
 )
 
 type docServer struct {
-	mutex    sync.Mutex
-	phase    int
+	mutex sync.Mutex
+
+	phase int
+
+	loadingLog *bytes.Buffer
+
 	analyzer *code.CodeAnalyzer
 
 	// Cached pages
