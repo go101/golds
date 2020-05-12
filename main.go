@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"runtime"
 
@@ -20,6 +21,8 @@ func init() {
 }
 
 func main() {
+	log.SetFlags(log.Lshortfile)
+
 	flag.Parse()
 	if *hFlag || *helpFlag {
 		printUsage(os.Stdout)

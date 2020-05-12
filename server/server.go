@@ -51,8 +51,6 @@ type docServer struct {
 }
 
 func Run(port string, args []string, printUsage func(io.Writer), roughBuildTime string) {
-	log.SetFlags(log.Lshortfile)
-
 	ds := &docServer{
 		phase:    Phase_Unprepared,
 		analyzer: &code.CodeAnalyzer{},
@@ -112,7 +110,9 @@ func (ds *docServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Min valid path length is 5.
 	if len(path) < 5 || path[3] != ':' {
 		if path == "update" {
-			ds.UpdateGold(w, r)
+			ds.updateAPI(w, r)
+		} else if path == "load" {
+			ds.loadAPI(w, r)
 		}
 
 		fmt.Fprint(w, "Invalid url")
@@ -126,6 +126,8 @@ func (ds *docServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		ds.cssFile(w, r, resPath)
 	case ResTypeJS: // "jvs"
 		ds.javascriptFile(w, r, resPath)
+	case ResTypeSVG: // "svg"
+		ds.svgFile(w, r, resPath)
 	//case "mod:": // module
 	//	ds.modulePage(w, r, path)
 	case ResTypePackage: // "pkg"
