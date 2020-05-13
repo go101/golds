@@ -57,8 +57,9 @@ type docServer struct {
 
 func Run(port string, args []string, printUsage func(io.Writer), roughBuildTime string) {
 	ds := &docServer{
-		phase:    Phase_Unprepared,
-		analyzer: &code.CodeAnalyzer{},
+		phase:      Phase_Unprepared,
+		loadingLog: bytes.NewBuffer([]byte{}),
+		analyzer:   &code.CodeAnalyzer{},
 	}
 
 	ds.changeSettings("", "")
