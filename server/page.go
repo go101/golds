@@ -40,12 +40,14 @@ func writeAutoRefreshHTML(w http.ResponseWriter, r *http.Request) {
 <html>
 	<head>
 		<meta charset="utf-8">
+		<noscript>
 		<meta http-equiv="refresh" content="1.5; url=%[1]v">
+		</noscript>
 	
 		<title>Analyzing ...</title>
 	</head>
 
-	<body>
+	<body onload="checkLoadProgress();">
 	Analyzing ... (<a href="%[1]v">refresh</a>)
 	</body>
 </html>`, r.URL.String())
@@ -77,7 +79,7 @@ func NewHtmlPage(title, themeName string, currentPageInfo pagePathInfo) *htmlPag
 <title>%s</title>
 <link href="%s" rel="stylesheet">
 <script src="%s"></script>
-<body onload="onPageLoaded()"><div>
+<body onload="checkUpdate();"><div>
 `,
 		title,
 		buildPageHref(currentPageInfo, pagePathInfo{ResTypeCSS, themeName}, nil, ""),

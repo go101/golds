@@ -366,8 +366,9 @@ func (t *TypeInfo) Kind() reflect.Kind {
 		return reflect.Invalid
 	case *types.Basic:
 		switch bt := tt.Kind(); bt {
-		default:
-			log.Printf("bad basic kind: %v", bt)
+		default: // t.TT: builtin.Type, unsafe.ArbitraryType, etc.
+			//log.Printf("bad basic kind: %v, %v", bt, t.TT)
+
 			return reflect.Invalid
 		case types.Bool:
 			return reflect.Bool

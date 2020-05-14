@@ -65,16 +65,11 @@ func collectStdPackages() ([]*packages.Package, error) {
 func (d *CodeAnalyzer) ParsePackages(args ...string) bool {
 	var stopWatch = util.NewStopWatch()
 
-	stdPPkgs, err := collectStdPackages()
-	if err != nil {
-		log.Fatal("failed to collect std packages: ", err)
-	}
-
-	log.Println("CollectStdPackages:", stopWatch.Duration())
-
 	//log.Println("[parse packages ...], args:", args)
 
 	// ToDo: check cache to avoid parsing again.
+
+	downloading := true
 
 	var configForParsing = &packages.Config{
 		Mode: packages.NeedName | packages.NeedImports | packages.NeedDeps |
@@ -88,6 +83,11 @@ func (d *CodeAnalyzer) ParsePackages(args ...string) bool {
 		//},
 
 		ParseFile: func(fset *token.FileSet, filename string, src []byte) (*ast.File, error) {
+			if downloading {
+				log.Println("Prepare packages:", stopWatch.Duration())
+				downloading = false
+			}
+
 			//defer log.Println("parsed", filename)
 			const mode = parser.AllErrors | parser.ParseComments
 			return parser.ParseFile(fset, filename, src, mode)
@@ -114,6 +114,14 @@ func (d *CodeAnalyzer) ParsePackages(args ...string) bool {
 	}
 
 	log.Println("Load packages:", stopWatch.Duration())
+
+	stdPPkgs, err := collectStdPackages()
+	if err != nil {
+		log.Fatal("failed to collect std packages: ", err)
+	}
+
+	log.Println("CollectStdPackages:", stopWatch.Duration())
+
 	defer func() {
 		log.Println("Collect packages:", stopWatch.Duration())
 	}()
