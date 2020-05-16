@@ -16,7 +16,7 @@ type _ bool
 
 type X unsafe.Pointer
 
-type P  interface {
+type P interface {
 	M1()
 }
 
@@ -25,11 +25,11 @@ type T = interface {
 	M2()
 }
 
-type Q  interface {
+type Q interface {
 	P
 	M2()
 }
 
 type Sa struct {
-	x int	
+	x int
 }

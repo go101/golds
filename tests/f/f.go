@@ -5,7 +5,6 @@ type AAA interface {
 	mmm()
 }
 
-
 type apiClientExperimental interface {
 	CheckpointAPIClient
 }
@@ -14,6 +13,5 @@ type apiClientExperimental interface {
 type CheckpointAPIClient interface {
 	CheckpointCreate() error
 	CheckpointDelete() error
-	CheckpointList() (error)
+	CheckpointList() error
 }
-

@@ -298,6 +298,7 @@ todo:
 
 
 
+* revert: needCheckUpdate := d > time.Hour*24*30 || true
 * use Go tip test analyzePackages_CheckCollectSelectors
 * package details page: click an exported type, don't go to source page
 * stat: n interfaces, m structs, ... (on overview and package detail pages)

@@ -47,7 +47,7 @@ type docServer struct {
 
 	//
 	updateLogger          *log.Logger
-	roughBuildTime        time.Time
+	roughBuildTime        func() time.Time
 	updateTip             int
 	cachedUpdateTip       int
 	newerVersionInstalled bool
@@ -56,14 +56,15 @@ type docServer struct {
 	generalLogger *log.Logger
 }
 
-func Run(port string, args []string, printUsage func(io.Writer), roughBuildTime string) {
+func Run(port string, args []string, printUsage func(io.Writer), roughBuildTime func() time.Time) {
 	ds := &docServer{
 		phase:           Phase_Unprepared,
 		analyzer:        &code.CodeAnalyzer{},
 		analyzingLogger: log.New(os.Stdout, "[Analyzing] ", 0),
 		analyzingLogs:   make([]LoadingLogMessage, 0, 64),
 
-		updateLogger: log.New(os.Stdout, "[Update] ", 0),
+		updateLogger:   log.New(os.Stdout, "[Update] ", 0),
+		roughBuildTime: roughBuildTime,
 	}
 
 	ds.changeSettings("", "")
@@ -78,8 +79,6 @@ NextTry:
 		// ToDo: random port
 		log.Fatal(err)
 	}
-
-	ds.parseRoughBuildTime(roughBuildTime)
 
 	go func() {
 		ds.analyze(args, printUsage)
@@ -97,15 +96,6 @@ NextTry:
 		WriteTimeout: 5 * time.Second,
 		ReadTimeout:  5 * time.Second,
 	}).Serve(l)
-}
-
-func (ds *docServer) parseRoughBuildTime(roughBuildTime string) {
-	var err error
-	ds.roughBuildTime, err = time.Parse("2006-01-02", roughBuildTime)
-	if err != nil {
-		log.Printf("! parse rough build time (%s) error: %s", roughBuildTime, err)
-		ds.roughBuildTime = time.Now()
-	}
 }
 
 func (ds *docServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {

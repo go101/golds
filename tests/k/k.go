@@ -9,5 +9,3 @@ type Hasher111 interface {
 
 	Hash([]byte) []byte
 }
-
-

@@ -5,5 +5,5 @@ package a
 type _ int
 
 type Sb struct {
-	x int	
+	x int
 }

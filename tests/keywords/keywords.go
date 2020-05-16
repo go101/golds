@@ -4,61 +4,61 @@ func foo() {
 	if a := 1 == 1; a {
 		/* ssssss */
 	} else {
-		// dafafasfa 
+		// dafafasfa
 	}
 	if a := 1 == 1; a {
 		/* ssssss */
-	} /*da faadsfaf /**/ /* /*dafafaf*/ else // dafasfasfas
+	} else /*da faadsfaf /**/ /* /*dafafaf*/ // dafasfasfas
 	//dafafasfasfa /*daafafaf/*
 	{
-		// dafafasfa 
+		// dafafasfa
 	}
-	
+
 	var x = []int{}
 	for range x {
 	}
-	
-	for /*da faadsfaf /**/ /* /*dafafaf*/range x {
+
+	for range /*da faadsfaf /**/ /* /*dafafaf*/ x {
 	}
-	for /*da faadsfaf /**/ /* /*dafafaf*/ range x {
+	for range /*da faadsfaf /**/ /* /*dafafaf*/ x {
 	}
-	for//aaa
+	for range //aaa
 	//aaaa
-	range x {
+	x {
 	}
-	
+
 	for _, _ = range x {
 	}
-	
-	for _, _ = /*da faadsfaf /**/ /* /*dafafaf*/range x {
-	
-		for//aaa
+
+	for _, _ = range /*da faadsfaf /**/ /* /*dafafaf*/ x {
+
+		for range //aaa
 		//aaaa
-		range x {
-			for /*da faadsfaf /**/ /* /*dafafaf*/range x {
-				for /*da faadsfaf /**/ /* /*dafafaf*/range x {
-	if a := 1 == 1; a {
-		/* ssssss */
-	} else {
-		// dafafasfa 
-	}
-	if a := 1 == 1; a {
-		/* ssssss */
-	} /*da faadsfaf /**/ /* /*dafafaf*/ else // dafasfasfas
-	//dafafasfasfa /*daafafaf/*
-	{
-		// dafafasfa 
-	}
+		x {
+			for range /*da faadsfaf /**/ /* /*dafafaf*/ x {
+				for range /*da faadsfaf /**/ /* /*dafafaf*/ x {
+					if a := 1 == 1; a {
+						/* ssssss */
+					} else {
+						// dafafasfa
+					}
+					if a := 1 == 1; a {
+						/* ssssss */
+					} else /*da faadsfaf /**/ /* /*dafafaf*/ // dafasfasfas
+					//dafafasfasfa /*daafafaf/*
+					{
+						// dafafasfa
+					}
 				}
 			}
 		}
-		
-		for /*da faadsfaf /**/ /* /*dafafaf*/range x {
+
+		for range /*da faadsfaf /**/ /* /*dafafaf*/ x {
 		}
-		for /*da faadsfaf /**/ /* /*dafafaf*/ range x {
+		for range /*da faadsfaf /**/ /* /*dafafaf*/ x {
 		}
 	}
-	
+
 	for a, _ := range x {
 		_ = a
 	}

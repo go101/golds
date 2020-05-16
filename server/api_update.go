@@ -1,13 +1,15 @@
 package server
 
 import (
-	"context"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"os/exec"
 	"time"
+
+	"go101.org/gold/util"
 )
+
+const DurationToUpdate = time.Second * 10 // time.Hour*24*30
 
 const (
 	UpdateTip_Nothing = iota
@@ -23,13 +25,14 @@ var UpdateTip2DivID = []string{
 	UpdateTip_Updated:  "updated",
 }
 
+// Must be called when locking.
 func (ds *docServer) confirmUpdateTip() {
 	if ds.updateTip == UpdateTip_Updating {
 		return
 	}
 
-	d := time.Now().Sub(ds.roughBuildTime)
-	needCheckUpdate := d > time.Hour*24*30 || true
+	d := time.Now().Sub(ds.roughBuildTime())
+	needCheckUpdate := d > DurationToUpdate
 	if needCheckUpdate {
 		ds.updateTip = UpdateTip_ToUpdate
 		ds.newerVersionInstalled = false
@@ -84,11 +87,16 @@ func (ds *docServer) updateAPI(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ds *docServer) onUpdateDone(succeeded bool) {
+	var now = time.Now()
+
 	ds.mutex.Lock()
 	defer ds.mutex.Unlock()
 
-	ds.roughBuildTime = time.Now()
+	ds.roughBuildTime = func() time.Time {
+		return now
+	}
 	ds.newerVersionInstalled = succeeded
+	ds.updateTip = UpdateTip_Nothing
 }
 
 func (ds *docServer) updateGold() {
@@ -99,7 +107,7 @@ func (ds *docServer) updateGold() {
 		}
 
 		ds.updateLogger.Println("Run: go get -u go101.org/gold")
-		output, err := runShellCommand(time.Minute*2, dir, "go", "get", "-u", "go101.org/gold")
+		output, err := util.RunShellCommand(time.Minute*2, dir, "go", "get", "-u", "go101.org/gold")
 		if len(output) > 0 {
 			ds.updateLogger.Printf("\n%s", output)
 		}
@@ -115,12 +123,4 @@ func (ds *docServer) updateGold() {
 		ds.onUpdateDone(true)
 		ds.updateLogger.Println("Update Gold succeeded.")
 	}
-}
-
-func runShellCommand(timeout time.Duration, wd, cmd string, args ...string) ([]byte, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-	command := exec.CommandContext(ctx, cmd, args...)
-	command.Dir = wd
-	return command.CombinedOutput()
 }

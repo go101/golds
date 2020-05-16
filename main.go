@@ -7,8 +7,10 @@ import (
 	"log"
 	"os"
 	"runtime"
+	"time"
 
 	"go101.org/gold/server"
+	"go101.org/gold/util"
 )
 
 func init() {
@@ -21,7 +23,8 @@ func init() {
 }
 
 func main() {
-	log.SetFlags(log.Lshortfile)
+	// This is used for updating Gold. It is invisible to users.
+	var roughBuildTimeFlag = flag.Bool("rough-build-time", false, "show rough build time")
 
 	flag.Parse()
 	if *hFlag || *helpFlag {
@@ -29,12 +32,35 @@ func main() {
 		return
 	}
 
+	if *roughBuildTimeFlag {
+		fmt.Print(RoughBuildTime)
+		return
+	}
+	var getRoughBuildTime = func() time.Time {
+		output, err := util.RunShellCommand(time.Second*3, "", os.Args[0], "-rough-build-time")
+		if err != nil {
+			log.Printf("Run: %s -rough-build-time error: %s", os.Args[0], err)
+			return time.Now()
+		}
+
+		t, err := time.Parse("2006-01-02", string(output))
+		if err != nil {
+			log.Printf("! parse rough build time (%s) error: %s", output, err)
+			return time.Now()
+		}
+
+		return t
+	}
+
+	// ...
+	log.SetFlags(log.Lshortfile)
+
 	if o := *genFlag; o != "" {
-		server.Gen(o, flag.Args(), printUsage, RoughBuildTime)
+		server.Gen(o, flag.Args(), printUsage, getRoughBuildTime)
 		return
 	}
 
-	server.Run(*portFlag, flag.Args(), printUsage, RoughBuildTime)
+	server.Run(*portFlag, flag.Args(), printUsage, getRoughBuildTime)
 }
 
 var hFlag = flag.Bool("h", false, "show help")

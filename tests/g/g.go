@@ -1,4 +1,3 @@
-
 /*aaaa
 bbbb
 cccc*/
@@ -46,11 +45,9 @@ func F() {
 		*C
 		B int
 	}
-	
+
 	var c C
 	_ = c
 }
 
-
 // dafafafadf
-

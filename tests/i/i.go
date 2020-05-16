@@ -4,7 +4,7 @@ import "io"
 
 type Conn struct {
 	frameReader
-	PayloadType        byte
+	PayloadType byte
 }
 
 type frameReader interface {
@@ -30,6 +30,6 @@ func f() {
 	//var x func() byte = c.PayloadType
 	var x = c.PayloadType
 	_ = x
-	
+
 	// typeutil.MethsetCache has bug.
 }

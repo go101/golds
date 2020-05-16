@@ -207,7 +207,7 @@ Generate:
 	return
 }
 
-func Gen(outputDir string, args []string, printUsage func(io.Writer), roughBuildTime string) {
+func Gen(outputDir string, args []string, printUsage func(io.Writer), roughBuildTime func() time.Time) {
 	log.SetFlags(log.Lshortfile)
 
 	// ...
@@ -221,10 +221,10 @@ func Gen(outputDir string, args []string, printUsage func(io.Writer), roughBuild
 
 	// ...
 	ds := &docServer{
-		phase:    Phase_Unprepared,
-		analyzer: &code.CodeAnalyzer{},
+		phase:          Phase_Unprepared,
+		analyzer:       &code.CodeAnalyzer{},
+		roughBuildTime: roughBuildTime,
 	}
-	ds.parseRoughBuildTime(roughBuildTime)
 	ds.changeSettings("", "")
 	ds.analyze(args, printUsage)
 

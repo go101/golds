@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"sort"
 	"strings"
-	"time"
 
 	"go101.org/gold/code"
 )
@@ -130,17 +129,14 @@ func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*Package
 var divVisibility = map[bool]string{false: " hidden", true: ""}
 
 func (ds *docServer) writeUpdateGoldBlock(page *htmlPage) {
-	d := time.Now().Sub(ds.roughBuildTime)
-	if true || d < time.Hour*24*30 {
-		fmt.Fprintf(page, `
+	fmt.Fprintf(page, `
 <pre id="%s" class="gold-update%s">%s</pre>
 <pre id="%s" class="gold-update hidden">%s</pre>
 <pre id="%s" class="gold-update%s">%s</pre>`,
-			UpdateTip2DivID[UpdateTip_ToUpdate], divVisibility[ds.updateTip == UpdateTip_ToUpdate], ds.currentTranslation.Text_UpdateTip("ToUpdate"),
-			UpdateTip2DivID[UpdateTip_Updating], ds.currentTranslation.Text_UpdateTip("Updating"),
-			UpdateTip2DivID[UpdateTip_Updated], divVisibility[ds.updateTip == UpdateTip_Updated], ds.currentTranslation.Text_UpdateTip("Updated"),
-		)
-	}
+		UpdateTip2DivID[UpdateTip_ToUpdate], divVisibility[ds.updateTip == UpdateTip_ToUpdate], ds.currentTranslation.Text_UpdateTip("ToUpdate"),
+		UpdateTip2DivID[UpdateTip_Updating], ds.currentTranslation.Text_UpdateTip("Updating"),
+		UpdateTip2DivID[UpdateTip_Updated], divVisibility[ds.updateTip == UpdateTip_Updated], ds.currentTranslation.Text_UpdateTip("Updated"),
+	)
 }
 
 func (ds *docServer) writeStatsBlock(page *htmlPage, stats *code.Stats) {
