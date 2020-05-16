@@ -314,7 +314,7 @@ type TypeInfo struct {
 	ImplementedBys []*TypeInfo
 
 	// For builtin and unnamed types only.
-	Aliases []*TypeAlias
+	Aliases []*TypeAlias // ToDo:
 
 	// For named and basic types.
 	TypeName *TypeName
@@ -325,7 +325,7 @@ type TypeInfo struct {
 	// For unnamed interfaces and structs, this field must be nil.
 	//Pkg *Package // Looks this field is never used. (It really should not exist in this type.)
 
-	// Including promoted ones. For struct types only.
+	// Explicit fields and methods.
 	// * For named types, only explicitly declared methods are included.
 	//   The field is only built for T. (*T).DirectSelectors is always nil.
 	// * For named interface types, all explicitly specified methods and embedded types (as fields).

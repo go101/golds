@@ -22,7 +22,9 @@ const (
 	SubTask_CollectRuntimeFunctionPositions
 	SubTask_FindTypeSources
 	SubTask_CollectSelectors
+	SubTask_CheckCollectedSelectors
 	SubTask_FindImplementations
+	SubTask_MakeStatistics
 	SubTask_CollectSourceFiles
 )
 
@@ -91,10 +93,19 @@ type Stats struct {
 	ExportedTypeAliases int32
 
 	//ExportedTypeAliasesByKind
-	ExportedNamedTypesByKind [KindCount]int32
+	ExportedNamedTypesByKind          [KindCount]int32
+	ExportedNameIntergerTypes         int32
+	ExportedNameUnsignedIntergerTypes int32
+	ExportedNameNumericTypes          int32
 
-	NamedStructsByExportedFieldCount,
-	ExportedNamedInterfacesByMethodCount [16]int32 // the last element means (N-1)+
+	NamedStructsByFieldCount, // including promoteds and non-exporteds
+	NamedStructsByExplicitFieldCount, // including non-exporteds but not including promoted
+	NamedStructsByExportedFieldCount, // including promoteds
+	NamedStructsByExportedExplicitFieldCount, // not including promoteds
+	ExportedNamedNonInterfaceTypesByMethodCount, // T and * T combined
+	ExportedNamedNonInterfaceTypesByExportedMethodCount, // T and * T combined
+	ExportedNamedInterfacesByMethodCount,
+	ExportedNamedInterfacesByExportedMethodCount [16]int32 // the last element means (N-1)+
 
 	// Values
 	ExportedVariables,

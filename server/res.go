@@ -51,7 +51,9 @@ type Translation interface {
 	Text_Analyzing_CollectRuntimeFunctionPositions(d time.Duration) string
 	Text_Analyzing_FindTypeSources(d time.Duration) string
 	Text_Analyzing_CollectSelectors(d time.Duration) string
+	Text_Analyzing_CheckCollectedSelectors(d time.Duration) string
 	Text_Analyzing_FindImplementations(d time.Duration) string
+	Text_Analyzing_MakeStatistics(d time.Duration) string
 	Text_Analyzing_CollectSourceFiles(d time.Duration) string
 	Text_Analyzing_Done(d time.Duration) string
 

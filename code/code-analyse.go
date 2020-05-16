@@ -7,6 +7,7 @@ import (
 	"go/token"
 	"go/types"
 	"log"
+	"reflect"
 	"sort"
 	"time"
 
@@ -72,6 +73,13 @@ func (d *CodeAnalyzer) AnalyzePackages(onSubTaskDone func(int, time.Duration, ..
 	d.forbidRegisterTypes = false
 
 	logProgress(SubTask_FindImplementations)
+
+	for _, pkg := range d.packageList {
+		d.analyzePackage_CollectMoreStatistics(pkg)
+	}
+	d.analyzePackage_CollectMoreStatisticsFinal()
+
+	logProgress(SubTask_MakeStatistics)
 
 	// ...
 
@@ -1660,11 +1668,6 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 		// function stats are moved to below
 	}
 
-	_ = registerFunction
-	_ = registerVariable
-	_ = registerConstant
-	_ = registerImport
-
 	var isBuiltinPkg = pkg.Path() == "builtin"
 	var isUnsafePkg = pkg.Path() == "unsafe"
 
@@ -1972,16 +1975,9 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 			}
 		}
 	}
-	for _, tn := range pkg.PackageAnalyzeResult.AllTypeNames {
-		if isBuiltinPkg || tn.Exported() {
-			if tn.Alias != nil {
-				d.stats.ExportedTypeAliases++
-			} else {
-				d.stats.ExportedNamedTypes++
-				d.stats.ExportedNamedTypesByKind[tn.Named.Kind()]++
-			}
-		}
-	}
+	//for _, tn := range pkg.PackageAnalyzeResult.AllTypeNames {
+	//	// moved to analyzePackage_CollectMoreStatistics
+	//}
 	if isBuiltinPkg {
 		return
 	}
@@ -1997,6 +1993,71 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 			d.stats.ExportedConstants++
 		}
 	}
+}
+
+func (d *CodeAnalyzer) analyzePackage_CollectMoreStatistics(pkg *Package) {
+	if pkg.PackageAnalyzeResult == nil {
+		panic(pkg.Path() + " is not analyzed yet")
+	}
+	var isBuiltinPkg = pkg.Path() == "builtin"
+
+	for _, tn := range pkg.PackageAnalyzeResult.AllTypeNames {
+		if isBuiltinPkg != token.IsExported(tn.Name()) {
+			if tn.Alias != nil {
+				d.stats.ExportedTypeAliases++
+			} else {
+				kind := tn.Named.Kind()
+				d.stats.ExportedNamedTypesByKind[kind]++
+				d.stats.ExportedNamedTypes++
+
+				var numExportedMethods = 0
+				for _, sel := range tn.Named.AllMethods {
+					if token.IsExported(sel.Name()) {
+						numExportedMethods++
+					}
+				}
+				if kind == reflect.Interface {
+					incSliceStat(d.stats.ExportedNamedInterfacesByMethodCount[:], len(tn.Named.AllMethods))
+					incSliceStat(d.stats.ExportedNamedInterfacesByExportedMethodCount[:], numExportedMethods)
+					continue
+				}
+				incSliceStat(d.stats.ExportedNamedNonInterfaceTypesByMethodCount[:], len(tn.Named.AllMethods))
+				incSliceStat(d.stats.ExportedNamedNonInterfaceTypesByExportedMethodCount[:], numExportedMethods)
+
+				if kind == reflect.Struct {
+					incSliceStat(d.stats.NamedStructsByFieldCount[:], len(tn.Named.AllFields))
+
+					var numExporteds, numExpliciteds, numExportedExpliciteds = 0, 0, 0
+					for _, sel := range tn.Named.AllFields {
+						if token.IsExported(sel.Name()) {
+							numExporteds++
+							if sel.Depth == 0 {
+								numExportedExpliciteds++
+							}
+						}
+						if sel.Depth == 0 {
+							numExpliciteds++
+						}
+					}
+					incSliceStat(d.stats.NamedStructsByExportedFieldCount[:], numExporteds)
+					incSliceStat(d.stats.NamedStructsByExplicitFieldCount[:], numExpliciteds)
+					incSliceStat(d.stats.NamedStructsByExportedExplicitFieldCount[:], numExportedExpliciteds)
+				}
+			}
+		}
+	}
+}
+
+func (d *CodeAnalyzer) analyzePackage_CollectMoreStatisticsFinal() {
+	var sum = func(kinds ...reflect.Kind) (r int32) {
+		for _, k := range kinds {
+			r += d.stats.ExportedNamedTypesByKind[k]
+		}
+		return
+	}
+	d.stats.ExportedNameUnsignedIntergerTypes = sum(reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr)
+	d.stats.ExportedNameIntergerTypes = d.stats.ExportedNameUnsignedIntergerTypes + sum(reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64)
+	d.stats.ExportedNameNumericTypes = d.stats.ExportedNameIntergerTypes + sum(reflect.Float32, reflect.Float64, reflect.Complex64, reflect.Complex128)
 }
 
 func (d *CodeAnalyzer) analyzePackage_CollectSomeRuntimeFunctionPositions() {

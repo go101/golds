@@ -100,8 +100,12 @@ func (ds *docServer) onAnalyzingSubTaskDone(task int, d time.Duration, args ...i
 		msg = ds.currentTranslation.Text_Analyzing_FindTypeSources(d)
 	case code.SubTask_CollectSelectors:
 		msg = ds.currentTranslation.Text_Analyzing_CollectSelectors(d)
+	case code.SubTask_CheckCollectedSelectors:
+		msg = ds.currentTranslation.Text_Analyzing_CheckCollectedSelectors(d)
 	case code.SubTask_FindImplementations:
 		msg = ds.currentTranslation.Text_Analyzing_FindImplementations(d)
+	case code.SubTask_MakeStatistics:
+		msg = ds.currentTranslation.Text_Analyzing_MakeStatistics(d)
 	case code.SubTask_CollectSourceFiles:
 		msg = ds.currentTranslation.Text_Analyzing_CollectSourceFiles(d)
 	}

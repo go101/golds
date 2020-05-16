@@ -77,8 +77,16 @@ func (*English) Text_Analyzing_CollectSelectors(d time.Duration) string {
 	return fmt.Sprintf("Collect selectors: %s", d)
 }
 
+func (*English) Text_Analyzing_CheckCollectedSelectors(d time.Duration) string {
+	return fmt.Sprintf("Check collected selectors: %s", d)
+}
+
 func (*English) Text_Analyzing_FindImplementations(d time.Duration) string {
 	return fmt.Sprintf("Find implementations: %s", d)
+}
+
+func (*English) Text_Analyzing_MakeStatistics(d time.Duration) string {
+	return fmt.Sprintf("Make statistics: %s", d)
 }
 
 func (*English) Text_Analyzing_CollectSourceFiles(d time.Duration) string {
