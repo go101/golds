@@ -1,6 +1,9 @@
 package translation
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 type English struct{}
 
@@ -9,13 +12,81 @@ func (*English) Name() string { return "English" }
 func (*English) LangTag() string { return "en" }
 
 ///////////////////////////////////////////////////////////////////
-// loading
+// analyzing
 ///////////////////////////////////////////////////////////////////
 
 func (*English) Text_Analyzing() string { return "Analyzing ..." }
 
 func (*English) Text_AnalyzingRefresh(currentPageURL string) string {
 	return fmt.Sprintf(`Please wait a moment ... (<a href="%s">refresh</a>)`, currentPageURL)
+}
+
+func (*English) Text_Analyzing_Start() string {
+	return "Start analyzing ..."
+}
+
+func (*English) Text_Analyzing_PreparationDone(d time.Duration) string {
+	return fmt.Sprintf("Preparation done: %s", d)
+}
+
+func (*English) Text_Analyzing_NFilesParsed(numFiles int, d time.Duration) string {
+	if numFiles == 1 {
+		fmt.Sprintf("One file parsed: %s", d)
+	}
+	return fmt.Sprintf("%d files parsed: %s", numFiles, d)
+}
+
+func (*English) Text_Analyzing_ParsePackagesDone(numPkgs, numFiles int, d time.Duration) string {
+	if numPkgs == 1 {
+		if numFiles == 1 {
+			return fmt.Sprintf("One package parsed (one file): %s", d)
+		}
+		return fmt.Sprintf("One packages parsed (%d files): %s", numFiles, d)
+	} else {
+		if numFiles == 1 {
+			return fmt.Sprintf("%d packages parsed (one file): %s", numPkgs, d)
+		}
+		return fmt.Sprintf("%d packages parsed (%d files): %s", numPkgs, numFiles, d)
+	}
+}
+
+func (*English) Text_Analyzing_CollectPackages(numPkgs int, d time.Duration) string {
+	if numPkgs == 1 {
+		return fmt.Sprintf("Collect one package: %s", d)
+	}
+	return fmt.Sprintf("Collect %d packages: %s", numPkgs, d)
+}
+
+func (*English) Text_Analyzing_SortPackagesByDependencies(d time.Duration) string {
+	return fmt.Sprintf("Sort packages by dependencies: %s", d)
+}
+
+func (*English) Text_Analyzing_CollectDeclarations(d time.Duration) string {
+	return fmt.Sprintf("Collect declarations: %s", d)
+}
+
+func (*English) Text_Analyzing_CollectRuntimeFunctionPositions(d time.Duration) string {
+	return fmt.Sprintf("Collect some runtime function positions: %s", d)
+}
+
+func (*English) Text_Analyzing_FindTypeSources(d time.Duration) string {
+	return fmt.Sprintf("Find type sources: %s", d)
+}
+
+func (*English) Text_Analyzing_CollectSelectors(d time.Duration) string {
+	return fmt.Sprintf("Collect selectors: %s", d)
+}
+
+func (*English) Text_Analyzing_FindImplementations(d time.Duration) string {
+	return fmt.Sprintf("Find implementations: %s", d)
+}
+
+func (*English) Text_Analyzing_CollectSourceFiles(d time.Duration) string {
+	return fmt.Sprintf("Collect Source Files: %s", d)
+}
+
+func (*English) Text_Analyzing_Done(d time.Duration) string {
+	return fmt.Sprintf("Done. (Total analyzation time: %s)", d)
 }
 
 ///////////////////////////////////////////////////////////////////

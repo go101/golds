@@ -12,6 +12,20 @@ import (
 	"golang.org/x/tools/go/types/typeutil"
 )
 
+const (
+	SubTask_PreparationDone = iota
+	SubTask_NFilesParsed
+	SubTask_ParsePackagesDone
+	SubTask_CollectPackages
+	SubTask_SortPackagesByDependencies
+	SubTask_CollectDeclarations
+	SubTask_CollectRuntimeFunctionPositions
+	SubTask_FindTypeSources
+	SubTask_CollectSelectors
+	SubTask_FindImplementations
+	SubTask_CollectSourceFiles
+)
+
 type CodeAnalyzer struct {
 	allModules []*Module
 	stdModule  *Module

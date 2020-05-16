@@ -8,6 +8,7 @@ import (
 	"log"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"go101.org/gold/util"
 )
@@ -18,10 +19,15 @@ import (
 //	AstFile *ast.File // non-nil for compiled Go files
 //}
 
-func (d *CodeAnalyzer) CollectSourceFiles(regMsg func(string)) {
+func (d *CodeAnalyzer) CollectSourceFiles(onSubTaskDone func(int, time.Duration, ...int32)) {
 	var stopWatch = util.NewStopWatch()
+
+	var logProgress = func(task int, args ...int32) {
+		onSubTaskDone(task, stopWatch.Duration(), args...)
+	}
+
 	defer func() {
-		log.Println("CollectSourceFiles:", stopWatch.Duration())
+		logProgress(SubTask_CollectSourceFiles)
 	}()
 
 	//log.Println("=================== CollectSourceFiles")

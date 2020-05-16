@@ -1,7 +1,6 @@
 package server
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"log"
@@ -15,7 +14,6 @@ import (
 	"time"
 
 	"go101.org/gold/code"
-
 	"go101.org/gold/util"
 )
 
@@ -32,11 +30,10 @@ const (
 type docServer struct {
 	mutex sync.Mutex
 
-	phase int
-
-	loadingLog *bytes.Buffer
-
-	analyzer *code.CodeAnalyzer
+	phase           int
+	analyzer        *code.CodeAnalyzer
+	analyzingLogger *log.Logger
+	analyzingLogs   []LoadingLogMessage
 
 	// Cached pages
 	packageListPage []byte
@@ -49,21 +46,24 @@ type docServer struct {
 	currentTranslation Translation
 
 	//
+	updateLogger          *log.Logger
 	roughBuildTime        time.Time
 	updateTip             int
 	cachedUpdateTip       int
 	newerVersionInstalled bool
 
 	//
-	loadingLogs []LoadingLogMessage
+	generalLogger *log.Logger
 }
 
 func Run(port string, args []string, printUsage func(io.Writer), roughBuildTime string) {
 	ds := &docServer{
-		phase:       Phase_Unprepared,
-		loadingLog:  bytes.NewBuffer([]byte{}),
-		analyzer:    &code.CodeAnalyzer{},
-		loadingLogs: make([]LoadingLogMessage, 0, 64),
+		phase:           Phase_Unprepared,
+		analyzer:        &code.CodeAnalyzer{},
+		analyzingLogger: log.New(os.Stdout, "[Analyzing] ", 0),
+		analyzingLogs:   make([]LoadingLogMessage, 0, 64),
+
+		updateLogger: log.New(os.Stdout, "[Update] ", 0),
 	}
 
 	ds.changeSettings("", "")
@@ -81,14 +81,17 @@ NextTry:
 
 	ds.parseRoughBuildTime(roughBuildTime)
 
-	go ds.analyze(args, printUsage)
+	go func() {
+		ds.analyze(args, printUsage)
+		ds.analyzingLogger.SetPrefix("")
+		ds.analyzingLogger.Printf("Server started: http://localhost:%v\n", port)
+	}()
 
 	err = OpenBrowser(fmt.Sprintf("http://localhost:%v", port))
 	if err != nil {
 		log.Println(err)
 	}
 
-	log.Printf("Server started: http://localhost:%v\n", port)
 	(&http.Server{
 		Handler:      ds,
 		WriteTimeout: 5 * time.Second,
@@ -167,7 +170,7 @@ func (ds *docServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (ds *docServer) analyze(args []string, printUsage func(io.Writer)) {
 	var stopWatch = util.NewStopWatch()
 	defer func() {
-		log.Println("Total analyzation time:", stopWatch.Duration())
+		ds.registerAnalyzingLogMessage(fmt.Sprint("Done. (Total analyzation time: ", stopWatch.Duration(), ")"))
 	}()
 
 	if len(args) == 0 {
@@ -187,12 +190,12 @@ func (ds *docServer) analyze(args []string, printUsage func(io.Writer)) {
 	args = append(args, "builtin")
 
 Start:
-	ds.registerLoadingLogMessage("Start analyzing ...")
+	ds.registerAnalyzingLogMessage("Start analyzing ...")
 	//if !ds.collectImports(args...) {
 	//	printUsage()
 	//}
 
-	if !ds.analyzer.ParsePackages(ds.registerLoadingLogMessage, args...) {
+	if !ds.analyzer.ParsePackages(ds.onAnalyzingSubTaskDone, args...) {
 		printUsage(os.Stdout)
 		return
 	}
@@ -203,8 +206,8 @@ Start:
 	//	ds.mutex.Unlock()
 	//}
 
-	ds.analyzer.AnalyzePackages(ds.registerLoadingLogMessage)
-	ds.analyzer.CollectSourceFiles(ds.registerLoadingLogMessage)
+	ds.analyzer.AnalyzePackages(ds.onAnalyzingSubTaskDone)
+	ds.analyzer.CollectSourceFiles(ds.onAnalyzingSubTaskDone)
 
 	{
 		ds.mutex.Lock()

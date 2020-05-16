@@ -11,6 +11,7 @@ import (
 	"os"
 	"strings"
 	"sync/atomic"
+	"time"
 
 	"golang.org/x/tools/go/packages"
 
@@ -63,19 +64,12 @@ func collectStdPackages() ([]*packages.Package, error) {
 	return packages.Load(configForCollectStdPkgs, "std")
 }
 
-func (d *CodeAnalyzer) ParsePackages(regMsg func(string), args ...string) bool {
+func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...int32), args ...string) bool {
 
 	var stopWatch = util.NewStopWatch()
 
-	var logProgress = func(msg string, err error) {
-		var l string
-		if err != nil {
-			l = fmt.Sprint(msg, ": ", err)
-		} else {
-			l = fmt.Sprint(msg, ": ", stopWatch.Duration())
-		}
-		log.Println(l)
-		regMsg(l)
+	var logProgress = func(task int, args ...int32) {
+		onSubTaskDone(task, stopWatch.Duration(), args...)
 	}
 
 	//log.Println("[parse packages ...], args:", args)
@@ -97,9 +91,9 @@ func (d *CodeAnalyzer) ParsePackages(regMsg func(string), args ...string) bool {
 
 		ParseFile: func(fset *token.FileSet, filename string, src []byte) (*ast.File, error) {
 			if num := atomic.AddInt32(&numParsedPackages, 1); num == 1 {
-				logProgress("Prepare packages", nil)
+				logProgress(SubTask_PreparationDone)
 			} else if num&(num-1) == 0 {
-				logProgress(fmt.Sprintf("%d files parsed", num), nil)
+				logProgress(SubTask_NFilesParsed, num)
 			}
 
 			//defer log.Println("parsed", filename)
@@ -123,14 +117,14 @@ func (d *CodeAnalyzer) ParsePackages(regMsg func(string), args ...string) bool {
 
 	ppkgs, err := packages.Load(configForParsing, args...)
 	if err != nil {
-		logProgress("packages.Load (parse packages)", err)
+		log.Println("packages.Load (parse packages):", err)
 		return false
 	}
 
-	if num := atomic.AddInt32(&numParsedPackages, 1); num < 2 || num&(num-1) != 0 {
-		logProgress(fmt.Sprintf("Parse packages done (%d files)", num), nil)
+	if num := atomic.AddInt32(&numParsedPackages, 1); num == 1 || num&(num-1) != 0 {
+		logProgress(SubTask_ParsePackagesDone, int32(len(ppkgs)), num)
 	} else {
-		logProgress("Parse packages done", nil)
+		logProgress(SubTask_ParsePackagesDone, int32(len(ppkgs)), -1)
 	}
 
 	stdPPkgs, err := collectStdPackages()
@@ -138,10 +132,8 @@ func (d *CodeAnalyzer) ParsePackages(regMsg func(string), args ...string) bool {
 		log.Fatal("failed to collect std packages: ", err)
 	}
 
-	logProgress("CollectStdPackages", nil)
-
 	defer func() {
-		logProgress("Collect packages", nil)
+		logProgress(SubTask_CollectPackages, int32(len(d.packageList)))
 	}()
 
 	var hasErrors bool

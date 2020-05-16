@@ -3,12 +3,15 @@ package server
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
+	"time"
+
+	"go101.org/gold/code"
 )
 
 // loading page
-
 func (ds *docServer) loadingPage(w http.ResponseWriter, r *http.Request) {
 	var pageUrl = r.URL.String()
 	fmt.Fprintf(w, `<!DOCTYPE html>
@@ -16,17 +19,17 @@ func (ds *docServer) loadingPage(w http.ResponseWriter, r *http.Request) {
 <head>
 <meta charset="utf-8">
 <meta http-equiv="refresh" content="1.5; url=%s">
-<title>Analyzing ...</title>
+<title>%s</title>
 </head>
 <body onload="checkLoadProgress();">
 <pre>
 <code>%s</code>
 
 `,
-		pageUrl, ds.currentTranslation.Text_AnalyzingRefresh(pageUrl),
+		pageUrl, ds.currentTranslation.Text_Analyzing(), ds.currentTranslation.Text_AnalyzingRefresh(pageUrl),
 	)
 
-	for _, lm := range ds.loadingLogs {
+	for _, lm := range ds.analyzingLogs {
 		fmt.Fprintf(w, `<code id="loading-message-%d">%s</code>
 `,
 			lm.ID, lm.Message,
@@ -50,11 +53,11 @@ func (ds *docServer) loadAPI(w http.ResponseWriter, r *http.Request) {
 	ds.mutex.Lock()
 	defer ds.mutex.Unlock()
 
-	if fromIndex > len(ds.loadingLogs) {
-		fromIndex = len(ds.loadingLogs)
+	if fromIndex > len(ds.analyzingLogs) {
+		fromIndex = len(ds.analyzingLogs)
 	}
 
-	data, err := json.Marshal(ds.loadingLogs[fromIndex:])
+	data, err := json.Marshal(ds.analyzingLogs[fromIndex:])
 	if err != nil {
 		fmt.Fprintf(w, `{"error": "%s"}`, err.Error())
 	}
@@ -67,9 +70,50 @@ type LoadingLogMessage struct {
 	Message string
 }
 
-func (ds *docServer) registerLoadingLogMessage(msg string) {
+func (ds *docServer) onAnalyzingSubTaskDone(task int, d time.Duration, args ...int32) {
+	var logger *log.Logger
+	var msg string
+	defer func() {
+		if logger != nil {
+			logger.Println(msg)
+		}
+	}()
+
+	switch task {
+	default:
+		return
+	case code.SubTask_PreparationDone:
+		msg = ds.currentTranslation.Text_Analyzing_PreparationDone(d)
+	case code.SubTask_NFilesParsed:
+		msg = ds.currentTranslation.Text_Analyzing_NFilesParsed(int(args[0]), d)
+	case code.SubTask_ParsePackagesDone:
+		msg = ds.currentTranslation.Text_Analyzing_ParsePackagesDone(int(args[0]), int(args[1]), d)
+	case code.SubTask_CollectPackages:
+		msg = ds.currentTranslation.Text_Analyzing_CollectPackages(int(args[0]), d)
+	case code.SubTask_SortPackagesByDependencies:
+		msg = ds.currentTranslation.Text_Analyzing_SortPackagesByDependencies(d)
+	case code.SubTask_CollectDeclarations:
+		msg = ds.currentTranslation.Text_Analyzing_CollectDeclarations(d)
+	case code.SubTask_CollectRuntimeFunctionPositions:
+		msg = ds.currentTranslation.Text_Analyzing_CollectRuntimeFunctionPositions(d)
+	case code.SubTask_FindTypeSources:
+		msg = ds.currentTranslation.Text_Analyzing_FindTypeSources(d)
+	case code.SubTask_CollectSelectors:
+		msg = ds.currentTranslation.Text_Analyzing_CollectSelectors(d)
+	case code.SubTask_FindImplementations:
+		msg = ds.currentTranslation.Text_Analyzing_FindImplementations(d)
+	case code.SubTask_CollectSourceFiles:
+		msg = ds.currentTranslation.Text_Analyzing_CollectSourceFiles(d)
+	}
+
+	logger = ds.registerAnalyzingLogMessage(msg)
+}
+
+func (ds *docServer) registerAnalyzingLogMessage(msg string) *log.Logger {
 	ds.mutex.Lock()
 	defer ds.mutex.Unlock()
 
-	ds.loadingLogs = append(ds.loadingLogs, LoadingLogMessage{len(ds.loadingLogs), msg})
+	ds.analyzingLogs = append(ds.analyzingLogs, LoadingLogMessage{len(ds.analyzingLogs), msg})
+	return ds.analyzingLogger
+
 }

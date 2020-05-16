@@ -8,16 +8,21 @@ import (
 	"go/types"
 	"log"
 	"sort"
+	"time"
 
 	"golang.org/x/tools/go/types/typeutil"
 
 	"go101.org/gold/util"
 )
 
-func (d *CodeAnalyzer) AnalyzePackages(regMsg func(string)) {
+func (d *CodeAnalyzer) AnalyzePackages(onSubTaskDone func(int, time.Duration, ...int32)) {
 	//log.Println("[analyze packages ...]")
 
 	var stopWatch = util.NewStopWatch()
+
+	var logProgress = func(task int, args ...int32) {
+		onSubTaskDone(task, stopWatch.Duration(), args...)
+	}
 
 	d.confirmPackageModules()
 
@@ -25,17 +30,17 @@ func (d *CodeAnalyzer) AnalyzePackages(regMsg func(string)) {
 
 	d.sortPackagesByDependencies()
 
-	log.Println("SortPackagesByDependencies:", stopWatch.Duration())
+	logProgress(SubTask_SortPackagesByDependencies)
 
 	for _, pkg := range d.packageList {
 		d.analyzePackage_CollectDeclarations(pkg)
 	}
 
-	log.Println("CollectDeclarations:", stopWatch.Duration())
+	logProgress(SubTask_CollectDeclarations)
 
 	d.analyzePackage_CollectSomeRuntimeFunctionPositions()
 
-	log.Println("CollectSomeRuntimeFunctionPositions:", stopWatch.Duration())
+	logProgress(SubTask_CollectRuntimeFunctionPositions)
 
 	//log.Println("=== recorded type count:", len(d.allTypeInfos))
 
@@ -45,13 +50,13 @@ func (d *CodeAnalyzer) AnalyzePackages(regMsg func(string)) {
 		d.analyzePackage_FindTypeSources(pkg)
 	}
 
-	log.Println("FindTypeSources:", stopWatch.Duration())
+	logProgress(SubTask_FindTypeSources)
 
 	//log.Println("[analyze packages 4...]")
 
 	d.analyzePackages_CollectSelectors()
 
-	log.Println("CollectSelectors:", stopWatch.Duration())
+	logProgress(SubTask_CollectSelectors)
 
 	// ToDo: it might be best to not use the NewMethodSet fucntion in std.
 	//       Same for NewFieldSet
@@ -66,7 +71,7 @@ func (d *CodeAnalyzer) AnalyzePackages(regMsg func(string)) {
 
 	d.forbidRegisterTypes = false
 
-	log.Println("FindImplementations:", stopWatch.Duration())
+	logProgress(SubTask_FindImplementations)
 
 	// ...
 
@@ -74,8 +79,7 @@ func (d *CodeAnalyzer) AnalyzePackages(regMsg func(string)) {
 	// https://github.com/golang/go/issues/37081
 	//d.analyzePackages_CheckCollectSelectors(methodCache)
 	_ = methodCache
-
-	log.Println("CheckCollectSelectors:", stopWatch.Duration())
+	//logProgress("Check collect selectors", nil)
 
 	// log.Println("[analyze packages done]")
 }

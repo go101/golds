@@ -1,6 +1,8 @@
 package server
 
 import (
+	"time"
+
 	"golang.org/x/text/language"
 	//"golang.org/x/text/language/display"
 
@@ -11,7 +13,7 @@ import (
 var (
 	allThemes       []Theme
 	allTranslations []Translation
-	langMatcher     language.Matcher
+	langMatcher     language.Matcher // ToDo:
 )
 
 // All themes and translations must be registered at init phase,
@@ -36,9 +38,22 @@ type Translation interface {
 	Name() string
 	LangTag() string
 
-	//loading
+	// analyzing
 	Text_Analyzing() string
 	Text_AnalyzingRefresh(currentPageURL string) string // also used in other pages
+	Text_Analyzing_Start() string
+	Text_Analyzing_PreparationDone(d time.Duration) string
+	Text_Analyzing_NFilesParsed(numFiles int, d time.Duration) string
+	Text_Analyzing_ParsePackagesDone(numPkgs, numFiles int, d time.Duration) string
+	Text_Analyzing_CollectPackages(numPkgs int, d time.Duration) string
+	Text_Analyzing_SortPackagesByDependencies(d time.Duration) string
+	Text_Analyzing_CollectDeclarations(d time.Duration) string
+	Text_Analyzing_CollectRuntimeFunctionPositions(d time.Duration) string
+	Text_Analyzing_FindTypeSources(d time.Duration) string
+	Text_Analyzing_CollectSelectors(d time.Duration) string
+	Text_Analyzing_FindImplementations(d time.Duration) string
+	Text_Analyzing_CollectSourceFiles(d time.Duration) string
+	Text_Analyzing_Done(d time.Duration) string
 
 	// overview page
 	Text_Overview() string

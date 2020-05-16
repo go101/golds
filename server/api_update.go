@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os/exec"
 	"time"
@@ -99,10 +98,10 @@ func (ds *docServer) updateGold() {
 			return err
 		}
 
-		log.Println("Run: go get -u go101.org/gold")
+		ds.updateLogger.Println("Run: go get -u go101.org/gold")
 		output, err := runShellCommand(time.Minute*2, dir, "go", "get", "-u", "go101.org/gold")
 		if len(output) > 0 {
-			log.Printf("\n%s", output)
+			ds.updateLogger.Printf("\n%s", output)
 		}
 		if err != nil {
 			return err
@@ -111,10 +110,10 @@ func (ds *docServer) updateGold() {
 		return nil
 	}(); err != nil {
 		ds.onUpdateDone(false)
-		log.Println("Update Gold error:", err)
+		ds.updateLogger.Println("Update Gold error:", err)
 	} else {
 		ds.onUpdateDone(true)
-		log.Println("Update Gold succeeded.")
+		ds.updateLogger.Println("Update Gold succeeded.")
 	}
 }
 
