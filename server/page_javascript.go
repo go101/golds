@@ -10,20 +10,25 @@ func (ds *docServer) javascriptFile(w http.ResponseWriter, r *http.Request, them
 }
 
 var jsFile = []byte(`
-
-function updateUpdateTip() {
-	// 1. Check whether or not a div with ID "updating" exists, if false, return.
-	// 2. Hide the "to-update", "updating" and "updated" divs.
-	// 3. call "GET /update" API. If the return body is
-	//    * {"updateStatus": "to-update"}, show the "to-update" div.
-	//    * {"updateStatus": "updating"}, show the "updating" div.
-	//    * {"updateStatus": "updated"}, show the "updated" div.
-	// 4. If the return body is not {"updateStatus": "updating"}, return.
-	// 5. Call the API from time to time, until the return body is not {"updateStatus": "updating"}.
-	//    Hide the "updating" div, and if the final return is {"updateStatus": "updated"}, show the "updated" div.
+function checkLoadProgress() {
 }
 
+function updateUpdateTip() {
+}
 `)
+
+// ToDo
+//function updateUpdateTip() {
+//	// 1. Check whether or not a div with ID "updating" exists, if false, return.
+//	// 2. Hide the "to-update", "updating" and "updated" divs.
+//	// 3. call "GET /update" API. If the return body is
+//	//    * {"updateStatus": "to-update"}, show the "to-update" div.
+//	//    * {"updateStatus": "updating"}, show the "updating" div.
+//	//    * {"updateStatus": "updated"}, show the "updated" div.
+//	// 4. If the return body is not {"updateStatus": "updating"}, return.
+//	// 5. Call the API from time to time, until the return body is not {"updateStatus": "updating"}.
+//	//    Hide the "updating" div, and if the final return is {"updateStatus": "updated"}, show the "updated" div.
+//}
 
 //function getStyle(e, styleProp) {
 //	if (e.currentStyle)

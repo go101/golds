@@ -14,7 +14,7 @@ import (
 	"go101.org/gold/util"
 )
 
-func (d *CodeAnalyzer) AnalyzePackages() {
+func (d *CodeAnalyzer) AnalyzePackages(regMsg func(string)) {
 	//log.Println("[analyze packages ...]")
 
 	var stopWatch = util.NewStopWatch()

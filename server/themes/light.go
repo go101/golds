@@ -76,7 +76,7 @@ code .comment {color: green; font-style: italic;}
 	border-top: 1px solid #888;
 }
 
-.gold-update {text-align: center; font-size: small; border-top: 1px solid #D4D4D4; border-bottom: 1px solid #D4D4D4;}
+.gold-update {text-align: center; font-size: smaller; background: #eee; padding: 3px;}
 .hidden {display: none;}
 
 `

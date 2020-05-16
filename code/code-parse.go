@@ -10,6 +10,7 @@ import (
 	"log"
 	"os"
 	"strings"
+	"sync/atomic"
 
 	"golang.org/x/tools/go/packages"
 
@@ -62,14 +63,26 @@ func collectStdPackages() ([]*packages.Package, error) {
 	return packages.Load(configForCollectStdPkgs, "std")
 }
 
-func (d *CodeAnalyzer) ParsePackages(args ...string) bool {
+func (d *CodeAnalyzer) ParsePackages(regMsg func(string), args ...string) bool {
+
 	var stopWatch = util.NewStopWatch()
+
+	var logProgress = func(msg string, err error) {
+		var l string
+		if err != nil {
+			l = fmt.Sprint(msg, ": ", err)
+		} else {
+			l = fmt.Sprint(msg, ": ", stopWatch.Duration())
+		}
+		log.Println(l)
+		regMsg(l)
+	}
 
 	//log.Println("[parse packages ...], args:", args)
 
 	// ToDo: check cache to avoid parsing again.
 
-	downloading := true
+	var numParsedPackages int32
 
 	var configForParsing = &packages.Config{
 		Mode: packages.NeedName | packages.NeedImports | packages.NeedDeps |
@@ -83,9 +96,10 @@ func (d *CodeAnalyzer) ParsePackages(args ...string) bool {
 		//},
 
 		ParseFile: func(fset *token.FileSet, filename string, src []byte) (*ast.File, error) {
-			if downloading {
-				log.Println("Prepare packages:", stopWatch.Duration())
-				downloading = false
+			if num := atomic.AddInt32(&numParsedPackages, 1); num == 1 {
+				logProgress("Prepare packages", nil)
+			} else if num&(num-1) == 0 {
+				logProgress(fmt.Sprintf("%d files parsed", num), nil)
 			}
 
 			//defer log.Println("parsed", filename)
@@ -109,21 +123,25 @@ func (d *CodeAnalyzer) ParsePackages(args ...string) bool {
 
 	ppkgs, err := packages.Load(configForParsing, args...)
 	if err != nil {
-		log.Println("packages.Load (parse packages):", err)
+		logProgress("packages.Load (parse packages)", err)
 		return false
 	}
 
-	log.Println("Load packages:", stopWatch.Duration())
+	if num := atomic.AddInt32(&numParsedPackages, 1); num < 2 || num&(num-1) != 0 {
+		logProgress(fmt.Sprintf("Parse packages done (%d files)", num), nil)
+	} else {
+		logProgress("Parse packages done", nil)
+	}
 
 	stdPPkgs, err := collectStdPackages()
 	if err != nil {
 		log.Fatal("failed to collect std packages: ", err)
 	}
 
-	log.Println("CollectStdPackages:", stopWatch.Duration())
+	logProgress("CollectStdPackages", nil)
 
 	defer func() {
-		log.Println("Collect packages:", stopWatch.Duration())
+		logProgress("Collect packages", nil)
 	}()
 
 	var hasErrors bool

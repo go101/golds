@@ -26,7 +26,7 @@ func (ds *docServer) sourceCodePage(w http.ResponseWriter, r *http.Request, pkgP
 	defer ds.mutex.Unlock()
 
 	if ds.phase < Phase_Analyzed {
-		writeAutoRefreshHTML(w, r)
+		ds.loadingPage(w, r)
 		return
 	}
 

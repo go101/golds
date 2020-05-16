@@ -26,7 +26,7 @@ func (ds *docServer) packageDetailsPage(w http.ResponseWriter, r *http.Request, 
 	defer ds.mutex.Unlock()
 
 	if ds.phase < Phase_Analyzed {
-		writeAutoRefreshHTML(w, r)
+		ds.loadingPage(w, r)
 		return
 	}
 

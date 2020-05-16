@@ -53,13 +53,17 @@ type docServer struct {
 	updateTip             int
 	cachedUpdateTip       int
 	newerVersionInstalled bool
+
+	//
+	loadingLogs []LoadingLogMessage
 }
 
 func Run(port string, args []string, printUsage func(io.Writer), roughBuildTime string) {
 	ds := &docServer{
-		phase:      Phase_Unprepared,
-		loadingLog: bytes.NewBuffer([]byte{}),
-		analyzer:   &code.CodeAnalyzer{},
+		phase:       Phase_Unprepared,
+		loadingLog:  bytes.NewBuffer([]byte{}),
+		analyzer:    &code.CodeAnalyzer{},
+		loadingLogs: make([]LoadingLogMessage, 0, 64),
 	}
 
 	ds.changeSettings("", "")
@@ -113,21 +117,31 @@ func (ds *docServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Min valid path length is 5.
 	if len(path) < 5 || path[3] != ':' {
 		if path == "update" {
-			ds.updateAPI(w, r)
-		} else if path == "load" {
-			ds.loadAPI(w, r)
+			ds.startUpdatingGold()
+			http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprint(w, "Invalid url")
 		}
-
-		fmt.Fprint(w, "Invalid url")
 		return
 	}
 
 	switch resType, resPath := pageResType(path[:3]), path[4:]; resType {
 	default: // ResTypeNone
 		w.WriteHeader(http.StatusNotFound)
+		fmt.Fprint(w, "Invalid url")
+	case ResTypeAPI: // "api"
+		switch resPath {
+		default:
+			w.WriteHeader(http.StatusNotFound)
+			fmt.Fprint(w, "Invalid url")
+		case "update":
+			ds.updateAPI(w, r)
+		case "load":
+			ds.loadAPI(w, r)
+		}
 	case ResTypeCSS: // "css"
 		ds.cssFile(w, r, resPath)
 	case ResTypeJS: // "jvs"
@@ -173,11 +187,12 @@ func (ds *docServer) analyze(args []string, printUsage func(io.Writer)) {
 	args = append(args, "builtin")
 
 Start:
+	ds.registerLoadingLogMessage("Start analyzing ...")
 	//if !ds.collectImports(args...) {
 	//	printUsage()
 	//}
 
-	if !ds.analyzer.ParsePackages(args...) {
+	if !ds.analyzer.ParsePackages(ds.registerLoadingLogMessage, args...) {
 		printUsage(os.Stdout)
 		return
 	}
@@ -188,8 +203,8 @@ Start:
 	//	ds.mutex.Unlock()
 	//}
 
-	ds.analyzer.AnalyzePackages()
-	ds.analyzer.CollectSourceFiles()
+	ds.analyzer.AnalyzePackages(ds.registerLoadingLogMessage)
+	ds.analyzer.CollectSourceFiles(ds.registerLoadingLogMessage)
 
 	{
 		ds.mutex.Lock()

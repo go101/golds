@@ -13,7 +13,7 @@ func (ds *docServer) packageDependenciesPage(w http.ResponseWriter, r *http.Requ
 	defer ds.mutex.Unlock()
 
 	if ds.phase < Phase_Analyzed {
-		writeAutoRefreshHTML(w, r)
+		ds.loadingPage(w, r)
 		return
 	}
 

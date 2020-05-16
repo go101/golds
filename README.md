@@ -318,4 +318,6 @@ todo:
     fitler packages (main | std)
     sort packages (importedBys, most imports)
     sort types (methods, used as parameters/results)
+  * search on pkg details page
+  * jump to concrete methods from interface methods
 

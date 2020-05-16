@@ -3,7 +3,6 @@ package server
 import (
 	"bytes"
 	"fmt"
-	"net/http"
 	"os/exec"
 	"runtime"
 )
@@ -12,6 +11,7 @@ type pageResType string
 
 const (
 	ResTypeNone       pageResType = ""
+	ResTypeAPI        pageResType = "api"
 	ResTypePackage    pageResType = "pkg"
 	ResTypeDependency pageResType = "dep"
 	ResTypeSource     pageResType = "src"
@@ -33,24 +33,6 @@ func OpenBrowser(url string) error {
 		cmd = "xdg-open"
 	}
 	return exec.Command(cmd, append(args, url)...).Start()
-}
-
-func writeAutoRefreshHTML(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, `<!DOCTYPE html>
-<html>
-	<head>
-		<meta charset="utf-8">
-		<noscript>
-		<meta http-equiv="refresh" content="1.5; url=%[1]v">
-		</noscript>
-	
-		<title>Analyzing ...</title>
-	</head>
-
-	<body onload="checkLoadProgress();">
-	Analyzing ... (<a href="%[1]v">refresh</a>)
-	</body>
-</html>`, r.URL.String())
 }
 
 type htmlPage struct {

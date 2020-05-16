@@ -9,6 +9,16 @@ func (*English) Name() string { return "English" }
 func (*English) LangTag() string { return "en" }
 
 ///////////////////////////////////////////////////////////////////
+// loading
+///////////////////////////////////////////////////////////////////
+
+func (*English) Text_Analyzing() string { return "Analyzing ..." }
+
+func (*English) Text_AnalyzingRefresh(currentPageURL string) string {
+	return fmt.Sprintf(`Please wait a moment ... (<a href="%s">refresh</a>)`, currentPageURL)
+}
+
+///////////////////////////////////////////////////////////////////
 // overview page
 ///////////////////////////////////////////////////////////////////
 
@@ -33,7 +43,7 @@ func (*English) Text_RequireStat(numRequires, numRequiredBys int) string {
 func (*English) Text_UpdateTip(tipName string) string {
 	switch tipName {
 	case "ToUpdate":
-		return `<b>Gold</b> has not been updated for about one month. You may run <b>go get -u go101.org/gold</b> or <b><a href="/update">click here</a></b> to update it.`
+		return `<b>Gold</b> has not been updated for one month. You may run <b>go get -u go101.org/gold</b> or <b><a href="/update">click here</a></b> to update it.`
 	case "Updating":
 		return `<b>Gold</b> is being updated.`
 	case "Updated":

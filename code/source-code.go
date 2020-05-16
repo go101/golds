@@ -18,7 +18,7 @@ import (
 //	AstFile *ast.File // non-nil for compiled Go files
 //}
 
-func (d *CodeAnalyzer) CollectSourceFiles() {
+func (d *CodeAnalyzer) CollectSourceFiles(regMsg func(string)) {
 	var stopWatch = util.NewStopWatch()
 	defer func() {
 		log.Println("CollectSourceFiles:", stopWatch.Duration())

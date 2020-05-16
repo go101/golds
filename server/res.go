@@ -36,6 +36,10 @@ type Translation interface {
 	Name() string
 	LangTag() string
 
+	//loading
+	Text_Analyzing() string
+	Text_AnalyzingRefresh(currentPageURL string) string // also used in other pages
+
 	// overview page
 	Text_Overview() string
 	Text_PackageList(num int) string

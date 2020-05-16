@@ -41,23 +41,20 @@ func (ds *docServer) confirmUpdateTip() {
 	}
 }
 
-var divShownHidden = map[bool]string{false: " hidden", true: ""}
+// update page.
+func (ds *docServer) startUpdatingGold() {
+	ds.mutex.Lock()
+	defer ds.mutex.Unlock()
 
-func (ds *docServer) writeUpdateGoldBlock(page *htmlPage) {
-	d := time.Now().Sub(ds.roughBuildTime)
-	if true || d < time.Hour*24*30 {
-		fmt.Fprintf(page, `
-<div id="%s" class="gold-update%s">%s</div>
-<div id="%s" class="gold-update hidden">%s</div>
-<div id="%s" class="gold-update%s">%s</div>`,
-			UpdateTip2DivID[UpdateTip_ToUpdate], divShownHidden[ds.updateTip == UpdateTip_ToUpdate], ds.currentTranslation.Text_UpdateTip("ToUpdate"),
-			UpdateTip2DivID[UpdateTip_Updating], ds.currentTranslation.Text_UpdateTip("Updating"),
-			UpdateTip2DivID[UpdateTip_Updated], divShownHidden[ds.updateTip == UpdateTip_Updated], ds.currentTranslation.Text_UpdateTip("Updated"),
-		)
+	ds.confirmUpdateTip()
+
+	if ds.updateTip == UpdateTip_ToUpdate {
+		ds.updateTip = UpdateTip_Updating
+		go ds.updateGold()
 	}
 }
 
-// "/update" API.
+// api:update
 // - GET: get current update info.
 // - POST: do update
 func (ds *docServer) updateAPI(w http.ResponseWriter, r *http.Request) {
@@ -126,5 +123,5 @@ func runShellCommand(timeout time.Duration, wd, cmd string, args ...string) ([]b
 	defer cancel()
 	command := exec.CommandContext(ctx, cmd, args...)
 	command.Dir = wd
-	return command.Output()
+	return command.CombinedOutput()
 }
