@@ -71,14 +71,7 @@ type LoadingLogMessage struct {
 }
 
 func (ds *docServer) onAnalyzingSubTaskDone(task int, d time.Duration, args ...int32) {
-	var logger *log.Logger
 	var msg string
-	defer func() {
-		if logger != nil {
-			logger.Println(msg)
-		}
-	}()
-
 	switch task {
 	default:
 		return
@@ -110,14 +103,22 @@ func (ds *docServer) onAnalyzingSubTaskDone(task int, d time.Duration, args ...i
 		msg = ds.currentTranslation.Text_Analyzing_CollectSourceFiles(d)
 	}
 
-	logger = ds.registerAnalyzingLogMessage(msg)
+	ds.registerAnalyzingLogMessage(msg)
 }
 
-func (ds *docServer) registerAnalyzingLogMessage(msg string) *log.Logger {
+func (ds *docServer) registerAnalyzingLogMessage(msg string) {
+	var l *log.Logger
+	defer func() {
+		if l != nil {
+			l.Println(msg)
+		}
+	}()
+
 	ds.mutex.Lock()
 	defer ds.mutex.Unlock()
 
 	ds.analyzingLogs = append(ds.analyzingLogs, LoadingLogMessage{len(ds.analyzingLogs), msg})
-	return ds.analyzingLogger
+	l = ds.analyzingLogger
+	return
 
 }

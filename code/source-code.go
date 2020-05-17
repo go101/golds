@@ -8,9 +8,6 @@ import (
 	"log"
 	"path/filepath"
 	"strings"
-	"time"
-
-	"go101.org/gold/util"
 )
 
 //type SourceFile struct {
@@ -19,17 +16,7 @@ import (
 //	AstFile *ast.File // non-nil for compiled Go files
 //}
 
-func (d *CodeAnalyzer) CollectSourceFiles(onSubTaskDone func(int, time.Duration, ...int32)) {
-	var stopWatch = util.NewStopWatch()
-
-	var logProgress = func(task int, args ...int32) {
-		onSubTaskDone(task, stopWatch.Duration(), args...)
-	}
-
-	defer func() {
-		logProgress(SubTask_CollectSourceFiles)
-	}()
-
+func (d *CodeAnalyzer) CollectSourceFiles() {
 	//log.Println("=================== CollectSourceFiles")
 
 	//d.sourceFile2PackageTable = make(map[string]SourceFile, len(d.packageList)*5)
@@ -62,7 +49,7 @@ func (d *CodeAnalyzer) CollectSourceFiles(onSubTaskDone func(int, time.Duration,
 
 		for _, path := range pkg.PPkg.OtherFiles {
 			d.sourceFile2PackageTable[path] = pkg
-			d.stats.Files++
+			d.stats.FilesWithoutGenerateds++
 		}
 
 		for _, path := range pkg.PPkg.CompiledGoFiles {
@@ -74,7 +61,7 @@ func (d *CodeAnalyzer) CollectSourceFiles(onSubTaskDone func(int, time.Duration,
 				//log.Println("! in GoFiles but not CompiledGoFiles:", path)
 				d.sourceFile2PackageTable[path] = pkg
 			}
-			d.stats.Files++
+			d.stats.FilesWithoutGenerateds++
 		}
 
 		d.BuildCgoFileMappings(pkg)

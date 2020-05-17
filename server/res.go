@@ -59,7 +59,8 @@ type Translation interface {
 
 	// overview page
 	Text_Overview() string
-	Text_PackageList(num int) string
+	Text_PackageList() string
+	Text_Statistics() string
 	Text_AllStats(stats map[string]int) string               // to use
 	Text_Modules() string                                    // to use
 	Text_BelongingModule() string                            // to use

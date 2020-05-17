@@ -197,7 +197,6 @@ Start:
 	//}
 
 	ds.analyzer.AnalyzePackages(ds.onAnalyzingSubTaskDone)
-	ds.analyzer.CollectSourceFiles(ds.onAnalyzingSubTaskDone)
 
 	{
 		ds.mutex.Lock()

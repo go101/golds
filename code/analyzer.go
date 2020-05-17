@@ -73,8 +73,13 @@ type CodeAnalyzer struct {
 const KindCount = reflect.UnsafePointer + 1
 
 type Stats struct {
-	//Packages, // available in other ways
-	Files,
+	Packages,
+	AllPackageDeps int32
+	PackagesByDeps [64]int32
+	//PackagesByImportBys [1024]int32 // use sorting packages by importBys instead.
+
+	FilesWithoutGenerateds,  // without generated ones
+	FilesWithGenerateds, // with generated ones
 	//ToDo: stat code lines. Use the info in AstFile?
 	CodeLines,
 	BlankCodeLines,
@@ -84,7 +89,7 @@ type Stats struct {
 	// Deps per packages are available in other ways.
 	AstFiles,
 	Imports int32
-	FilesByImportCount [32]int32
+	FilesByImportCount [64]int32
 
 	// Types
 	//NamedStructTypesWithEmbeddingField,
@@ -94,9 +99,9 @@ type Stats struct {
 
 	//ExportedTypeAliasesByKind
 	ExportedNamedTypesByKind          [KindCount]int32
-	ExportedNameIntergerTypes         int32
-	ExportedNameUnsignedIntergerTypes int32
-	ExportedNameNumericTypes          int32
+	ExportedNamedIntergerTypes,
+	ExportedNamedUnsignedIntergerTypes,
+	ExportedNamedNumericTypes int32
 
 	NamedStructsByFieldCount, // including promoteds and non-exporteds
 	NamedStructsByExplicitFieldCount, // including non-exporteds but not including promoted
@@ -105,7 +110,7 @@ type Stats struct {
 	ExportedNamedNonInterfaceTypesByMethodCount, // T and * T combined
 	ExportedNamedNonInterfaceTypesByExportedMethodCount, // T and * T combined
 	ExportedNamedInterfacesByMethodCount,
-	ExportedNamedInterfacesByExportedMethodCount [16]int32 // the last element means (N-1)+
+	ExportedNamedInterfacesByExportedMethodCount [64]int32 // the last element means (N-1)+
 
 	// Values
 	ExportedVariables,
@@ -116,9 +121,9 @@ type Stats struct {
 	ExportedMethods int32
 
 	FunctionsByParameterCount,
-	MethodsByParameterCount [16]int32 // the last element means (N-1)+
+	MethodsByParameterCount [32]int32 // the last element means (N-1)+
 	FunctionsByResultCount,
-	MethodsByResultCount [6]int32 // the last element means (N-1)+
+	MethodsByResultCount [16]int32 // the last element means (N-1)+
 }
 
 func incSliceStat(stats []int32, index int) {
@@ -127,6 +132,10 @@ func incSliceStat(stats []int32, index int) {
 	} else {
 		stats[index]++
 	}
+}
+
+func (d *CodeAnalyzer) Statistics() Stats {
+	return d.stats
 }
 
 // Please reset it after using.

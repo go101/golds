@@ -74,6 +74,10 @@ func (d *CodeAnalyzer) AnalyzePackages(onSubTaskDone func(int, time.Duration, ..
 
 	logProgress(SubTask_FindImplementations)
 
+	d.CollectSourceFiles()
+
+	logProgress(SubTask_CollectSourceFiles)
+
 	for _, pkg := range d.packageList {
 		d.analyzePackage_CollectMoreStatistics(pkg)
 	}
@@ -2055,9 +2059,16 @@ func (d *CodeAnalyzer) analyzePackage_CollectMoreStatisticsFinal() {
 		}
 		return
 	}
-	d.stats.ExportedNameUnsignedIntergerTypes = sum(reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr)
-	d.stats.ExportedNameIntergerTypes = d.stats.ExportedNameUnsignedIntergerTypes + sum(reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64)
-	d.stats.ExportedNameNumericTypes = d.stats.ExportedNameIntergerTypes + sum(reflect.Float32, reflect.Float64, reflect.Complex64, reflect.Complex128)
+	d.stats.ExportedNamedUnsignedIntergerTypes = sum(reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr)
+	d.stats.ExportedNamedIntergerTypes = d.stats.ExportedNamedUnsignedIntergerTypes + sum(reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64)
+	d.stats.ExportedNamedNumericTypes = d.stats.ExportedNamedIntergerTypes + sum(reflect.Float32, reflect.Float64, reflect.Complex64, reflect.Complex128)
+
+	d.stats.Packages = int32(len(d.packageList))
+	for _, pkg := range d.packageList {
+		d.stats.FilesWithGenerateds += int32(len(pkg.SourceFiles))
+		d.stats.AllPackageDeps += int32(len(pkg.Deps))
+		incSliceStat(d.stats.PackagesByDeps[:], len(pkg.Deps))
+	}
 }
 
 func (d *CodeAnalyzer) analyzePackage_CollectSomeRuntimeFunctionPositions() {

@@ -5,6 +5,7 @@ import (
 	"go/token"
 	"log"
 	"net/http"
+	"reflect"
 	"sort"
 	"strings"
 
@@ -51,7 +52,7 @@ func (ds *docServer) buildOverviewPage(overview *Overview) []byte {
 
 	fmt.Fprintf(page, `
 <pre><code><span class="title">%s</span></code>`,
-		ds.currentTranslation.Text_PackageList(len(overview.Packages)),
+		ds.currentTranslation.Text_PackageList(),
 	)
 
 	ds.writePackagesForListing(page, overview.Packages, true, true)
@@ -132,7 +133,8 @@ func (ds *docServer) writeUpdateGoldBlock(page *htmlPage) {
 	fmt.Fprintf(page, `
 <pre id="%s" class="gold-update%s">%s</pre>
 <pre id="%s" class="gold-update hidden">%s</pre>
-<pre id="%s" class="gold-update%s">%s</pre>`,
+<pre id="%s" class="gold-update%s">%s</pre>
+`,
 		UpdateTip2DivID[UpdateTip_ToUpdate], divVisibility[ds.updateTip == UpdateTip_ToUpdate], ds.currentTranslation.Text_UpdateTip("ToUpdate"),
 		UpdateTip2DivID[UpdateTip_Updating], ds.currentTranslation.Text_UpdateTip("Updating"),
 		UpdateTip2DivID[UpdateTip_Updated], divVisibility[ds.updateTip == UpdateTip_Updated], ds.currentTranslation.Text_UpdateTip("Updated"),
@@ -140,11 +142,86 @@ func (ds *docServer) writeUpdateGoldBlock(page *htmlPage) {
 }
 
 func (ds *docServer) writeStatsBlock(page *htmlPage, stats *code.Stats) {
-	// Front page:
-	// * N typed recorded, in which M are nameds, P are exporteds.
-	// * Z aliases. K exported.
-	// * X interfaces (Y nameds),
-	// Main packages: ...
+	var sum = func(kinds ...reflect.Kind) (r int32) {
+		for _, k := range kinds {
+			r += stats.ExportedNamedTypesByKind[k]
+		}
+		return
+	}
+
+	fmt.Fprintf(page, `
+<pre><code><span class="title">%s</span></code>
+	Packages: %d
+	- By Dependencies: %v
+	- Dependencies/Package: %.2f
+	- Source Files/Package: %.2f
+	Source Files:          %d
+	Parsed Go Files:       %d
+	- By Imports:          %v
+	- Imports/GoFile:        %.2f,
+	Exported Named Types:  %d, Aliases: %d,
+	- By Kind:             %v
+	  - Numerics:          %d
+	    - Integers:        %d (Unsigneds: %d)
+	    - Floating-Points: %d (float64: %d)
+	    - Complexs:        %d (complex128: %d)
+	  - Structs By Fields:             %v
+	    - By Explicit Fields:          %v
+	    - By Exported Fields:          %v
+	    - By Exported Explicit Fields: %v
+	  - Interfaces By Methods:     %v
+	    - By Exported Methods:     %v
+	  - Non-Interfaces By Methods: %v
+	    - By Exported Methods:     %v
+	Exported Variables: %d
+	Exported Constants: %d
+	Functions:          %d (Exporteds: %d)
+	- By Parameters:  %v
+	- By Results:     %v
+	Methods:          %d (Exporteds: %d)
+	- By Parameters:  %v
+	- By Results:     %v
+`,
+		ds.currentTranslation.Text_Statistics(),
+		stats.Packages,
+		stats.PackagesByDeps,
+		float64(stats.AllPackageDeps) / float64(stats.Packages),
+		float64(stats.FilesWithGenerateds) / float64(stats.Packages),
+		stats.FilesWithoutGenerateds,
+		stats.AstFiles,
+		stats.FilesByImportCount,
+		float64(stats.Imports) / float64(stats.AstFiles),
+		stats.ExportedNamedTypes,
+		stats.ExportedTypeAliases,
+		stats.ExportedNamedTypesByKind,
+		stats.ExportedNamedNumericTypes,
+		stats.ExportedNamedIntergerTypes,
+		stats.ExportedNamedUnsignedIntergerTypes,
+		sum(reflect.Float32, reflect.Float64),
+		sum(reflect.Float64),
+		sum(reflect.Complex64, reflect.Complex128),
+		sum(reflect.Complex128),
+		stats.NamedStructsByFieldCount,
+		stats.NamedStructsByExplicitFieldCount,
+		stats.NamedStructsByExportedFieldCount,
+		stats.NamedStructsByExportedExplicitFieldCount,
+		stats.ExportedNamedInterfacesByMethodCount,
+		stats.ExportedNamedInterfacesByExportedMethodCount,
+		stats.ExportedNamedNonInterfaceTypesByMethodCount,
+		stats.ExportedNamedNonInterfaceTypesByExportedMethodCount,
+		stats.ExportedVariables,
+		stats.ExportedConstants,
+		stats.Functions,
+		stats.ExportedFunctions,
+		stats.FunctionsByParameterCount,
+		stats.FunctionsByResultCount,
+		stats.Methods,
+		stats.ExportedMethods,
+		stats.MethodsByParameterCount,
+		stats.MethodsByResultCount,
+	)
+
+
 }
 
 type Overview struct {
@@ -192,6 +269,7 @@ func (ds *docServer) buildOverviewData() *Overview {
 
 	return &Overview{
 		Packages: result,
+		Stats:    ds.analyzer.Statistics(),
 	}
 }
 

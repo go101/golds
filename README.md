@@ -305,7 +305,7 @@ todo:
 * tests
 * comments
 * css style
-* js
+* js: yes, this tool is non-JS freindly, but more features will be available if JS is on.
   * loading progress in pages
   * shortcuts:
     * ~, Backspace: back
@@ -317,8 +317,9 @@ todo:
   * filter values (var | const | func)
     filter types (interfaces)
     fitler packages (main | std)
-    sort packages (importedBys, most imports)
+    sort packages by importedBys (by most imports is non-sense)
     sort types (methods, used as parameters/results)
   * search on pkg details pages, and filter packages on overview page
   * jump to concrete methods from interface methods
+
 

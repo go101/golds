@@ -58,7 +58,7 @@ func (*English) Text_Analyzing_CollectPackages(numPkgs int, d time.Duration) str
 }
 
 func (*English) Text_Analyzing_SortPackagesByDependencies(d time.Duration) string {
-	return fmt.Sprintf("Sort packages by dependencies: %s", d)
+	return fmt.Sprintf("Sort packages by dependency relations: %s", d)
 }
 
 func (*English) Text_Analyzing_CollectDeclarations(d time.Duration) string {
@@ -103,8 +103,12 @@ func (*English) Text_Analyzing_Done(d time.Duration) string {
 
 func (*English) Text_Overview() string { return "Overview" }
 
-func (*English) Text_PackageList(num int) string {
-	return fmt.Sprintf("All Packages (%d)", num)
+func (*English) Text_PackageList() string {
+	return "All Packages"
+}
+
+func (*English) Text_Statistics() string {
+	return "Statistics"
 }
 
 func (*English) Text_AllStats(stats map[string]int) string {

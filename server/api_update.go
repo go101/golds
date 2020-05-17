@@ -9,7 +9,7 @@ import (
 	"go101.org/gold/util"
 )
 
-const DurationToUpdate = time.Second * 10 // time.Hour*24*30
+const DurationToUpdate = time.Hour*24*30
 
 const (
 	UpdateTip_Nothing = iota
