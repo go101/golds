@@ -111,12 +111,14 @@ func (ds *docServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if len(path) < 5 || path[3] != ':' {
-		if path == "update" {
-			ds.startUpdatingGold()
-			http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
-		} else {
+		switch path {
+		default:
 			w.WriteHeader(http.StatusNotFound)
 			fmt.Fprint(w, "Invalid url")
+		case "update":
+			ds.startUpdatingGold()
+			http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+		case "statistics":
 		}
 		return
 	}

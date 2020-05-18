@@ -36,18 +36,11 @@ func (*English) Text_Analyzing_NFilesParsed(numFiles int, d time.Duration) strin
 	return fmt.Sprintf("%d files parsed: %s", numFiles, d)
 }
 
-func (*English) Text_Analyzing_ParsePackagesDone(numPkgs, numFiles int, d time.Duration) string {
-	if numPkgs == 1 {
-		if numFiles == 1 {
-			return fmt.Sprintf("One package parsed (one file): %s", d)
-		}
-		return fmt.Sprintf("One packages parsed (%d files): %s", numFiles, d)
-	} else {
-		if numFiles == 1 {
-			return fmt.Sprintf("%d packages parsed (one file): %s", numPkgs, d)
-		}
-		return fmt.Sprintf("%d packages parsed (%d files): %s", numPkgs, numFiles, d)
+func (*English) Text_Analyzing_ParsePackagesDone(numFiles int, d time.Duration) string {
+	if numFiles == 1 {
+		return fmt.Sprintf("one file parsed: %s", d)
 	}
+	return fmt.Sprintf("%d files parsed: %s", numFiles, d)
 }
 
 func (*English) Text_Analyzing_CollectPackages(numPkgs int, d time.Duration) string {

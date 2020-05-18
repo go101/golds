@@ -44,7 +44,7 @@ type Translation interface {
 	Text_Analyzing_Start() string
 	Text_Analyzing_PreparationDone(d time.Duration) string
 	Text_Analyzing_NFilesParsed(numFiles int, d time.Duration) string
-	Text_Analyzing_ParsePackagesDone(numPkgs, numFiles int, d time.Duration) string
+	Text_Analyzing_ParsePackagesDone(numFiles int, d time.Duration) string
 	Text_Analyzing_CollectPackages(numPkgs int, d time.Duration) string
 	Text_Analyzing_SortPackagesByDependencies(d time.Duration) string
 	Text_Analyzing_CollectDeclarations(d time.Duration) string

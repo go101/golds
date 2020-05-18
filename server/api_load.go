@@ -80,7 +80,7 @@ func (ds *docServer) onAnalyzingSubTaskDone(task int, d time.Duration, args ...i
 	case code.SubTask_NFilesParsed:
 		msg = ds.currentTranslation.Text_Analyzing_NFilesParsed(int(args[0]), d)
 	case code.SubTask_ParsePackagesDone:
-		msg = ds.currentTranslation.Text_Analyzing_ParsePackagesDone(int(args[0]), int(args[1]), d)
+		msg = ds.currentTranslation.Text_Analyzing_ParsePackagesDone(int(args[0]), d)
 	case code.SubTask_CollectPackages:
 		msg = ds.currentTranslation.Text_Analyzing_CollectPackages(int(args[0]), d)
 	case code.SubTask_SortPackagesByDependencies:

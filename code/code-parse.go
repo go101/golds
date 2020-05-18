@@ -122,9 +122,9 @@ func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...i
 	}
 
 	if num := atomic.AddInt32(&numParsedPackages, 1); num == 1 || num&(num-1) != 0 {
-		logProgress(SubTask_ParsePackagesDone, int32(len(ppkgs)), num)
+		logProgress(SubTask_ParsePackagesDone, num)
 	} else {
-		logProgress(SubTask_ParsePackagesDone, int32(len(ppkgs)), -1)
+		logProgress(SubTask_ParsePackagesDone, -1)
 	}
 
 	stdPPkgs, err := collectStdPackages()
