@@ -18,7 +18,7 @@ func (ds *docServer) statisticsPage(page *htmlPage, stats *code.Stats) {
 
 	fmt.Fprintf(page, `
 <pre><code><span class="title">%s</span></code>
-	Packages: %d
+	Packages: %d, n of them are standard packages.
 	- By Dependencies: %v
 	- Dependencies/Package: %.2f
 	- Source Files/Package: %.2f
@@ -48,6 +48,12 @@ func (ds *docServer) statisticsPage(page *htmlPage, stats *code.Stats) {
 	Methods:          %d (Exporteds: %d)
 	- By Parameters:  %v
 	- By Results:     %v
+	Identifer ave. length. Average funciton name length, ...
+	- num camel styles
+	- num a_b styles
+	- IdentifiersByLength [64]int32
+	- top N identifers of most length
+	- top N functions with most parameters/results, ...
 `,
 		ds.currentTranslation.Text_Statistics(),
 		stats.Packages,
