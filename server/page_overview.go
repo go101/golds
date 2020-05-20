@@ -151,8 +151,7 @@ func (ds *docServer) writeStatsBlock(page *htmlPage, stats *code.Stats) {
 	  - %.2f named types,
 	  - %.2f variables,
 	  - %.2f constants,
-	  - %.2f functions.
-`,
+	  - %.2f functions.`,
 		ds.currentTranslation.Text_Statistics(),
 		stats.Packages, stats.AstFiles,
 		float64(stats.Imports)/float64(stats.AstFiles),

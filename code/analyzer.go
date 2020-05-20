@@ -78,7 +78,7 @@ type Stats struct {
 	PackagesByDeps [64]int32
 	//PackagesByImportBys [1024]int32 // use sorting packages by importBys instead.
 
-	FilesWithoutGenerateds,  // without generated ones
+	FilesWithoutGenerateds, // without generated ones
 	FilesWithGenerateds, // with generated ones
 	//ToDo: stat code lines. Use the info in AstFile?
 	CodeLines,
@@ -98,7 +98,7 @@ type Stats struct {
 	ExportedTypeAliases int32
 
 	//ExportedTypeAliasesByKind
-	ExportedNamedTypesByKind          [KindCount]int32
+	ExportedNamedTypesByKind [KindCount]int32
 	ExportedNamedIntergerTypes,
 	ExportedNamedUnsignedIntergerTypes,
 	ExportedNamedNumericTypes int32
@@ -161,6 +161,7 @@ func (d *CodeAnalyzer) PackageAt(i int) *Package {
 	return d.packageList[i]
 }
 
+// ToDo: remove the second result
 func (d *CodeAnalyzer) PackageByPath(path string) (*Package, bool) {
 	pkg, ok := d.packageTable[path]
 	return pkg, ok
@@ -170,6 +171,7 @@ func (d *CodeAnalyzer) IsStandardPackage(pkg *Package) bool {
 	return pkg.Mod == d.stdModule
 }
 
+// ToDo: add Standard field.
 func (d *CodeAnalyzer) IsStandardPackageByPath(path string) bool {
 	pkg, ok := d.packageTable[path]
 	return ok && d.IsStandardPackage(pkg)

@@ -380,7 +380,7 @@ func WriteTypeEx(w io.Writer, typeLit ast.Expr, info *types.Info, funcKeywordNee
 	case *ast.FuncType:
 		if funcKeywordNeeded {
 			w.Write(funcKeyword)
-			w.Write(space)
+			//w.Write(space)
 		}
 		w.Write(leftParen)
 		WriteFieldListEx(w, node.Params, comma, info, true, recvParam, lvi)

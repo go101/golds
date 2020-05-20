@@ -10,6 +10,8 @@ import (
 	"go/token"
 	"go/types"
 	"io"
+
+	//"log"
 	"net/http"
 	"sort"
 	"strings"
@@ -944,14 +946,20 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, res code.Resource, f
 		// ToDo: also wirte non-alais src type.
 		// ToDo: use a custom formatter to avoid multiple line and too long src type strings.
 		if writeType {
+			writeInterfaceText := func(tt types.Type) {
+				if _, ok := tt.Underlying().(*types.Interface); ok {
+					page.WriteString(` <i>(interface)</i>`)
+				}
+			}
+
 			if res.Alias != nil {
 				page.WriteString(" = ")
 				page.WriteString(types.TypeString(res.Denoting().TT, types.RelativeTo(res.Package().PPkg.Types)))
 				if _, ok := res.Denoting().TT.(*types.Named); ok {
-					WriteInterfaceText(page, res.Named.TT)
+					writeInterfaceText(res.Named.TT)
 				}
 			} else {
-				WriteInterfaceText(page, res.Named.TT)
+				writeInterfaceText(res.Named.TT)
 			}
 		}
 	case *code.Constant:
@@ -964,7 +972,9 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, res code.Resource, f
 		}
 		if writeType && btt.Info()&types.IsUntyped == 0 {
 			page.WriteByte(' ')
-			page.WriteString(types.TypeString(res.TType(), types.RelativeTo(res.Package().PPkg.Types)))
+			//page.WriteString(types.TypeString(res.TType(), types.RelativeTo(res.Package().PPkg.Types)))
+			ds.writeValueTType(page, res.TType(), true)
+			// ToDo: use the ast exp instead (if avaliable)
 		}
 		page.WriteString(" = ")
 		page.WriteString(res.Val().String())
@@ -973,7 +983,9 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, res code.Resource, f
 		ds.writeSrouceCodeLineLink(page, res.Package(), pos, res.Name(), "", false)
 		if writeType {
 			page.WriteByte(' ')
-			page.WriteString(res.TType().String())
+			//page.WriteString(res.TType().String())
+			ds.writeValueTType(page, res.TType(), true)
+			// ToDo: use the ast exp instead (if avaliable)
 		}
 	case *code.Function:
 		var recv *types.Var
@@ -982,9 +994,8 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, res code.Resource, f
 			recv = sig.Recv()
 		}
 		page.WriteString(" func ")
+		// This if-block will be never entered now.
 		if recv != nil {
-			// ToDo: methods might be outside the current package,
-			//       so maybe it is better to write Type.Method(Type, ...) instead.
 			switch tt := recv.Type().(type) {
 			case *types.Named:
 				fmt.Fprintf(page, `(%s) `, tt.Obj().Name())
@@ -1000,7 +1011,9 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, res code.Resource, f
 		}
 		ds.writeSrouceCodeLineLink(page, res.Package(), pos, res.Name(), "", false)
 		if writeType {
-			WriteType(page, res.AstDecl.Type, res.Pkg.PPkg.TypesInfo, false)
+			//WriteType(page, res.AstDecl.Type, res.Pkg.PPkg.TypesInfo, false)
+			ds.writeValueTType(page, res.TType(), false)
+			// ToDo: use the ast exp instead
 		}
 	}
 
@@ -1012,11 +1025,169 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, res code.Resource, f
 	//fmt.Fprint(page, ` <a href="#">{/}</a>`)
 }
 
-// Named and basic ones: linked.
-// Composited:
-func WriteInterfaceText(page *htmlPage, tt types.Type) {
-	if _, ok := tt.Underlying().(*types.Interface); ok {
-		page.WriteString(` <i>(interface)</i>`)
+// ToDo: need to be a method?
+func (ds *docServer) writeValueTType(page *htmlPage, tt types.Type, writeFuncKeyword bool) {
+	switch tt := tt.(type) {
+	default:
+		panic("should not")
+	case *types.Named:
+		pkg := tt.Obj().Pkg()
+		if pkg == nil {
+			//log.Printf("======================= %v", tt)
+			// must be the builtin error type
+			p, _ := ds.analyzer.PackageByPath("builtin")
+			if p == nil {
+				panic("builtin package not found")
+			}
+			pkg = p.PPkg.Types
+		}
+		if page.PathInfo.resType != ResTypePackage || pkg.Path() != page.PathInfo.resPath {
+			buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, pkg.Path()}, page, pkg.Name())
+			page.Write(period)
+		}
+		//page.WriteString(tt.Obj().Name())
+		if tt.Obj().Exported() {
+			buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, tt.Obj().Pkg().Path()}, page, tt.Obj().Name(), "name-", tt.Obj().Name())
+		} else {
+			p, _ := ds.analyzer.PackageByPath(pkg.Path())
+			if p == nil {
+				panic("should not")
+			}
+			ttPos := p.PPkg.Fset.PositionFor(tt.Obj().Pos(), false)
+			ds.writeSrouceCodeLineLink(page, p, ttPos, tt.Obj().Name(), "", false)
+		}
+	case *types.Basic:
+		// if unsafe
+		//page.WriteString(tt.Name())
+		buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, "builtin"}, page, tt.Name(), "name-", tt.Name())
+	case *types.Pointer:
+		page.Write(star)
+		ds.writeValueTType(page, tt.Elem(), true)
+	case *types.Array:
+		page.Write(leftSquare)
+		fmt.Sprintf("%d", tt.Len())
+		page.Write(rightSquare)
+		ds.writeValueTType(page, tt.Elem(), true)
+	case *types.Slice:
+		page.Write(leftSquare)
+		page.Write(rightSquare)
+		ds.writeValueTType(page, tt.Elem(), true)
+	case *types.Map:
+		page.Write(mapKeyword)
+		page.Write(leftSquare)
+		ds.writeValueTType(page, tt.Key(), true)
+		page.Write(rightSquare)
+		ds.writeValueTType(page, tt.Elem(), true)
+	case *types.Chan:
+		if tt.Dir() == types.RecvOnly {
+			page.Write(chanDir)
+			page.Write(chanKeyword)
+		} else if tt.Dir() == types.SendOnly {
+			page.Write(chanKeyword)
+			page.Write(chanDir)
+		} else {
+			page.Write(chanKeyword)
+		}
+		page.Write(space)
+		ds.writeValueTType(page, tt.Elem(), true)
+	case *types.Signature:
+		if writeFuncKeyword {
+			page.Write(funcKeyword)
+			//page.Write(space)
+		}
+		page.Write(leftParen)
+		ds.writeTuple(page, tt.Params(), tt.Variadic())
+		page.Write(rightParen)
+		if rs := tt.Results(); rs != nil && rs.Len() > 0 {
+			page.Write(space)
+			if rs.Len() == 1 && rs.At(0).Name() == "" {
+				ds.writeTuple(page, rs, false)
+			} else {
+				page.Write(leftParen)
+				ds.writeTuple(page, rs, false)
+				page.Write(rightParen)
+			}
+		}
+	case *types.Struct:
+		page.Write(structKeyword)
+		page.Write(space)
+		page.Write(leftBrace)
+		ds.writeStructFields(page, tt)
+		page.Write(rightBrace)
+	case *types.Interface:
+		page.Write(interfaceKeyword)
+		page.Write(space)
+		page.Write(leftBrace)
+		ds.writeInterfaceMethods(page, tt)
+		page.Write(rightBrace)
+	}
+}
+
+// ToDo: need to be a method?
+func (ds *docServer) writeTuple(page *htmlPage, tuple *types.Tuple, variadic bool) {
+	n := tuple.Len()
+	for i := 0; i < n; i++ {
+		v := tuple.At(i)
+		if v.Name() != "" {
+			page.WriteString(v.Name())
+			page.WriteByte(' ')
+		}
+		if i == n-1 {
+			if variadic {
+				st, ok := v.Type().(*types.Slice)
+				if !ok {
+					panic("should not")
+				}
+				page.WriteString("...")
+				ds.writeValueTType(page, st.Elem(), true)
+			} else {
+				ds.writeValueTType(page, v.Type(), true)
+			}
+		} else {
+			ds.writeValueTType(page, v.Type(), true)
+			page.WriteString(", ")
+		}
+	}
+}
+
+// ToDo: need to be a method?
+func (ds *docServer) writeStructFields(page *htmlPage, st *types.Struct) {
+	n := st.NumFields()
+	for i := 0; i < n; i++ {
+		v := st.Field(i)
+		if !v.Embedded() {
+			page.WriteString(v.Name())
+			page.WriteByte(' ')
+		}
+		ds.writeValueTType(page, v.Type(), true)
+		if i < n-1 {
+			page.WriteString("; ")
+		}
+	}
+}
+
+// ToDo: need to be a method?
+func (ds *docServer) writeInterfaceMethods(page *htmlPage, it *types.Interface) {
+	n := it.NumEmbeddeds()
+	for i := 0; i < n; i++ {
+		named := it.Embedded(i)
+		ds.writeValueTType(page, named.Obj().Type(), false)
+		if i < n-1 {
+			page.WriteString("; ")
+		}
+	}
+	n = it.NumExplicitMethods()
+	if n > 0 {
+		page.WriteString("; ")
+	}
+	for i := 0; i < n; i++ {
+		f := it.ExplicitMethod(i)
+		page.WriteString(f.Name())
+		page.WriteByte(' ')
+		ds.writeValueTType(page, f.Type(), false)
+		if i < n-1 {
+			page.WriteString("; ")
+		}
 	}
 }
 

@@ -295,7 +295,8 @@ todo:
 * "go/doc": doc.Examples(...)
 * sort packages by importedBy
 * click "type" keyword to show the source of a type.
-
+* net/http: var ErrUnexpectedTrailer *ProtocolError
+  - not only list values of T, also *T, []T, ...
 
 
 * revert: needCheckUpdate := d > time.Hour*24*30 || true
