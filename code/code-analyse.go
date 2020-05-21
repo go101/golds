@@ -1656,6 +1656,7 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 
 	registerVariable := func(v *Variable) {
 		pkg.PackageAnalyzeResult.AllVariables = append(pkg.PackageAnalyzeResult.AllVariables, v)
+		d.RegisterType(v.TType())
 	}
 
 	registerConstant := func(c *Constant) {
@@ -2024,6 +2025,9 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 		if v.Exported() {
 			d.registerValueForItsTypeName(v)
 			d.stats.ExportedVariables++
+		}
+		if v.AstSpec.Type != nil {
+			d.lookForAndRegisterUnnamedInterfaceAndStructTypes(v.AstSpec.Type, v.Pkg)
 		}
 	}
 	for _, c := range pkg.PackageAnalyzeResult.AllConstants {
