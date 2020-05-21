@@ -1761,7 +1761,11 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 						var srcType = tv.Type
 						var objName = typeObj.Name()
 						// Exported names, such as Type and Type1 are fake types.
-						if isBuiltinPkg && !token.IsExported(objName) {
+						if isBuiltinPkg {
+							if token.IsExported(objName) {
+								continue
+							}
+
 							var ok bool
 							// It looks the parsed one are not the internal one.
 							//fmt.Println(typeObj == types.Universe.Lookup(objName)) // false
@@ -1774,7 +1778,9 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 
 							//srcType = typeObj.Type().Underlying() // why underlying here? error and its underlying is different.
 							//log.Println(typeObj.Type(), srcType, typeObj.Type() == srcType) // true
-							srcType = typeObj.Type()
+							//srcType = typeObj.Type()
+
+							//log.Println("######", typeObj.Type(), "######", srcType, "####", types.Identical(typeObj.Type(), srcType))
 
 							// It looks the below twos are not equal, though
 							// types.Idenfical(them) returns true. So, typeObj.Type()
@@ -1811,8 +1817,16 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 							AstSpec: typeSpec,
 						}
 						if typeObj.IsAlias() {
-							if srcTypeInfo != newTypeInfo {
-								panic(fmt.Sprintf("srcTypeInfo != newTypeInfo, %v, %v", srcTypeInfo, newTypeInfo))
+							if isBuiltinPkg {
+								// byte != uint8
+								// rune != int32
+							} else {
+								if srcTypeInfo != newTypeInfo {
+									panic(fmt.Sprintf("srcTypeInfo != newTypeInfo, %v, %v", srcTypeInfo, newTypeInfo))
+								}
+								//if !types.Identical(srcTypeInfo.TT, newTypeInfo.TT) {
+								//	panic(fmt.Sprintf("srcTypeInfo != newTypeInfo, %v, %v", srcTypeInfo.TT, newTypeInfo.TT))
+								//}
 							}
 
 							tn.Alias = &TypeAlias{
@@ -1983,6 +1997,27 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 	//	// moved to analyzePackage_CollectMoreStatistics
 	//}
 	if isBuiltinPkg {
+		//var tnRune, tnInt32, tnByte, tnUint8 *TypeName
+		//for _, tn := range pkg.PackageAnalyzeResult.AllTypeNames {
+		//	switch tn.Name() {
+		//	case "rune":
+		//		tnRune = tn
+		//	case "int32":
+		//		tnInt32 = tn
+		//	case "byte":
+		//		tnByte = tn
+		//	case "uint8":
+		//		tnUint8 = tn
+		//	}
+		//}
+		//if tnRune != nil && tnInt32 != nil { // always true
+		//	log.Println("=============== tnInt32.Named:", tnInt32.Named)
+		//	tnRune.Named = tnInt32.Named
+		//}
+		//if tnByte != nil && tnUint8 != nil { // always true
+		//	log.Println("=============== tnUint8.Named:", tnUint8.Named)
+		//	tnByte.Named = tnUint8.Named
+		//}
 		return
 	}
 	for _, v := range pkg.PackageAnalyzeResult.AllVariables {
@@ -2117,6 +2152,10 @@ func (d *CodeAnalyzer) analyzePackage_FindTypeSources(pkg *Package) {
 					obj := pkg.PPkg.TypesInfo.Defs[typeSpec.Name]
 					typeObj := obj.(*types.TypeName)
 					if typeObj.Name() == "_" {
+						continue
+					}
+
+					if isBuiltin && token.IsExported(typeObj.Name()) {
 						continue
 					}
 

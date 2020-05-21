@@ -1310,7 +1310,7 @@ func (ds *docServer) writeSrouceCodeLineLink(page *htmlPage, pkg *code.Package, 
 	var sourceFilename string
 	fileInfo := pkg.SourceFileInfoByFilePath(p.Filename)
 	if fileInfo == nil {
-		log.Printf("! file info for %s in package %s is not found", p.Filename, pkg.Path())
+		panic(fmt.Sprintf("! file info for %s in package %s is not found", p.Filename, pkg.Path()))
 	} else {
 		sourceFilename = fileInfo.BareFilename
 		if sourceFilename == "" {

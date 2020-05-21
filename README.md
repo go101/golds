@@ -5,6 +5,7 @@ Sell points:
 * show promoted selectors, even on unexported embedded fields.
 * rich code view experience
 * JavaScript-off friendly
+* html generation for packages which licenses don't satisfy go.dev requirements.
 
 The HTML generation feature is for distributed docs.
 
@@ -300,6 +301,7 @@ todo:
 
 
 * revert: needCheckUpdate := d > time.Hour*24*30 || true
+* testing: -gen=... -gen-format=json
 * use Go tip test analyzePackages_CheckCollectSelectors
 * package details page: click an exported type, don't go to source page
 * stat: n interfaces, m structs, ... (on overview and package detail pages)

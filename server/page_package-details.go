@@ -11,13 +11,15 @@ import (
 	"go/types"
 	"io"
 
-	//"log"
+	"log"
 	"net/http"
 	"sort"
 	"strings"
 
 	"go101.org/gold/code"
 )
+
+var _ = log.Print
 
 func (ds *docServer) packageDetailsPage(w http.ResponseWriter, r *http.Request, pkgPath string) {
 	w.Header().Set("Content-Type", "text/html")
@@ -955,8 +957,8 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, res code.Resource, f
 			if res.Alias != nil {
 				page.WriteString(" = ")
 				page.WriteString(types.TypeString(res.Denoting().TT, types.RelativeTo(res.Package().PPkg.Types)))
-				if _, ok := res.Denoting().TT.(*types.Named); ok {
-					writeInterfaceText(res.Named.TT)
+				if ttn, ok := res.Denoting().TT.(*types.Named); ok {
+					writeInterfaceText(ttn)
 				}
 			} else {
 				writeInterfaceText(res.Named.TT)
@@ -1032,6 +1034,7 @@ func (ds *docServer) writeValueTType(page *htmlPage, tt types.Type, writeFuncKey
 		panic("should not")
 	case *types.Named:
 		pkg := tt.Obj().Pkg()
+		isBuiltin := false
 		if pkg == nil {
 			//log.Printf("======================= %v", tt)
 			// must be the builtin error type
@@ -1040,20 +1043,28 @@ func (ds *docServer) writeValueTType(page *htmlPage, tt types.Type, writeFuncKey
 				panic("builtin package not found")
 			}
 			pkg = p.PPkg.Types
+			isBuiltin = true
 		}
 		if page.PathInfo.resType != ResTypePackage || pkg.Path() != page.PathInfo.resPath {
 			buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, pkg.Path()}, page, pkg.Name())
 			page.Write(period)
 		}
 		//page.WriteString(tt.Obj().Name())
-		if tt.Obj().Exported() {
-			buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, tt.Obj().Pkg().Path()}, page, tt.Obj().Name(), "name-", tt.Obj().Name())
+		if isBuiltin || tt.Obj().Exported() {
+			var pkgPath string
+			if isBuiltin {
+				pkgPath = "builtin"
+			} else {
+				pkgPath = tt.Obj().Pkg().Path()
+			}
+			buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, pkgPath}, page, tt.Obj().Name(), "name-", tt.Obj().Name())
 		} else {
 			p, _ := ds.analyzer.PackageByPath(pkg.Path())
 			if p == nil {
 				panic("should not")
 			}
 			ttPos := p.PPkg.Fset.PositionFor(tt.Obj().Pos(), false)
+			//log.Printf("============ %v, %v, %v", tt, pkg.Path(), ttPos)
 			ds.writeSrouceCodeLineLink(page, p, ttPos, tt.Obj().Name(), "", false)
 		}
 	case *types.Basic:
