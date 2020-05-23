@@ -202,6 +202,7 @@ func WriteHtmlEscapedBytes(w io.Writer, data []byte) {
 	w.Write(data[last:])
 }
 
+/*
 var (
 	blankID          = []byte("_")
 	space            = []byte(" ")
@@ -397,18 +398,19 @@ func WriteTypeEx(w io.Writer, typeLit ast.Expr, info *types.Info, funcKeywordNee
 		}
 	case *ast.StructType:
 		w.Write(structKeyword)
-		w.Write(space)
+		//w.Write(space)
 		w.Write(leftBrace)
 		WriteFieldListEx(w, node.Fields, semicoloon, info, true, nil, lvi)
 		w.Write(rightBrace)
 	case *ast.InterfaceType:
 		w.Write(interfaceKeyword)
-		w.Write(space)
+		//w.Write(space)
 		w.Write(leftBrace)
 		WriteFieldListEx(w, node.Methods, semicoloon, info, false, nil, lvi)
 		w.Write(rightBrace)
 	}
 }
+*/
 
 // should be fasters than strings.Compare for comparing non-equal package paths.
 func CompareStringsInversely(a, b string) (r int) {

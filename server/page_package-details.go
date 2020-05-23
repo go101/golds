@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 
-	//"go/ast"
+	"go/ast"
 	"go/token"
 	"go/types"
 	"io"
@@ -653,10 +653,11 @@ func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pk
 	case *code.Function:
 		page.WriteString(" func ")
 
-		if v.Package() != pkg {
-			//if v.Package().Path() != "builtin" {
-			page.WriteString(v.Package().Path())
-			page.WriteByte('.')
+		if vpkg := v.Package(); vpkg != pkg {
+			if vpkg != nil {
+				page.WriteString(v.Package().Path())
+				page.WriteByte('.')
+			}
 		}
 		lvi := &ListedValueInfo{
 			codePkg:     v.Package(),
@@ -685,7 +686,7 @@ func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pk
 
 			ds.writeSrouceCodeLineLink(page, v.Package(), pos, v.Name(), "", false)
 
-			WriteTypeEx(page, res.AstDecl.Type, res.Pkg.PPkg.TypesInfo, false, recvParam, lvi)
+			ds.WriteAstType(page, res.AstDecl.Type, res.Pkg.PPkg.TypesInfo, false, recvParam, lvi, true)
 		} else {
 			if v.Package() != pkg {
 				//fmt.Fprintf(page, `<a href="/pkg:%[1]s#name-%[2]s">%[2]s</a>`, v.Package().Path(), v.Name())
@@ -694,7 +695,7 @@ func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pk
 				fmt.Fprintf(page, `<a href="#name-%[1]s">%[1]s</a>`, v.Name())
 			}
 
-			WriteTypeEx(page, res.AstDecl.Type, res.Pkg.PPkg.TypesInfo, false, nil, lvi)
+			ds.WriteAstType(page, res.AstDecl.Type, res.Pkg.PPkg.TypesInfo, false, nil, lvi, true)
 		}
 	}
 }
@@ -896,7 +897,7 @@ func (ds *docServer) writeFieldForListing(page *htmlPage, sel *FieldForListing) 
 	//pos.Line += ds.analyzer.SourceFileLineOffset(pos.Filename)
 	ds.writeSrouceCodeLineLink(page, sel.Pkg(), pos, selField.Name, "", false)
 	page.WriteByte(' ')
-	WriteType(page, selField.AstField.Type, selField.Pkg.PPkg.TypesInfo, true)
+	ds.WriteAstType(page, selField.AstField.Type, selField.Pkg.PPkg.TypesInfo, true, nil, nil, true)
 }
 
 func (ds *docServer) writeMethodForListing(page *htmlPage, sel *code.Selector) {
@@ -913,9 +914,9 @@ func (ds *docServer) writeMethodForListing(page *htmlPage, sel *code.Selector) {
 	//pos.Line += ds.analyzer.SourceFileLineOffset(pos.Filename)
 	ds.writeSrouceCodeLineLink(page, sel.Pkg(), pos, setMethod.Name, "", false)
 	if setMethod.AstFunc != nil {
-		WriteType(page, setMethod.AstFunc.Type, setMethod.Pkg.PPkg.TypesInfo, false)
+		ds.WriteAstType(page, setMethod.AstFunc.Type, setMethod.Pkg.PPkg.TypesInfo, false, nil, nil, true)
 	} else {
-		WriteType(page, setMethod.AstField.Type, setMethod.Pkg.PPkg.TypesInfo, false)
+		ds.WriteAstType(page, setMethod.AstField.Type, setMethod.Pkg.PPkg.TypesInfo, false, nil, nil, true)
 	}
 }
 
@@ -1013,7 +1014,7 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, res code.Resource, f
 		}
 		ds.writeSrouceCodeLineLink(page, res.Package(), pos, res.Name(), "", false)
 		if writeType {
-			//WriteType(page, res.AstDecl.Type, res.Pkg.PPkg.TypesInfo, false)
+			//ds.WriteAstType(page, res.AstDecl.Type, res.Pkg.PPkg.TypesInfo, false, nil, nil)
 			ds.writeValueTType(page, res.TType(), false)
 			// ToDo: use the ast exp instead
 		}
@@ -1027,7 +1028,6 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, res code.Resource, f
 	//fmt.Fprint(page, ` <a href="#">{/}</a>`)
 }
 
-// ToDo: need to be a method?
 func (ds *docServer) writeValueTType(page *htmlPage, tt types.Type, writeFuncKeyword bool) {
 	switch tt := tt.(type) {
 	default:
@@ -1046,8 +1046,10 @@ func (ds *docServer) writeValueTType(page *htmlPage, tt types.Type, writeFuncKey
 			isBuiltin = true
 		}
 		if page.PathInfo.resType != ResTypePackage || pkg.Path() != page.PathInfo.resPath {
-			buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, pkg.Path()}, page, pkg.Name())
-			page.Write(period)
+			if !isBuiltin {
+				buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, pkg.Path()}, page, pkg.Name())
+				page.Write(period)
+			}
 		}
 		//page.WriteString(tt.Obj().Name())
 		if isBuiltin || tt.Obj().Exported() {
@@ -1121,20 +1123,19 @@ func (ds *docServer) writeValueTType(page *htmlPage, tt types.Type, writeFuncKey
 		}
 	case *types.Struct:
 		page.Write(structKeyword)
-		page.Write(space)
+		//page.Write(space)
 		page.Write(leftBrace)
 		ds.writeStructFields(page, tt)
 		page.Write(rightBrace)
 	case *types.Interface:
 		page.Write(interfaceKeyword)
-		page.Write(space)
+		//page.Write(space)
 		page.Write(leftBrace)
 		ds.writeInterfaceMethods(page, tt)
 		page.Write(rightBrace)
 	}
 }
 
-// ToDo: need to be a method?
 func (ds *docServer) writeTuple(page *htmlPage, tuple *types.Tuple, variadic bool) {
 	n := tuple.Len()
 	for i := 0; i < n; i++ {
@@ -1161,7 +1162,6 @@ func (ds *docServer) writeTuple(page *htmlPage, tuple *types.Tuple, variadic boo
 	}
 }
 
-// ToDo: need to be a method?
 func (ds *docServer) writeStructFields(page *htmlPage, st *types.Struct) {
 	n := st.NumFields()
 	for i := 0; i < n; i++ {
@@ -1177,7 +1177,6 @@ func (ds *docServer) writeStructFields(page *htmlPage, st *types.Struct) {
 	}
 }
 
-// ToDo: need to be a method?
 func (ds *docServer) writeInterfaceMethods(page *htmlPage, it *types.Interface) {
 	n := it.NumEmbeddeds()
 	for i := 0; i < n; i++ {
@@ -1198,6 +1197,238 @@ func (ds *docServer) writeInterfaceMethods(page *htmlPage, it *types.Interface) 
 		ds.writeValueTType(page, f.Type(), false)
 		if i < n-1 {
 			page.WriteString("; ")
+		}
+	}
+}
+
+var (
+	blankID          = []byte("_")
+	space            = []byte(" ")
+	leftParen        = []byte("(")
+	rightParen       = []byte(")")
+	period           = []byte(".")
+	comma            = []byte(", ")
+	semicoloon       = []byte("; ")
+	ellipsis         = []byte("...")
+	star             = []byte("*")
+	leftSquare       = []byte("[")
+	rightSquare      = []byte("]")
+	leftBrace        = []byte("{")
+	rightBrace       = []byte("}")
+	mapKeyword       = []byte("map")
+	chanKeyword      = []byte("chan")
+	chanDir          = []byte("&lt;-")
+	funcKeyword      = []byte("func")
+	structKeyword    = []byte("struct")
+	interfaceKeyword = []byte("interface")
+
+	BoldTagStart = []byte("<b>")
+	BoldTagEnd   = []byte("</b>")
+)
+
+type ListedValueInfo struct {
+	codePkg *code.Package // the package in which the value is declared
+	docPkg  *code.Package // the package in which "forType" is declared
+
+	forTypeName string
+}
+
+// This is a rewritten of WriteTypeEx.
+// Please make sure w.Write never makes errors.
+// ToDo: "too many fields/methods/params/results" is replaced with ".....".
+func (ds *docServer) WriteAstType(w *htmlPage, typeLit ast.Expr, info *types.Info, funcKeywordNeeded bool, recvParam *ast.Field, lvi *ListedValueInfo, writeLinks bool) {
+	if lvi != nil && lvi.codePkg.PPkg.TypesInfo != info {
+		panic("should not")
+	}
+
+	switch node := typeLit.(type) {
+	default:
+		panic(fmt.Sprint("WriteType, unknown node: ", node))
+	case *ast.ParenExpr:
+		w.Write(leftParen)
+		ds.WriteAstType(w, node.X, info, true, nil, lvi, writeLinks)
+		w.Write(rightParen)
+	case *ast.Ident:
+		// This might be an unquanlifiy identifier be written in other packages (instead of the current doc package).
+		// For the same reason, a quanlifiy identifier (handled in the next case) might be declared in the current doc package.
+		if lvi != nil {
+			// forTypeName should be in lvi.docPkg.
+			// lvi.forTypeName should never be builtin types.
+			isForTypeName := node.Name == lvi.forTypeName
+			obj := lvi.codePkg.PPkg.TypesInfo.ObjectOf(node)
+			_, ok := obj.(*types.TypeName)
+			// obj.Pkg() might be nil for builtin types.
+			objpkg := obj.Pkg()
+			if objpkg != lvi.docPkg.PPkg.Types {
+				isForTypeName = false
+			}
+			if ok && !isForTypeName && objpkg != nil {
+				//w.WriteString(objpkg.Name())
+				buildPageHref(w.PathInfo, pagePathInfo{ResTypePackage, objpkg.Path()}, w, objpkg.Name())
+				w.Write(period)
+			}
+
+			if isForTypeName {
+				w.Write(BoldTagStart)
+				w.WriteString(node.Name)
+				w.Write(BoldTagEnd)
+			} else {
+				w.WriteString(node.Name)
+
+				isBuiltin := objpkg == nil
+				if isBuiltin || obj.Exported() {
+					var pkgPath string
+					if isBuiltin {
+						pkgPath = "builtin"
+					} else {
+						pkgPath = objpkg.Path()
+					}
+					buildPageHref(w.PathInfo, pagePathInfo{ResTypePackage, pkgPath}, w, obj.Name(), "name-", obj.Name())
+				} else {
+					p, _ := ds.analyzer.PackageByPath(objpkg.Path())
+					if p == nil {
+						panic("should not")
+					}
+					ttPos := p.PPkg.Fset.PositionFor(obj.Pos(), false)
+					//log.Printf("============ %v, %v, %v", tt, pkg.Path(), ttPos)
+					ds.writeSrouceCodeLineLink(w, p, ttPos, obj.Name(), "", false)
+				}
+			}
+		} else {
+			w.WriteString(node.Name)
+		}
+	case *ast.SelectorExpr:
+		if lvi != nil {
+			isForTypeName := node.Sel.Name == lvi.forTypeName
+			obj := lvi.codePkg.PPkg.TypesInfo.ObjectOf(node.Sel)
+			// obj.Pkg() might be nil for builtin types.
+			objpkg := obj.Pkg()
+			if objpkg != lvi.docPkg.PPkg.Types {
+				isForTypeName = false
+			}
+			if objpkg != nil && !isForTypeName {
+				//w.WriteString(objpkg.Name())
+				buildPageHref(w.PathInfo, pagePathInfo{ResTypePackage, objpkg.Path()}, w, objpkg.Name())
+				w.Write(period)
+			}
+
+			if isForTypeName {
+				w.Write(BoldTagStart)
+				w.WriteString(node.Sel.Name)
+				w.Write(BoldTagEnd)
+			} else {
+				w.WriteString(node.Sel.Name)
+			}
+		} else {
+			//ds.WriteAstType(w, node.X, info, true, nil, lvi, writeLinks)
+			pkgId, ok := node.X.(*ast.Ident)
+			if !ok {
+				panic("should not")
+			}
+			w.WriteString(pkgId.Name)
+			w.Write(period)
+			w.WriteString(node.Sel.Name)
+		}
+	case *ast.StarExpr:
+		w.Write(star)
+		ds.WriteAstType(w, node.X, info, true, nil, lvi, writeLinks)
+	case *ast.Ellipsis: // possible? (yes, variadic parameters)
+		//panic("[...] should be impossible") // ToDo: go/types package has a case.
+		//w.Write(leftSquare)
+		w.Write(ellipsis)
+		//w.Write(rightSquare)
+		ds.WriteAstType(w, node.Elt, info, true, nil, lvi, writeLinks)
+	case *ast.ArrayType:
+		w.Write(leftSquare)
+		if node.Len != nil {
+			tv, ok := info.Types[node.Len]
+			if !ok {
+				panic(fmt.Sprint("no values found for ", node.Len))
+			}
+			w.WriteString(tv.Value.String())
+		}
+		w.Write(rightSquare)
+		ds.WriteAstType(w, node.Elt, info, true, nil, lvi, writeLinks)
+	case *ast.MapType:
+		w.Write(mapKeyword)
+		w.Write(leftSquare)
+		ds.WriteAstType(w, node.Key, info, true, nil, lvi, writeLinks)
+		w.Write(rightSquare)
+		ds.WriteAstType(w, node.Value, info, true, nil, lvi, writeLinks)
+	case *ast.ChanType:
+		if node.Dir == ast.RECV {
+			w.Write(chanDir)
+			w.Write(chanKeyword)
+		} else if node.Dir == ast.SEND {
+			w.Write(chanKeyword)
+			w.Write(chanDir)
+		} else {
+			w.Write(chanKeyword)
+		}
+		w.Write(space)
+		ds.WriteAstType(w, node.Value, info, true, nil, lvi, writeLinks)
+	case *ast.FuncType:
+		if funcKeywordNeeded {
+			w.Write(funcKeyword)
+			//w.Write(space)
+		}
+		w.Write(leftParen)
+		ds.WriteAstFieldList(w, node.Params, comma, info, true, recvParam, lvi, writeLinks)
+		w.Write(rightParen)
+		if node.Results != nil && len(node.Results.List) > 0 {
+			w.Write(space)
+			if len(node.Results.List) == 1 && len(node.Results.List[0].Names) == 0 {
+				ds.WriteAstFieldList(w, node.Results, comma, info, true, nil, lvi, writeLinks)
+			} else {
+				w.Write(leftParen)
+				ds.WriteAstFieldList(w, node.Results, comma, info, true, nil, lvi, writeLinks)
+				w.Write(rightParen)
+			}
+		}
+	case *ast.StructType:
+		w.Write(structKeyword)
+		//w.Write(space)
+		w.Write(leftBrace)
+		ds.WriteAstFieldList(w, node.Fields, semicoloon, info, true, nil, lvi, writeLinks)
+		w.Write(rightBrace)
+	case *ast.InterfaceType:
+		w.Write(interfaceKeyword)
+		//w.Write(space)
+		w.Write(leftBrace)
+		ds.WriteAstFieldList(w, node.Methods, semicoloon, info, false, nil, lvi, writeLinks)
+		w.Write(rightBrace)
+	}
+}
+
+func (ds *docServer) WriteAstFieldList(w *htmlPage, fieldList *ast.FieldList, sep []byte, info *types.Info, funcKeywordNeeded bool, recvParam *ast.Field, lvi *ListedValueInfo, writeLinks bool) {
+	if fieldList == nil {
+		return
+	}
+	showRecvName := recvParam != nil && len(recvParam.Names) > 0
+	showParamsNames := len(fieldList.List) > 0 && len(fieldList.List[0].Names) > 0
+	showParamsNames = showParamsNames || showRecvName
+
+	fields := fieldList.List
+	if recvParam != nil {
+		fields = append([]*ast.Field{recvParam}, fields...)
+	}
+
+	for i, fld := range fields {
+		if len(fld.Names) > 0 {
+			for k, n := range fld.Names {
+				w.Write([]byte(n.Name))
+				if k+1 < len(fld.Names) {
+					w.Write(comma)
+				}
+			}
+			w.Write(space)
+		} else if showParamsNames {
+			w.Write(blankID)
+			w.Write(space)
+		}
+		ds.WriteAstType(w, fld.Type, info, funcKeywordNeeded, nil, lvi, writeLinks)
+		if i+1 < len(fields) {
+			w.Write(sep)
 		}
 	}
 }
