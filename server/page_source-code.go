@@ -33,7 +33,7 @@ func (ds *docServer) sourceCodePage(w http.ResponseWriter, r *http.Request, pkgP
 
 	// Browers will replace all \ in url to / automatically, so we need convert them back.
 	// Otherwise, the file will not be found on Windows.
-	//srcPath = strings.ReplaceAll(srcPath, "/", string(filepath.Separator))
+	//srcPath = strings.Replace(srcPath, "/", string(filepath.Separator), -1)
 	//if ds.sourcePages[srcPath] == nil {
 	//	result, err := ds.analyzeSoureCode(srcPath)
 	//	if err != nil {
@@ -1285,6 +1285,10 @@ func (v *AstVisitor) handleIdent(ident *ast.Ident) {
 func buildSrouceCodeLineLink(currentPathInfo pagePathInfo, analyzer *code.CodeAnalyzer, pkg *code.Package, p token.Position) string {
 	//return "/src:" + analyzer.OriginalGoSourceFile(p.Filename) + "#line-" + strconv.Itoa(p.Line)
 	//return buildPageHref(ResTypeSource, analyzer.OriginalGoSourceFile(p.Filename), false, "", nil) + "#line-" + strconv.Itoa(p.Line)
+
+	//if p.Filename == "" {
+	//	panic(fmt.Sprint(pkg.Path(), p))
+	//}
 
 	var sourceFilename string
 	fileInfo := pkg.SourceFileInfoByFilePath(p.Filename)

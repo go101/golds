@@ -6,6 +6,7 @@ import (
 	"golang.org/x/text/language"
 	//"golang.org/x/text/language/display"
 
+	"go101.org/gold/code"
 	theme "go101.org/gold/server/themes"
 	translation "go101.org/gold/server/translations"
 )
@@ -61,7 +62,7 @@ type Translation interface {
 	Text_Overview() string
 	Text_PackageList() string
 	Text_Statistics() string
-	Text_AllStats(stats map[string]int) string               // to use
+	Text_SimpleStats(stats *code.Stats) string
 	Text_Modules() string                                    // to use
 	Text_BelongingModule() string                            // to use
 	Text_RequireStat(numRequires, numRequiredBys int) string // to use

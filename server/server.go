@@ -56,7 +56,7 @@ type docServer struct {
 	generalLogger *log.Logger
 }
 
-func Run(port string, args []string, printUsage func(io.Writer), roughBuildTime func() time.Time) {
+func Run(port string, args []string, silentMode bool, printUsage func(io.Writer), roughBuildTime func() time.Time) {
 	ds := &docServer{
 		phase:           Phase_Unprepared,
 		analyzer:        &code.CodeAnalyzer{},
@@ -86,9 +86,11 @@ NextTry:
 		ds.analyzingLogger.Printf("Server started: http://localhost:%v\n", port)
 	}()
 
-	err = OpenBrowser(fmt.Sprintf("http://localhost:%v", port))
-	if err != nil {
-		log.Println(err)
+	if !silentMode {
+		err = util.OpenBrowser(fmt.Sprintf("http://localhost:%v", port))
+		if err != nil {
+			log.Println(err)
+		}
 	}
 
 	(&http.Server{
@@ -191,7 +193,7 @@ Start:
 
 	if !ds.analyzer.ParsePackages(ds.onAnalyzingSubTaskDone, args...) {
 		printUsage(os.Stdout)
-		return
+		os.Exit(1)
 	}
 
 	//{

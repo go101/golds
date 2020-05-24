@@ -668,21 +668,23 @@ func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pk
 		if res.IsMethod() {
 			recvParam, typeId, isStar := res.ReceiverTypeName()
 			if isStar {
-				if v.Package() != pkg {
-					//fmt.Fprintf(page, `(*<a href="/pkg:%[1]s#name-%[2]s">%[2]s</a>).`, v.Package().Path(), typeId.Name)
-					page.WriteString("(*")
-					buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, v.Package().Path()}, page, typeId.Name, "name-", typeId.Name)
-					page.WriteString(").")
-				} else {
-					fmt.Fprintf(page, `(*<a href="#name-%[1]s">%[1]s</a>).`, typeId.Name)
-				}
+				//if v.Package() != pkg {
+				//	//fmt.Fprintf(page, `(*<a href="/pkg:%[1]s#name-%[2]s">%[2]s</a>).`, v.Package().Path(), typeId.Name)
+				//	page.WriteString("(*")
+				//	buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, v.Package().Path()}, page, typeId.Name, "name-", typeId.Name)
+				//	page.WriteString(").")
+				//} else {
+				//	fmt.Fprintf(page, `(*<a href="#name-%[1]s">%[1]s</a>).`, typeId.Name)
+				//}
+				fmt.Fprintf(page, "(*%s).", typeId.Name)
 			} else {
-				if v.Package() != pkg {
-					//fmt.Fprintf(page, `<a href="/pkg:%[1]s#name-%[2]s">%[2]s</a>.`, v.Package().Path(), typeId.Name)
-					buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, v.Package().Path()}, page, typeId.Name, "name-", typeId.Name)
-				} else {
-					fmt.Fprintf(page, `<a href="#name-%[1]s">%[1]s</a>.`, typeId.Name)
-				}
+				//if v.Package() != pkg {
+				//	//fmt.Fprintf(page, `<a href="/pkg:%[1]s#name-%[2]s">%[2]s</a>.`, v.Package().Path(), typeId.Name)
+				//	buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, v.Package().Path()}, page, typeId.Name, "name-", typeId.Name)
+				//} else {
+				//	fmt.Fprintf(page, `<a href="#name-%[1]s">%[1]s</a>.`, typeId.Name)
+				//}
+				fmt.Fprintf(page, "%s.", typeId.Name)
 			}
 
 			ds.writeSrouceCodeLineLink(page, v.Package(), pos, v.Name(), "", false)
@@ -950,29 +952,43 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, res code.Resource, f
 		// ToDo: also wirte non-alais src type.
 		// ToDo: use a custom formatter to avoid multiple line and too long src type strings.
 		if writeType {
+			showSource := false
+			for t, done := res.AstSpec.Type, false; !done; {
+				switch e := t.(type) {
+				case *ast.Ident, *ast.SelectorExpr:
+					showSource = true
+					done = true
+				case *ast.ParenExpr:
+					t = e.X
+				case *ast.StarExpr:
+					t = e.X
+				default:
+					done = true
+				}
+			}
+
 			writeInterfaceText := func(tt types.Type) {
 				if _, ok := tt.Underlying().(*types.Interface); ok {
-					page.WriteString(` <i>(interface)</i>`)
+					page.WriteString(` <b><i>(interface)</i></b>`)
 				}
 			}
 
+			page.WriteByte(' ')
 			if res.Alias != nil {
-				page.WriteString(" = ")
-
-				//page.WriteString(types.TypeString(res.Denoting().TT, types.RelativeTo(res.Package().PPkg.Types)))
-				if res.AstSpec.Type != nil {
-					ds.WriteAstType(page, res.AstSpec.Type, res.Pkg, res.Pkg, false, nil, nil)
-				} else {
-					log.Println("res.Alias != nil, but res.AstSpec.Type == nil, ???")
-					ds.writeValueTType(page, res.Denoting().TT, res.Pkg, true)
-				}
-
-				if ttn, ok := res.Denoting().TT.(*types.Named); ok {
-					writeInterfaceText(ttn)
-				}
-			} else {
-				writeInterfaceText(res.Named.TT)
+				page.WriteByte('=')
 			}
+
+			//page.WriteString(types.TypeString(res.Denoting().TT, types.RelativeTo(res.Package().PPkg.Types)))
+			if res.AstSpec.Type == nil {
+				panic("res.Alias != nil, but res.AstSpec.Type == nil, ???")
+			}
+
+			if showSource {
+				page.WriteByte(' ')
+				ds.WriteAstType(page, res.AstSpec.Type, res.Pkg, res.Pkg, true, nil, nil)
+				//ds.writeValueTType(page, res.Denoting().TT, res.Pkg, true)
+			}
+			writeInterfaceText(res.Denoting().TT)
 		}
 	case *code.Constant:
 		page.WriteString("const ")
@@ -1192,7 +1208,7 @@ func (ds *docServer) writeInterfaceMethods(page *htmlPage, it *types.Interface, 
 	for i := 0; i < n; i++ {
 		f := it.ExplicitMethod(i)
 		page.WriteString(f.Name())
-		page.WriteByte(' ')
+		//page.WriteByte(' ')
 		ds.writeValueTType(page, f.Type(), docPkg, false)
 		if i < n-1 {
 			page.WriteString("; ")
@@ -1443,10 +1459,14 @@ func (ds *docServer) WriteAstFieldList(w *htmlPage, fieldList *ast.FieldList, se
 					w.Write(comma)
 				}
 			}
-			w.Write(space)
+			if funcKeywordNeeded {
+				w.Write(space)
+			} // else for interface methods
 		} else if showParamsNames {
 			w.Write(blankID)
-			w.Write(space)
+			if funcKeywordNeeded {
+				w.Write(space)
+			} // else for interface methods
 		}
 		ds.WriteAstType(w, fld.Type, codePkg, docPkg, funcKeywordNeeded, nil, forTypeName)
 		if i+1 < len(fields) {

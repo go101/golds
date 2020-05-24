@@ -60,13 +60,23 @@ func main() {
 		return
 	}
 
-	server.Run(*portFlag, flag.Args(), printUsage, getRoughBuildTime)
+	silentMode := *silentFlag || *sFlag
+
+	if d := *dirFlag; d != "" {
+		util.ServeFiles(d, *portFlag, silentMode)
+		return
+	}
+
+	server.Run(*portFlag, flag.Args(), silentMode, printUsage, getRoughBuildTime)
 }
 
 var hFlag = flag.Bool("h", false, "show help")
 var helpFlag = flag.Bool("help", false, "show help")
 var genFlag = flag.String("gen", "", "html generation output folder")
+var dirFlag = flag.String("dir", "", "file serving folder")
 var portFlag = flag.String("port", "56789", "preferred server port")
+var sFlag = flag.Bool("s", false, "not open a browser automatically")
+var silentFlag = flag.Bool("silent", false, "not open a browser automatically")
 
 // var versionFlag = flag.String("version", "", "show version info")
 
@@ -77,13 +87,18 @@ func printUsage(out io.Writer) {
 Options (by priority order):
 	-h/-help
 		Show help information.
+		When the flags present, others will be ignored.
 	-gen  OutputFolder
 		Generate all pages in the specified folder.
-		(And will not start a web server.)
+		This flag will surpress "dir" and "port" flags.
+	-dir  FileServingDirectory
+		The directory in which the files are served.
 	-port ServicePort
 		Service port, default to 56789.
 		If the specified or default port is not
 		availabe, a random port will be used.
+	-s/-silent
+		Don't open a browser automatically.
 
 Examples:
 	%[1]v std
@@ -92,8 +107,16 @@ Examples:
 		Show docs of package x.y.z/myapp.
 	%[1]v
 		Show docs of the package in the current directory.
+	%[1]v .
+		Show docs of the package in the current directory.
 	%[1]v ./...
-		Show docs of the package and sub-packages in the current directory.
+		Show docs of the package and sub-packages in the
+		current directory.
+	%[1]v -gen=./generated ./...
+		Generate HTML docs pages for the package and
+		sub-packages in the current directory.
+	%[1]v -dir=.
+		Serving the files in the current directory.
 `,
 		os.Args[0])
 }

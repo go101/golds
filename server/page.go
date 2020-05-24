@@ -3,8 +3,6 @@ package server
 import (
 	"bytes"
 	"fmt"
-	"os/exec"
-	"runtime"
 )
 
 type pageResType string
@@ -19,21 +17,6 @@ const (
 	ResTypeJS         pageResType = "jvs"
 	ResTypeSVG        pageResType = "svg"
 )
-
-func OpenBrowser(url string) error {
-	var cmd string
-	var args []string
-	switch runtime.GOOS {
-	case "windows":
-		cmd = "cmd"
-		args = []string{"/c", "start"}
-	case "darwin":
-		cmd = "open"
-	default: // "linux", "freebsd", "openbsd", "netbsd"
-		cmd = "xdg-open"
-	}
-	return exec.Command(cmd, append(args, url)...).Start()
-}
 
 type htmlPage struct {
 	bytes.Buffer

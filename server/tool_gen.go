@@ -217,7 +217,7 @@ func Gen(outputDir string, args []string, printUsage func(io.Writer), roughBuild
 	outputDir = strings.TrimRight(outputDir, "\\/")
 	outputDir = strings.Replace(outputDir, "/", string(filepath.Separator), -1)
 	outputDir = strings.Replace(outputDir, "\\", string(filepath.Separator), -1)
-	outputDir = filepath.Join(outputDir, "generated-"+time.Now().UTC().Format("20060102150405"))
+	outputDir = filepath.Join(outputDir, "generated-"+time.Now().Format("20060102150405"))
 
 	// ...
 	ds := &docServer{

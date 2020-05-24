@@ -48,7 +48,7 @@ func (ds *docServer) buildOverviewPage(overview *Overview) []byte {
 		ds.writeUpdateGoldBlock(page)
 	}
 
-	ds.writeStatsBlock(page, &overview.Stats)
+	ds.writeSimpleStatsBlock(page, &overview.Stats)
 
 	fmt.Fprintf(page, `
 <pre><code><span class="title">%s</span></code>`,
@@ -141,29 +141,19 @@ func (ds *docServer) writeUpdateGoldBlock(page *htmlPage) {
 	)
 }
 
-func (ds *docServer) writeStatsBlock(page *htmlPage, stats *code.Stats) {
+type SimpleStats struct {
+}
+
+func (ds *docServer) writeSimpleStatsBlock(page *htmlPage, stats *code.Stats) {
+	text := ds.currentTranslation.Text_SimpleStats(stats)
+	text = strings.Replace(text, "\n", "\n\t", -1)
+
 	fmt.Fprintf(page, `
 <pre><code><span class="title">%s</span></code>
-	Total %d packages analyzed and %d Go files parsed.
-	On average,
-	* each Go source file imports %.2f packages,
-	* each package depends on %.2f other packages,
-	  contains %.2f source code files, and exports
-	  - %.2f named types,
-	  - %.2f variables,
-	  - %.2f constants,
-	  - %.2f functions.`,
+	%s`,
 		ds.currentTranslation.Text_Statistics(),
-		stats.Packages, stats.AstFiles,
-		float64(stats.Imports)/float64(stats.AstFiles),
-		float64(stats.AllPackageDeps)/float64(stats.Packages),
-		float64(stats.FilesWithoutGenerateds)/float64(stats.Packages),
-		float64(stats.ExportedNamedTypes)/float64(stats.Packages),
-		float64(stats.ExportedVariables)/float64(stats.Packages),
-		float64(stats.ExportedConstants)/float64(stats.Packages),
-		float64(stats.ExportedFunctions)/float64(stats.Packages),
+		text,
 	)
-
 }
 
 type Overview struct {

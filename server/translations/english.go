@@ -3,6 +3,8 @@ package translation
 import (
 	"fmt"
 	"time"
+
+	"go101.org/gold/code"
 )
 
 type English struct{}
@@ -104,8 +106,26 @@ func (*English) Text_Statistics() string {
 	return "Statistics"
 }
 
-func (*English) Text_AllStats(stats map[string]int) string {
-	return "ToDo" // how many interfaces, ...
+func (*English) Text_SimpleStats(stats *code.Stats) string {
+	return fmt.Sprintf(`Total %d packages analyzed and %d Go files parsed.
+On average,
+* each Go source file imports %.2f packages,
+* each package depends on %.2f other packages,
+  contains %.2f source code files, and exports
+  - %.2f named types,
+  - %.2f variables,
+  - %.2f constants,
+  - %.2f functions.`,
+		stats.Packages, stats.AstFiles,
+		float64(stats.Imports)/float64(stats.AstFiles),
+		float64(stats.AllPackageDeps)/float64(stats.Packages),
+		float64(stats.FilesWithoutGenerateds)/float64(stats.Packages),
+		float64(stats.ExportedNamedTypes)/float64(stats.Packages),
+		float64(stats.ExportedVariables)/float64(stats.Packages),
+		float64(stats.ExportedConstants)/float64(stats.Packages),
+		float64(stats.ExportedFunctions)/float64(stats.Packages),
+	)
+
 }
 
 func (*English) Text_Modules() string { return "Modules" }
@@ -119,7 +139,7 @@ func (*English) Text_RequireStat(numRequires, numRequiredBys int) string {
 func (*English) Text_UpdateTip(tipName string) string {
 	switch tipName {
 	case "ToUpdate":
-		return `<b>Gold</b> has not been updated for one month. You may run <b>go get -u go101.org/gold</b> or <b><a href="/update">click here</a></b> to update it.`
+		return `<b>Gold</b> has not been updated for more than one month. You may run <b>go get -u go101.org/gold</b> or <b><a href="/update">click here</a></b> to update it.`
 	case "Updating":
 		return `<b>Gold</b> is being updated.`
 	case "Updated":
@@ -172,7 +192,7 @@ func (*English) Text_ImportStat(numImports, numImportedBys int, depPageURL strin
 	return fmt.Sprintf(`imports %s, and imported by %s`, importsStr, importedBysStr)
 }
 
-func (*English) Text_InvolvedFiles(num int) string { return "Source Files" }
+func (*English) Text_InvolvedFiles(num int) string { return "Involved Source Files" }
 
 func (*English) Text_ExportedValues(num int) string {
 	return "Exported Values"
