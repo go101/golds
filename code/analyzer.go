@@ -162,9 +162,8 @@ func (d *CodeAnalyzer) PackageAt(i int) *Package {
 }
 
 // ToDo: remove the second result
-func (d *CodeAnalyzer) PackageByPath(path string) (*Package, bool) {
-	pkg, ok := d.packageTable[path]
-	return pkg, ok
+func (d *CodeAnalyzer) PackageByPath(path string) *Package {
+	return d.packageTable[path]
 }
 
 func (d *CodeAnalyzer) IsStandardPackage(pkg *Package) bool {
@@ -175,6 +174,10 @@ func (d *CodeAnalyzer) IsStandardPackage(pkg *Package) bool {
 func (d *CodeAnalyzer) IsStandardPackageByPath(path string) bool {
 	pkg, ok := d.packageTable[path]
 	return ok && d.IsStandardPackage(pkg)
+}
+
+func (d *CodeAnalyzer) BuiltinPackge() *Package {
+	return d.builtinPkg
 }
 
 func (d *CodeAnalyzer) NumSourceFiles() int {
@@ -202,8 +205,7 @@ func (d *CodeAnalyzer) RuntimeFunctionCodePosition(f string) token.Position {
 }
 
 func (d *CodeAnalyzer) RuntimePackage() *Package {
-	runtimePkg, _ := d.PackageByPath("runtime")
-	return runtimePkg
+	return d.PackageByPath("runtime")
 }
 
 func (d *CodeAnalyzer) Id1(p *types.Package, name string) string {

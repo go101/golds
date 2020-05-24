@@ -119,6 +119,8 @@ func (ds *docServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			ds.startUpdatingGold()
 			http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 		case "statistics":
+			w.WriteHeader(http.StatusNotImplemented)
+			fmt.Fprint(w, "Not implemented yet")
 		}
 		return
 	}

@@ -26,6 +26,7 @@ func (ds *docServer) sourceCodePage(w http.ResponseWriter, r *http.Request, pkgP
 	defer ds.mutex.Unlock()
 
 	if ds.phase < Phase_Analyzed {
+		w.WriteHeader(http.StatusTooEarly)
 		ds.loadingPage(w, r)
 		return
 	}
@@ -48,7 +49,7 @@ func (ds *docServer) sourceCodePage(w http.ResponseWriter, r *http.Request, pkgP
 	if ds.sourcePages[pageKey] == nil {
 		result, err := ds.analyzeSoureCode(pkgPath, bareFilename)
 		if err != nil {
-			// ToDo: not found
+			w.WriteHeader(http.StatusNotFound)
 			fmt.Fprint(w, "Load file (", bareFilename, ") in ", pkgPath, " error: ", err)
 			return
 		}
@@ -1168,8 +1169,8 @@ func (v *AstVisitor) handleIdent(ident *ast.Ident) {
 		return
 	}
 
-	objPkg, ok := v.dataAnalyzer.PackageByPath(objPkgPath)
-	if !ok {
+	objPkg := v.dataAnalyzer.PackageByPath(objPkgPath)
+	if objPkg == nil {
 		panic(fmt.Sprintf("package for object (%v) is not found", obj))
 	}
 
@@ -1374,8 +1375,8 @@ func BuildLineOffsets(content []byte, onlyStatLineCount bool) (int, []int) {
 
 // Need locking before calling this function.
 func (ds *docServer) analyzeSoureCode(pkgPath, bareFilename string) (*SourceFileAnalyzeResult, error) {
-	pkg, ok := ds.analyzer.PackageByPath(pkgPath)
-	if !ok || pkg == nil {
+	pkg := ds.analyzer.PackageByPath(pkgPath)
+	if pkg == nil {
 		return nil, errors.New("package not found")
 	}
 

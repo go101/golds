@@ -9,6 +9,8 @@ import (
 
 // ToDo:
 func (ds *docServer) statisticsPage(page *htmlPage, stats *code.Stats) {
+	// w.WriteHeader(http.StatusTooEarly)
+	
 	var sum = func(kinds ...reflect.Kind) (r int32) {
 		for _, k := range kinds {
 			r += stats.ExportedNamedTypesByKind[k]

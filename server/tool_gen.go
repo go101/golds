@@ -257,6 +257,10 @@ func Gen(outputDir string, args []string, printUsage func(io.Writer), roughBuild
 				log.Fatal(err)
 			}
 
+			if res.StatusCode != http.StatusOK {
+				log.Fatalf("visit %s, get non-ok status code: %d", info.HrefPath, res.StatusCode)
+			}
+
 			content, err := ioutil.ReadAll(res.Body)
 			res.Body.Close()
 			if err != nil {

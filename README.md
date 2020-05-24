@@ -251,6 +251,12 @@ todo:
 * (done) func (x, y int): len(params []ast.Field) == 1, len(params[0].Names) == 2
   ast.Struct.Fields is alike. Check the uses!
 * (done) when finding selector shadowing, need to consider unexported names needing package import pathes, ...
+* (done) write links for
+  * alias denoting
+  * exported methods / fields
+  * as outputs / as inputs 
+* (done) package details page: click an exported type, don't go to source page
+
 
 * value: find other values with the same type
 * type: find convertible/assignable types
@@ -301,11 +307,10 @@ todo:
 
 
 * revert: needCheckUpdate := d > time.Hour*24*30 || true
-* testing: -gen=... -gen-format=json
-* use Go tip test analyzePackages_CheckCollectSelectors
-* package details page: click an exported type, don't go to source page
 * stat: n interfaces, m structs, ... (on overview and package detail pages)
 * tests
+  * -gen=... -gen-format=json
+  * use Go 1.15+ test analyzePackages_CheckCollectSelectors
 * comments
 * css style
 * js: yes, this tool is non-JS freindly, but more features will be available if JS is on.

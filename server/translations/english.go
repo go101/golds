@@ -140,9 +140,9 @@ func (*English) Text_BelongingPackage() string { return "Belonging Package" }
 
 func (*English) Text_PackageDocsLinksOnOtherWebsites(pkgPath string, isStdPkg bool) string {
 	if isStdPkg {
-		return fmt.Sprintf(` (on <a href="https://golang.org/pkg/%[1]s/" target="_blank">golang.org</a> and <a href="https://pkg.go.dev/%[1]s" target="_blank">go.dev</a>)`, pkgPath)
+		return fmt.Sprintf(`(<i> on <a href="https://golang.org/pkg/%[1]s/" target="_blank">golang.org</a> and <a href="https://pkg.go.dev/%[1]s" target="_blank">go.dev</a></i>)`, pkgPath)
 	} else {
-		return fmt.Sprintf(` (on <a href="https://pkg.go.dev/%s" target="_blank">go.dev</a>)`, pkgPath)
+		return fmt.Sprintf(`(<i> on <a href="https://pkg.go.dev/%s" target="_blank">go.dev</a></i>)`, pkgPath)
 	}
 }
 
@@ -152,7 +152,7 @@ func (*English) Text_ImportStat(numImports, numImportedBys int, depPageURL strin
 	var importsStr, importedBysStr string
 
 	if numImports == 1 {
-		importsStr = "1 package"
+		importsStr = "one package"
 	} else {
 		importsStr = fmt.Sprintf("%d packages", numImports)
 	}
@@ -161,7 +161,7 @@ func (*English) Text_ImportStat(numImports, numImportedBys int, depPageURL strin
 	}
 
 	if numImportedBys == 1 {
-		importedBysStr = "1 package"
+		importedBysStr = "one package"
 	} else {
 		importedBysStr = fmt.Sprintf("%d packages", numImportedBys)
 	}
@@ -172,7 +172,7 @@ func (*English) Text_ImportStat(numImports, numImportedBys int, depPageURL strin
 	return fmt.Sprintf(`imports %s, and imported by %s`, importsStr, importedBysStr)
 }
 
-func (*English) Text_InvolvedFiles(num int) string { return "Involved Files" }
+func (*English) Text_InvolvedFiles(num int) string { return "Source Files" }
 
 func (*English) Text_ExportedValues(num int) string {
 	return "Exported Values"

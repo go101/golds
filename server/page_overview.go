@@ -19,6 +19,7 @@ func (ds *docServer) overviewPage(w http.ResponseWriter, r *http.Request) {
 
 	//if ds.phase < Phase_Parsed {
 	if ds.phase < Phase_Analyzed {
+		w.WriteHeader(http.StatusTooEarly)
 		ds.loadingPage(w, r)
 		return
 	}

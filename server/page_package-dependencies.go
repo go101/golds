@@ -13,6 +13,7 @@ func (ds *docServer) packageDependenciesPage(w http.ResponseWriter, r *http.Requ
 	defer ds.mutex.Unlock()
 
 	if ds.phase < Phase_Analyzed {
+		w.WriteHeader(http.StatusTooEarly)
 		ds.loadingPage(w, r)
 		return
 	}
@@ -22,6 +23,7 @@ func (ds *docServer) packageDependenciesPage(w http.ResponseWriter, r *http.Requ
 
 		depInfo := ds.buildPackageDependenciesData(pkgPath)
 		if depInfo == nil {
+			w.WriteHeader(http.StatusNotFound)
 			fmt.Fprintf(w, "Package (%s) not found", pkgPath)
 			return
 		}
@@ -41,8 +43,8 @@ type PackageDependencyInfo struct {
 }
 
 func (ds *docServer) buildPackageDependenciesData(pkgPath string) *PackageDependencyInfo {
-	pkg, ok := ds.analyzer.PackageByPath(pkgPath)
-	if !ok || pkg == nil {
+	pkg := ds.analyzer.PackageByPath(pkgPath)
+	if pkg == nil {
 		return nil
 	}
 
