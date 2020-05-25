@@ -973,8 +973,8 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, res code.Resource, f
 				}
 			}
 
-			page.WriteByte(' ')
 			if res.Alias != nil {
+				page.WriteByte(' ')
 				page.WriteByte('=')
 			}
 
@@ -1587,16 +1587,3 @@ func writePageText(page *htmlPage, indent, text string, htmlEscape bool) {
 		}
 	}
 }
-
-// Do not ue the offiical builtin package page? Too many quirks. Use a simple custom page instead?
-// * make(Type ChannelKind|MapKind|SliceKind) Type
-//   Type must denote a channel, map, or slice type.
-//   make(Type ChannelKind|MapKind|SliceKind, size integer) Type
-//   Type must denote a channel, map, or slice type.
-//   size must be a non-negative integer value (of any integer type) or a literal denoting a non-negative integer value.
-//   make(Type SliceKind, length integer, capacity interger) Type
-//   Type must denote a slice type.
-//   length and capacity must be both non-negative integer values (of any integer type) or literals denoting a non-negative integer values.
-//   The types of length and capacity may be different.
-// * new(Type AnyKind) *Type
-// * each with simple examples

@@ -2,7 +2,8 @@
 
 ### Soon to do
 
-
+* print final memory usage.
+* Footer: go101 twitter. supported by: tapirgames, go101 book, paypal
 * net/http: var ErrUnexpectedTrailer *ProtocolError
   - not only list values of T, also *T, []T, ...
   * var x T
@@ -14,20 +15,18 @@
   * use Go 1.15+ test analyzePackages_CheckCollectSelectors
 * comments
 * css style
-* js: yes, this tool is non-JS freindly, but more features will be available if JS is on.
-  * loading progress in pages
+* js:
   * shortcuts:
     * ~, Backspace: back
     * HOME: to overview page
     * P: from code page to package detail page
     * -: collapse value/type docs
     * +: expand value/type docs
-  * two weeks not update. Update now?: to prepare for future golf promotion etc.
   * filter values (var | const | func)
     filter types (interfaces)
     fitler packages (main | std)
     sort packages by importedBys (by most imports is non-sense)
-    sort types (methods, used as parameters/results)
+    sort types (by method count, used as parameters/results)
   * search on pkg details pages, and filter packages on overview page
   * click "package"/overview to switch theme/language
 
@@ -40,13 +39,27 @@
     * https://godoc.org/github.com/cznic/cc#example-Statement
       https://pkg.go.dev/github.com/cznic/cc/v2?tab=doc
     * https://github.com/xlab/c-for-go
+* use css fixate the top file path bar.
+
+* special handling for the buitlin page, 
+  // * make(Type ChannelKind|MapKind|SliceKind, sizes ...int) Type
+  //   Type must denote a channel, map, or slice type.
+  //   make(Type ChannelKind|MapKind|SliceKind, size integer) Type
+  //   Type must denote a channel, map, or slice type.
+  //   size must be a non-negative integer value (of any integer type) or a literal denoting a non-negative integer value.
+  //   make(Type SliceKind, length integer, capacity interger) Type
+  //   Type must denote a slice type.
+  //   length and capacity must be both non-negative integer values (of any integer type) or literals denoting a non-negative integer values.
+  //   The types of length and capacity may be different.
+  // * new(Type AnyKind) *Type
+  // * each with simple examples
+
 
 * module info
 * code search
-* special handling for the buitlin page, 
-  by replacing make(t T, sizes ...int) T to make(T slice|map|channel, sizes ...int) T
 * show/run examples/tests/banchmarks
   * "go/doc": doc.Examples(...)
+  * use go/doc to retrieve package docs
   * websocket: monitor page leave and shutdown unfinished Go processes.
 * support multi GOOS pages, show all OS specified packages
   * show used build tags and other available ones
@@ -85,7 +98,7 @@
   * click "type" keyword to unhide the source type definition.
     And show underlying type in a further click.
   * show the types with the same underlying type.
-  * show comparable or not
+  * show comparable/embeddable or not. Fill TypeInfo.attributes.
   * all alias list
   * values which can be converted to (some functions can be used as (implicitly converted to) http.HandleFunc values, alike)    
   * asParams/asResults lists exclude the methods of unexported types now.

@@ -18,20 +18,20 @@ import (
 	"go101.org/gold/util"
 )
 
-func avoidCheckFuncBody(fset *token.FileSet, parseFilename string, _ []byte) (*ast.File, error) {
-	var src interface{}
-	mode := parser.ParseComments // | parser.AllErrors
-	file, err := parser.ParseFile(fset, parseFilename, src, mode)
-	if file == nil {
-		return nil, err
-	}
-	for _, decl := range file.Decls {
-		if fd, ok := decl.(*ast.FuncDecl); ok {
-			fd.Body = nil
-		}
-	}
-	return file, nil
-}
+//func avoidCheckFuncBody(fset *token.FileSet, parseFilename string, _ []byte) (*ast.File, error) {
+//	var src interface{}
+//	mode := parser.ParseComments // | parser.AllErrors
+//	file, err := parser.ParseFile(fset, parseFilename, src, mode)
+//	if file == nil {
+//		return nil, err
+//	}
+//	for _, decl := range file.Decls {
+//		if fd, ok := decl.(*ast.FuncDecl); ok {
+//			fd.Body = nil
+//		}
+//	}
+//	return file, nil
+//}
 
 func collectPPackages(ppkgs []*packages.Package) map[string]*packages.Package {
 	var allPPkgs = make(map[string]*packages.Package, 1000)
@@ -68,8 +68,8 @@ func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...i
 
 	var stopWatch = util.NewStopWatch()
 
-	var logProgress = func(task int, args ...int32) {
-		onSubTaskDone(task, stopWatch.Duration(), args...)
+	var logProgress = func(resetWatch bool, task int, args ...int32) {
+		onSubTaskDone(task, stopWatch.Duration(resetWatch), args...)
 	}
 
 	//log.Println("[parse packages ...], args:", args)
@@ -91,9 +91,9 @@ func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...i
 
 		ParseFile: func(fset *token.FileSet, filename string, src []byte) (*ast.File, error) {
 			if num := atomic.AddInt32(&numParsedPackages, 1); num == 1 {
-				logProgress(SubTask_PreparationDone)
+				logProgress(true, SubTask_PreparationDone)
 			} else if num&(num-1) == 0 {
-				logProgress(SubTask_NFilesParsed, num)
+				logProgress(false, SubTask_NFilesParsed, num)
 			}
 
 			//defer log.Println("parsed", filename)
@@ -122,9 +122,9 @@ func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...i
 	}
 
 	if num := atomic.AddInt32(&numParsedPackages, 1); num == 1 || num&(num-1) != 0 {
-		logProgress(SubTask_ParsePackagesDone, num)
+		logProgress(true, SubTask_ParsePackagesDone, num)
 	} else {
-		logProgress(SubTask_ParsePackagesDone, -1)
+		logProgress(true, SubTask_ParsePackagesDone, -1)
 	}
 
 	stdPPkgs, err := collectStdPackages()
@@ -133,7 +133,7 @@ func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...i
 	}
 
 	defer func() {
-		logProgress(SubTask_CollectPackages, int32(len(d.packageList)))
+		logProgress(true, SubTask_CollectPackages, int32(len(d.packageList)))
 	}()
 
 	var hasErrors bool
@@ -243,14 +243,6 @@ func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...i
 
 	return true
 }
-
-// Go 1.14: added go/build.Context.Dir, ..., some convienient to not use go/types and go/packages?
-
-// ToDo: use go/doc to retrieve package docs
-
-// ToDo: don't load builtin pacakge, construct a custom builtin package manually instead.
-
-// ToDo: make some special handling in unsafe package page creation.
 
 func fillUnsafePackage(unsafePPkg *packages.Package, builtinPPkg *packages.Package) {
 	intType := builtinPPkg.Types.Scope().Lookup("int").Type()

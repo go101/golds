@@ -10,12 +10,6 @@ import (
 	"strings"
 )
 
-//type SourceFile struct {
-//	Path    string
-//	Pkg     *Package
-//	AstFile *ast.File // non-nil for compiled Go files
-//}
-
 func (d *CodeAnalyzer) CollectSourceFiles() {
 	//log.Println("=================== CollectSourceFiles")
 

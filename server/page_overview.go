@@ -141,9 +141,6 @@ func (ds *docServer) writeUpdateGoldBlock(page *htmlPage) {
 	)
 }
 
-type SimpleStats struct {
-}
-
 func (ds *docServer) writeSimpleStatsBlock(page *htmlPage, stats *code.Stats) {
 	text := ds.currentTranslation.Text_SimpleStats(stats)
 	text = strings.Replace(text, "\n", "\n\t", -1)

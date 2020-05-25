@@ -688,58 +688,17 @@ func (f *Function) ReceiverTypeName() (paramField *ast.Field, typeIdent *ast.Ide
 	}
 }
 
-// ToDo: not use types.NewMethodSet or typesutil.MethodSet().
-//       Implement it from scratch instead.
-//type Method struct {
-//	*types.Func // receiver is ignored
-//
-//	SignatureIndex uint32
-//
-//	PointerReceiverOnly bool
-//
-//	// The embedded type names in full form.
-//	// Nil means this method is not obtained through embedding.
-//	SelectorChain []Embedded
-//
-//	astFunc *ast.FuncDecl
-//}
-
 type MethodSignature struct {
 	Name string // must be an identifier other than "_"
 	Pkg  string // the import path, for unepxorted method names only
+
+	// ToDo: the above two can be replaced with two int32 IDs.
 
 	//InOutTypes []int32 // global type indexes
 	InOutTypes string
 
 	NumInOutAndVariadic int
 }
-
-//// The lower bits of each Embedded is an index to the global TypeName table.
-//// The global TypeName table comtains all type aliases and defined types.
-//// The highest bit indicates whether or not the embedding for is *T or not.
-//type Embedded uint32
-//
-//type Field struct {
-//	*types.Var
-//
-//	// The info is contained in the above types.Var field.
-//	//Owner *TypeInfo // must be a (non-defined) struct type
-//
-//	// The embedded type names in full form.
-//	// Nil means this is a non-embedded field.
-//	SelectorChain []Embedded
-//
-//	astList  *ast.FieldList
-//	astField *ast.Field
-//}
-//
-//type Method struct {
-//	*types.Func // object denoted by x.f
-//
-//	SelectorChain []Embedded
-//
-//	astFunc *ast.FuncDecl
-//}
 
 type EmbedMode uint8
 
@@ -896,5 +855,3 @@ func PrintSelectors(title string, selectors []*Selector) {
 		log.Println("  ", sel)
 	}
 }
-
-// ToDo: use go/doc package

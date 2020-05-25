@@ -3,7 +3,7 @@
 
 go local docs server
 
-go local directory server `gold -dir=.`
+go local directory server `gold -dir .`
 
 #### golden
 

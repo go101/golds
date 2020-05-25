@@ -61,17 +61,6 @@ func (ds *docServer) sourceCodePage(w http.ResponseWriter, r *http.Request, pkgP
 func (ds *docServer) buildSourceCodePage(result *SourceFileAnalyzeResult) []byte {
 	page := NewHtmlPage(ds.currentTranslation.Text_SourceCode(result.PkgPath, result.BareFilename), ds.currentTheme.Name(), pagePathInfo{ResTypeSource, result.PkgPath + "/" + result.BareFilename})
 
-	// ToDo: the belonging package section is not essential.
-	//       We can put a link in "package pkg",
-	//       or in the middle part of the file path.
-	//       (Cancelled, for the package path is not always in the file path,
-	//       if the file lies in the module cache directory.)
-	//       (Update: maybe the idea can still be considered if the module
-	//       part of the project is implemented.)
-	//       (Update 2: it is some hard. Some compiled Go files with cgo code
-	//       might be cached temp file which path/filename is not expected.)
-	// ToDo: use css fix the file path bar.
-
 	realFilePath := result.OriginalPath
 	if result.GeneratedPath != "" {
 		realFilePath = result.GeneratedPath
@@ -413,55 +402,33 @@ func WriteTypeEx(w io.Writer, typeLit ast.Expr, info *types.Info, funcKeywordNee
 }
 */
 
-// should be fasters than strings.Compare for comparing non-equal package paths.
-func CompareStringsInversely(a, b string) (r int) {
-	//defer func(x, y string) {
-	//	println("Compare ", x, " and ", y, ": ", r)
-	//}(a, b)
-
-	pos, neg := 1, -1
-	if len(a) > len(b) {
-		a, b = b, a
-		pos, neg = neg, pos
-	}
-
-	i, j := len(a)-1, len(b)-1
-	for i >= 0 {
-		if a[i] < b[j] {
-			return neg
-		} else if a[i] > b[j] {
-			return pos
-		}
-		i--
-		j--
-	}
-	if j >= 0 {
-		return neg
-	}
-	return 0
-}
-
-// ToDo: to get better user experience for browsing cgo/c files.
+// should be faster than strings.Compare for comparing non-equal package paths.
+//func CompareStringsInversely(a, b string) (r int) {
+//	//defer func(x, y string) {
+//	//	println("Compare ", x, " and ", y, ": ", r)
+//	//}(a, b)
 //
-// There are amny /*line :m:n*/ line repos directives in
-// the generated files for those using cgo. These directives
-// will affect the "Line" and "Colume" field values of the
-// token.Position results of FileSet.Position() calls.
-// However, the "Offset" field values are not affected.
+//	pos, neg := 1, -1
+//	if len(a) > len(b) {
+//		a, b = b, a
+//		pos, neg = neg, pos
+//	}
 //
-// (Edit: we should use FileSet.PositionFor(, false) instead!
-//
-// It looks the Position info of exported names are only
-// affected by the first "//line file:m:n" directive in
-// a generated file. Also true for parameters and results.
-//
-// In future, the perfect implementation will ignore
-// generated files and be independent to the go/types package.
-//
-// To avoid complixity and keep reasonable CPU consuming,
-// the current implementation uses the generated files.
-// The "Line" info returned by the FileSet.Position() calls
-// for the current identifier is ignored.
+//	i, j := len(a)-1, len(b)-1
+//	for i >= 0 {
+//		if a[i] < b[j] {
+//			return neg
+//		} else if a[i] > b[j] {
+//			return pos
+//		}
+//		i--
+//		j--
+//	}
+//	if j >= 0 {
+//		return neg
+//	}
+//	return 0
+//}
 
 // ToDo: write to page directly.
 type AstVisitor struct {

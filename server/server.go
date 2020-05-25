@@ -166,7 +166,8 @@ func (ds *docServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (ds *docServer) analyze(args []string, printUsage func(io.Writer)) {
 	var stopWatch = util.NewStopWatch()
 	defer func() {
-		ds.registerAnalyzingLogMessage(fmt.Sprint("Done. (Total analyzation time: ", stopWatch.Duration(), ")"))
+		ds.registerAnalyzingLogMessage(fmt.Sprint("Done. (Total analyzation time: ", stopWatch.Duration(false), ")"))
+		ds.registerAnalyzingLogMessage("")
 	}()
 
 	if len(args) == 0 {

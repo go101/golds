@@ -62,8 +62,12 @@ func main() {
 
 	silentMode := *silentFlag || *sFlag
 
-	if d := *dirFlag; d != "" {
-		util.ServeFiles(d, *portFlag, silentMode)
+	if d := *dirFlag; d {
+		dir := "."
+		if flag.NArg() > 0 {
+			dir = flag.Arg(0)
+		}
+		util.ServeFiles(dir, *portFlag, silentMode)
 		return
 	}
 
@@ -73,7 +77,7 @@ func main() {
 var hFlag = flag.Bool("h", false, "show help")
 var helpFlag = flag.Bool("help", false, "show help")
 var genFlag = flag.String("gen", "", "html generation output folder")
-var dirFlag = flag.String("dir", "", "file serving folder")
+var dirFlag = flag.Bool("dir", false, "directory serving mode")
 var portFlag = flag.String("port", "56789", "preferred server port")
 var sFlag = flag.Bool("s", false, "not open a browser automatically")
 var silentFlag = flag.Bool("silent", false, "not open a browser automatically")
@@ -84,16 +88,18 @@ func printUsage(out io.Writer) {
 	fmt.Fprintf(out, `Usage:
 	%[1]v [options] [arguments]
 
-Options (by priority order):
+Options:
 	-h/-help
 		Show help information.
 		When the flags present, others will be ignored.
-	-gen  OutputFolder
-		Generate all pages in the specified folder.
+	-gen=OutputFolder
+		Generate all doc pages in the specified folder.
 		This flag will surpress "dir" and "port" flags.
-	-dir  FileServingDirectory
-		The directory in which the files are served.
-	-port ServicePort
+	-dir
+		Directory serving mode (instead of docs server mode).
+		The first argument will be viewed as the served directory.
+		Current directory will be used if no arguments specified.
+	-port=ServicePort
 		Service port, default to 56789.
 		If the specified or default port is not
 		availabe, a random port will be used.
@@ -115,8 +121,9 @@ Examples:
 	%[1]v -gen=./generated ./...
 		Generate HTML docs pages for the package and
 		sub-packages in the current directory.
-	%[1]v -dir=.
-		Serving the files in the current directory.
+	%[1]v -dir -s
+		Serving the files in the current directory
+		without opening browser automatically.
 `,
 		os.Args[0])
 }

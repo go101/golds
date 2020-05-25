@@ -22,12 +22,12 @@ func (d *CodeAnalyzer) AnalyzePackages(onSubTaskDone func(int, time.Duration, ..
 	var stopWatch = util.NewStopWatch()
 
 	var logProgress = func(task int, args ...int32) {
-		onSubTaskDone(task, stopWatch.Duration(), args...)
+		onSubTaskDone(task, stopWatch.Duration(true), args...)
 	}
 
 	d.confirmPackageModules()
 
-	stopWatch.Duration()
+	stopWatch.Duration(true)
 
 	d.sortPackagesByDependencies()
 
