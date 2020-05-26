@@ -9,9 +9,13 @@ go local directory server `gold -dir .`
 
 The development/experiment version of gold
 
-#### gold -gen=./tmp
+#### gold -gen
 
 HTML pages generation
+
+#### gold -dir=.
+
+File server.
 
 ### why gold is recommended to run locally? Is gold is really capable for running on internet?
 

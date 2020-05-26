@@ -17,4 +17,5 @@ func TestBuildLineOffsets(t *testing.T) {
 }
 
 func TestDocsForStandardPackages(t *testing.T) {
+
 }

@@ -6,7 +6,9 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"runtime"
+	"strings"
 	"time"
 
 	"go101.org/gold/server"
@@ -55,19 +57,30 @@ func main() {
 	// ...
 	log.SetFlags(log.Lshortfile)
 
-	if o := *genFlag; o != "" {
-		server.Gen(o, flag.Args(), printUsage, getRoughBuildTime)
-		return
+	var validateDiir = func(dir string) string {
+		if dir == "" {
+			dir = "."
+		} else {
+			dir = strings.TrimRight(dir, "\\/")
+			dir = strings.Replace(dir, "/", string(filepath.Separator), -1)
+			dir = strings.Replace(dir, "\\", string(filepath.Separator), -1)
+		}
+		return dir
 	}
 
 	silentMode := *silentFlag || *sFlag
 
-	if d := *dirFlag; d {
-		dir := "."
-		if flag.NArg() > 0 {
-			dir = flag.Arg(0)
+	if gen := *genFlag; gen {
+		var viewDocsCommand = func(docsDir string) string {
+			return os.Args[0] + " -dir=" + docsDir
 		}
-		util.ServeFiles(dir, *portFlag, silentMode)
+		server.Gen(validateDiir(*dirFlag), flag.Args(), silentMode, printUsage, getRoughBuildTime, viewDocsCommand)
+		return
+	}
+
+	if dir := *dirFlag; dir != "" {
+		log.Printf("a%sb", dir)
+		util.ServeFiles(validateDiir(dir), *portFlag, silentMode)
 		return
 	}
 
@@ -76,8 +89,8 @@ func main() {
 
 var hFlag = flag.Bool("h", false, "show help")
 var helpFlag = flag.Bool("help", false, "show help")
-var genFlag = flag.String("gen", "", "html generation output folder")
-var dirFlag = flag.Bool("dir", false, "directory serving mode")
+var genFlag = flag.Bool("gen", false, "HTML generation mode")
+var dirFlag = flag.String("dir", "", "directory for file serving or HTML generation")
 var portFlag = flag.String("port", "56789", "preferred server port")
 var sFlag = flag.Bool("s", false, "not open a browser automatically")
 var silentFlag = flag.Bool("silent", false, "not open a browser automatically")
@@ -104,7 +117,8 @@ Options:
 		If the specified or default port is not
 		availabe, a random port will be used.
 	-s/-silent
-		Don't open a browser automatically.
+		Don't open a browser automatically or don't show HTML
+		file generation logs in docs generation mode.
 
 Examples:
 	%[1]v std

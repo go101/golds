@@ -13,7 +13,7 @@ func (ds *docServer) statisticsPage(page *htmlPage, stats *code.Stats) {
 	
 	var sum = func(kinds ...reflect.Kind) (r int32) {
 		for _, k := range kinds {
-			r += stats.ExportedNamedTypesByKind[k]
+			r += stats.ExportedTypeNamesByKind[k]
 		}
 		return
 	}
@@ -66,9 +66,9 @@ func (ds *docServer) statisticsPage(page *htmlPage, stats *code.Stats) {
 		stats.AstFiles,
 		stats.FilesByImportCount,
 		float64(stats.Imports)/float64(stats.AstFiles),
-		stats.ExportedNamedTypes,
+		stats.ExportedTypeNames,
 		stats.ExportedTypeAliases,
-		stats.ExportedNamedTypesByKind,
+		stats.ExportedTypeNamesByKind,
 		stats.ExportedNamedNumericTypes,
 		stats.ExportedNamedIntergerTypes,
 		stats.ExportedNamedUnsignedIntergerTypes,

@@ -26,7 +26,7 @@
     filter types (interfaces)
     fitler packages (main | std)
     sort packages by importedBys (by most imports is non-sense)
-    sort types (by method count, used as parameters/results)
+    sort types (by method count or popularity, used as parameters/results)
   * search on pkg details pages, and filter packages on overview page
   * click "package"/overview to switch theme/language
 
@@ -109,10 +109,14 @@
   * for non-interface: embedded by list
   * convertible/assignable types
   * show struct paddings/sizes
+  * sort types by popularity
+  * filter by kind
 * for a method
   * if it is an interface method, show all concrete implementations, need JS
   * if it is a concrete methods, show all its implemented interface methods (to view docs), need JS
   * an interface method might also has multiple docs, for interface embed overlapping interfaces
+* for builtin function
+  * link panic/recover/... to their implementation positions.
 * all references of an identifier: in frame pages
   * for types, show unexported methods/fields/...
 

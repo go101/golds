@@ -39,10 +39,6 @@ func (d *CodeAnalyzer) AnalyzePackages(onSubTaskDone func(int, time.Duration, ..
 
 	logProgress(SubTask_CollectDeclarations)
 
-	d.analyzePackage_CollectSomeRuntimeFunctionPositions()
-
-	logProgress(SubTask_CollectRuntimeFunctionPositions)
-
 	//log.Println("=== recorded type count:", len(d.allTypeInfos))
 
 	//log.Println("[analyze packages 2...]")
@@ -77,6 +73,10 @@ func (d *CodeAnalyzer) AnalyzePackages(onSubTaskDone func(int, time.Duration, ..
 	d.CollectSourceFiles()
 
 	logProgress(SubTask_CollectSourceFiles)
+
+	d.analyzePackage_CollectSomeRuntimeFunctionPositions()
+
+	logProgress(SubTask_CollectRuntimeFunctionPositions)
 
 	for _, pkg := range d.packageList {
 		d.analyzePackage_CollectMoreStatistics(pkg)
@@ -2050,8 +2050,8 @@ func (d *CodeAnalyzer) analyzePackage_CollectMoreStatistics(pkg *Package) {
 				d.stats.ExportedTypeAliases++
 			} else {
 				kind := tn.Named.Kind()
-				d.stats.ExportedNamedTypesByKind[kind]++
-				d.stats.ExportedNamedTypes++
+				d.stats.ExportedTypeNamesByKind[kind]++
+				d.stats.ExportedTypeNames++
 
 				var numExportedMethods = 0
 				for _, sel := range tn.Named.AllMethods {
@@ -2094,7 +2094,7 @@ func (d *CodeAnalyzer) analyzePackage_CollectMoreStatistics(pkg *Package) {
 func (d *CodeAnalyzer) analyzePackage_CollectMoreStatisticsFinal() {
 	var sum = func(kinds ...reflect.Kind) (r int32) {
 		for _, k := range kinds {
-			r += d.stats.ExportedNamedTypesByKind[k]
+			r += d.stats.ExportedTypeNamesByKind[k]
 		}
 		return
 	}

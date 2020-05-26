@@ -94,11 +94,11 @@ type Stats struct {
 	// Types
 	//NamedStructTypesWithEmbeddingField,
 	//NamedStructTypeFields
-	ExportedNamedTypes,
+	ExportedTypeNames,
 	ExportedTypeAliases int32
 
 	//ExportedTypeAliasesByKind
-	ExportedNamedTypesByKind [KindCount]int32
+	ExportedTypeNamesByKind [KindCount]int32
 	ExportedNamedIntergerTypes,
 	ExportedNamedUnsignedIntergerTypes,
 	ExportedNamedNumericTypes int32

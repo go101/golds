@@ -88,8 +88,8 @@ func (*English) Text_Analyzing_CollectSourceFiles(d time.Duration) string {
 	return fmt.Sprintf("Collect Source Files: %s", d)
 }
 
-func (*English) Text_Analyzing_Done(d time.Duration) string {
-	return fmt.Sprintf("Done. (Total analyzation time: %s)", d)
+func (*English) Text_Analyzing_Done(d time.Duration, memoryUse string) string {
+	return fmt.Sprintf("Done. (Total time: %s, used memory: %s)", d, memoryUse)
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -112,7 +112,7 @@ On average,
 * each Go source file imports %.2f packages,
 * each package depends on %.2f other packages,
   contains %.2f source code files, and exports
-  - %.2f named types,
+  - %.2f type names,
   - %.2f variables,
   - %.2f constants,
   - %.2f functions.`,
@@ -120,7 +120,7 @@ On average,
 		float64(stats.Imports)/float64(stats.AstFiles),
 		float64(stats.AllPackageDeps)/float64(stats.Packages),
 		float64(stats.FilesWithoutGenerateds)/float64(stats.Packages),
-		float64(stats.ExportedNamedTypes)/float64(stats.Packages),
+		float64(stats.ExportedTypeNames)/float64(stats.Packages),
 		float64(stats.ExportedVariables)/float64(stats.Packages),
 		float64(stats.ExportedConstants)/float64(stats.Packages),
 		float64(stats.ExportedFunctions)/float64(stats.Packages),

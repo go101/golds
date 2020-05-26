@@ -207,16 +207,13 @@ Generate:
 	return
 }
 
-func Gen(outputDir string, args []string, printUsage func(io.Writer), roughBuildTime func() time.Time) {
+func Gen(outputDir string, args []string, silent bool, printUsage func(io.Writer), roughBuildTime func() time.Time, viewDocsCommand func(string) string) {
 	log.SetFlags(log.Lshortfile)
 
 	// ...
 
 	enabledHtmlGenerationMod()
 
-	outputDir = strings.TrimRight(outputDir, "\\/")
-	outputDir = strings.Replace(outputDir, "/", string(filepath.Separator), -1)
-	outputDir = strings.Replace(outputDir, "\\", string(filepath.Separator), -1)
 	outputDir = filepath.Join(outputDir, "generated-"+time.Now().Format("20060102150405"))
 
 	// ...
@@ -293,8 +290,14 @@ func Gen(outputDir string, args []string, printUsage func(io.Writer), roughBuild
 			log.Fatalln("Write file error:", err)
 		}
 
-		log.Printf("Generated %s (size: %d).", pg.FilePath, len(pg.Content))
+		if !silent {
+			log.Printf("Generated %s (size: %d).", pg.FilePath, len(pg.Content))
+		}
 	}
 
 	log.Printf("Done (%d pages are generated and %d bytes are written).", numPages, numBytes)
+	//outputDir, _ = filepath.Abs(outputDir)
+	log.Printf("Docs are generated in %s.", outputDir)
+	log.Println("Run the following command to view the docs:")
+	log.Printf("\t%s", viewDocsCommand(outputDir))
 }

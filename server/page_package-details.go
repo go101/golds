@@ -943,27 +943,44 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, res code.Resource, f
 
 	//log.Println("   :", pos)
 
+	isBuiltin := res.Package().Path() == "builtin"
+
 	switch res := res.(type) {
 	default:
 		panic("should not")
 	case *code.TypeName:
 		page.WriteString(" type ")
-		ds.writeSrouceCodeLineLink(page, res.Package(), pos, res.Name(), "", false)
-		// ToDo: also wirte non-alais src type.
-		// ToDo: use a custom formatter to avoid multiple line and too long src type strings.
+		if isBuiltin {
+			page.WriteString(res.Name())
+		} else {
+			ds.writeSrouceCodeLineLink(page, res.Package(), pos, res.Name(), "", false)
+		}
+
 		if writeType {
 			showSource := false
-			for t, done := res.AstSpec.Type, false; !done; {
-				switch e := t.(type) {
-				case *ast.Ident, *ast.SelectorExpr:
-					showSource = true
-					done = true
-				case *ast.ParenExpr:
-					t = e.X
-				case *ast.StarExpr:
-					t = e.X
-				default:
-					done = true
+			if isBuiltin {
+				// builtin package source code are fake.
+				showSource = res.Alias != nil
+			} else {
+				allowStar := res.Alias != nil
+				for t, done := res.AstSpec.Type, false; !done; {
+					switch e := t.(type) {
+					case *ast.Ident, *ast.SelectorExpr:
+						showSource = true
+						done = true
+					case *ast.ParenExpr:
+						t = e.X
+					case *ast.StarExpr:
+						// type A = *T
+						if allowStar {
+							t = e.X
+							allowStar = false
+						} else {
+							done = true
+						}
+					default:
+						done = true
+					}
 				}
 			}
 
@@ -992,7 +1009,11 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, res code.Resource, f
 		}
 	case *code.Constant:
 		page.WriteString("const ")
-		ds.writeSrouceCodeLineLink(page, res.Package(), pos, res.Name(), "", false)
+		if isBuiltin {
+			page.WriteString(res.Name())
+		} else {
+			ds.writeSrouceCodeLineLink(page, res.Package(), pos, res.Name(), "", false)
+		}
 
 		btt, ok := res.TType().Underlying().(*types.Basic)
 		if !ok {
@@ -1007,11 +1028,17 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, res code.Resource, f
 				ds.writeValueTType(page, res.TType(), res.Pkg, true)
 			}
 		}
-		page.WriteString(" = ")
-		page.WriteString(res.Val().String())
+		if !isBuiltin {
+			page.WriteString(" = ")
+			page.WriteString(res.Val().String())
+		}
 	case *code.Variable:
 		page.WriteString("  var ")
-		ds.writeSrouceCodeLineLink(page, res.Package(), pos, res.Name(), "", false)
+		if isBuiltin {
+			page.WriteString(res.Name())
+		} else {
+			ds.writeSrouceCodeLineLink(page, res.Package(), pos, res.Name(), "", false)
+		}
 		if writeType {
 			page.WriteByte(' ')
 			//page.WriteString(res.TType().String())
@@ -1044,7 +1071,12 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, res code.Resource, f
 				panic("should not")
 			}
 		}
-		ds.writeSrouceCodeLineLink(page, res.Package(), pos, res.Name(), "", false)
+		if isBuiltin {
+			page.WriteString(res.Name())
+			// ToDo: link panic/recover/... to their implementation positions.
+		} else {
+			ds.writeSrouceCodeLineLink(page, res.Package(), pos, res.Name(), "", false)
+		}
 		if writeType {
 			ds.WriteAstType(page, res.AstDecl.Type, res.Pkg, res.Pkg, false, nil, nil)
 			//ds.writeValueTType(page, res.TType(), res.Pkg, false)
@@ -1298,6 +1330,12 @@ func (ds *docServer) WriteAstType(w *htmlPage, typeLit ast.Expr, codePkg, docPkg
 
 		if objpkg == docPkg.PPkg.Types && forTypeName != nil && node.Name == forTypeName.Name() {
 			w.WriteString(node.Name)
+		} else if docPkg.Path() == "builtin" {
+			if obj.Exported() { // like Type
+				w.WriteString(node.Name)
+			} else { // like int
+				buildPageHref(w.PathInfo, pagePathInfo{ResTypePackage, objpkg.Path()}, w, node.Name, "name-", node.Name)
+			}
 		} else if isBuiltin || obj.Exported() {
 			buildPageHref(w.PathInfo, pagePathInfo{ResTypePackage, objpkg.Path()}, w, node.Name, "name-", node.Name)
 		} else {

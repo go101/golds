@@ -56,7 +56,7 @@ type Translation interface {
 	Text_Analyzing_FindImplementations(d time.Duration) string
 	Text_Analyzing_MakeStatistics(d time.Duration) string
 	Text_Analyzing_CollectSourceFiles(d time.Duration) string
-	Text_Analyzing_Done(d time.Duration) string
+	Text_Analyzing_Done(d time.Duration, memoryUse string) string
 
 	// overview page
 	Text_Overview() string

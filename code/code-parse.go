@@ -53,7 +53,7 @@ func collectPPackages(ppkgs []*packages.Package) map[string]*packages.Package {
 	return allPPkgs
 }
 
-func collectStdPackages() ([]*packages.Package, error) {
+func collectStdPackages() ([]string, error) {
 	//log.Println("[collect std packages ...]")
 	//defer log.Println("[collect std packages done]")
 
@@ -61,7 +61,18 @@ func collectStdPackages() ([]*packages.Package, error) {
 		Tests: false,
 	}
 
-	return packages.Load(configForCollectStdPkgs, "std")
+	ppkgs, err := packages.Load(configForCollectStdPkgs, "std")
+	if err != nil {
+		return nil, err
+	}
+
+	pkgs := make([]string, 0, len(ppkgs)+1)
+	pkgs = append(pkgs, "builtin")
+	for _, pp := range ppkgs {
+		pkgs = append(pkgs, pp.PkgPath)
+	}
+
+	return pkgs, nil
 }
 
 func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...int32), args ...string) bool {
@@ -127,7 +138,7 @@ func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...i
 		logProgress(true, SubTask_ParsePackagesDone, -1)
 	}
 
-	stdPPkgs, err := collectStdPackages()
+	stdPkgs, err := collectStdPackages()
 	if err != nil {
 		log.Fatal("failed to collect std packages: ", err)
 	}
@@ -232,8 +243,8 @@ func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...i
 	d.allModules = make([]*Module, estimatedNumMods)
 	d.allModules = append(d.allModules, d.stdModule)
 
-	for _, ppkg := range stdPPkgs {
-		pkg := d.packageTable[ppkg.PkgPath]
+	for _, path := range stdPkgs {
+		pkg := d.packageTable[path]
 		if pkg != nil {
 			pkg.Mod = d.stdModule
 		}
