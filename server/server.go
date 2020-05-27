@@ -177,17 +177,6 @@ func (ds *docServer) analyze(args []string, printUsage func(io.Writer)) {
 		os.Setenv("CGO_ENABLED", "0")
 	}
 
-	for _, arg := range args {
-		if arg == "builtin" {
-			goto Start
-		}
-	}
-
-	// "builtin" package is always needed.
-	// ToDo: remove this line, use a custom builtin page.
-	args = append(args, "builtin")
-
-Start:
 	ds.registerAnalyzingLogMessage("Start analyzing ...")
 	//if !ds.collectImports(args...) {
 	//	printUsage()

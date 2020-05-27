@@ -20,7 +20,9 @@ func (d *CodeAnalyzer) AnalyzePackages(onSubTaskDone func(int, time.Duration, ..
 	//log.Println("[analyze packages ...]")
 
 	var stopWatch = util.NewStopWatch()
-
+	if onSubTaskDone == nil {
+		onSubTaskDone = func(int, time.Duration, ...int32){}
+	}
 	var logProgress = func(task int, args ...int32) {
 		onSubTaskDone(task, stopWatch.Duration(true), args...)
 	}
@@ -87,8 +89,8 @@ func (d *CodeAnalyzer) AnalyzePackages(onSubTaskDone func(int, time.Duration, ..
 
 	// ...
 
-	// This is a bug in std types.MethodSet implementation (Go SDK 1.14-)
-	// https://github.com/golang/go/issues/37081
+	// The following is moved to TestAnalyzer.
+	//
 	//d.analyzePackages_CheckCollectSelectors(methodCache)
 	_ = methodCache
 	//logProgress("Check collect selectors", nil)
@@ -902,51 +904,6 @@ func (d *CodeAnalyzer) analyzePackages_CollectSelectors() {
 
 	// The ssame unnamed typed might appear in several different declarations.
 	// The docs for declarations might be different.
-}
-
-// ToDo: also check method signatures.
-func (d *CodeAnalyzer) analyzePackages_CheckCollectSelectors(cache *typeutil.MethodSetCache) {
-	for i := 0; i < len(d.allTypeInfos); i++ {
-		t := d.allTypeInfos[i]
-		switch tt := t.TT.(type) {
-		case *types.Interface:
-			if cache.MethodSet(tt).Len() != len(t.AllMethods) {
-				panic(fmt.Sprintf("%v: interface (%d) method numbers not match. %d : %d.\n %v", t, t.index, cache.MethodSet(t.TT).Len(), len(t.AllMethods), t.AllMethods))
-			}
-		case *types.Pointer:
-			switch btt := tt.Elem(); btt.Underlying().(type) {
-			case *types.Interface, *types.Pointer:
-				if num := cache.MethodSet(tt).Len(); num != 0 || len(t.AllMethods) != 0 {
-					panic(fmt.Sprintf("%v: should not have methods. %d : %d", t, num, len(t.AllMethods)))
-				}
-			default:
-				ttset := cache.MethodSet(tt)
-				bttset := cache.MethodSet(btt)
-
-				typesCount := len(d.allTypeInfos)
-				bt := d.RegisterType(btt)
-				num1, num2 := 0, 0
-				for _, sel := range bt.AllMethods {
-					num2++
-					if !sel.PointerReceiverOnly() {
-						num1++
-					}
-				}
-
-				if len(d.allTypeInfos) > typesCount {
-					//log.Println("> new types are added:", btt)
-					//} else if ttset.Len() < num2 || bttset.Len() < num1 {
-				} else if ttset.Len() != num2 || bttset.Len() != num1 {
-					// This is a bug in std types.MethodSet implementation (Go SDK 1.14-)
-					// https://github.com/golang/go/issues/37081
-
-					log.Println("      promoted selectors collected?", t.attributes|promotedSelectorsCollected != 0, bt.attributes|promotedSelectorsCollected != 0)
-					log.Println("      >>", bttset)
-					panic(fmt.Sprintf("%v: method numbers not match: %d : %d and %d : %d. (%d) %v : %v", t, ttset.Len(), num2, bttset.Len(), num1, len(bt.DirectSelectors), bt.DirectSelectors, bt.AllMethods))
-				}
-			}
-		}
-	}
 }
 
 // ...

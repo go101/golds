@@ -37,20 +37,21 @@ This project uses the [golang.org/x/tools/go/packages](https://pkg.go.dev/golang
 
 All packages must compile okay to get their docs shown.
 
-Currently, testing packages are not analyzed.
-
 ### Analyzation Cases
 
 The following results are got on a machine with an AMD-2200G CPU (4 cores 4 threads) and sufficient memory.
-
-It is assumed that all involved modules/packages are fetched to local machine before running the `gold ./...` command.
-
 Go SDK 1.14.3 is used in the analyzations.
 
-| Project  | Package Count | Analyzation Time | Final Memory Usage | Notes |
+Before running the `gold ./...` command, the `go build ./...` command is run to ensure that
+all involved modules/packages are fetched to local machine and cgo tools (if needed) have been installed.
+
+| Project  | Package Count | Analyzation Time | Final Used Memory | Notes |
 | ------------- | ------------- | ------------- | ------------- | ------------- |
 | [go-sdl2](https://github.com/veandco/go-sdl2) v0.4.4 | 47 | 1.3s | 200M | _(need run `go mod init github.com/veandco/go-sdl2` before running **Gold**)_ |
 | [bolt](https://github.com/boltdb/bolt) v1.3.1 | 51 | 1.6s | 140M |  |
+| [tview](https://github.com/rivo/tview) rev:823f280 | 102 | 2s | 200M | _(run `gold .` instead of `gold ./...`)_ |
+| [gorilla/websocket](https://github.com/gorilla/websocket) v1.4.2 | 118 | 1.8s | 337M |  |
+| [gio](https://git.sr.ht/~eliasnaur/gio) rev:3314696 | 119 | 3.1s | 1G |  |
 | [nats-server](https://github.com/nats-io/nats-server) v2.1.7 | 136 | 2.3s | 400M | _(need run `go mod vendor` before running **Gold**)_ |
 | [badger](https://github.com/dgraph-io/badger) v2.0.3 | 145 | 2.2s | 350M | |
 | Gold v0.0.1 | 149 | 2.2s | 400M |  |
@@ -66,3 +67,6 @@ Go SDK 1.14.3 is used in the analyzations.
 | [istio](https://github.com/istio/istio) _1.6.0_ | 1860 | 10.7s | 2.8G | |
 | [kubernetes](https://github.com/kubernetes/kubernetes) _v1.18.2_ | 2821 | 16.3s | 4G | |
 
+There are still some famous projects failing to build (with the `go build ./...` command, at May 27th, 2020), such as docker, gvisor and traefik, so **Gold** is not able to build docs for them.
+
+There are also some projects not using go modules, such as hashicorp/nomad and openshift/origin, and GOPROXY doesn't take effect for the `go mod init` command (as of Go SDK 1.14), so I couldn't build docs for these projects on my machine (this is my network problem, it might work on your machine).

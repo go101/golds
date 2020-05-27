@@ -78,11 +78,25 @@ func collectStdPackages() ([]string, error) {
 func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...int32), args ...string) bool {
 
 	var stopWatch = util.NewStopWatch()
-
+	if onSubTaskDone == nil {
+		onSubTaskDone = func(int, time.Duration, ...int32) {}
+	}
 	var logProgress = func(resetWatch bool, task int, args ...int32) {
 		onSubTaskDone(task, stopWatch.Duration(resetWatch), args...)
 	}
 
+	// ...
+	for _, arg := range args {
+		if arg == "builtin" {
+			goto Start
+		}
+	}
+
+	// "builtin" package is always needed.
+	// ToDo: remove this line, use a custom builtin page.
+	args = append(args, "builtin")
+
+Start:
 	//log.Println("[parse packages ...], args:", args)
 
 	// ToDo: check cache to avoid parsing again.
@@ -339,9 +353,13 @@ func fillUnsafePackage(unsafePPkg *packages.Package, builtinPPkg *packages.Packa
 					artitraryExpr = typeSpec.Type
 				case "ArbitraryType":
 					intExpr = typeSpec.Type
-					if typeObj != nil {
-						panic("a nil type object for ArbitraryType is expected")
-					}
+
+					// ToDo: need invesgate: in testing running, typeObj != nil
+					//       but in normal running, it is nil!!!
+					//log.Println("ArbitraryType obj:", typeObj)
+					//if typeObj != nil {
+					//	panic("a nil type object for ArbitraryType is expected")
+					//}
 					//log.Println("    ", typeSpec.Name.Name, "is not found in unsafe scope. Create one manually.")
 
 					//log.Printf("%T %T\n", intType, intType.Underlying())

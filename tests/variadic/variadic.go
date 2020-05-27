@@ -4,7 +4,7 @@ import "io"
 
 var X func(a int, b ...int)
 
-func Foo(int, ...int)
+func Foo(int, ...int) {}
 
 var Y struct {
 	AAA int
