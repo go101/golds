@@ -11,6 +11,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"reflect"
 	"sort"
 	"strings"
 
@@ -923,6 +924,39 @@ func (ds *docServer) writeMethodForListing(page *htmlPage, pkg *code.Package, se
 	}
 }
 
+func writeKindText(page *htmlPage, tt types.Type) {
+	var kind string
+	var bold = false
+
+	switch tt.Underlying().(type) {
+	default:
+		return
+	case *types.Pointer:
+		kind = "*Type"
+	case *types.Struct:
+		kind = reflect.Struct.String()
+	case *types.Array:
+		kind = "[...]"
+	case *types.Slice:
+		kind = "[]"
+	case *types.Map:
+		kind = reflect.Map.String()
+	case *types.Chan:
+		kind = reflect.Chan.String()
+	case *types.Signature:
+		kind = reflect.Func.String()
+	case *types.Interface:
+		kind = reflect.Interface.String()
+		bold = true
+	}
+
+	if bold {
+		fmt.Fprintf(page, ` // <b><i>(%s)</i></b>`, kind)
+	} else {
+		fmt.Fprintf(page, ` // <i>(%s)</i>`, kind)
+	}
+}
+
 func (ds *docServer) writeResourceIndexHTML(page *htmlPage, res code.Resource, fileLineOffsets map[string][]int, writeType, writeReceiver bool) {
 	pos := res.Position()
 	//if lineOffsets, ok := fileLineOffsets[pos.Filename]; ok {
@@ -984,12 +1018,6 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, res code.Resource, f
 				}
 			}
 
-			writeInterfaceText := func(tt types.Type) {
-				if _, ok := tt.Underlying().(*types.Interface); ok {
-					page.WriteString(` <b><i>(interface)</i></b>`)
-				}
-			}
-
 			if res.Alias != nil {
 				page.WriteByte(' ')
 				page.WriteByte('=')
@@ -1005,7 +1033,7 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, res code.Resource, f
 				ds.WriteAstType(page, res.AstSpec.Type, res.Pkg, res.Pkg, true, nil, nil)
 				//ds.writeValueTType(page, res.Denoting().TT, res.Pkg, true)
 			}
-			writeInterfaceText(res.Denoting().TT)
+			writeKindText(page, res.Denoting().TT)
 		}
 	case *code.Constant:
 		page.WriteString("const ")
@@ -1091,31 +1119,40 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, res code.Resource, f
 	//fmt.Fprint(page, ` <a href="#">{/}</a>`)
 }
 
+func (ds *docServer) writeTypeName(page *htmlPage, tt *types.Named, docPkg *code.Package, alternativeTypeName string) {
+	objpkg := tt.Obj().Pkg()
+	isBuiltin := objpkg == nil
+	if isBuiltin {
+		objpkg = ds.analyzer.BuiltinPackge().PPkg.Types
+	} else if objpkg != docPkg.PPkg.Types {
+		buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, objpkg.Path()}, page, objpkg.Name())
+		page.Write(period)
+	}
+	ttName := alternativeTypeName
+	if ttName == "" {
+		ttName = tt.Obj().Name()
+	}
+	//page.WriteString(tt.Obj().Name())
+	if isBuiltin || tt.Obj().Exported() {
+		buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, objpkg.Path()}, page, ttName, "name-", tt.Obj().Name())
+	} else {
+		p := ds.analyzer.PackageByPath(objpkg.Path())
+		if p == nil {
+			panic("should not")
+		}
+		ttPos := p.PPkg.Fset.PositionFor(tt.Obj().Pos(), false)
+		//log.Printf("============ %v, %v, %v", tt, pkg.Path(), ttPos)
+		ds.writeSrouceCodeLineLink(page, p, ttPos, ttName, "", false)
+	}
+
+}
+
 func (ds *docServer) writeValueTType(page *htmlPage, tt types.Type, docPkg *code.Package, writeFuncKeyword bool) {
 	switch tt := tt.(type) {
 	default:
 		panic("should not")
 	case *types.Named:
-		objpkg := tt.Obj().Pkg()
-		isBuiltin := objpkg == nil
-		if isBuiltin {
-			objpkg = ds.analyzer.BuiltinPackge().PPkg.Types
-		} else if objpkg != docPkg.PPkg.Types {
-			buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, objpkg.Path()}, page, objpkg.Name())
-			page.Write(period)
-		}
-		//page.WriteString(tt.Obj().Name())
-		if isBuiltin || tt.Obj().Exported() {
-			buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, objpkg.Path()}, page, tt.Obj().Name(), "name-", tt.Obj().Name())
-		} else {
-			p := ds.analyzer.PackageByPath(objpkg.Path())
-			if p == nil {
-				panic("should not")
-			}
-			ttPos := p.PPkg.Fset.PositionFor(tt.Obj().Pos(), false)
-			//log.Printf("============ %v, %v, %v", tt, pkg.Path(), ttPos)
-			ds.writeSrouceCodeLineLink(page, p, ttPos, tt.Obj().Name(), "", false)
-		}
+		ds.writeTypeName(page, tt, docPkg, "")
 	case *types.Basic:
 		// if unsafe
 		//page.WriteString(tt.Name())
@@ -1213,11 +1250,20 @@ func (ds *docServer) writeStructFields(page *htmlPage, st *types.Struct, docPkg 
 	n := st.NumFields()
 	for i := 0; i < n; i++ {
 		v := st.Field(i)
-		if !v.Embedded() {
+		if v.Embedded() {
+			// ToDo: try to find ast representation of the types of all variables.
+			//       Otherwise, the embedded interface type aliases info are lost.
+			// This is a suboptimal implementaiuon.
+			if tn, ok := v.Type().(*types.Named); ok {
+				ds.writeTypeName(page, tn, docPkg, v.Name())
+			} else {
+				page.WriteString(v.Name())
+			}
+		} else {
 			page.WriteString(v.Name())
 			page.WriteByte(' ')
+			ds.writeValueTType(page, v.Type(), docPkg, true)
 		}
-		ds.writeValueTType(page, v.Type(), docPkg, true)
 		if i < n-1 {
 			page.WriteString("; ")
 		}
@@ -1225,24 +1271,39 @@ func (ds *docServer) writeStructFields(page *htmlPage, st *types.Struct, docPkg 
 }
 
 func (ds *docServer) writeInterfaceMethods(page *htmlPage, it *types.Interface, docPkg *code.Package) {
-	n := it.NumEmbeddeds()
-	for i := 0; i < n; i++ {
-		named := it.Embedded(i)
-		ds.writeValueTType(page, named.Obj().Type(), docPkg, false)
-		if i < n-1 {
-			page.WriteString("; ")
-		}
-	}
-	n = it.NumExplicitMethods()
-	if n > 0 {
-		page.WriteString("; ")
-	}
-	for i := 0; i < n; i++ {
-		f := it.ExplicitMethod(i)
+	//n, m := it.NumEmbeddeds(), it.NumExplicitMethods()
+	//
+	//for i := 0; i < m; i++ {
+	//	f := it.ExplicitMethod(i)
+	//	page.WriteString(f.Name())
+	//	//page.WriteByte(' ')
+	//	ds.writeValueTType(page, f.Type(), docPkg, false)
+	//	if i < m-1 {
+	//		page.WriteString("; ")
+	//	}
+	//}
+	//if n > 0 && m > 0 {
+	//	page.WriteString("; ")
+	//}
+	//
+	//for i := 0; i < n; i++ {
+	//	named := it.Embedded(i)
+	//	ds.writeValueTType(page, named.Obj().Type(), docPkg, false)
+	//	if i < n-1 {
+	//		page.WriteString("; ")
+	//	}
+	//}
+
+	// ToDo: try to find ast representation of the types of all variables.
+	//       Otherwise, the embedded interface type aliases info are lost.
+	// This is a suboptimal implementaiuon.
+	var k = it.NumMethods()
+	for i := 0; i < k; i++ {
+		f := it.Method(i)
 		page.WriteString(f.Name())
 		//page.WriteByte(' ')
 		ds.writeValueTType(page, f.Type(), docPkg, false)
-		if i < n-1 {
+		if i < k-1 {
 			page.WriteString("; ")
 		}
 	}

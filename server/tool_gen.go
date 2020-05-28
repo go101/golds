@@ -51,8 +51,13 @@ func enabledHtmlGenerationMod() {
 	genMode = true
 	pageHrefList = list.New()
 	resHrefs = make(map[pageResType]map[string]int, 8)
-
 }
+
+//func disabledHtmlGenerationMod() {
+//	genMode = false
+//	pageHrefList = nil
+//	resHrefs = nil
+//}
 
 type genPageInfo struct {
 	HrefPath string
@@ -105,13 +110,34 @@ var resType2ExtTable = map[pageResType]string{
 var dotdotslashes = strings.Repeat("../", 256)
 
 func DotDotSlashes(count int) string {
+	if count > 256 {
+		return "" // panic is better?
+	}
 	return dotdotslashes[:count*3]
 }
 
 func RelativePath(a, b string) string {
 	var c = FindPackageCommonPrefixPaths(a, b)
-	a = a[len(c):]
+	if len(c) > len(a) {
+		if len(c) != len(a) + 1 {
+			panic("what a?")
+		}
+		if c[len(a)] != '/' {
+			panic("what a?!")
+		}
+	} else {
+		a = a[len(c):]
+	}
 	n := strings.Count(a, "/")
+	if len(c) > len(b) {
+		if len(c) != len(b) + 1 {
+			panic("what b?")
+		}
+		if c[len(b)] != '/' {
+			panic("what b?!")
+		}
+		return DotDotSlashes(n)
+	}
 	return DotDotSlashes(n) + b[len(c):]
 }
 

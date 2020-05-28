@@ -1,21 +1,20 @@
 
+(ToDo: move to go101 website)
+
 #### What does `Gold` mean?
 
 go local docs server
 
 go local directory server `gold -dir .`
 
+#### Why Gold?
+
+* show type implementaion relations
+* distributed package docs (the Go culture). Make a central docs website is really hard in the Go modules age.
+
 #### golden
 
 The development/experiment version of gold
-
-#### gold -gen
-
-HTML pages generation
-
-#### gold -dir=.
-
-File server.
 
 ### why gold is recommended to run locally? Is gold is really capable for running on internet?
 

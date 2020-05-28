@@ -2,7 +2,7 @@
 
 ### Soon to do
 
-* print final memory usage.
+* try to reduce the API surface
 * Footer: go101 twitter. supported by: tapirgames, go101 book, paypal
 * net/http: var ErrUnexpectedTrailer *ProtocolError
   - not only list values of T, also *T, []T, ...
@@ -160,3 +160,4 @@
   * as outputs / as inputs 
 * (done) package details page: click an exported type, don't go to source page
 * (done) Alias to a type in another package, asOutputList, type is not bold displayed now.
+* (done) print final memory usage.

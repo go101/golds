@@ -1,4 +1,4 @@
-**Gold** is an experimental alternative Go local docs server.
+**Gold** is an experimental alternative Go local docs server and Go docs generation tool.
 
 ### Features
 
@@ -6,7 +6,7 @@
 * Show promoted selectors, even on unexported embedded fields.
 * Rich code view experience (good for study Go projects without opening IDEs).
 * JavaScript-off friendly.
-* Support generating static HTML pages (good for packages which don't satisfy go.dev license requirements).
+* Support generating static HTML pages (good for package developers to host docs of their packages).
 
 This tool is still in its early phase. More features will be supported from time to time.
 
@@ -24,10 +24,10 @@ Start the docs server:
 The above commands will open browser automatically.
 We can use the `-s` or `-silent` flags to turn off the behavior.
 
-Generate static HTML docs pages:
-* `gold -gen -dir=./generated`
-* `gold -gen -dir=./generated ./...`
-* `gold -gen -dir=./generated std`
+Generate static HTML docs pages (the `-dir` flag is optional in this mode, its default value is `.`):
+* `gold -gen -dir=generated`
+* `gold -gen -dir=generated ./...`
+* `gold -gen -dir=generated std`
 
 We can run `gold -dir=.` or `gold -dir` from the generation directory to view the generated docs.
 
@@ -43,7 +43,7 @@ The following results are got on a machine with an AMD-2200G CPU (4 cores 4 thre
 Go SDK 1.14.3 is used in the analyzations.
 
 Before running the `gold ./...` command, the `go build ./...` command is run to ensure that
-all involved modules/packages are fetched to local machine and cgo tools (if needed) have been installed.
+all involved modules/packages are fetched to local machine and verify cgo tools (if needed) have been installed.
 
 | Project  | Package Count | Analyzation Time | Final Used Memory | Notes |
 | ------------- | ------------- | ------------- | ------------- | ------------- |
@@ -58,15 +58,17 @@ all involved modules/packages are fetched to local machine and cgo tools (if nee
 | [pion/webrtc](https://github.com/pion/webrtc) v2.2.9 | 189 | 2.1s | 400M | |
 | [goleveldb](https://github.com/syndtr/goleveldb) v1.0.0 | 193 | 2.7s | 600M | |
 | standard packages v1.15 | 199 | 2.6s | 400M |  |
+| [ebiten](https://github.com/hajimehoshi/ebiten) _v1.11.1_ | 214 | 2.1s | 472M |  |
 | [tailscale](https://github.com/tailscale/tailscale) _v0.98.0_ | 275 | 2.5s | 539M |  |
 | [etcd](https://github.com/etcd-io/etcd) _v3.4.7_ | 391 | 3.5s | 700M | _(need run `go mod vendor` before running **Gold**)_ |
 | [go-ethereum](https://github.com/ethereum/go-ethereum) _v1.9.14_ | 459 | 5.5s | 1.3G | |
+| [minio](https://github.com/minio/minio) _RELEASE.2020-05-16T01-33-21Z_ | 639 | 5.1s | 1.2G | |
 | [terraform](https://github.com/hashicorp/terraform) _v0.12.25_ | 777 | 5.7s | 1.5G | |
 | [consul](https://github.com/hashicorp/consul) _v1.7.3_ | 803 | 7.2s | 1.9G | |
 | [vitess](https://github.com/vitessio/vitess) _v6.0.20-20200525_ | 905 | 7.1s | 1.7G | |
 | [istio](https://github.com/istio/istio) _1.6.0_ | 1860 | 10.7s | 2.8G | |
 | [kubernetes](https://github.com/kubernetes/kubernetes) _v1.18.2_ | 2821 | 16.3s | 4G | |
 
-There are still some famous projects failing to build (with the `go build ./...` command, at May 27th, 2020), such as docker, gvisor and traefik, so **Gold** is not able to build docs for them.
+There are still some famous projects failing to build (with the `go build ./...` command, at May 27th, 2020), such as docker, gvisor and traefik, so **Gold** is unable to build docs for them.
 
 There are also some projects not using go modules, such as hashicorp/nomad and openshift/origin, and GOPROXY doesn't take effect for the `go mod init` command (as of Go SDK 1.14), so I couldn't build docs for these projects on my machine (this is my network problem, it might work on your machine).
