@@ -13,7 +13,7 @@ import (
 
 	"golang.org/x/tools/go/types/typeutil"
 
-	"go101.org/gold/util"
+	"go101.org/gold/internal/util"
 )
 
 func (d *CodeAnalyzer) AnalyzePackages(onSubTaskDone func(int, time.Duration, ...int32)) {

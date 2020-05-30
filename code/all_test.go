@@ -83,8 +83,8 @@ func TestRegisterType(t *testing.T) {
 // ToDo: also check method signatures.
 // There is a bug in std types.MethodSet implementation (Go SDK 1.14-)
 // https://github.com/golang/go/issues/37081
-// So this test is not okay to test the results of arbitrary packages,
-// though it is okay to test the results of standard packages.
+// So this test is not okay to test the results of arbitrary packages (such as k8s),
+// it is only okay to test the results of standard packages.
 func TestAnalyzeStandardPackage(t *testing.T) {
 	var analyzer CodeAnalyzer
 	analyzer.ParsePackages(nil, "std")

@@ -15,7 +15,7 @@ import (
 
 	"golang.org/x/tools/go/packages"
 
-	"go101.org/gold/util"
+	"go101.org/gold/internal/util"
 )
 
 //func avoidCheckFuncBody(fset *token.FileSet, parseFilename string, _ []byte) (*ast.File, error) {

@@ -24,9 +24,11 @@ func (ds *docServer) overviewPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if ds.confirmUpdateTip(); ds.updateTip != ds.cachedUpdateTip {
-		ds.packageListPage = nil
-		ds.cachedUpdateTip = ds.updateTip
+	if !genDocsMode {
+		if ds.confirmUpdateTip(); ds.updateTip != ds.cachedUpdateTip {
+			ds.packageListPage = nil
+			ds.cachedUpdateTip = ds.updateTip
+		}
 	}
 
 	if ds.packageListPage == nil {
@@ -44,7 +46,7 @@ func (ds *docServer) buildOverviewPage(overview *Overview) []byte {
 		ds.currentTranslation.Text_Overview(),
 	)
 
-	if !genMode {
+	if !genDocsMode {
 		ds.writeUpdateGoldBlock(page)
 	}
 

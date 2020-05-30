@@ -37,7 +37,8 @@ func (ds *docServer) packageDetailsPage(w http.ResponseWriter, r *http.Request, 
 	if ds.packagePages[pkgPath] == nil {
 		// ToDo: not found
 
-		details := ds.buildPackageDetailsData(pkgPath)
+		//details := ds.buildPackageDetailsData(pkgPath)
+		details := buildPackageDetailsData(ds.analyzer, pkgPath)
 		if details == nil {
 			w.WriteHeader(http.StatusNotFound)
 			fmt.Fprintf(w, "Package (%s) not found", pkgPath)
@@ -105,11 +106,14 @@ func (ds *docServer) buildPackageDetailsPage(pkg *PackageDetails) []byte {
 		page.WriteString("\n")
 		fmt.Fprintf(page, `<div class="anchor" id="name-%s">`, et.TypeName.Name())
 		page.WriteByte('\t')
-		ds.writeResourceIndexHTML(page, et.TypeName, pkg.FileLineNumberOffsets, true, false)
+		ds.writeResourceIndexHTML(page, et.TypeName, true, false)
 		if doc := et.TypeName.Documentation(); doc != "" {
 			page.WriteString("\n")
 			writePageText(page, "\t\t", doc, true)
 		}
+
+		// ToDo: for alias, if its denoting type is an exported named type, then stop here.
+
 		page.WriteString("\n")
 		if count := len(et.Fields); count > 0 {
 			page.WriteString("\n\t\t")
@@ -144,7 +148,7 @@ func (ds *docServer) buildPackageDetailsPage(pkg *PackageDetails) []byte {
 					impledLys := ds.sortTypeList(et.ImplementedBys, pkg.Package)
 					for _, by := range impledLys {
 						page.WriteString("\n\t\t\t")
-						writeTypeForListing(page, by, pkg.Package, true)
+						writeTypeForListing(page, by, pkg.Package, "")
 					}
 				})
 		}
@@ -157,7 +161,7 @@ func (ds *docServer) buildPackageDetailsPage(pkg *PackageDetails) []byte {
 					impls := ds.sortTypeList(et.Implements, pkg.Package)
 					for _, impl := range impls {
 						page.WriteString("\n\t\t\t")
-						writeTypeForListing(page, impl, pkg.Package, false)
+						writeTypeForListing(page, impl, pkg.Package, et.TypeName.Name())
 					}
 				})
 		}
@@ -169,7 +173,7 @@ func (ds *docServer) buildPackageDetailsPage(pkg *PackageDetails) []byte {
 					values := ds.sortValueList(et.AsOutputsOf, pkg.Package)
 					for _, v := range values {
 						page.WriteString("\n\t\t\t")
-						ds.writeValueForListing(page, v, pkg.Package, pkg.FileLineNumberOffsets, et.TypeName)
+						ds.writeValueForListing(page, v, pkg.Package, et.TypeName)
 					}
 				})
 		}
@@ -181,7 +185,7 @@ func (ds *docServer) buildPackageDetailsPage(pkg *PackageDetails) []byte {
 					values := ds.sortValueList(et.AsInputsOf, pkg.Package)
 					for _, v := range values {
 						page.WriteString("\n\t\t\t")
-						ds.writeValueForListing(page, v, pkg.Package, pkg.FileLineNumberOffsets, et.TypeName)
+						ds.writeValueForListing(page, v, pkg.Package, et.TypeName)
 					}
 				})
 		}
@@ -193,7 +197,7 @@ func (ds *docServer) buildPackageDetailsPage(pkg *PackageDetails) []byte {
 					values := ds.sortValueList(et.Values, pkg.Package)
 					for _, v := range values {
 						page.WriteString("\n\t\t\t")
-						ds.writeValueForListing(page, v, pkg.Package, pkg.FileLineNumberOffsets, et.TypeName)
+						ds.writeValueForListing(page, v, pkg.Package, et.TypeName)
 					}
 				})
 		}
@@ -219,7 +223,7 @@ WriteValues:
 		page.WriteByte('\n')
 		fmt.Fprintf(page, `<div class="anchor" id="name-%s">`, v.Name())
 		page.WriteByte('\t')
-		ds.writeResourceIndexHTML(page, v, pkg.FileLineNumberOffsets, true, false)
+		ds.writeResourceIndexHTML(page, v, true, false)
 		if doc := v.Documentation(); doc != "" {
 			page.WriteString("\n")
 			writePageText(page, "\t\t", doc, true)
@@ -255,7 +259,7 @@ type PackageDetails struct {
 	ExportedTypeNames []*ExportedType
 
 	// Line dismatches exist in some cgo generated files.
-	FileLineNumberOffsets map[string][]int
+	//FileLineNumberOffsets map[string][]int
 
 	NumDeps     uint32
 	NumDepedBys uint32
@@ -299,13 +303,14 @@ type ExportedType struct {
 }
 
 // ds should be locked before calling this method.
-func (ds *docServer) buildPackageDetailsData(pkgPath string) *PackageDetails {
-	pkg := ds.analyzer.PackageByPath(pkgPath)
+//func (ds *docServer) buildPackageDetailsData(pkgPath string) *PackageDetails {
+func buildPackageDetailsData(analyzer *code.CodeAnalyzer, pkgPath string) *PackageDetails {
+	pkg := analyzer.PackageByPath(pkgPath)
 	if pkg == nil {
 		return nil
 	}
 
-	//ds.analyzer.BuildCgoFileMappings(pkg)
+	//analyzer.BuildCgoFileMappings(pkg)
 
 	isBuiltin := pkgPath == "builtin"
 
@@ -369,12 +374,12 @@ func (ds *docServer) buildPackageDetailsData(pkgPath string) *PackageDetails {
 	//asResultsOf := make([]code.ValueResource, 256)
 	//isType := func(tt types.Type, comparer *code.TypeInfo) bool {
 	//	// only check T and *T
-	//	t := ds.analyzer.RegisterType(tt)
+	//	t := analyzer.RegisterType(tt)
 	//	if t == comparer {
 	//		return true
 	//	}
 	//	if ptt, ok := tt.(*types.Pointer); ok {
-	//		return ds.analyzer.RegisterType(ptt.Elem()) == comparer
+	//		return analyzer.RegisterType(ptt.Elem()) == comparer
 	//	}
 	//	return false
 	//}
@@ -410,7 +415,7 @@ func (ds *docServer) buildPackageDetailsData(pkgPath string) *PackageDetails {
 				}
 			}
 			for _, impledBy := range denoting.ImplementedBys {
-				bytn, isPointer := ds.analyzer.RetrieveTypeName(impledBy)
+				bytn, isPointer := analyzer.RetrieveTypeName(impledBy)
 				if bytn != nil && bytn != tn && bytn.Exported() {
 					et.ImplementedBys = append(et.ImplementedBys, TypeForListing{
 						TypeName:  bytn,
@@ -418,7 +423,7 @@ func (ds *docServer) buildPackageDetailsData(pkgPath string) *PackageDetails {
 					})
 				}
 			}
-			for _, impl := range ds.analyzer.CleanImplements(denoting) {
+			for _, impl := range analyzer.CleanImplements(denoting) {
 				//if impl.Interface.TypeName == nil || token.IsExported(impl.Interface.TypeName.Name()) {
 				//	et.Implements = append(et.Implements, impl)
 				//}
@@ -520,7 +525,7 @@ func (ds *docServer) buildPackageDetailsData(pkgPath string) *PackageDetails {
 
 		Package: pkg,
 
-		IsStandard:        ds.analyzer.IsStandardPackage(pkg),
+		IsStandard:        analyzer.IsStandardPackage(pkg),
 		Index:             pkg.Index,
 		Name:              pkg.PPkg.Name,
 		ImportPath:        pkg.PPkg.PkgPath,
@@ -619,7 +624,8 @@ func (ds *docServer) sortValueList(valueList []ValueForListing, pkg *code.Packag
 }
 
 // The funciton is some repeatitive with writeResourceIndexHTML.
-func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pkg *code.Package, fileLineOffsets map[string][]int, forTypeName *code.TypeName) {
+//func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pkg *code.Package, fileLineOffsets map[string][]int, forTypeName *code.TypeName) {
+func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pkg *code.Package, forTypeName *code.TypeName) {
 	pos := v.Position()
 	//if lineOffsets, ok := fileLineOffsets[pos.Filename]; ok {
 	//	correctPosition(lineOffsets, &pos)
@@ -761,18 +767,20 @@ func (ds *docServer) sortTypeList(typeList []TypeForListing, pkg *code.Package) 
 	return result
 }
 
-func writeTypeForListing(page *htmlPage, t *TypeForListing, pkg *code.Package, isImpler bool) {
-	if isImpler {
+func writeTypeForListing(page *htmlPage, t *TypeForListing, pkg *code.Package, implerName string) {
+	if implerName == "" {
 		if t.IsPointer {
 			page.WriteByte('*')
 		} else {
 			page.WriteByte(' ')
 		}
-	} else { // is an interface being implemented
+	} else {
 		if t.IsPointer {
 			page.WriteString("*T : ")
+			//fmt.Fprintf(page, "*%s : ", implerName)
 		} else {
 			page.WriteString(" T : ")
+			//fmt.Fprintf(page, " %s : ", implerName)
 		}
 	}
 	if t.Package() != pkg {
@@ -957,7 +965,8 @@ func writeKindText(page *htmlPage, tt types.Type) {
 	}
 }
 
-func (ds *docServer) writeResourceIndexHTML(page *htmlPage, res code.Resource, fileLineOffsets map[string][]int, writeType, writeReceiver bool) {
+//func (ds *docServer) writeResourceIndexHTML(page *htmlPage, res code.Resource, fileLineOffsets map[string][]int, writeType, writeReceiver bool) {
+func (ds *docServer) writeResourceIndexHTML(page *htmlPage, res code.Resource, writeType, writeReceiver bool) {
 	pos := res.Position()
 	//if lineOffsets, ok := fileLineOffsets[pos.Filename]; ok {
 	//	correctPosition(lineOffsets, &pos)

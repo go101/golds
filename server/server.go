@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"go101.org/gold/code"
-	"go101.org/gold/util"
+	"go101.org/gold/internal/util"
 )
 
 func init() {
@@ -178,12 +178,11 @@ func (ds *docServer) analyze(args []string, printUsage func(io.Writer)) {
 	}
 
 	ds.registerAnalyzingLogMessage("Start analyzing ...")
-	//if !ds.collectImports(args...) {
-	//	printUsage()
-	//}
 
 	if !ds.analyzer.ParsePackages(ds.onAnalyzingSubTaskDone, args...) {
-		printUsage(os.Stdout)
+		if printUsage != nil {
+			printUsage(os.Stdout)
+		}
 		os.Exit(1)
 	}
 

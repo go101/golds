@@ -66,7 +66,7 @@ func (ds *docServer) buildSourceCodePage(result *SourceFileAnalyzeResult) []byte
 		realFilePath = result.GeneratedPath
 	}
 
-	if genMode {
+	if genDocsMode {
 		fmt.Fprintf(page, `
 <pre><code><span class="title">%s</span>
 	%s`,

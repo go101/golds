@@ -2,6 +2,7 @@
 
 ### Soon to do
 
+* use as early as possible SDK to generate testdata.json.tar.gz
 * try to reduce the API surface
 * Footer: go101 twitter. supported by: tapirgames, go101 book, paypal
 * net/http: var ErrUnexpectedTrailer *ProtocolError
@@ -31,6 +32,8 @@
   * click "package"/overview to switch theme/language
 
 ### More to do
+
+* change theme and language
 
 * parse more source files
   * .s file syntax support
@@ -87,6 +90,7 @@
   * n interfaces, m structs, ... (on overview and package detail pages)
   * top N lists
   * embedding in n types
+  * top N used identifers
 * docs for unepxorted types/vars
   * unnamed type: find all occurences
   * (done) the promoted methods and fields of unexported fields
@@ -111,6 +115,8 @@
   * show struct paddings/sizes
   * sort types by popularity
   * filter by kind
+  * as-type / as-params / as-results lists detail:
+    * merge method with the same signature
 * for a method
   * if it is an interface method, show all concrete implementations, need JS
   * if it is a concrete methods, show all its implemented interface methods (to view docs), need JS

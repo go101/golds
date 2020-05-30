@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"time"
 
-	"go101.org/gold/util"
+	"go101.org/gold/internal/util"
 )
 
 const DurationToUpdate = time.Hour * 24 * 32
