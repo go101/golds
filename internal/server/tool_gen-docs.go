@@ -222,7 +222,7 @@ func GenDocs(outputDir string, args []string, goldVersion string, silent bool, p
 		phase:       Phase_Unprepared,
 		analyzer:    &code.CodeAnalyzer{},
 	}
-	ds.changeSettings("", "")
+	ds.initSettings()
 	ds.analyze(args, printUsage)
 
 	// ...

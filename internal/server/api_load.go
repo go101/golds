@@ -25,12 +25,12 @@ func (ds *docServer) loadingPage(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintf(w, `
 <meta http-equiv="refresh" content="1.5; url=%s">
 <script>
-	window.onload=function() {
-		setInterval(reload, 1111)
-	}
-
 	function reload() {
 		window.location.href="?js=on";
+	}
+
+	window.onload=function() {
+		setTimeout(reload, 1111)
 	}
 </script>
 `, pageUrl)

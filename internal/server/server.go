@@ -11,7 +11,10 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
+
+	"golang.org/x/text/language"
 
 	"go101.org/gold/code"
 	"go101.org/gold/internal/util"
@@ -31,6 +34,13 @@ type docServer struct {
 
 	goldVersion string
 
+	//
+	allThemes                  []Theme
+	allTranslations            []Translation
+	langMatcher                language.Matcher
+	translationsByLangTagIndex []Translation
+
+	//
 	phase           int
 	analyzer        *code.CodeAnalyzer
 	analyzingLogger *log.Logger
@@ -55,6 +65,7 @@ type docServer struct {
 
 	//
 	generalLogger *log.Logger
+	firstVisit    int32
 }
 
 func Run(port string, args []string, silentMode bool, goldVersion string, printUsage func(io.Writer), roughBuildTime func() time.Time) {
@@ -70,7 +81,7 @@ func Run(port string, args []string, silentMode bool, goldVersion string, printU
 		roughBuildTime: roughBuildTime,
 	}
 
-	ds.changeSettings("", "")
+	ds.initSettings()
 
 NextTry:
 	l, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
@@ -86,9 +97,7 @@ NextTry:
 	go func() {
 		ds.analyze(args, printUsage)
 		ds.analyzingLogger.SetPrefix("")
-		ds.mutex.Lock()
-		serverStarted := ds.currentTranslation.Text_Server_Started()
-		ds.mutex.Unlock()
+		serverStarted := ds.currentTranslationSafely().Text_Server_Started()
 		ds.analyzingLogger.Printf("%s http://localhost:%v\n", serverStarted, port)
 	}()
 
@@ -107,6 +116,10 @@ NextTry:
 }
 
 func (ds *docServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if atomic.SwapInt32(&ds.firstVisit, 1) == 0 {
+		ds.changeTranslationByAcceptLanguage(r.Header.Get("Accept-Language"))
+	}
+
 	// Query strings might contain setting change parameters,
 	// such as "?theme=dark&lang=fr".
 	// ToDo, if query string is not blank, change settings,
@@ -174,9 +187,7 @@ func (ds *docServer) analyze(args []string, printUsage func(io.Writer)) {
 	defer func() {
 		d := stopWatch.Duration(false)
 		memUsed := util.MemoryUse()
-		ds.mutex.Lock()
-		analyzingDoneText := ds.currentTranslation.Text_Analyzing_Done(d, memUsed)
-		ds.mutex.Unlock()
+		analyzingDoneText := ds.currentTranslationSafely().Text_Analyzing_Done(d, memUsed)
 		ds.registerAnalyzingLogMessage(analyzingDoneText)
 		ds.registerAnalyzingLogMessage("")
 	}()
@@ -187,9 +198,7 @@ func (ds *docServer) analyze(args []string, printUsage func(io.Writer)) {
 		os.Setenv("CGO_ENABLED", "0")
 	}
 
-	ds.mutex.Lock()
-	analyzingStartText := ds.currentTranslation.Text_Analyzing_Start()
-	ds.mutex.Unlock()
+	analyzingStartText := ds.currentTranslationSafely().Text_Analyzing_Start()
 	ds.registerAnalyzingLogMessage(analyzingStartText)
 
 	if !ds.analyzer.ParsePackages(ds.onAnalyzingSubTaskDone, args...) {

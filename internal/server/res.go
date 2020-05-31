@@ -1,35 +1,15 @@
 package server
 
 import (
+	"os"
 	"time"
 
 	"golang.org/x/text/language"
-	//"golang.org/x/text/language/display"
 
 	"go101.org/gold/code"
 	theme "go101.org/gold/internal/server/themes"
 	translation "go101.org/gold/internal/server/translations"
 )
-
-var (
-	allThemes       []Theme
-	allTranslations []Translation
-	langMatcher     language.Matcher // ToDo:
-)
-
-// All themes and translations must be registered at init phase,
-// so that no syncrhomization is needed.
-func init() {
-	allThemes = make([]Theme, 0, 2)
-	registerTheme(&theme.Light{})
-
-	langTags := make([]language.Tag, 0, 8)
-	allTranslations = make([]Translation, 0, cap(langTags))
-	registerTranslation(&translation.English{}, &langTags)
-	registerTranslation(&translation.Chinese{}, &langTags)
-
-	langMatcher = language.NewMatcher(langTags)
-}
 
 type Theme interface {
 	Name() string
@@ -102,19 +82,81 @@ type Translation interface {
 	Text_Server_Started() string
 }
 
-func registerTheme(theme Theme) {
-	allThemes = append(allThemes, theme)
+func (ds *docServer) currentSettings() (Theme, Translation) {
+	ds.mutex.Lock()
+	defer ds.mutex.Unlock()
+
+	return ds.currentTheme, ds.currentTranslation
 }
 
-func registerTranslation(tr Translation, tags *[]language.Tag) {
-	allTranslations = append(allTranslations, tr)
-	t := language.Make(tr.LangTag())
-	*tags = append(*tags, t)
+func (ds *docServer) changeSettings(themeName string, langTags ...string) {
+	ds.mutex.Lock()
+	defer ds.mutex.Unlock()
+
+	if themeName != "" {
+		ds.currentTheme = ds.themeByName(themeName)
+	}
+	if len(langTags) > 0 {
+		ds.currentTranslation = ds.translationByLangs(langTags...)
+	}
 }
 
-func themeByName(name string) Theme {
-	theme := allThemes[0]
-	for _, t := range allThemes[1:] {
+func (ds *docServer) changeTranslationByAcceptLanguage(acceptedLanguage string) {
+	langTags, _, _ := language.ParseAcceptLanguage(acceptedLanguage)
+	ds.mutex.Lock()
+	defer ds.mutex.Unlock()
+	ds.currentTranslation = ds.translationByLangTags(langTags...)
+}
+
+// All themes and translations must be registered at init phase,
+// so that no syncrhomization is needed.
+func (ds *docServer) initSettings() {
+	var (
+		themes        = make([]Theme, 0, 2)
+		translations  = make([]Translation, 0, 6)
+		langTags      = make([]language.Tag, 0, len(translations)*2)
+		translations2 = make([]Translation, 0, len(translations)*2)
+	)
+
+	registerTheme := func(theme Theme) {
+		themes = append(themes, theme)
+	}
+	registerTranslation := func(tr Translation) {
+		translations = append(translations, tr)
+		tag := language.Make(tr.LangTag())
+		langTags = append(langTags, tag)
+		translations2 = append(translations2, tr)
+	}
+
+	registerTheme(&theme.Light{})
+
+	registerTranslation(&translation.English{})
+	registerTranslation(&translation.Chinese{})
+
+	defer func() {
+		lang := os.Getenv("LANG")
+		ds.changeSettings("", lang)
+	}()
+
+	ds.mutex.Lock()
+	defer ds.mutex.Unlock()
+
+	ds.allThemes = themes
+	ds.allTranslations = translations
+	ds.langMatcher = language.NewMatcher(langTags)
+	ds.translationsByLangTagIndex = translations2
+
+	ds.currentTheme = ds.allThemes[0]
+	ds.currentTranslation = ds.allTranslations[0]
+}
+
+func (ds *docServer) currentTranslationSafely() Translation {
+	return ds.currentTranslation
+}
+
+func (ds *docServer) themeByName(name string) Theme {
+	theme := ds.allThemes[0]
+	for _, t := range ds.allThemes[1:] {
 		if t.Name() == name {
 			theme = t
 			break
@@ -123,9 +165,9 @@ func themeByName(name string) Theme {
 	return theme
 }
 
-func translationByName(name string) Translation {
-	trans := allTranslations[0]
-	for _, tr := range allTranslations[1:] {
+func (ds *docServer) translationByName(name string) Translation {
+	trans := ds.allTranslations[0]
+	for _, tr := range ds.allTranslations[1:] {
 		if tr.Name() == name {
 			trans = tr
 			break
@@ -134,17 +176,24 @@ func translationByName(name string) Translation {
 	return trans
 }
 
-func translationByTag(tag string) Translation {
-	trans := allTranslations[0]
-	// ToDo: langMatcher
-	return trans
+func (ds *docServer) translationByLangs(langs ...string) Translation {
+	userPrefs := make([]language.Tag, 0, len(langs))
+	for _, l := range langs {
+		if l != "" {
+			userPrefs = append(userPrefs, language.Make(l))
+		}
+	}
+	return ds.translationByLangTags(userPrefs...)
 }
 
-func (ds *docServer) changeSettings(themeName, langTag string) {
-	ds.mutex.Lock()
-	defer ds.mutex.Unlock()
+func (ds *docServer) translationByLangTags(userPrefs ...language.Tag) Translation {
+	if len(userPrefs) == 0 {
+		return ds.currentTranslation
+	}
 
-	// ToDo:
-	ds.currentTheme = allThemes[0]
-	ds.currentTranslation = allTranslations[1]
+	_, index, confidence := ds.langMatcher.Match(userPrefs...)
+	if confidence == language.No {
+		return ds.allTranslations[0]
+	}
+	return ds.translationsByLangTagIndex[index]
 }
