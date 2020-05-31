@@ -164,41 +164,45 @@ type LoadingLogMessage struct {
 }
 
 func (ds *docServer) onAnalyzingSubTaskDone(task int, d time.Duration, args ...int32) {
-	var msg string
-	switch task {
-	default:
-		return
-	case code.SubTask_PreparationDone:
-		msg = ds.currentTranslation.Text_Analyzing_PreparationDone(d)
-	case code.SubTask_NFilesParsed:
-		msg = ds.currentTranslation.Text_Analyzing_NFilesParsed(int(args[0]), d)
-	case code.SubTask_ParsePackagesDone:
-		msg = ds.currentTranslation.Text_Analyzing_ParsePackagesDone(int(args[0]), d)
-	case code.SubTask_CollectPackages:
-		msg = ds.currentTranslation.Text_Analyzing_CollectPackages(int(args[0]), d)
-	case code.SubTask_SortPackagesByDependencies:
-		msg = ds.currentTranslation.Text_Analyzing_SortPackagesByDependencies(d)
-	case code.SubTask_CollectDeclarations:
-		msg = ds.currentTranslation.Text_Analyzing_CollectDeclarations(d)
-	case code.SubTask_CollectRuntimeFunctionPositions:
-		msg = ds.currentTranslation.Text_Analyzing_CollectRuntimeFunctionPositions(d)
-	case code.SubTask_FindTypeSources:
-		msg = ds.currentTranslation.Text_Analyzing_FindTypeSources(d)
-	case code.SubTask_CollectSelectors:
-		msg = ds.currentTranslation.Text_Analyzing_CollectSelectors(d)
-	case code.SubTask_FindImplementations:
-		msg = ds.currentTranslation.Text_Analyzing_FindImplementations(d)
-	case code.SubTask_MakeStatistics:
-		msg = ds.currentTranslation.Text_Analyzing_MakeStatistics(d)
-	case code.SubTask_CollectSourceFiles:
-		msg = ds.currentTranslation.Text_Analyzing_CollectSourceFiles(d)
+	getMsg := func() string {
+		var msg string
+		switch task {
+		case code.SubTask_PreparationDone:
+			msg = ds.currentTranslation.Text_Analyzing_PreparationDone(d)
+		case code.SubTask_NFilesParsed:
+			msg = ds.currentTranslation.Text_Analyzing_NFilesParsed(int(args[0]), d)
+		case code.SubTask_ParsePackagesDone:
+			msg = ds.currentTranslation.Text_Analyzing_ParsePackagesDone(int(args[0]), d)
+		case code.SubTask_CollectPackages:
+			msg = ds.currentTranslation.Text_Analyzing_CollectPackages(int(args[0]), d)
+		case code.SubTask_SortPackagesByDependencies:
+			msg = ds.currentTranslation.Text_Analyzing_SortPackagesByDependencies(d)
+		case code.SubTask_CollectDeclarations:
+			msg = ds.currentTranslation.Text_Analyzing_CollectDeclarations(d)
+		case code.SubTask_CollectRuntimeFunctionPositions:
+			msg = ds.currentTranslation.Text_Analyzing_CollectRuntimeFunctionPositions(d)
+		case code.SubTask_FindTypeSources:
+			msg = ds.currentTranslation.Text_Analyzing_FindTypeSources(d)
+		case code.SubTask_CollectSelectors:
+			msg = ds.currentTranslation.Text_Analyzing_CollectSelectors(d)
+		case code.SubTask_FindImplementations:
+			msg = ds.currentTranslation.Text_Analyzing_FindImplementations(d)
+		case code.SubTask_RegisterInterfaceMethodsForTypes:
+			msg = ds.currentTranslation.Text_Analyzing_RegisterInterfaceMethodsForTypes(d)
+		case code.SubTask_MakeStatistics:
+			msg = ds.currentTranslation.Text_Analyzing_MakeStatistics(d)
+		case code.SubTask_CollectSourceFiles:
+			msg = ds.currentTranslation.Text_Analyzing_CollectSourceFiles(d)
+		}
+		return msg
 	}
 
-	ds.registerAnalyzingLogMessage(msg)
+	ds.registerAnalyzingLogMessage(getMsg)
 }
 
-func (ds *docServer) registerAnalyzingLogMessage(msg string) {
+func (ds *docServer) registerAnalyzingLogMessage(getMsg func() string) {
 	var l *log.Logger
+	var msg string
 	defer func() {
 		if l != nil && msg != "" {
 			l.Println(msg)
@@ -208,6 +212,7 @@ func (ds *docServer) registerAnalyzingLogMessage(msg string) {
 	ds.mutex.Lock()
 	defer ds.mutex.Unlock()
 
+	msg = getMsg()
 	ds.analyzingLogs = append(ds.analyzingLogs, LoadingLogMessage{len(ds.analyzingLogs), msg})
 	l = ds.analyzingLogger
 	return

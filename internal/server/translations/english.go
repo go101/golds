@@ -76,6 +76,10 @@ func (*English) Text_Analyzing_FindImplementations(d time.Duration) string {
 	return fmt.Sprintf("Find implementations: %s", d)
 }
 
+func (*English) Text_Analyzing_RegisterInterfaceMethodsForTypes(d time.Duration) string {
+	return fmt.Sprintf("Register interface methods: %s", d)
+}
+
 func (*English) Text_Analyzing_MakeStatistics(d time.Duration) string {
 	return fmt.Sprintf("Make statistics: %s", d)
 }

@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-func Gen(intent, outputDir string, args []string, silent bool, goldVersion string, printUsage func(io.Writer), viewDocsCommand func(string) string) {
+func Gen(intent, outputDir, lang string, args []string, silent bool, goldVersion string, printUsage func(io.Writer), viewDocsCommand func(string) string) {
 	log.SetFlags(0)
 
 	// ...
@@ -18,9 +18,9 @@ func Gen(intent, outputDir string, args []string, silent bool, goldVersion strin
 		log.Println("Unknown gen intent:", intent)
 		printUsage(os.Stdout)
 	case "docs":
-		GenDocs(outputDir, args, goldVersion, silent, printUsage, viewDocsCommand)
+		GenDocs(outputDir, args, lang, silent, goldVersion, printUsage, viewDocsCommand)
 	case "testdata":
-		GenTestData(outputDir, args, goldVersion, silent, printUsage)
+		GenTestData(outputDir, args, silent, goldVersion, printUsage)
 	}
 
 	// ...

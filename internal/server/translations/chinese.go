@@ -67,6 +67,10 @@ func (*Chinese) Text_Analyzing_FindImplementations(d time.Duration) string {
 	return fmt.Sprintf("寻找类型实现关系：%s", d)
 }
 
+func (*Chinese) Text_Analyzing_RegisterInterfaceMethodsForTypes(d time.Duration) string {
+	return fmt.Sprintf("注册接口方法：%s", d)
+}
+
 func (*Chinese) Text_Analyzing_MakeStatistics(d time.Duration) string {
 	return fmt.Sprintf("整理统计：%s", d)
 }
@@ -76,7 +80,7 @@ func (*Chinese) Text_Analyzing_CollectSourceFiles(d time.Duration) string {
 }
 
 func (*Chinese) Text_Analyzing_Done(d time.Duration, memoryUse string) string {
-	return fmt.Sprintf("分析完毕（共用时%s，最终消耗内存%s）。", d, memoryUse)
+	return fmt.Sprintf("分析完毕（共用时%s，最终消耗内存%s）", d, memoryUse)
 }
 
 ///////////////////////////////////////////////////////////////////

@@ -213,7 +213,7 @@ Generate:
 	return
 }
 
-func GenDocs(outputDir string, args []string, goldVersion string, silent bool, printUsage func(io.Writer), viewDocsCommand func(string) string) {
+func GenDocs(outputDir string, args []string, lang string, silent bool, goldVersion string, printUsage func(io.Writer), viewDocsCommand func(string) string) {
 	enabledHtmlGenerationMod()
 	//
 
@@ -222,7 +222,7 @@ func GenDocs(outputDir string, args []string, goldVersion string, silent bool, p
 		phase:       Phase_Unprepared,
 		analyzer:    &code.CodeAnalyzer{},
 	}
-	ds.initSettings()
+	ds.initSettings(lang)
 	ds.analyze(args, printUsage)
 
 	// ...

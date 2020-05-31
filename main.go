@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"go101.org/gold/internal/util"
 	"go101.org/gold/internal/server"
+	"go101.org/gold/internal/util"
 )
 
 func init() {
@@ -74,7 +74,7 @@ func main() {
 		var viewDocsCommand = func(docsDir string) string {
 			return os.Args[0] + " -dir=" + docsDir
 		}
-		server.Gen(*genIntentFlag, validateDiir(*dirFlag), flag.Args(), silentMode, Version, printUsage, viewDocsCommand)
+		server.Gen(*genIntentFlag, validateDiir(*dirFlag), *genLangFlag, flag.Args(), silentMode, Version, printUsage, viewDocsCommand)
 		return
 	}
 
@@ -90,6 +90,7 @@ var hFlag = flag.Bool("h", false, "show help")
 var helpFlag = flag.Bool("help", false, "show help")
 var genFlag = flag.Bool("gen", false, "HTML generation mode")
 var genIntentFlag = flag.String("gen-intent", "docs", "docs | testdata")
+var genLangFlag = flag.String("gen-lang", "", "docs generation language tag")
 var dirFlag = flag.String("dir", "", "directory for file serving or HTML generation")
 var portFlag = flag.String("port", "56789", "preferred server port")
 var sFlag = flag.Bool("s", false, "not open a browser automatically")

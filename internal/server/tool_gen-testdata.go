@@ -96,7 +96,7 @@ func buildTestData(args []string, silent bool, printUsage func(io.Writer)) map[s
 	return pkgTestDatas
 }
 
-func GenTestData(outputDir string, args []string, goldVersion string, silent bool, printUsage func(io.Writer)) {
+func GenTestData(outputDir string, args []string, silent bool, goldVersion string, printUsage func(io.Writer)) {
 	pkgTestDatas := buildTestData(args, silent, printUsage)
 
 	data, err := json.MarshalIndent(pkgTestDatas, "", "\t")

@@ -2,8 +2,7 @@
 
 ### Soon to do
 
-* gen zh-Cn std docs
-  * show golang.google.cn/pkg/xxx for zh-CN translation 
+* implement registerNamedInterfaceMethodsForInvolvedTypeNames
 * css style
 * add comments
 * js:
@@ -112,6 +111,7 @@
     * merge method with the same signature
   * as-type: also combine values of []T, chan T, etc. (now only combine values of T and *T)
   * implementBy and implement lists should include exported aliases of unnmaed types.
+  * it is important to find a way to list implemented unexported types, which is good for code reading.
 * for a value
   * if its type is unexported, but its type has exported methods, list the methods under the value.
 * for a method
@@ -125,6 +125,8 @@
 
 ### Done
 
+* (doen) gen zh-Cn std docs
+  * show golang.google.cn/pkg/xxx for zh-CN translation 
 * (done) use as early as possible SDK to generate testdata.json.tar.gz
 * (done) debug ast file not found, why so many goroutines panics.
 * (done) add color to code

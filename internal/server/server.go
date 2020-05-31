@@ -81,7 +81,7 @@ func Run(port string, args []string, silentMode bool, goldVersion string, printU
 		roughBuildTime: roughBuildTime,
 	}
 
-	ds.initSettings()
+	ds.initSettings(os.Getenv("LANG"))
 
 NextTry:
 	l, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
@@ -187,9 +187,10 @@ func (ds *docServer) analyze(args []string, printUsage func(io.Writer)) {
 	defer func() {
 		d := stopWatch.Duration(false)
 		memUsed := util.MemoryUse()
-		analyzingDoneText := ds.currentTranslationSafely().Text_Analyzing_Done(d, memUsed)
-		ds.registerAnalyzingLogMessage(analyzingDoneText)
-		ds.registerAnalyzingLogMessage("")
+		ds.registerAnalyzingLogMessage(func() string {
+			return ds.currentTranslation.Text_Analyzing_Done(d, memUsed)
+		})
+		ds.registerAnalyzingLogMessage(func() string { return "" })
 	}()
 
 	if len(args) == 0 {
@@ -198,8 +199,9 @@ func (ds *docServer) analyze(args []string, printUsage func(io.Writer)) {
 		os.Setenv("CGO_ENABLED", "0")
 	}
 
-	analyzingStartText := ds.currentTranslationSafely().Text_Analyzing_Start()
-	ds.registerAnalyzingLogMessage(analyzingStartText)
+	ds.registerAnalyzingLogMessage(func() string {
+		return ds.currentTranslationSafely().Text_Analyzing_Start()
+	})
 
 	if !ds.analyzer.ParsePackages(ds.onAnalyzingSubTaskDone, args...) {
 		if printUsage != nil {

@@ -21,7 +21,7 @@ func (d *CodeAnalyzer) AnalyzePackages(onSubTaskDone func(int, time.Duration, ..
 
 	var stopWatch = util.NewStopWatch()
 	if onSubTaskDone == nil {
-		onSubTaskDone = func(int, time.Duration, ...int32){}
+		onSubTaskDone = func(int, time.Duration, ...int32) {}
 	}
 	var logProgress = func(task int, args ...int32) {
 		onSubTaskDone(task, stopWatch.Duration(true), args...)
@@ -71,6 +71,10 @@ func (d *CodeAnalyzer) AnalyzePackages(onSubTaskDone func(int, time.Duration, ..
 	d.forbidRegisterTypes = false
 
 	logProgress(SubTask_FindImplementations)
+
+	//ds.registerNamedInterfaceMethodsForInvolvedTypeNames()
+
+	//logProgress(SubTask_RegisterInterfaceMethodsForTypes)
 
 	d.CollectSourceFiles()
 
@@ -775,6 +779,30 @@ func (d *CodeAnalyzer) analyzePackages_FindImplementations_Old() (resultMethodCa
 	}
 
 	return
+}
+
+// This method should only be called when all selectors are confirmed.
+func (d *CodeAnalyzer) registerNamedInterfaceMethodsForInvolvedTypeNames(pkg *Package) {
+	// ToDo:
+	// sometime situations are much complicated.
+	// An interface method might have several origins.
+	// A glocal method table (key is method signature) is needed. Each method in the table
+	// * might have several source postions/comments/documents.
+	// (A global function table might be also needed. Method signature = func sig + method name)
+	for _, tn := range pkg.AllTypeNames {
+		// ToDo: in fact, some unexported interface names might also export methods.
+		if !tn.Exported() {
+			continue
+		}
+
+		t := tn.Denoting()
+		for _, sel := range t.AllMethods {
+			if !token.IsExported(sel.Name()) {
+				continue
+			}
+
+		}
+	}
 }
 
 func (d *CodeAnalyzer) analyzePackages_CollectSelectors() {

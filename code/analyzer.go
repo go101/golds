@@ -24,6 +24,7 @@ const (
 	SubTask_CollectSelectors
 	SubTask_CheckCollectedSelectors
 	SubTask_FindImplementations
+	SubTask_RegisterInterfaceMethodsForTypes
 	SubTask_MakeStatistics
 	SubTask_CollectSourceFiles
 )
@@ -863,6 +864,8 @@ func (d *CodeAnalyzer) registerExplicitlyDeclaredMethod(f *Function) {
 // ToDo: also register function variables?
 // Return parameter and result counts.
 func (d *CodeAnalyzer) registerFunctionForInvolvedTypeNames(f *Function) (ins, outs int) {
+	// ToDo: unepxorted function should also reged,
+	//       but then they should be filtered out when in listing.
 	notToReg := !f.Exported()
 	fType := f.AstDecl.Type
 

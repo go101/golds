@@ -1,7 +1,6 @@
 package server
 
 import (
-	"os"
 	"time"
 
 	"golang.org/x/text/language"
@@ -34,6 +33,7 @@ type Translation interface {
 	Text_Analyzing_FindTypeSources(d time.Duration) string
 	Text_Analyzing_CollectSelectors(d time.Duration) string
 	Text_Analyzing_FindImplementations(d time.Duration) string
+	Text_Analyzing_RegisterInterfaceMethodsForTypes(d time.Duration) string
 	Text_Analyzing_MakeStatistics(d time.Duration) string
 	Text_Analyzing_CollectSourceFiles(d time.Duration) string
 	Text_Analyzing_Done(d time.Duration, memoryUse string) string
@@ -110,7 +110,7 @@ func (ds *docServer) changeTranslationByAcceptLanguage(acceptedLanguage string) 
 
 // All themes and translations must be registered at init phase,
 // so that no syncrhomization is needed.
-func (ds *docServer) initSettings() {
+func (ds *docServer) initSettings(lang string) {
 	var (
 		themes        = make([]Theme, 0, 2)
 		translations  = make([]Translation, 0, 6)
@@ -133,11 +133,6 @@ func (ds *docServer) initSettings() {
 	registerTranslation(&translation.English{})
 	registerTranslation(&translation.Chinese{})
 
-	defer func() {
-		lang := os.Getenv("LANG")
-		ds.changeSettings("", lang)
-	}()
-
 	ds.mutex.Lock()
 	defer ds.mutex.Unlock()
 
@@ -147,7 +142,7 @@ func (ds *docServer) initSettings() {
 	ds.translationsByLangTagIndex = translations2
 
 	ds.currentTheme = ds.allThemes[0]
-	ds.currentTranslation = ds.allTranslations[0]
+	ds.currentTranslation = ds.translationByLangs(lang)
 }
 
 func (ds *docServer) currentTranslationSafely() Translation {
