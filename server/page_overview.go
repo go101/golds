@@ -39,7 +39,7 @@ func (ds *docServer) overviewPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ds *docServer) buildOverviewPage(overview *Overview) []byte {
-	page := NewHtmlPage(ds.currentTranslation.Text_Overview(), ds.currentTheme.Name(), pagePathInfo{ResTypeNone, ""})
+	page := NewHtmlPage(ds.goldVersion, ds.currentTranslation.Text_Overview(), ds.currentTheme.Name(), pagePathInfo{ResTypeNone, ""})
 	fmt.Fprintf(page, `
 <pre><code><span style="font-size:xx-large;">%s</span></code></pre>
 `,

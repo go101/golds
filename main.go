@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"go101.org/gold/server"
 	"go101.org/gold/internal/util"
+	"go101.org/gold/server"
 )
 
 func init() {
@@ -74,17 +74,16 @@ func main() {
 		var viewDocsCommand = func(docsDir string) string {
 			return os.Args[0] + " -dir=" + docsDir
 		}
-		server.Gen(*genIntentFlag, validateDiir(*dirFlag), flag.Args(), silentMode, printUsage, viewDocsCommand)
+		server.Gen(*genIntentFlag, validateDiir(*dirFlag), flag.Args(), silentMode, Version, printUsage, viewDocsCommand)
 		return
 	}
 
 	if dir := *dirFlag; dir != "" {
-		log.Printf("a%sb", dir)
-		util.ServeFiles(validateDiir(dir), *portFlag, silentMode)
+		util.ServeFiles(validateDiir(dir), *portFlag, silentMode, Version)
 		return
 	}
 
-	server.Run(*portFlag, flag.Args(), silentMode, printUsage, getRoughBuildTime)
+	server.Run(*portFlag, flag.Args(), silentMode, Version, printUsage, getRoughBuildTime)
 }
 
 var hFlag = flag.Bool("h", false, "show help")
@@ -99,7 +98,9 @@ var silentFlag = flag.Bool("silent", false, "not open a browser automatically")
 // var versionFlag = flag.String("version", "", "show version info")
 
 func printUsage(out io.Writer) {
-	fmt.Fprintf(out, `Usage:
+	fmt.Fprintf(out, `Gold %[2]s
+
+Usage:
 	%[1]v [options] [arguments]
 
 Options:
@@ -140,5 +141,5 @@ Examples:
 		Serving the files in the current directory
 		without opening browser automatically.
 `,
-		os.Args[0])
+		os.Args[0], Version)
 }

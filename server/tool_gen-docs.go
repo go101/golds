@@ -16,18 +16,6 @@ import (
 	"go101.org/gold/code"
 )
 
-func writePageGenerationInfo(page *htmlPage) {
-	if !genDocsMode {
-		return
-	}
-
-	page.WriteString(`
-<pre id="gen-footer">
-Generated with <b>Gold</b> <sup>beta</sup> (to be released soon).
-</pre>
-`)
-}
-
 func init() {
 	//enabledHtmlGenerationMod() // debug
 }
@@ -225,13 +213,14 @@ Generate:
 	return
 }
 
-func GenDocs(outputDir string, args []string, silent bool, printUsage func(io.Writer), viewDocsCommand func(string) string) {
+func GenDocs(outputDir string, args []string, goldVersion string, silent bool, printUsage func(io.Writer), viewDocsCommand func(string) string) {
 	enabledHtmlGenerationMod()
 	//
 
 	ds := &docServer{
-		phase:    Phase_Unprepared,
-		analyzer: &code.CodeAnalyzer{},
+		goldVersion: goldVersion,
+		phase:       Phase_Unprepared,
+		analyzer:    &code.CodeAnalyzer{},
 	}
 	ds.changeSettings("", "")
 	ds.analyze(args, printUsage)

@@ -68,9 +68,13 @@ code .lit-string {color: #a66;}
 code .keyword {color: brown;}
 code .comment {color: green; font-style: italic;}
 
-#gen-footer {
-	padding-top: 5px;
-	text-align: center;
+#header {
+	padding-bottom: 8px;
+	border-bottom: 1px solid #888;
+}
+
+#footer {
+	padding: 5px 8px;
 	font-size: small;
 	color: #555;
 	border-top: 1px solid #888;

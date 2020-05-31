@@ -59,7 +59,7 @@ func (ds *docServer) sourceCodePage(w http.ResponseWriter, r *http.Request, pkgP
 }
 
 func (ds *docServer) buildSourceCodePage(result *SourceFileAnalyzeResult) []byte {
-	page := NewHtmlPage(ds.currentTranslation.Text_SourceCode(result.PkgPath, result.BareFilename), ds.currentTheme.Name(), pagePathInfo{ResTypeSource, result.PkgPath + "/" + result.BareFilename})
+	page := NewHtmlPage(ds.goldVersion, ds.currentTranslation.Text_SourceCode(result.PkgPath, result.BareFilename), ds.currentTheme.Name(), pagePathInfo{ResTypeSource, result.PkgPath + "/" + result.BareFilename})
 
 	realFilePath := result.OriginalPath
 	if result.GeneratedPath != "" {
@@ -68,14 +68,14 @@ func (ds *docServer) buildSourceCodePage(result *SourceFileAnalyzeResult) []byte
 
 	if genDocsMode {
 		fmt.Fprintf(page, `
-<pre><code><span class="title">%s</span>
+<pre id="header"><code><span class="title">%s</span>
 	%s`,
 			ds.currentTranslation.Text_SourceFilePath(),
 			result.BareFilename,
 		)
 	} else {
 		fmt.Fprintf(page, `
-<pre><code><span class="title">%s</span>
+<pre id="header"><code><span class="title">%s</span>
 	%s`,
 			ds.currentTranslation.Text_SourceFilePath(),
 			realFilePath,
@@ -97,8 +97,6 @@ func (ds *docServer) buildSourceCodePage(result *SourceFileAnalyzeResult) []byte
 <span class="title">%s</span>
 	<a href="%s">%s</a>
 </code></pre>
-
-<hr/>
 `,
 		ds.currentTranslation.Text_BelongingPackage(),
 		buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, result.PkgPath}, nil, ""),

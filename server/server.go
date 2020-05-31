@@ -30,6 +30,8 @@ const (
 type docServer struct {
 	mutex sync.Mutex
 
+	goldVersion string
+
 	phase           int
 	analyzer        *code.CodeAnalyzer
 	analyzingLogger *log.Logger
@@ -56,8 +58,10 @@ type docServer struct {
 	generalLogger *log.Logger
 }
 
-func Run(port string, args []string, silentMode bool, printUsage func(io.Writer), roughBuildTime func() time.Time) {
+func Run(port string, args []string, silentMode bool, goldVersion string, printUsage func(io.Writer), roughBuildTime func() time.Time) {
 	ds := &docServer{
+		goldVersion: goldVersion,
+
 		phase:           Phase_Unprepared,
 		analyzer:        &code.CodeAnalyzer{},
 		analyzingLogger: log.New(os.Stdout, "[Analyzing] ", 0),
@@ -142,9 +146,9 @@ func (ds *docServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			ds.loadAPI(w, r)
 		}
 	case ResTypeCSS: // "css"
-		ds.cssFile(w, r, resPath)
+		ds.cssFile(w, r, removeVersionFromFilename(resPath, ds.goldVersion))
 	case ResTypeJS: // "jvs"
-		ds.javascriptFile(w, r, resPath)
+		ds.javascriptFile(w, r, removeVersionFromFilename(resPath, ds.goldVersion))
 	case ResTypeSVG: // "svg"
 		ds.svgFile(w, r, resPath)
 	//case "mod:": // module

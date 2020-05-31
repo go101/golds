@@ -51,7 +51,7 @@ func (ds *docServer) packageDetailsPage(w http.ResponseWriter, r *http.Request, 
 }
 
 func (ds *docServer) buildPackageDetailsPage(pkg *PackageDetails) []byte {
-	page := NewHtmlPage(ds.currentTranslation.Text_Package(pkg.ImportPath), ds.currentTheme.Name(), pagePathInfo{ResTypePackage, pkg.ImportPath})
+	page := NewHtmlPage(ds.goldVersion, ds.currentTranslation.Text_Package(pkg.ImportPath), ds.currentTheme.Name(), pagePathInfo{ResTypePackage, pkg.ImportPath})
 
 	fmt.Fprintf(page, `
 <pre><code><span style="font-size:xx-large;">package <b>%s</b></span>
@@ -898,8 +898,16 @@ func (ds *docServer) writeFieldForListing(page *htmlPage, pkg *code.Package, sel
 		if i < sel.numDuplicatedMiddlesWithLast {
 			class = "path-duplicate"
 		}
-		ds.writeSrouceCodeLineLink(page, fld.Pkg, pos, fld.Name, class, false)
-		page.WriteByte('.')
+		if token.IsExported(fld.Name) {
+			ds.writeSrouceCodeLineLink(page, fld.Pkg, pos, fld.Name, class, false)
+			page.WriteByte('.')
+		} else {
+			//ds.writeSrouceCodeLineLink(page, fld.Pkg, pos, "<strike>"+fld.Name+"</strike>", class, false)
+			//page.WriteString("<strike>.</strike>")
+			page.WriteString("<i>")
+			ds.writeSrouceCodeLineLink(page, fld.Pkg, pos, fld.Name, class, false)
+			page.WriteString(".</i>")
+		}
 	}
 	selField := sel.Field
 	if selField == nil {
@@ -959,9 +967,9 @@ func writeKindText(page *htmlPage, tt types.Type) {
 	}
 
 	if bold {
-		fmt.Fprintf(page, ` // <b><i>(%s)</i></b>`, kind)
+		fmt.Fprintf(page, ` <b><i>(%s)</i></b>`, kind)
 	} else {
-		fmt.Fprintf(page, ` // <i>(%s)</i>`, kind)
+		fmt.Fprintf(page, ` <i>(%s)</i>`, kind)
 	}
 }
 
@@ -1519,15 +1527,15 @@ func (ds *docServer) WriteAstType(w *htmlPage, typeLit ast.Expr, codePkg, docPkg
 			//w.Write(space)
 		}
 		w.Write(leftParen)
-		ds.WriteAstFieldList(w, node.Params, comma, codePkg, docPkg, true, recvParam, forTypeName)
+		ds.WriteAstFieldList(w, node.Params, true, comma, codePkg, docPkg, true, recvParam, forTypeName)
 		w.Write(rightParen)
 		if node.Results != nil && len(node.Results.List) > 0 {
 			w.Write(space)
 			if len(node.Results.List) == 1 && len(node.Results.List[0].Names) == 0 {
-				ds.WriteAstFieldList(w, node.Results, comma, codePkg, docPkg, true, nil, forTypeName)
+				ds.WriteAstFieldList(w, node.Results, true, comma, codePkg, docPkg, true, nil, forTypeName)
 			} else {
 				w.Write(leftParen)
-				ds.WriteAstFieldList(w, node.Results, comma, codePkg, docPkg, true, nil, forTypeName)
+				ds.WriteAstFieldList(w, node.Results, true, comma, codePkg, docPkg, true, nil, forTypeName)
 				w.Write(rightParen)
 			}
 		}
@@ -1535,23 +1543,23 @@ func (ds *docServer) WriteAstType(w *htmlPage, typeLit ast.Expr, codePkg, docPkg
 		w.Write(structKeyword)
 		//w.Write(space)
 		w.Write(leftBrace)
-		ds.WriteAstFieldList(w, node.Fields, semicoloon, codePkg, docPkg, true, nil, forTypeName)
+		ds.WriteAstFieldList(w, node.Fields, false, semicoloon, codePkg, docPkg, true, nil, forTypeName)
 		w.Write(rightBrace)
 	case *ast.InterfaceType:
 		w.Write(interfaceKeyword)
 		//w.Write(space)
 		w.Write(leftBrace)
-		ds.WriteAstFieldList(w, node.Methods, semicoloon, codePkg, docPkg, false, nil, forTypeName)
+		ds.WriteAstFieldList(w, node.Methods, false, semicoloon, codePkg, docPkg, false, nil, forTypeName)
 		w.Write(rightBrace)
 	}
 }
 
-func (ds *docServer) WriteAstFieldList(w *htmlPage, fieldList *ast.FieldList, sep []byte, codePkg, docPkg *code.Package, funcKeywordNeeded bool, recvParam *ast.Field, forTypeName *code.TypeName) {
+func (ds *docServer) WriteAstFieldList(w *htmlPage, fieldList *ast.FieldList, isParamOrResultList bool, sep []byte, codePkg, docPkg *code.Package, funcKeywordNeeded bool, recvParam *ast.Field, forTypeName *code.TypeName) {
 	if fieldList == nil {
 		return
 	}
 	showRecvName := recvParam != nil && len(recvParam.Names) > 0
-	showParamsNames := len(fieldList.List) > 0 && len(fieldList.List[0].Names) > 0
+	showParamsNames := isParamOrResultList && len(fieldList.List) > 0 && len(fieldList.List[0].Names) > 0
 	showParamsNames = showParamsNames || showRecvName
 
 	fields := fieldList.List

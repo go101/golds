@@ -2,9 +2,8 @@
 
 ### Soon to do
 
-* use as early as possible SDK to generate testdata.json.tar.gz
+* for alias name, if its denoting type is an exported named type, then don't show the lists (dont build, or build but don't show).
 * try to reduce the API surface
-* Footer: go101 twitter. supported by: tapirgames, go101 book, paypal
 * net/http: var ErrUnexpectedTrailer *ProtocolError
   - not only list values of T, also *T, []T, ...
   * var x T
@@ -117,6 +116,9 @@
   * filter by kind
   * as-type / as-params / as-results lists detail:
     * merge method with the same signature
+  * implementBy and implement lists should include exported aliases of unnmaed types.
+* for a value
+  * if its type is unexported, but its type has exported methods, list the methods under the value.
 * for a method
   * if it is an interface method, show all concrete implementations, need JS
   * if it is a concrete methods, show all its implemented interface methods (to view docs), need JS
@@ -128,6 +130,7 @@
 
 ### Done
 
+* (done) use as early as possible SDK to generate testdata.json.tar.gz
 * (done) debug ast file not found, why so many goroutines panics.
 * (done) add color to code
 * (done) package dependency page

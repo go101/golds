@@ -3,6 +3,7 @@ package server
 import (
 	"bytes"
 	"fmt"
+	"strings"
 )
 
 type pageResType string
@@ -20,8 +21,10 @@ const (
 
 type htmlPage struct {
 	bytes.Buffer
-	theme *Theme
-	trans Translation
+
+	theme       *Theme
+	trans       Translation
+	goldVersion string
 
 	PathInfo pagePathInfo
 }
@@ -31,8 +34,8 @@ type pagePathInfo struct {
 	resPath string
 }
 
-func NewHtmlPage(title, themeName string, currentPageInfo pagePathInfo) *htmlPage {
-	page := htmlPage{PathInfo: currentPageInfo}
+func NewHtmlPage(goldVersion, title, themeName string, currentPageInfo pagePathInfo) *htmlPage {
+	page := htmlPage{PathInfo: currentPageInfo, goldVersion: goldVersion}
 	page.Grow(4 * 1024 * 1024)
 
 	fmt.Fprintf(&page, `<!DOCTYPE html>
@@ -44,20 +47,31 @@ func NewHtmlPage(title, themeName string, currentPageInfo pagePathInfo) *htmlPag
 <title>%s</title>
 <link href="%s" rel="stylesheet">
 <script src="%s"></script>
-<body onload="checkUpdate();"><div>
+<body><div>
 `,
 		title,
-		buildPageHref(currentPageInfo, pagePathInfo{ResTypeCSS, themeName}, nil, ""),
-		buildPageHref(currentPageInfo, pagePathInfo{ResTypeJS, "gold"}, nil, ""),
+		buildPageHref(currentPageInfo, pagePathInfo{ResTypeCSS, addVersionToFilename(themeName, page.goldVersion)}, nil, ""),
+		buildPageHref(currentPageInfo, pagePathInfo{ResTypeJS, addVersionToFilename("gold", page.goldVersion)}, nil, ""),
 	)
 
 	return &page
 }
 
 func (page *htmlPage) Done() []byte {
-	writePageGenerationInfo(page)
+	//if genDocsMode {}
 
-	page.WriteString(`</div></body></html>`)
+	fmt.Fprintf(page, `<pre id="footer">
+Generated with <a href="https://go101.org/article/tool-gold.html"><b>Gold</b></a> <i>%s</i>.
+<b>Gold</b> is a <a href="https://go101.org">Go 101</a> project started by <a href="https://tapirgames.com">TapirLiu</a>.
+Please follow <a href="https://twitter.com/go100and1">@Go100and1</a> to get the latest news of <b>Gold</b>.
+PR and bug reqports are welcomed and can be submitted <a href="https://github.com/go101/gold">here</a>.
+</pre>`,
+		page.goldVersion,
+	)
+
+	page.WriteString(`
+</div></body></html>`,
+	)
 	return append([]byte(nil), page.Bytes()...)
 }
 
@@ -77,4 +91,12 @@ func (page *htmlPage) writePageLink(writeHref func(), linkText string, fragments
 		page.WriteString(linkText)
 		page.WriteString(`</a>`)
 	}
+}
+
+func addVersionToFilename(filename string, version string) string {
+	return filename + "-" + version
+}
+
+func removeVersionFromFilename(filename string, version string) string {
+	return strings.TrimSuffix(filename, "-"+version)
 }

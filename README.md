@@ -1,14 +1,28 @@
-**Gold** is an experimental alternative Go local docs server and Go docs generation tool.
+**Gold** is an experimental Go local docs server and Go docs generation tool.
+
+([Demo](https://docs.go101.org/index.html) and [FAQ](https://go101.org/article/tool-gold.html#faq))
 
 ### Features
 
 * Show type implemention relations.
 * Show promoted selectors, even on unexported embedded fields.
-* Rich code view experience (good for study Go projects without opening IDEs).
+* Rich code view experience (good for studying Go projects without opening IDEs).
 * JavaScript-off friendly.
-* Support generating static HTML pages (good for package developers to host docs of their packages).
+* Support generating static HTML docs pages (good for package developers to host docs of their packages).
 
 This tool is still in its early phase. More features will be supported from time to time.
+
+### Limitations
+
+Go SDK 1.13+ is needed to build and run **Gold**.
+
+This project uses the [golang.org/x/tools/go/packages](https://pkg.go.dev/golang.org/x/tools/go/packages) package to parse code. The `golang.org/x/tools/go/package` is great, but it also has a shortcoming: there are no ways to get module/package downloading/preparing progress.
+
+All packages must compile okay to get their docs shown.
+
+Testing packages are excluded currently.
+
+Code examples in docs are not shown currently.
 
 ### Installation
 
@@ -21,7 +35,7 @@ Start the docs server:
 * Run `gold ./...` to show docs of all the package under the current directory (and all their dependency packages).
 * Run `gold std` to show docs of standard pacakges.
 
-The above commands will open browser automatically.
+Each of the above commands will open a browser window automatically.
 We can use the `-s` or `-silent` flags to turn off the behavior.
 
 Generate static HTML docs pages (the `-dir` flag is optional in this mode, its default value is `.`):
@@ -29,13 +43,7 @@ Generate static HTML docs pages (the `-dir` flag is optional in this mode, its d
 * `gold -gen -dir=generated ./...`
 * `gold -gen -dir=generated std`
 
-We can run `gold -dir=.` or `gold -dir` from the generation directory to view the generated docs.
-
-### Limitations
-
-This project uses the [golang.org/x/tools/go/packages](https://pkg.go.dev/golang.org/x/tools/go/packages) package to parse code. The `golang.org/x/tools/go/package` is great, but it also has a shortcoming: there are no ways to get module/package downloading/preparing progress.
-
-All packages must compile okay to get their docs shown.
+We can run `gold -dir=.` from the HTML docs generation directory to view the generated docs.
 
 ### Analyzation Cases
 
@@ -48,18 +56,18 @@ all involved modules/packages are fetched to local machine and verify cgo tools 
 | Project  | Package Count | Analyzation Time | Final Used Memory | Notes |
 | ------------- | ------------- | ------------- | ------------- | ------------- |
 | [go-sdl2](https://github.com/veandco/go-sdl2) v0.4.4 | 47 | 1.3s | 200M | _(need run `go mod init github.com/veandco/go-sdl2` before running **Gold**)_ |
-| [bolt](https://github.com/boltdb/bolt) v1.3.1 | 51 | 1.6s | 140M |  |
+| [bolt](https://github.com/boltdb/bolt) v1.3.1 | 51 | 1.6s | 140M | |
 | [tview](https://github.com/rivo/tview) rev:823f280 | 102 | 2s | 200M | _(run `gold .` instead of `gold ./...`)_ |
-| [gorilla/websocket](https://github.com/gorilla/websocket) v1.4.2 | 118 | 1.8s | 337M |  |
-| [gio](https://git.sr.ht/~eliasnaur/gio) rev:3314696 | 119 | 3.1s | 1G |  |
+| [gorilla/websocket](https://github.com/gorilla/websocket) v1.4.2 | 118 | 1.8s | 337M | |
+| [gio](https://git.sr.ht/~eliasnaur/gio) rev:3314696 | 119 | 3.1s | 1G | |
 | [nats-server](https://github.com/nats-io/nats-server) v2.1.7 | 136 | 2.3s | 400M | _(need run `go mod vendor` before running **Gold**)_ |
 | [badger](https://github.com/dgraph-io/badger) v2.0.3 | 145 | 2.2s | 350M | |
-| Gold v0.0.1 | 149 | 2.2s | 400M |  |
+| Gold v0.0.1 | 151 | 2.5s | 400M | _(run `gold .` instead of `gold ./...`)_ |
 | [pion/webrtc](https://github.com/pion/webrtc) v2.2.9 | 189 | 2.1s | 400M | |
 | [goleveldb](https://github.com/syndtr/goleveldb) v1.0.0 | 193 | 2.7s | 600M | |
-| standard packages v1.15 | 199 | 2.6s | 400M |  |
-| [ebiten](https://github.com/hajimehoshi/ebiten) _v1.11.1_ | 214 | 2.1s | 472M |  |
-| [tailscale](https://github.com/tailscale/tailscale) _v0.98.0_ | 275 | 2.5s | 539M |  |
+| standard packages v1.15 | 199 | 2.6s | 400M | |
+| [ebiten](https://github.com/hajimehoshi/ebiten) _v1.11.1_ | 214 | 2.1s | 472M | |
+| [tailscale](https://github.com/tailscale/tailscale) _v0.98.0_ | 275 | 2.5s | 539M | |
 | [etcd](https://github.com/etcd-io/etcd) _v3.4.7_ | 391 | 3.5s | 700M | _(need run `go mod vendor` before running **Gold**)_ |
 | [go-ethereum](https://github.com/ethereum/go-ethereum) _v1.9.14_ | 459 | 5.5s | 1.3G | |
 | [minio](https://github.com/minio/minio) _RELEASE.2020-05-16T01-33-21Z_ | 639 | 5.1s | 1.2G | |

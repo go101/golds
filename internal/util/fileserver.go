@@ -16,7 +16,7 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-func ServeFiles(dir, port string, silentMode bool) {
+func ServeFiles(dir, port string, silentMode bool, goldVersion string) {
 	log.SetFlags(0)
 
 	dir, err := filepath.Abs(dir)
