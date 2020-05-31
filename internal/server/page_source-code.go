@@ -429,7 +429,7 @@ func WriteTypeEx(w io.Writer, typeLit ast.Expr, info *types.Info, funcKeywordNee
 //}
 
 // ToDo: write to page directly.
-type AstVisitor struct {
+type astVisitor struct {
 	currentPathInfo pagePathInfo
 
 	dataAnalyzer *code.CodeAnalyzer
@@ -494,7 +494,7 @@ func (ccp *ChanCommOprator) End() token.Pos {
 	return ccp.pos + token.Pos(len("<-"))
 }
 
-func (v *AstVisitor) addSpecialNode(n ast.Node) {
+func (v *astVisitor) addSpecialNode(n ast.Node) {
 	for e := v.specialAstNodes.Front(); e != nil; e = e.Next() {
 		en := e.Value.(ast.Node)
 		if en.Pos() > n.Pos() {
@@ -509,7 +509,7 @@ func (v *AstVisitor) addSpecialNode(n ast.Node) {
 // * comments,
 // * "else" and "range" keywords.
 // * "<-" channel receive and send (todo)
-func (v *AstVisitor) tryToHandleSomeSpecialNodes(beforeNode ast.Node) {
+func (v *astVisitor) tryToHandleSomeSpecialNodes(beforeNode ast.Node) {
 	for e := v.specialAstNodes.Front(); e != nil; {
 		next := e.Next()
 
@@ -549,14 +549,14 @@ func (v *AstVisitor) tryToHandleSomeSpecialNodes(beforeNode ast.Node) {
 	}
 }
 
-//func (v *AstVisitor) nextComment() *ast.Comment {
+//func (v *astVisitor) nextComment() *ast.Comment {
 //	if len(v.comments) > 0 {
 //		return v.comments[0]
 //	}
 //	return nil
 //}
 
-//func (v *AstVisitor) removeNextComment() {
+//func (v *astVisitor) removeNextComment() {
 //	if len(v.comments) <= 0 {
 //		panic("no more comments")
 //	}
@@ -564,14 +564,14 @@ func (v *AstVisitor) tryToHandleSomeSpecialNodes(beforeNode ast.Node) {
 //	return
 //}
 
-//func (v *AstVisitor) lastTokenPos() (KeywordToken, bool) {
+//func (v *astVisitor) lastTokenPos() (KeywordToken, bool) {
 //	if n := len(v.pendingTokenPoses); n > 0 {
 //		return v.pendingTokenPoses[n-1], true
 //	}
 //	return KeywordToken{}, false
 //}
 
-//func (v *AstVisitor) removeLastTokenPos() {
+//func (v *astVisitor) removeLastTokenPos() {
 //	if n := len(v.pendingTokenPoses); n <= 0 {
 //		panic("no more else statements")
 //	} else {
@@ -580,7 +580,7 @@ func (v *AstVisitor) tryToHandleSomeSpecialNodes(beforeNode ast.Node) {
 //	return
 //}
 
-//func (v *AstVisitor) correctPosition(pos *token.Position) {
+//func (v *astVisitor) correctPosition(pos *token.Position) {
 //	// ToDo: to remove
 //	b1 := CompareStringsInversely(pos.Filename, v.goFilePath)
 //	b2 := pos.Filename == v.goFilePath
@@ -623,7 +623,7 @@ func (v *AstVisitor) tryToHandleSomeSpecialNodes(beforeNode ast.Node) {
 //	}
 //}
 
-func (v *AstVisitor) writeEscapedHTML(data []byte, class string) {
+func (v *astVisitor) writeEscapedHTML(data []byte, class string) {
 	if len(data) == 0 {
 		return
 	}
@@ -636,7 +636,7 @@ func (v *AstVisitor) writeEscapedHTML(data []byte, class string) {
 	}
 }
 
-func (v *AstVisitor) buildConfirmedLines(toLine int, class string) {
+func (v *astVisitor) buildConfirmedLines(toLine int, class string) {
 	//log.Println("=================== buildConfirmedLines:", v.lineNumber, toLine, v.file.Name())
 	for range [1024 * 256]struct{}{} {
 		if v.lineNumber >= toLine {
@@ -662,12 +662,12 @@ func (v *AstVisitor) buildConfirmedLines(toLine int, class string) {
 	}
 }
 
-func (v *AstVisitor) buildLine() {
+func (v *astVisitor) buildLine() {
 	v.result.Lines = append(v.result.Lines, v.lineBuilder.String())
 	v.lineBuilder.Reset()
 }
 
-func (v *AstVisitor) buildText(litStart, litEnd token.Position, class, link string) {
+func (v *astVisitor) buildText(litStart, litEnd token.Position, class, link string) {
 	v.buildConfirmedLines(litStart.Line, "")
 	v.writeEscapedHTML(v.content[v.offset:litStart.Offset], "")
 	v.offset = litStart.Offset
@@ -685,8 +685,8 @@ func (v *AstVisitor) buildText(litStart, litEnd token.Position, class, link stri
 	v.offset = litEnd.Offset
 }
 
-//func (v *AstVisitor) buildIdentifier(idStart, idEnd token.Position, ratioId int32, link, id string) {
-func (v *AstVisitor) buildIdentifier(idStart, idEnd token.Position, ratioId int32, link string) {
+//func (v *astVisitor) buildIdentifier(idStart, idEnd token.Position, ratioId int32, link, id string) {
+func (v *astVisitor) buildIdentifier(idStart, idEnd token.Position, ratioId int32, link string) {
 	var class = "ident"
 
 	//startOffset := idStart.Offset
@@ -722,7 +722,7 @@ func (v *AstVisitor) buildIdentifier(idStart, idEnd token.Position, ratioId int3
 	v.offset = idEnd.Offset
 }
 
-func (v *AstVisitor) finish() {
+func (v *astVisitor) finish() {
 	v.tryToHandleSomeSpecialNodes(nil)
 
 	//log.Println("v.file.LineCount()=", v.file.LineCount())
@@ -749,7 +749,7 @@ var (
 	StarSlash = []byte("*/")
 )
 
-func (v *AstVisitor) findToken(start, maxPos token.Pos, token string) *KeywordToken {
+func (v *astVisitor) findToken(start, maxPos token.Pos, token string) *KeywordToken {
 	offset := v.file.Offset(start)
 	max := v.file.Offset(maxPos)
 
@@ -796,11 +796,11 @@ Loop:
 	panic("token " + token + " is not found")
 }
 
-func (v *AstVisitor) findElseToken(ifstmt *ast.IfStmt) *KeywordToken {
+func (v *astVisitor) findElseToken(ifstmt *ast.IfStmt) *KeywordToken {
 	return v.findToken(ifstmt.Body.End(), ifstmt.Else.Pos(), "else")
 }
 
-func (v *AstVisitor) findRangeToken(rangeStmt *ast.RangeStmt) *KeywordToken {
+func (v *astVisitor) findRangeToken(rangeStmt *ast.RangeStmt) *KeywordToken {
 	pos := rangeStmt.For + token.Pos(len(token.FOR.String()))
 	if rangeStmt.Key != nil {
 		pos = rangeStmt.TokPos + token.Pos(len(rangeStmt.Tok.String()))
@@ -808,7 +808,7 @@ func (v *AstVisitor) findRangeToken(rangeStmt *ast.RangeStmt) *KeywordToken {
 	return v.findToken(pos, rangeStmt.X.Pos(), "range")
 }
 
-func (v *AstVisitor) Visit(n ast.Node) (w ast.Visitor) {
+func (v *astVisitor) Visit(n ast.Node) (w ast.Visitor) {
 	w = v
 	//log.Println(">>>>>>>>>>> node:", n)
 	//log.Printf(">>>>>>>>>>> node type: %T", n)
@@ -1028,7 +1028,7 @@ func (v *AstVisitor) Visit(n ast.Node) (w ast.Visitor) {
 	return
 }
 
-func (v *AstVisitor) handleNode(node ast.Node, class string) {
+func (v *astVisitor) handleNode(node ast.Node, class string) {
 	start := v.fset.PositionFor(node.Pos(), false)
 	end := v.fset.PositionFor(node.End(), false)
 	//log.Println("=============================", start.Line, start.Offset, end.Line, end.Offset)
@@ -1039,7 +1039,7 @@ func (v *AstVisitor) handleNode(node ast.Node, class string) {
 	v.buildText(start, end, class, "")
 }
 
-func (v *AstVisitor) handleBasicLit(basicLit *ast.BasicLit) {
+func (v *astVisitor) handleBasicLit(basicLit *ast.BasicLit) {
 	class := "lit-number"
 	if basicLit.Kind == token.STRING {
 		class = "lit-string"
@@ -1048,19 +1048,19 @@ func (v *AstVisitor) handleBasicLit(basicLit *ast.BasicLit) {
 	v.handleNode(basicLit, class)
 }
 
-func (v *AstVisitor) handleSelectKeyword(selectPos token.Pos, fPosition token.Position) {
+func (v *astVisitor) handleSelectKeyword(selectPos token.Pos, fPosition token.Position) {
 	v.handleToken(selectPos, token.SELECT.String(), "keyword", buildSrouceCodeLineLink(v.currentPathInfo, v.dataAnalyzer, v.dataAnalyzer.RuntimePackage(), fPosition))
 }
 
-func (v *AstVisitor) handleKeyword(pos token.Pos, tok token.Token) {
+func (v *astVisitor) handleKeyword(pos token.Pos, tok token.Token) {
 	v.handleKeywordToken(pos, tok.String())
 }
 
-func (v *AstVisitor) handleKeywordToken(pos token.Pos, token string) {
+func (v *astVisitor) handleKeywordToken(pos token.Pos, token string) {
 	v.handleToken(pos, token, "keyword", "")
 }
 
-func (v *AstVisitor) handleToken(pos token.Pos, token, class, link string) {
+func (v *astVisitor) handleToken(pos token.Pos, token, class, link string) {
 	length := len(token)
 	start := v.fset.PositionFor(pos, false)
 	//v.correctPosition(&start)
@@ -1070,7 +1070,7 @@ func (v *AstVisitor) handleToken(pos token.Pos, token, class, link string) {
 	v.buildText(start, end, class, link)
 }
 
-func (v *AstVisitor) handleIdent(ident *ast.Ident) {
+func (v *astVisitor) handleIdent(ident *ast.Ident) {
 	start := v.fset.PositionFor(ident.Pos(), false)
 	end := v.fset.PositionFor(ident.End(), false)
 	//fmt.Println("========= 111 start=", start)
@@ -1416,7 +1416,6 @@ func (ds *docServer) analyzeSoureCode(pkgPath, bareFilename string) (*SourceFile
 
 		//_, lineStartOffsets := BuildLineOffsets(content, false)
 
-		var astVisitor *AstVisitor
 		fset := pkg.PPkg.Fset
 		file := fset.File(fileInfo.AstFile.Pos())
 
@@ -1440,7 +1439,7 @@ func (ds *docServer) analyzeSoureCode(pkgPath, bareFilename string) (*SourceFile
 			docEndLine = end.Line
 		}
 
-		astVisitor = &AstVisitor{
+		av := &astVisitor{
 			currentPathInfo: pagePathInfo{ResTypeSource, pkg.Path() + "/" + bareFilename},
 
 			dataAnalyzer: ds.analyzer,
@@ -1476,19 +1475,19 @@ func (ds *docServer) analyzeSoureCode(pkgPath, bareFilename string) (*SourceFile
 
 			sameFileObjects: make(map[types.Object]int32, 256),
 		}
-		astVisitor.lineBuilder.Grow(1024)
+		av.lineBuilder.Grow(1024)
 
 		//if fileInfo.GoFileContentOffset > 0 {
-		//	astVisitor.buildConfirmedLines(int(fileInfo.GoFileLineOffset+1), "")
+		//	ab.buildConfirmedLines(int(fileInfo.GoFileLineOffset+1), "")
 		//}
-		ast.Walk(astVisitor, fileInfo.AstFile)
-		astVisitor.finish()
+		ast.Walk(av, fileInfo.AstFile)
+		av.finish()
 
-		if n := astVisitor.specialAstNodes.Len(); n > 0 {
+		if n := av.specialAstNodes.Len(); n > 0 {
 			log.Println("!!!", filePath, "has still", n, "special ast node(s) not handled yet.")
 		}
 
-		result = astVisitor.result
+		result = av.result
 	}
 
 	return result, nil

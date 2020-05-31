@@ -502,10 +502,18 @@ func buildPackageDetailsData(analyzer *code.CodeAnalyzer, pkgPath string) *Packa
 			//et.Values = append(nil, denoting.AsTypesOf...)
 			//et.AsInputsOf = append(nil, denoting.AsInputsOf...)
 			//et.AsOutputsOf = append(nil, denoting.AsOutputsOf...)
-			et.Values = buildValueList(denoting.AsTypesOf)
+
+			//et.Values = buildValueList(denoting.AsTypesOf)
 			et.AsInputsOf = buildValueList(denoting.AsInputsOf)
 			et.AsOutputsOf = buildValueList(denoting.AsOutputsOf)
 
+			var values []code.ValueResource
+			values = append(values, denoting.AsTypesOf...)
+			// ToDo: also combine values of []T, chan T, ...
+			if t := analyzer.TryRegisteringType(types.NewPointer(denoting.TT), false); t != nil {
+				values = append(values, t.AsTypesOf...)
+			}
+			et.Values = buildValueList(values)
 		}
 	}
 	sort.Slice(exportedTypesResources, func(i, j int) bool {
@@ -662,6 +670,18 @@ func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pk
 		fmt.Fprintf(page, `">`)
 		page.WriteString(v.Name())
 		page.WriteString("</a>")
+
+		if t := res.TypeInfo(ds.analyzer); t != forTypeName.Denoting() {
+			page.WriteByte(' ')
+			//page.WriteString(res.TType().String())
+			specOwner := res.(code.AstValueSpecOwner)
+			if astType := specOwner.AstValueSpec().Type; astType != nil {
+				ds.WriteAstType(page, astType, specOwner.Package(), specOwner.Package(), false, nil, forTypeName)
+			} else {
+				// ToDo: track to get the AstType and use WriteAstType instead.
+				ds.writeValueTType(page, res.TType(), specOwner.Package(), true, forTypeName)
+			}
+		}
 	case *code.Function:
 		page.WriteString(" func ")
 
@@ -1048,7 +1068,7 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, res code.Resource, w
 			if showSource {
 				page.WriteByte(' ')
 				ds.WriteAstType(page, res.AstSpec.Type, res.Pkg, res.Pkg, true, nil, nil)
-				//ds.writeValueTType(page, res.Denoting().TT, res.Pkg, true)
+				//ds.writeValueTType(page, res.Denoting().TT, res.Pkg, true, nil)
 			}
 			writeKindText(page, res.Denoting().TT)
 		}
@@ -1070,7 +1090,7 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, res code.Resource, w
 			if res.AstSpec.Type != nil {
 				ds.WriteAstType(page, res.AstSpec.Type, res.Pkg, res.Pkg, false, nil, nil)
 			} else {
-				ds.writeValueTType(page, res.TType(), res.Pkg, true)
+				ds.writeValueTType(page, res.TType(), res.Pkg, true, nil)
 			}
 		}
 		if !isBuiltin {
@@ -1091,7 +1111,7 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, res code.Resource, w
 				ds.WriteAstType(page, res.AstSpec.Type, res.Pkg, res.Pkg, false, nil, nil)
 			} else {
 				// ToDo: track to get the AstType and use WriteAstType instead.
-				ds.writeValueTType(page, res.TType(), res.Pkg, true)
+				ds.writeValueTType(page, res.TType(), res.Pkg, true, nil)
 			}
 		}
 	case *code.Function:
@@ -1164,34 +1184,40 @@ func (ds *docServer) writeTypeName(page *htmlPage, tt *types.Named, docPkg *code
 
 }
 
-func (ds *docServer) writeValueTType(page *htmlPage, tt types.Type, docPkg *code.Package, writeFuncKeyword bool) {
+func (ds *docServer) writeValueTType(page *htmlPage, tt types.Type, docPkg *code.Package, writeFuncKeyword bool, forTypeName *code.TypeName) {
 	switch tt := tt.(type) {
 	default:
 		panic("should not")
 	case *types.Named:
-		ds.writeTypeName(page, tt, docPkg, "")
+		if forTypeName != nil && tt == forTypeName.Denoting().TT {
+			page.WriteString(tt.Obj().Name())
+		} else {
+			ds.writeTypeName(page, tt, docPkg, "")
+		}
 	case *types.Basic:
-		// if unsafe
-		//page.WriteString(tt.Name())
-		buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, "builtin"}, page, tt.Name(), "name-", tt.Name())
+		if forTypeName != nil && tt == forTypeName.Denoting().TT {
+			page.WriteString(tt.Name())
+		} else {
+			buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, "builtin"}, page, tt.Name(), "name-", tt.Name())
+		}
 	case *types.Pointer:
 		page.Write(star)
-		ds.writeValueTType(page, tt.Elem(), docPkg, true)
+		ds.writeValueTType(page, tt.Elem(), docPkg, true, forTypeName)
 	case *types.Array:
 		page.Write(leftSquare)
 		fmt.Fprintf(page, "%d", tt.Len())
 		page.Write(rightSquare)
-		ds.writeValueTType(page, tt.Elem(), docPkg, true)
+		ds.writeValueTType(page, tt.Elem(), docPkg, true, forTypeName)
 	case *types.Slice:
 		page.Write(leftSquare)
 		page.Write(rightSquare)
-		ds.writeValueTType(page, tt.Elem(), docPkg, true)
+		ds.writeValueTType(page, tt.Elem(), docPkg, true, forTypeName)
 	case *types.Map:
 		page.Write(mapKeyword)
 		page.Write(leftSquare)
-		ds.writeValueTType(page, tt.Key(), docPkg, true)
+		ds.writeValueTType(page, tt.Key(), docPkg, true, forTypeName)
 		page.Write(rightSquare)
-		ds.writeValueTType(page, tt.Elem(), docPkg, true)
+		ds.writeValueTType(page, tt.Elem(), docPkg, true, forTypeName)
 	case *types.Chan:
 		if tt.Dir() == types.RecvOnly {
 			page.Write(chanDir)
@@ -1203,22 +1229,22 @@ func (ds *docServer) writeValueTType(page *htmlPage, tt types.Type, docPkg *code
 			page.Write(chanKeyword)
 		}
 		page.Write(space)
-		ds.writeValueTType(page, tt.Elem(), docPkg, true)
+		ds.writeValueTType(page, tt.Elem(), docPkg, true, forTypeName)
 	case *types.Signature:
 		if writeFuncKeyword {
 			page.Write(funcKeyword)
 			//page.Write(space)
 		}
 		page.Write(leftParen)
-		ds.writeTuple(page, tt.Params(), docPkg, tt.Variadic())
+		ds.writeTuple(page, tt.Params(), docPkg, tt.Variadic(), forTypeName)
 		page.Write(rightParen)
 		if rs := tt.Results(); rs != nil && rs.Len() > 0 {
 			page.Write(space)
 			if rs.Len() == 1 && rs.At(0).Name() == "" {
-				ds.writeTuple(page, rs, docPkg, false)
+				ds.writeTuple(page, rs, docPkg, false, forTypeName)
 			} else {
 				page.Write(leftParen)
-				ds.writeTuple(page, rs, docPkg, false)
+				ds.writeTuple(page, rs, docPkg, false, forTypeName)
 				page.Write(rightParen)
 			}
 		}
@@ -1226,18 +1252,18 @@ func (ds *docServer) writeValueTType(page *htmlPage, tt types.Type, docPkg *code
 		page.Write(structKeyword)
 		//page.Write(space)
 		page.Write(leftBrace)
-		ds.writeStructFields(page, tt, docPkg)
+		ds.writeStructFields(page, tt, docPkg, forTypeName)
 		page.Write(rightBrace)
 	case *types.Interface:
 		page.Write(interfaceKeyword)
 		//page.Write(space)
 		page.Write(leftBrace)
-		ds.writeInterfaceMethods(page, tt, docPkg)
+		ds.writeInterfaceMethods(page, tt, docPkg, forTypeName)
 		page.Write(rightBrace)
 	}
 }
 
-func (ds *docServer) writeTuple(page *htmlPage, tuple *types.Tuple, docPkg *code.Package, variadic bool) {
+func (ds *docServer) writeTuple(page *htmlPage, tuple *types.Tuple, docPkg *code.Package, variadic bool, forTypeName *code.TypeName) {
 	n := tuple.Len()
 	for i := 0; i < n; i++ {
 		v := tuple.At(i)
@@ -1252,18 +1278,18 @@ func (ds *docServer) writeTuple(page *htmlPage, tuple *types.Tuple, docPkg *code
 					panic("should not")
 				}
 				page.WriteString("...")
-				ds.writeValueTType(page, st.Elem(), docPkg, true)
+				ds.writeValueTType(page, st.Elem(), docPkg, true, forTypeName)
 			} else {
-				ds.writeValueTType(page, v.Type(), docPkg, true)
+				ds.writeValueTType(page, v.Type(), docPkg, true, forTypeName)
 			}
 		} else {
-			ds.writeValueTType(page, v.Type(), docPkg, true)
+			ds.writeValueTType(page, v.Type(), docPkg, true, forTypeName)
 			page.WriteString(", ")
 		}
 	}
 }
 
-func (ds *docServer) writeStructFields(page *htmlPage, st *types.Struct, docPkg *code.Package) {
+func (ds *docServer) writeStructFields(page *htmlPage, st *types.Struct, docPkg *code.Package, forTypeName *code.TypeName) {
 	n := st.NumFields()
 	for i := 0; i < n; i++ {
 		v := st.Field(i)
@@ -1279,7 +1305,7 @@ func (ds *docServer) writeStructFields(page *htmlPage, st *types.Struct, docPkg 
 		} else {
 			page.WriteString(v.Name())
 			page.WriteByte(' ')
-			ds.writeValueTType(page, v.Type(), docPkg, true)
+			ds.writeValueTType(page, v.Type(), docPkg, true, forTypeName)
 		}
 		if i < n-1 {
 			page.WriteString("; ")
@@ -1287,7 +1313,7 @@ func (ds *docServer) writeStructFields(page *htmlPage, st *types.Struct, docPkg 
 	}
 }
 
-func (ds *docServer) writeInterfaceMethods(page *htmlPage, it *types.Interface, docPkg *code.Package) {
+func (ds *docServer) writeInterfaceMethods(page *htmlPage, it *types.Interface, docPkg *code.Package, forTypeName *code.TypeName) {
 	//n, m := it.NumEmbeddeds(), it.NumExplicitMethods()
 	//
 	//for i := 0; i < m; i++ {
@@ -1319,7 +1345,7 @@ func (ds *docServer) writeInterfaceMethods(page *htmlPage, it *types.Interface, 
 		f := it.Method(i)
 		page.WriteString(f.Name())
 		//page.WriteByte(' ')
-		ds.writeValueTType(page, f.Type(), docPkg, false)
+		ds.writeValueTType(page, f.Type(), docPkg, false, forTypeName)
 		if i < k-1 {
 			page.WriteString("; ")
 		}
@@ -1350,13 +1376,6 @@ var (
 	BoldTagStart = []byte("<b>")
 	BoldTagEnd   = []byte("</b>")
 )
-
-type ListedValueInfo struct {
-	codePkg *code.Package // the package in which the value is declared
-	docPkg  *code.Package // the package in which "forType" is declared
-
-	forTypeName string
-}
 
 // This is a rewritten of WriteTypeEx.
 // Please make sure w.Write never makes errors.

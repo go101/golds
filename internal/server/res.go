@@ -7,8 +7,8 @@ import (
 	//"golang.org/x/text/language/display"
 
 	"go101.org/gold/code"
-	theme "go101.org/gold/server/themes"
-	translation "go101.org/gold/server/translations"
+	theme "go101.org/gold/internal/server/themes"
+	translation "go101.org/gold/internal/server/translations"
 )
 
 var (

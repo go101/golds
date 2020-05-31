@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"go101.org/gold/internal/util"
-	"go101.org/gold/server"
+	"go101.org/gold/internal/server"
 )
 
 func init() {

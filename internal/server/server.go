@@ -23,7 +23,6 @@ func init() {
 
 const (
 	Phase_Unprepared = iota
-	//Phase_Parsed     // todo: remove, useless now.
 	Phase_Analyzed
 )
 

@@ -491,6 +491,10 @@ func (c *Constant) TypeInfo(d *CodeAnalyzer) *TypeInfo {
 	return c.Type
 }
 
+func (c *Constant) AstValueSpec() *ast.ValueSpec {
+	return c.AstSpec
+}
+
 //func (c *Constant) IndexString() string {
 //	btt, ok := c.Type().(*types.Basic)
 //	if !ok {
@@ -561,6 +565,15 @@ func (v *Variable) TypeInfo(d *CodeAnalyzer) *TypeInfo {
 		v.Type = d.RegisterType(v.TType())
 	}
 	return v.Type
+}
+
+func (v *Variable) AstValueSpec() *ast.ValueSpec {
+	return v.AstSpec
+}
+
+type AstValueSpecOwner interface {
+	AstValueSpec() *ast.ValueSpec
+	Package() *Package
 }
 
 //func (v *Variable) IndexString() string {

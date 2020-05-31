@@ -2,18 +2,15 @@
 
 ### Soon to do
 
+* gen zh-Cn std docs
 * for alias name, if its denoting type is an exported named type, then don't show the lists (dont build, or build but don't show).
-* try to reduce the API surface
 * net/http: var ErrUnexpectedTrailer *ProtocolError
   - not only list values of T, also *T, []T, ...
   * var x T
     var y *T
     var x []T
-* show golang.google.cn/pkg/xxx for zh-CN translation
-* tests
-  * -gen=... -gen-format=json
-  * use Go 1.15+ test analyzePackages_CheckCollectSelectors
-* comments
+* show golang.google.cn/pkg/xxx for zh-CN translation 
+* add comments
 * css style
 * js:
   * shortcuts:
@@ -33,6 +30,9 @@
 ### More to do
 
 * change theme and language
+
+* FindPackageCommonPrefixPaths(pa, pb string) string
+	ToDo: ToLower both?
 
 * parse more source files
   * .s file syntax support

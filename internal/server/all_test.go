@@ -125,7 +125,7 @@ func TestAssureSubsetStringSlice(t *testing.T) {
 
 func TestDocsForStandardPackages(t *testing.T) {
 	// ...
-	data, err := ioutil.ReadFile(filepath.Join("..", "internal", "testing", "data", "testdata.json.tar.gz"))
+	data, err := ioutil.ReadFile(filepath.Join("..", "testing", "data", "testdata.json.tar.gz"))
 	if err != nil {
 		t.Errorf("Read testdata.json.tar.gz error: %s", err)
 	}

@@ -221,7 +221,6 @@ func ImprovePackagesForListing(pkgs []*PackageForListing) {
 	}
 }
 
-// ToDo: ToLower both?
 func FindPackageCommonPrefixPaths(pa, pb string) string {
 	var n = len(pa)
 	if n > len(pb) {

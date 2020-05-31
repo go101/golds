@@ -266,8 +266,12 @@ func (d *CodeAnalyzer) RegisterTypeName(tn *TypeName) {
 }
 
 func (d *CodeAnalyzer) RegisterType(t types.Type) *TypeInfo {
+	return d.TryRegisteringType(t, true)
+}
+
+func (d *CodeAnalyzer) TryRegisteringType(t types.Type, createOnNonexist bool) *TypeInfo {
 	typeInfo, _ := d.ttype2TypeInfoTable.At(t).(*TypeInfo)
-	if typeInfo == nil {
+	if typeInfo == nil && createOnNonexist {
 		if d.forbidRegisterTypes {
 			log.Println("=================================", t)
 		}
@@ -925,14 +929,26 @@ func (d *CodeAnalyzer) registerFunctionForInvolvedTypeNames(f *Function) (ins, o
 
 func (d *CodeAnalyzer) registerValueForItsTypeName(res ValueResource) {
 	t := res.TypeInfo(d)
-	if t.TypeName == nil {
-		return
+	toRegsiter := t.TypeName != nil
+	if !toRegsiter {
+		// ToDo: also for []T, [N]T, chan T, etc.
+		switch tt := t.TT.(type) {
+		case *types.Pointer:
+			bt := d.RegisterType(tt.Elem())
+			// ToDo: also register if an unnamed type has some aliases
+			if bt.TypeName != nil {
+				//log.Println("========= t=", t)
+				toRegsiter = true
+			}
+		}
 	}
 
-	if t.AsTypesOf == nil {
-		t.AsTypesOf = make([]ValueResource, 0, 4)
+	if toRegsiter {
+		if t.AsTypesOf == nil {
+			t.AsTypesOf = make([]ValueResource, 0, 4)
+		}
+		t.AsTypesOf = append(t.AsTypesOf, res)
 	}
-	t.AsTypesOf = append(t.AsTypesOf, res)
 }
 
 func (d *CodeAnalyzer) BuildMethodSignatureFromFuncObject(funcObj *types.Func) MethodSignature {
