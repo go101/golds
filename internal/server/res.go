@@ -26,6 +26,7 @@ func init() {
 	langTags := make([]language.Tag, 0, 8)
 	allTranslations = make([]Translation, 0, cap(langTags))
 	registerTranslation(&translation.English{}, &langTags)
+	registerTranslation(&translation.Chinese{}, &langTags)
 
 	langMatcher = language.NewMatcher(langTags)
 }
@@ -52,7 +53,6 @@ type Translation interface {
 	Text_Analyzing_CollectRuntimeFunctionPositions(d time.Duration) string
 	Text_Analyzing_FindTypeSources(d time.Duration) string
 	Text_Analyzing_CollectSelectors(d time.Duration) string
-	Text_Analyzing_CheckCollectedSelectors(d time.Duration) string
 	Text_Analyzing_FindImplementations(d time.Duration) string
 	Text_Analyzing_MakeStatistics(d time.Duration) string
 	Text_Analyzing_CollectSourceFiles(d time.Duration) string
@@ -97,6 +97,9 @@ type Translation interface {
 	Text_SourceCode(pkgPath, bareFilename string) string
 	Text_SourceFilePath() string
 	Text_GeneratedFrom() string
+
+	// server
+	Text_Server_Started() string
 }
 
 func registerTheme(theme Theme) {
@@ -143,5 +146,5 @@ func (ds *docServer) changeSettings(themeName, langTag string) {
 
 	// ToDo:
 	ds.currentTheme = allThemes[0]
-	ds.currentTranslation = allTranslations[0]
+	ds.currentTranslation = allTranslations[1]
 }

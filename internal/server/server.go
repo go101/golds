@@ -86,7 +86,10 @@ NextTry:
 	go func() {
 		ds.analyze(args, printUsage)
 		ds.analyzingLogger.SetPrefix("")
-		ds.analyzingLogger.Printf("Server started: http://localhost:%v\n", port)
+		ds.mutex.Lock()
+		serverStarted := ds.currentTranslation.Text_Server_Started()
+		ds.mutex.Unlock()
+		ds.analyzingLogger.Printf("%s http://localhost:%v\n", serverStarted, port)
 	}()
 
 	if !silentMode {
@@ -170,7 +173,11 @@ func (ds *docServer) analyze(args []string, printUsage func(io.Writer)) {
 	var stopWatch = util.NewStopWatch()
 	defer func() {
 		d := stopWatch.Duration(false)
-		ds.registerAnalyzingLogMessage(ds.currentTranslation.Text_Analyzing_Done(d, util.MemoryUse()))
+		memUsed := util.MemoryUse()
+		ds.mutex.Lock()
+		analyzingDoneText := ds.currentTranslation.Text_Analyzing_Done(d, memUsed)
+		ds.mutex.Unlock()
+		ds.registerAnalyzingLogMessage(analyzingDoneText)
 		ds.registerAnalyzingLogMessage("")
 	}()
 
@@ -180,7 +187,10 @@ func (ds *docServer) analyze(args []string, printUsage func(io.Writer)) {
 		os.Setenv("CGO_ENABLED", "0")
 	}
 
-	ds.registerAnalyzingLogMessage("Start analyzing ...")
+	ds.mutex.Lock()
+	analyzingStartText := ds.currentTranslation.Text_Analyzing_Start()
+	ds.mutex.Unlock()
+	ds.registerAnalyzingLogMessage(analyzingStartText)
 
 	if !ds.analyzer.ParsePackages(ds.onAnalyzingSubTaskDone, args...) {
 		if printUsage != nil {

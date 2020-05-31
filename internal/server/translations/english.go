@@ -11,7 +11,7 @@ type English struct{}
 
 func (*English) Name() string { return "English" }
 
-func (*English) LangTag() string { return "en" }
+func (*English) LangTag() string { return "en-US" }
 
 ///////////////////////////////////////////////////////////////////
 // analyzing
@@ -33,7 +33,7 @@ func (*English) Text_Analyzing_PreparationDone(d time.Duration) string {
 
 func (*English) Text_Analyzing_NFilesParsed(numFiles int, d time.Duration) string {
 	if numFiles == 1 {
-		fmt.Sprintf("One file parsed: %s", d)
+		return fmt.Sprintf("One file parsed: %s", d)
 	}
 	return fmt.Sprintf("%d files parsed: %s", numFiles, d)
 }
@@ -42,7 +42,7 @@ func (*English) Text_Analyzing_ParsePackagesDone(numFiles int, d time.Duration) 
 	if numFiles == 1 {
 		return fmt.Sprintf("one file parsed: %s", d)
 	}
-	return fmt.Sprintf("%d files parsed: %s", numFiles, d)
+	return fmt.Sprintf("All %d files are parsed: %s", numFiles, d)
 }
 
 func (*English) Text_Analyzing_CollectPackages(numPkgs int, d time.Duration) string {
@@ -70,10 +70,6 @@ func (*English) Text_Analyzing_FindTypeSources(d time.Duration) string {
 
 func (*English) Text_Analyzing_CollectSelectors(d time.Duration) string {
 	return fmt.Sprintf("Collect selectors: %s", d)
-}
-
-func (*English) Text_Analyzing_CheckCollectedSelectors(d time.Duration) string {
-	return fmt.Sprintf("Check collected selectors: %s", d)
 }
 
 func (*English) Text_Analyzing_FindImplementations(d time.Duration) string {
@@ -275,3 +271,13 @@ func (*English) Text_SourceCode(pkgPath, bareFilename string) string {
 func (*English) Text_SourceFilePath() string { return "Source File" }
 
 func (*English) Text_GeneratedFrom() string { return "Generated From" }
+
+///////////////////////////////////////////////////////////////////
+// server
+///////////////////////////////////////////////////////////////////
+
+func (*English) Text_Server_Started() string {
+	return "Server started:"
+}
+
+
