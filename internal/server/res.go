@@ -142,6 +142,7 @@ func (ds *docServer) initSettings(lang string) {
 	ds.translationsByLangTagIndex = translations2
 
 	ds.currentTheme = ds.allThemes[0]
+	ds.currentTranslation = ds.allTranslations[0]
 	ds.currentTranslation = ds.translationByLangs(lang)
 }
 

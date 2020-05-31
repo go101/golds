@@ -194,3 +194,7 @@ func TestDocsForStandardPackages(t *testing.T) {
 		}
 	}
 }
+
+func TestGenerateDocsOfStandardPackages(t *testing.T) {
+	GenDocs("", []string{"std"}, "en-US", true, "v0.0.0", nil, nil)
+}

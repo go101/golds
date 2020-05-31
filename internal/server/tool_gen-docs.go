@@ -215,6 +215,8 @@ Generate:
 
 func GenDocs(outputDir string, args []string, lang string, silent bool, goldVersion string, printUsage func(io.Writer), viewDocsCommand func(string) string) {
 	enabledHtmlGenerationMod()
+	forTesting := outputDir == ""
+	silent = silent || forTesting
 	//
 
 	ds := &docServer{
@@ -275,6 +277,10 @@ func GenDocs(outputDir string, args []string, lang string, silent bool, goldVers
 	// page saver
 	numPages, numBytes := 0, 0
 	for pg := range pages {
+		if forTesting {
+			continue
+		}
+
 		numPages++
 		numBytes += len(pg.Content)
 
@@ -293,6 +299,10 @@ func GenDocs(outputDir string, args []string, lang string, silent bool, goldVers
 		if !silent {
 			log.Printf("Generated %s (size: %d).", pg.FilePath, len(pg.Content))
 		}
+	}
+
+	if forTesting {
+		return
 	}
 
 	log.Printf("Done (%d pages are generated and %d bytes are written).", numPages, numBytes)
