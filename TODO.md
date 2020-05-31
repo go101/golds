@@ -3,15 +3,9 @@
 ### Soon to do
 
 * gen zh-Cn std docs
-* for alias name, if its denoting type is an exported named type, then don't show the lists (dont build, or build but don't show).
-* net/http: var ErrUnexpectedTrailer *ProtocolError
-  - not only list values of T, also *T, []T, ...
-  * var x T
-    var y *T
-    var x []T
-* show golang.google.cn/pkg/xxx for zh-CN translation 
-* add comments
+  * show golang.google.cn/pkg/xxx for zh-CN translation 
 * css style
+* add comments
 * js:
   * shortcuts:
     * ~, Backspace: back
@@ -116,6 +110,7 @@
   * filter by kind
   * as-type / as-params / as-results lists detail:
     * merge method with the same signature
+  * as-type: also combine values of []T, chan T, etc. (now only combine values of T and *T)
   * implementBy and implement lists should include exported aliases of unnmaed types.
 * for a value
   * if its type is unexported, but its type has exported methods, list the methods under the value.

@@ -63,7 +63,7 @@ code .ident {color: blue;}
 code .id-type {color: blue;}
 code .id-value {color: blue;}
 code .id-function {color: blue;}
-code .lit-number {color: #696;}
+code .lit-number {color: #e66;}
 code .lit-string {color: #a66;}
 code .keyword {color: brown;}
 code .comment {color: green; font-style: italic;}

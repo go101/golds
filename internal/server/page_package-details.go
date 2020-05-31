@@ -113,6 +113,7 @@ func (ds *docServer) buildPackageDetailsPage(pkg *PackageDetails) []byte {
 		}
 
 		// ToDo: for alias, if its denoting type is an exported named type, then stop here.
+		//       (might be not a good idea. 1. such cases are rare. 2. if they happen, it does need to list ...)
 
 		page.WriteString("\n")
 		if count := len(et.Fields); count > 0 {

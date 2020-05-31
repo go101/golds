@@ -22,6 +22,9 @@ func (ds *docServer) overviewPage(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusTooEarly)
 		ds.loadingPage(w, r)
 		return
+	} else if r.FormValue("js") != "" {
+		http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
+		return
 	}
 
 	if !genDocsMode {

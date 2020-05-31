@@ -23,10 +23,13 @@ func (ds *docServer) loadingPage(w http.ResponseWriter, r *http.Request) {
 
 	if r.FormValue("js") != "on" {
 		fmt.Fprintf(w, `
-
 <meta http-equiv="refresh" content="1.5; url=%s">
 <script>
-	window.onload=function(){
+	window.onload=function() {
+		setInterval(reload, 1111)
+	}
+
+	function reload() {
 		window.location.href="?js=on";
 	}
 </script>
