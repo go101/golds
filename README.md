@@ -2,6 +2,13 @@
 
 ([Demo](https://docs.go101.org/index.html) and [FAQ](https://go101.org/article/tool-gold.html#faq))
 
+### Installation
+
+Run `go get -u go101.org/gold` to install (and update) **Gold**.
+
+_If the tool name `gold` conflicts with another tool with the same name you are using,
+you can run `go get -u go101.org/gold/godoge` instead to install **Gold** as as `godoge`._
+
 ### Features
 
 * Show type implemention relations.
@@ -14,7 +21,7 @@ This tool is still in its early phase. More features will be supported from time
 
 ### Limitations
 
-Go SDK 1.13+ is needed to build and run **Gold**.
+Go Toolchain 1.13+ is needed to build and run **Gold**.
 
 This project uses the [golang.org/x/tools/go/packages](https://pkg.go.dev/golang.org/x/tools/go/packages) package to parse code. The `golang.org/x/tools/go/package` is great, but it also has a shortcoming: there are no ways to get module/package downloading/preparing progress.
 
@@ -23,10 +30,6 @@ All packages must compile okay to get their docs shown.
 Testing packages are excluded currently.
 
 Code examples in docs are not shown currently.
-
-### Installation
-
-Run `go get -u go101.org/gold` to install (and update) **Gold**.
 
 ### Usage
 
@@ -48,7 +51,7 @@ We can run `gold -dir=.` from the HTML docs generation directory to view the gen
 ### Analyzation Cases
 
 The following results are got on a machine with an AMD-2200G CPU (4 cores 4 threads) and sufficient memory.
-Go SDK 1.14.3 is used in the analyzations.
+Go Toolchain 1.14.3 is used in the analyzations.
 
 Before running the `gold ./...` command, the `go build ./...` command is run to ensure that
 all involved modules/packages are fetched to local machine and verify cgo tools (if needed) have been installed.
@@ -79,4 +82,4 @@ all involved modules/packages are fetched to local machine and verify cgo tools 
 
 There are still some famous projects failing to build (with the `go build ./...` command, at May 27th, 2020), such as docker, gvisor and traefik, so **Gold** is unable to build docs for them.
 
-There are also some projects not using go modules, such as hashicorp/nomad and openshift/origin, and GOPROXY doesn't take effect for the `go mod init` command (as of Go SDK 1.14), so I couldn't build docs for these projects on my machine (this is my network problem, it might work on your machine).
+There are also some projects not using go modules, such as hashicorp/nomad and openshift/origin, and GOPROXY doesn't take effect for the `go mod init` command (as of Go Toolchain 1.14), so I couldn't build docs for these projects on my machine (this is my network problem, it might work on your machine).

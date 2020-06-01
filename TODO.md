@@ -4,6 +4,7 @@
 
 * implement registerNamedInterfaceMethodsForInvolvedTypeNames
 * enhance tests
+  * test by ast comments
 * css style
 * add comments
 * js:
