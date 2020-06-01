@@ -684,40 +684,42 @@ func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pk
 			}
 		}
 	case *code.Function:
-		page.WriteString(" func ")
 
+		page.WriteString("func ")
 		if vpkg := v.Package(); vpkg != pkg {
 			if vpkg != nil {
 				page.WriteString(v.Package().Path())
-				page.WriteByte('.')
+				page.WriteString(".")
 			}
 		}
 
 		if res.IsMethod() {
 			recvParam, typeId, isStar := res.ReceiverTypeName()
 			if isStar {
-				//if v.Package() != pkg {
-				//	//fmt.Fprintf(page, `(*<a href="/pkg:%[1]s#name-%[2]s">%[2]s</a>).`, v.Package().Path(), typeId.Name)
-				//	page.WriteString("(*")
-				//	buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, v.Package().Path()}, page, typeId.Name, "name-", typeId.Name)
-				//	page.WriteString(").")
-				//} else {
-				//	fmt.Fprintf(page, `(*<a href="#name-%[1]s">%[1]s</a>).`, typeId.Name)
-				//}
-				fmt.Fprintf(page, "(*%s).", typeId.Name)
+				if v.Package() != pkg {
+					//fmt.Fprintf(page, `(*<a href="/pkg:%[1]s#name-%[2]s">%[2]s</a>).`, v.Package().Path(), typeId.Name)
+					page.WriteString("(*")
+					buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, v.Package().Path()}, page, typeId.Name, "name-", typeId.Name)
+					page.WriteString(").")
+				} else {
+					fmt.Fprintf(page, `(*<a href="#name-%[1]s">%[1]s</a>).`, typeId.Name)
+				}
+				//fmt.Fprintf(page, "(*%s) ", typeId.Name)
 			} else {
-				//if v.Package() != pkg {
-				//	//fmt.Fprintf(page, `<a href="/pkg:%[1]s#name-%[2]s">%[2]s</a>.`, v.Package().Path(), typeId.Name)
-				//	buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, v.Package().Path()}, page, typeId.Name, "name-", typeId.Name)
-				//} else {
-				//	fmt.Fprintf(page, `<a href="#name-%[1]s">%[1]s</a>.`, typeId.Name)
-				//}
-				fmt.Fprintf(page, "%s.", typeId.Name)
+				if v.Package() != pkg {
+					//fmt.Fprintf(page, `<a href="/pkg:%[1]s#name-%[2]s">%[2]s</a>.`, v.Package().Path(), typeId.Name)
+					buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, v.Package().Path()}, page, typeId.Name, "name-", typeId.Name)
+				} else {
+					fmt.Fprintf(page, `<a href="#name-%[1]s">%[1]s</a>.`, typeId.Name)
+				}
+				//fmt.Fprintf(page, "(%s) ", typeId.Name)
 			}
 
 			ds.writeSrouceCodeLineLink(page, v.Package(), pos, v.Name(), "", false)
 
-			ds.WriteAstType(page, res.AstDecl.Type, res.Pkg, pkg, false, recvParam, forTypeName)
+			//ds.WriteAstType(page, res.AstDecl.Type, res.Pkg, pkg, false, recvParam, forTypeName)
+			ds.WriteAstType(page, res.AstDecl.Type, res.Pkg, pkg, false, nil, forTypeName)
+			_ = recvParam
 		} else {
 			if v.Package() != pkg {
 				//fmt.Fprintf(page, `<a href="/pkg:%[1]s#name-%[2]s">%[2]s</a>`, v.Package().Path(), v.Name())

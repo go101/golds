@@ -99,7 +99,7 @@ var silentFlag = flag.Bool("silent", false, "not open a browser automatically")
 // var versionFlag = flag.String("version", "", "show version info")
 
 func printUsage(out io.Writer) {
-	fmt.Fprintf(out, `Gold %[2]s
+	fmt.Fprintf(out, `Gold - a Go local docs server (%[2]s).
 
 Usage:
 	%[1]v [options] [arguments]
@@ -108,12 +108,10 @@ Options:
 	-h/-help
 		Show help information.
 		When the flags present, others will be ignored.
-	-gen=OutputFolder
-		Generate all doc pages in the specified folder.
-		This flag will surpress "dir" and "port" flags.
-	-dir
-		Directory serving mode (instead of docs server mode).
-		The first argument will be viewed as the served directory.
+	-gen
+		Static HTML docs generation mode.
+	-dir=DocsDirectory
+		Specifiy the docs generation or file serving diretory.
 		Current directory will be used if no arguments specified.
 	-port=ServicePort
 		Service port, default to 56789.
@@ -135,9 +133,10 @@ Examples:
 	%[1]v ./...
 		Show docs of the package and sub-packages in the
 		current directory.
-	%[1]v -gen=./generated ./...
-		Generate HTML docs pages for the package and
-		sub-packages in the current directory.
+	%[1]v -gen -dir=./generated ./...
+		Generate HTML docs pages into the path specified by
+		the -dir flag for the packages under the current
+		directory and their dependency packages.
 	%[1]v -dir -s
 		Serving the files in the current directory
 		without opening browser automatically.

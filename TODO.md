@@ -3,6 +3,7 @@
 ### Soon to do
 
 * implement registerNamedInterfaceMethodsForInvolvedTypeNames
+* enhance tests
 * css style
 * add comments
 * js:
@@ -83,6 +84,10 @@
   * top N lists
   * embedding in n types
   * top N used identifers
+* package details
+  * add parent and children packages
+* imports
+  * add links for import declarations
 * docs for unepxorted types/vars
   * unnamed type: find all occurences
   * (done) the promoted methods and fields of unexported fields
@@ -112,6 +117,7 @@
   * as-type: also combine values of []T, chan T, etc. (now only combine values of T and *T)
   * implementBy and implement lists should include exported aliases of unnmaed types.
   * it is important to find a way to list implemented unexported types, which is good for code reading.
+  * list variables of function types in asParams and asResults lists.
 * for a value
   * if its type is unexported, but its type has exported methods, list the methods under the value.
 * for a method
@@ -122,6 +128,7 @@
   * link panic/recover/... to their implementation positions.
 * all references of an identifier: in frame pages
   * for types, show unexported methods/fields/...
+
 
 ### Done
 

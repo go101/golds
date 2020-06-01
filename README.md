@@ -32,8 +32,8 @@ Run `go get -u go101.org/gold` to install (and update) **Gold**.
 
 Start the docs server:
 * Run `gold .` or `gold` to show docs of the package in the current directory (and all its dependency packages).
-* Run `gold ./...` to show docs of all the package under the current directory (and all their dependency packages).
-* Run `gold std` to show docs of standard pacakges.
+* Run `gold ./...` to show docs of all packages under the current directory (and all their dependency packages).
+* Run `gold std` to show docs of standard packages.
 
 Each of the above commands will open a browser window automatically.
 We can use the `-s` or `-silent` flags to turn off the behavior.
