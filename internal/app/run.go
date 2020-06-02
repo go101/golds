@@ -32,6 +32,9 @@ func Run() {
 	if *hFlag || *helpFlag {
 		printUsage(os.Stdout)
 		return
+	} else if *versionFlag {
+		printVersion(os.Stdout)
+		return
 	}
 
 	if *roughBuildTimeFlag {
@@ -88,6 +91,7 @@ func Run() {
 
 var hFlag = flag.Bool("h", false, "show help")
 var helpFlag = flag.Bool("help", false, "show help")
+var versionFlag = flag.Bool("version", false, "show version info")
 var genFlag = flag.Bool("gen", false, "HTML generation mode")
 var genIntentFlag = flag.String("gen-intent", "docs", "docs | testdata")
 var genLangFlag = flag.String("gen-lang", "", "docs generation language tag")
@@ -96,7 +100,9 @@ var portFlag = flag.String("port", "56789", "preferred server port")
 var sFlag = flag.Bool("s", false, "not open a browser automatically")
 var silentFlag = flag.Bool("silent", false, "not open a browser automatically")
 
-// var versionFlag = flag.String("version", "", "show version info")
+func printVersion(out io.Writer) {
+	fmt.Fprintf(out, "Gold %s\n", Version)
+}
 
 func printUsage(out io.Writer) {
 	fmt.Fprintf(out, `Gold - a Go local docs server (%[2]s).
@@ -106,20 +112,22 @@ Usage:
 
 Options:
 	-h/-help
-		Show help information.
-		When the flags present, others will be ignored.
+		Show help information. When the flags
+		present, others will be ignored.
 	-gen
 		Static HTML docs generation mode.
 	-dir=DocsDirectory
-		Specifiy the docs generation or file serving diretory.
-		Current directory will be used if no arguments specified.
+		Specifiy the docs generation or file
+		serving diretory. Current directory
+		will be used if no arguments specified.
 	-port=ServicePort
-		Service port, default to 56789.
-		If the specified or default port is not
+		Service port, default to 56789. If
+		the specified or default port is not
 		availabe, a random port will be used.
 	-s/-silent
-		Don't open a browser automatically or don't show HTML
-		file generation logs in docs generation mode.
+		Don't open a browser automatically
+		or don't show HTML file generation
+		logs in docs generation mode.
 
 Examples:
 	%[1]v std
@@ -127,19 +135,22 @@ Examples:
 	%[1]v x.y.z/myapp
 		Show docs of package x.y.z/myapp.
 	%[1]v
-		Show docs of the package in the current directory.
-	%[1]v .
-		Show docs of the package in the current directory.
-	%[1]v ./...
-		Show docs of the package and sub-packages in the
+		Show docs of the package in the
 		current directory.
+	%[1]v .
+		Show docs of the package in the
+		current directory.
+	%[1]v ./...
+		Show docs of all the packages
+		within the current directory.
 	%[1]v -gen -dir=./generated ./...
-		Generate HTML docs pages into the path specified by
-		the -dir flag for the packages under the current
-		directory and their dependency packages.
-	%[1]v -dir -s
-		Serving the files in the current directory
-		without opening browser automatically.
+		Generate HTML docs pages into the path
+		specified by the -dir flag for the
+		packages under the current directory
+		and their dependency packages.
+	%[1]v -dir=. -s
+		Serving the files in working directory
+		without opening a browser windows.
 `,
 		os.Args[0], Version)
 }

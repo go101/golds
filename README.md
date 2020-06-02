@@ -68,7 +68,7 @@ all involved modules/packages are fetched to local machine and verify cgo tools 
 | Gold v0.0.1 | 151 | 2.5s | 400M | _(run `gold .` instead of `gold ./...`)_ |
 | [pion/webrtc](https://github.com/pion/webrtc) v2.2.9 | 189 | 2.1s | 400M | |
 | [goleveldb](https://github.com/syndtr/goleveldb) v1.0.0 | 193 | 2.7s | 600M | |
-| standard packages v1.15 | 199 | 2.6s | 400M | |
+| standard packages v1.14 | 199 | 2.6s | 400M | |
 | [ebiten](https://github.com/hajimehoshi/ebiten) _v1.11.1_ | 214 | 2.1s | 472M | |
 | [tailscale](https://github.com/tailscale/tailscale) _v0.98.0_ | 275 | 2.5s | 539M | |
 | [etcd](https://github.com/etcd-io/etcd) _v3.4.7_ | 391 | 3.5s | 700M | _(need run `go mod vendor` before running **Gold**)_ |

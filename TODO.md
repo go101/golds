@@ -24,6 +24,9 @@
 
 ### More to do
 
+* For std pacakges: show which version of Go introduced a particular function/type, etc.
+  * or for any modules
+
 * change theme and language
 
 * FindPackageCommonPrefixPaths(pa, pb string) string
