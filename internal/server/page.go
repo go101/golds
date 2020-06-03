@@ -57,16 +57,13 @@ func NewHtmlPage(goldVersion, title, themeName string, currentPageInfo pagePathI
 	return &page
 }
 
-func (page *htmlPage) Done() []byte {
+func (page *htmlPage) Done(translation Translation) []byte {
 	//if genDocsMode {}
 
 	fmt.Fprintf(page, `<pre id="footer">
-Generated with <a href="https://go101.org/article/tool-gold.html"><b>Gold</b></a> <i>%s</i>.
-<b>Gold</b> is a <a href="https://go101.org">Go 101</a> project started by <a href="https://tapirgames.com">TapirLiu</a>.
-Please follow <a href="https://twitter.com/go100and1">@Go100and1</a> to get the latest news of <b>Gold</b>.
-PR and bug reqports are welcomed and can be submitted <a href="https://github.com/go101/gold">here</a>.
+%s
 </pre>`,
-		page.goldVersion,
+		translation.Text_GeneratedPageFooter(page.goldVersion),
 	)
 
 	page.WriteString(`

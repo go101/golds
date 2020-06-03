@@ -192,7 +192,7 @@ func (*Chinese) Text_UnexportedTypeNames(num int) string {
 ///////////////////////////////////////////////////////////////////
 
 func (*Chinese) Text_Fields(num int) string {
-	return fmt.Sprintf("%d个导出类型", num)
+	return fmt.Sprintf("%d个导出字段", num)
 }
 
 func (*Chinese) Text_Methods(num int) string {
@@ -216,7 +216,7 @@ func (*Chinese) Text_AsInputsOf(num int) string {
 }
 
 func (*Chinese) Text_AsTypesOf(num int) string {
-	return fmt.Sprintf("此类型的值（%d+）", num)
+	return fmt.Sprintf("和此类型相关的值（%d+）", num)
 }
 
 func (*Chinese) Text_References(num int) string {
@@ -259,4 +259,13 @@ func (*Chinese) Text_Server_Started() string {
 	return "服务已启动："
 }
 
+///////////////////////////////////////////////////////////////////
+// HTML generation
+///////////////////////////////////////////////////////////////////
 
+func (*Chinese) Text_GeneratedPageFooter(goldVersion string) string {
+	return fmt.Sprintf(`由 <a href="https://go101.org/article/tool-gold.html"><b>Gold</b></a> <i>%s</i> 生成。<b>Gold</b> 是由<a href="https://gfw.tapirgames.com">老貘</a>创建的一个 <a href="https://go101.org">Go 101</a>项目。欢迎在 <a href="https://github.com/go101/gold">Gold 项目</a>中提交 PR 和 bug 报告。
+请关注 Go 101 官方 Twitter 帐号 <a href="https://twitter.com/go100and1">@Go100and1</a> 或者 “Go 101” 微信公众号以获取 <b>Gold</b> 的最新消息。`,
+		goldVersion,
+	)
+}

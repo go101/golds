@@ -64,7 +64,7 @@ func (ds *docServer) buildOverviewPage(overview *Overview) []byte {
 
 	page.WriteString("</pre>")
 
-	return page.Done()
+	return page.Done(ds.currentTranslation)
 }
 
 func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*PackageForListing, writeAnchorTarget, inGenModeRootPages bool) {

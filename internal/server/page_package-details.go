@@ -234,7 +234,7 @@ WriteValues:
 
 Done:
 	page.WriteString("</code></pre>")
-	return page.Done()
+	return page.Done(ds.currentTranslation)
 }
 
 type FileInfo struct {

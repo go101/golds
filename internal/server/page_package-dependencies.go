@@ -119,5 +119,5 @@ func (ds *docServer) buildPackageDependenciesPage(depInfo *PackageDependencyInfo
 		ds.writePackagesForListing(page, depInfo.ImportedBys, false, false)
 	}
 
-	return page.Done()
+	return page.Done(ds.currentTranslation)
 }

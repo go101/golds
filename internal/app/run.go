@@ -32,7 +32,9 @@ func Run() {
 	if *hFlag || *helpFlag {
 		printUsage(os.Stdout)
 		return
-	} else if *versionFlag {
+	}
+
+	if *versionFlag {
 		printVersion(os.Stdout)
 		return
 	}
@@ -77,7 +79,7 @@ func Run() {
 		var viewDocsCommand = func(docsDir string) string {
 			return os.Args[0] + " -dir=" + docsDir
 		}
-		server.Gen(*genIntentFlag, validateDiir(*dirFlag), *genLangFlag, flag.Args(), silentMode, Version, printUsage, viewDocsCommand)
+		server.Gen(*genIntentFlag, validateDiir(*dirFlag), *langFlag, flag.Args(), silentMode, Version, printUsage, viewDocsCommand)
 		return
 	}
 
@@ -86,7 +88,7 @@ func Run() {
 		return
 	}
 
-	server.Run(*portFlag, flag.Args(), silentMode, Version, printUsage, getRoughBuildTime)
+	server.Run(*portFlag, *langFlag, flag.Args(), silentMode, Version, printUsage, getRoughBuildTime)
 }
 
 var hFlag = flag.Bool("h", false, "show help")
@@ -94,7 +96,7 @@ var helpFlag = flag.Bool("help", false, "show help")
 var versionFlag = flag.Bool("version", false, "show version info")
 var genFlag = flag.Bool("gen", false, "HTML generation mode")
 var genIntentFlag = flag.String("gen-intent", "docs", "docs | testdata")
-var genLangFlag = flag.String("gen-lang", "", "docs generation language tag")
+var langFlag = flag.String("lang", "", "docs generation language tag")
 var dirFlag = flag.String("dir", "", "directory for file serving or HTML generation")
 var portFlag = flag.String("port", "56789", "preferred server port")
 var sFlag = flag.Bool("s", false, "not open a browser automatically")
@@ -150,7 +152,7 @@ Examples:
 		and their dependency packages.
 	%[1]v -dir=. -s
 		Serving the files in working directory
-		without opening a browser windows.
+		without opening a browser window.
 `,
 		os.Args[0], Version)
 }

@@ -6,8 +6,11 @@
 
 Run `go get -u go101.org/gold` to install (and update) **Gold**.
 
-_If the tool name `gold` conflicts with another tool with the same name you are using,
-you can run `go get -u go101.org/gold/godoge` instead to install **Gold** as as `godoge`._
+Notes:
+* If the tool name `gold` conflicts with another tool with the same name you are using,
+you can run `go get -u go101.org/gold/godoge` instead to install **Gold** as as `godoge`.
+* The `GO111MODULE` enviroment variable might need to be set as `on` to utilize the `GOPROXY` setting,
+depending on your Go Toolchain version and the directory in which the installation command runs.
 
 ### Features
 

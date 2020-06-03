@@ -148,7 +148,7 @@ func (ds *docServer) buildSourceCodePage(result *SourceFileAnalyzeResult) []byte
 	page.WriteString(`
 </pre>`)
 
-	return page.Done()
+	return page.Done(ds.currentTranslation)
 }
 
 type SourceFileAnalyzeResult struct {

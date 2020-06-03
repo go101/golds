@@ -65,10 +65,10 @@ type docServer struct {
 
 	//
 	generalLogger *log.Logger
-	firstVisit    int32
+	visited       int32
 }
 
-func Run(port string, args []string, silentMode bool, goldVersion string, printUsage func(io.Writer), roughBuildTime func() time.Time) {
+func Run(port, lang string, args []string, silentMode bool, goldVersion string, printUsage func(io.Writer), roughBuildTime func() time.Time) {
 	ds := &docServer{
 		goldVersion: goldVersion,
 
@@ -82,6 +82,11 @@ func Run(port string, args []string, silentMode bool, goldVersion string, printU
 	}
 
 	ds.initSettings(os.Getenv("LANG"))
+
+	if lang != "" {
+		ds.visited = 1
+		ds.changeTranslationByAcceptLanguage(lang)
+	}
 
 NextTry:
 	l, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
@@ -116,7 +121,7 @@ NextTry:
 }
 
 func (ds *docServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if atomic.SwapInt32(&ds.firstVisit, 1) == 0 {
+	if atomic.SwapInt32(&ds.visited, 1) == 0 {
 		ds.changeTranslationByAcceptLanguage(r.Header.Get("Accept-Language"))
 	}
 

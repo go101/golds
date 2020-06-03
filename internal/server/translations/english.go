@@ -284,4 +284,17 @@ func (*English) Text_Server_Started() string {
 	return "Server started:"
 }
 
+///////////////////////////////////////////////////////////////////
+// HTML generation
+///////////////////////////////////////////////////////////////////
+
+func (*English) Text_GeneratedPageFooter(goldVersion string) string {
+	return fmt.Sprintf(`Generated with <a href="https://go101.org/article/tool-gold.html"><b>Gold</b></a> <i>%s</i>.
+<b>Gold</b> is a <a href="https://go101.org">Go 101</a> project started by <a href="https://tapirgames.com">TapirLiu</a>.
+Please follow <a href="https://twitter.com/go100and1">@Go100and1</a> to get the latest news of <b>Gold</b>.
+PR and bug reqports are welcomed and can be submitted <a href="https://github.com/go101/gold">here</a>.`,
+		goldVersion,
+	)
+}
+
 

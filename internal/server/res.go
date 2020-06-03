@@ -80,6 +80,9 @@ type Translation interface {
 
 	// server
 	Text_Server_Started() string
+
+	// HTML generation
+	Text_GeneratedPageFooter(goldVersion string) string
 }
 
 func (ds *docServer) currentSettings() (Theme, Translation) {
