@@ -14,6 +14,14 @@ func (*English) Name() string { return "English" }
 func (*English) LangTag() string { return "en-US" }
 
 ///////////////////////////////////////////////////////////////////
+// server
+///////////////////////////////////////////////////////////////////
+
+func (*English) Text_Server_Started() string {
+	return "Server started:"
+}
+
+///////////////////////////////////////////////////////////////////
 // analyzing
 ///////////////////////////////////////////////////////////////////
 
@@ -102,8 +110,8 @@ func (*English) Text_PackageList() string {
 	return "All Packages"
 }
 
-func (*English) Text_Statistics() string {
-	return "Statistics"
+func (*English) Text_StatisticsWithMoreLink(detailedStatsLink string) string {
+	return fmt.Sprintf(`Statistics (<a href="%s">detailed ones</a>)`, detailedStatsLink)
 }
 
 func (*English) Text_SimpleStats(stats *code.Stats) string {
@@ -277,22 +285,199 @@ func (*English) Text_SourceFilePath() string { return "Source File" }
 func (*English) Text_GeneratedFrom() string { return "Generated From" }
 
 ///////////////////////////////////////////////////////////////////
-// server
+// statistics
 ///////////////////////////////////////////////////////////////////
 
-func (*English) Text_Server_Started() string {
-	return "Server started:"
+func (*English) Text_Statistics() string {
+	return "Statistics"
+}
+
+func (*English) Text_ChartTitle(chartName string) string {
+	switch chartName {
+	case "gosourcefiles-by-imports":
+		return "Numbers of Go Source Files by Import Counts"
+	case "packages-by-dependencies":
+		return "Numbers of Packages by Dependency Counts"
+	case "exportedtypenames-by-kinds":
+		return "Numbers of Exported Type Names by Kinds"
+	case "exportedstructtypes-by-embeddingfields":
+		return "Numbers of Exported Struct Types by Embedding Field Counts"
+	//case "exportedstructtypes-by-allfields":
+	//	return "Numbers of Exported Struct Types by All Field Counts"
+	case "exportedstructtypes-by-explicitfields":
+		return "Numbers of Exported Struct Types by Explicit Field Counts"
+	case "exportedstructtypes-by-exportedfields":
+		return "Numbers of Exported Struct Types by Exported (incl. Promoted) Field Counts"
+	case "exportedstructtypes-by-exportedexplicitfields":
+		return "Numbers of Exported Struct Types by Exported Explicit Field Counts"
+	//case "exportedstructtypes-by-exportedpromotedfields":
+	//	return "Numbers of Exported Struct Types by Exported Promoted Field Counts"
+	case "exportedfunctions-by-parameters":
+		return "Numbers of Exported Functions/Methods by Parameter Counts"
+	case "exportedfunctions-by-results":
+		return "Numbers of Exported Functions/Methods by Result Counts"
+	case "exportedidentifiers-by-lengths":
+		return "Number of Exported Identifiers by Lengths"
+	case "exportedvariables-by-typekinds":
+		return "Numbers of Exported Variables by Type Kinds"
+	case "exportedconstants-by-typekinds":
+		return "Numbers of Exported Constants by Type Kinds (or Default Kinds)"
+	case "exportednoninterfacetypes-by-exportedmethods":
+		return "Numbers of Exported Non-Interface Types by Exported Method Counts"
+	case "exportedinterfacetypes-by-exportedmethods":
+		return "Numbers of Exported Interface Types by Exported Method Counts"
+	default:
+		panic("unknown char name: " + chartName)
+	}
+}
+
+func (*English) Text_PackageStatistics(values map[string]interface{}) string {
+	return fmt.Sprintf(`
+<pre><code><span class="title">Packages</span></code>
+	Total <a href="%s">%d packages</a>, %d of them are standard packages.
+	Total %d source files, %d of them are Go source files.
+	Averagely,
+	- each package contains %.2f source files,
+	- each Go source file imports %.2f packages,
+	- each package depends %.2f other packages.
+
+	<img src="%s"></image>
+	<img src="%s"></image>
+`,
+		values["overviewPageURL"],
+		values["packageCount"],
+		values["standardPackageCount"],
+		values["sourceFileCount"], 	
+		values["goSourceFileCount"],
+		values["averageSourceFileCountPerPackage"], 
+		values["averageImportCountPerFile"], 	
+		values["averageDependencyCountPerPackage"],
+
+		values["gosourcefilesByImportsChartURL"], 
+		values["packagesByDependenciesChartURL"], 
+	)
+}
+
+func (*English) Text_TypeStatistics(values map[string]interface{}) string {
+	return fmt.Sprintf(`
+<pre><code><span class="title">Types</span></code>
+	Total %d exported type names, %d of them are aliases.
+	In them, %d are composite types and %d are basic types.
+	In the basic types, %d are integers (%d are unsigneds).
+
+	<img src="%s"></image>
+
+	In %d exported struct types, %d have embedding fields,
+	and %d have promoted fields.
+
+	<img src="%s"></image>
+
+	On average, each exported struct type has
+	* %.2f fields (including promoteds and unexporteds),
+	* %.2f explicit fields (including unexporteds),
+	* %.2f exported fields (including promoteds),
+	* %.2f explicit exported fields.
+
+	<img src="%s"></image>
+	<img src="%s"></image>
+	<img src="%s"></image>
+
+	Averagely,
+	- for exported non-interface types with at least one exported
+	  method, each of them has %.2f exported methods.
+	- each exported interface type specified %.2f exported methods.
+
+	<img src="%s"></image>
+	<img src="%s"></image>
+`,
+		values["exportedTypeNameCount"],
+		values["exportedTypeAliases"],
+		values["exportedCompositeTypeNames"],
+		values["exportedBasicTypeNames"],
+		values["exportedIntergerTypeNames"],
+		values["exportedUnsignedTypeNames"],
+
+		values["exportedtypenamesByKindsChartURL"],
+
+		values["exportedStructTypeNames"],
+		values["exportedNamedStructTypesWithEmbeddingFields"],
+		values["exportedNamedStructTypesWithPromotedFields"],
+
+		values["exportedstructtypesByEmbeddingfieldsChartURL"],
+
+		values["exportedNamedStructTypeFieldsPerExportedStruct"],
+		values["exportedNamedStructTypeExplicitFieldsPerExportedStruct"],
+		values["exportedNamedStructTypeExportedFieldsPerExportedStruct"],
+		values["exportedNamedStructTypeExportedExplicitFieldsPerExportedStruct"],
+
+		values["exportedstructtypesByExplicitfieldsChartURL"],
+		values["exportedstructtypesByExportedexplicitfieldsChartURL"],
+		values["exportedstructtypesByExportedfieldsChartURL"],
+
+		values["exportedNamedNonInterfacesExportedMethodsPerExportedNonInterfaceType"],
+		values["exportedNamedInterfacesExportedMethodsPerExportedInterfaceType"],
+
+		values["exportednoninterfacetypesByExportedmethodsChartURL"],
+		values["exportedinterfacetypesByExportedmethodsChartURL"],
+	)
+}
+
+func (*English) Text_ValueStatistics(values map[string]interface{}) string {
+	return fmt.Sprintf(`
+<pre><code><span class="title">Values</span></code>
+	Total %d exported variables and %d exported constants.
+
+	<img src="%s"></image>
+	<img src="%s"></image>
+
+	Total %d exported functions and %d exported explicit methods.
+	On average, each of these functions and methods has
+	%.2f parameters and %.2f results. For %d (%d%%) of these
+	functions and methods, the last result types are <code>error</code>.
+
+	<img src="%s"></image>
+	<img src="%s"></image>
+`,
+		values["exportedVariables"],
+		values["exportedConstants"],
+
+		values["exportedvariablesByTypekindsChartURL"],
+		values["exportedconstantsByTypekindsChartURL"],
+
+		values["exportedFunctions"],
+		values["exportedMethods"],
+		values["averageParameterCountPerExportedFunction"],
+		values["averageResultCountPerExportedFunction"],
+		values["exportedFunctionWithLastErrorResult"],
+		values["exportedFunctionWithLastErrorResultPercentage"],
+
+		values["exportedfunctionsByParametersChartURL"],
+		values["exportedfunctionsByResultsChartURL"],
+	)
+}
+
+func (*English) Text_Othertatistics(values map[string]interface{}) string {
+	return fmt.Sprintf(`
+<pre><code><span class="title">Others</span></code>
+	The average length of exported identifiers is %.2f.
+
+	<img src="%s"></image>
+`,
+		values["averageIdentiferLength"],
+
+		values["exportedidentifiersByLengthsChartURL"],
+	)
 }
 
 ///////////////////////////////////////////////////////////////////
-// HTML generation
+// footer
 ///////////////////////////////////////////////////////////////////
 
 func (*English) Text_GeneratedPageFooter(goldVersion string) string {
 	return fmt.Sprintf(`Generated with <a href="https://go101.org/article/tool-gold.html"><b>Gold</b></a> <i>%s</i>.
 <b>Gold</b> is a <a href="https://go101.org">Go 101</a> project started by <a href="https://tapirgames.com">TapirLiu</a>.
 Please follow <a href="https://twitter.com/go100and1">@Go100and1</a> to get the latest news of <b>Gold</b>.
-PR and bug reqports are welcomed and can be submitted <a href="https://github.com/go101/gold">here</a>.`,
+PR and bug reports are welcomed and can be submitted <a href="https://github.com/go101/gold">here</a>.`,
 		goldVersion,
 	)
 }

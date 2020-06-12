@@ -1,4 +1,6 @@
 **Gold** is an experimental Go local docs server and Go docs generation tool.
+It tries to extract as much information as possible from Go code.
+**Gold** is expected to be helpful for reading only only Go docs, but also Go code.
 
 ([Demo](https://docs.go101.org/index.html) and [FAQ](https://go101.org/article/tool-gold.html#faq))
 
@@ -8,7 +10,7 @@ Run `go get -u go101.org/gold` to install (and update) **Gold**.
 
 Notes:
 * If the tool name `gold` conflicts with another tool with the same name you are using,
-you can run `go get -u go101.org/gold/godoge` instead to install **Gold** as as `godoge`.
+you can run `go get -u go101.org/gold/godoge` instead to install **Gold** as `godoge`.
 * The `GO111MODULE` enviroment variable might need to be set as `on` to utilize the `GOPROXY` setting,
 depending on your Go Toolchain version and the directory in which the installation command runs.
 
@@ -19,6 +21,7 @@ depending on your Go Toolchain version and the directory in which the installati
 * Rich code view experience (good for studying Go projects without opening IDEs).
 * JavaScript-off friendly.
 * Support generating static HTML docs pages (good for package developers to host docs of their packages).
+* Show code statistics.
 
 This tool is still in its early phase. More features will be supported from time to time.
 
@@ -29,6 +32,8 @@ Go Toolchain 1.13+ is needed to build and run **Gold**.
 This project uses the [golang.org/x/tools/go/packages](https://pkg.go.dev/golang.org/x/tools/go/packages) package to parse code. The `golang.org/x/tools/go/package` is great, but it also has a shortcoming: there are no ways to get module/package downloading/preparing progress.
 
 All packages must compile okay to get their docs shown.
+
+Only a code snapshot is analyzed. When code changes, a new analyzation is needed from scratch.
 
 Testing packages are excluded currently.
 

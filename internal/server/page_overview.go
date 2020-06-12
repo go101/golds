@@ -29,16 +29,16 @@ func (ds *docServer) overviewPage(w http.ResponseWriter, r *http.Request) {
 
 	if !genDocsMode {
 		if ds.confirmUpdateTip(); ds.updateTip != ds.cachedUpdateTip {
-			ds.packageListPage = nil
+			ds.theOverviewPage = nil
 			ds.cachedUpdateTip = ds.updateTip
 		}
 	}
 
-	if ds.packageListPage == nil {
+	if ds.theOverviewPage == nil {
 		overview := ds.buildOverviewData()
-		ds.packageListPage = ds.buildOverviewPage(overview)
+		ds.theOverviewPage = ds.buildOverviewPage(overview)
 	}
-	w.Write(ds.packageListPage)
+	w.Write(ds.theOverviewPage)
 }
 
 func (ds *docServer) buildOverviewPage(overview *Overview) []byte {
@@ -149,11 +149,11 @@ func (ds *docServer) writeUpdateGoldBlock(page *htmlPage) {
 func (ds *docServer) writeSimpleStatsBlock(page *htmlPage, stats *code.Stats) {
 	text := ds.currentTranslation.Text_SimpleStats(stats)
 	text = strings.Replace(text, "\n", "\n\t", -1)
-
+	moreLink := buildPageHref(page.PathInfo, pagePathInfo{ResTypeNone, "statistics"}, nil, "")
 	fmt.Fprintf(page, `
 <pre><code><span class="title">%s</span></code>
 	%s`,
-		ds.currentTranslation.Text_Statistics(),
+		ds.currentTranslation.Text_StatisticsWithMoreLink(moreLink),
 		text,
 	)
 }

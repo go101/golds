@@ -2,6 +2,7 @@
 
 ### Soon to do
 
+* move stat title out of translation. (translations should not contain html)
 * implement registerNamedInterfaceMethodsForInvolvedTypeNames
 * enhance tests
   * test by ast comments
@@ -85,10 +86,10 @@
   * find other values with the same type
   * function: hints: will an argument be modified in function body
 * stat:
-  * n interfaces, m structs, ... (on overview and package detail pages)
   * top N lists
-  * embedding in n types
   * top N used identifers
+  * function stats also consider vars of function types.
+  * all stats also consider unexported global and local resources
 * package details
   * add parent and children packages
 * imports
@@ -104,13 +105,14 @@
   * click "type" keyword to unhide the source type definition.
     And show underlying type in a further click.
   * show the types with the same underlying type.
+  * embedding in n types
   * show comparable/embeddable or not. Fill TypeInfo.attributes.
   * all alias list
   * values which can be converted to (some functions can be used as (implicitly converted to) http.HandleFunc values, alike)    
   * asParams/asResults lists exclude the methods of unexported types now.
   * asTypeOf items: sort by value | sort by position | sort by name
   * method: show whether or not is promoted
-  * as fields of types list (and embedded-in list)
+  * as fields of types list (and embedded-in list, this is important, must do)
   * for interface: subset of list
   * for non-interface: embedded by list
   * convertible/assignable types
@@ -137,7 +139,11 @@
 
 ### Done
 
-* (doen) gen zh-Cn std docs
+* (done) stat:
+  * n interfaces, m structs, ... (on overview and package detail pages)
+  * exported variables/constants by type kinds
+  * parameters/results by type kinds
+* (done) gen zh-Cn std docs
   * show golang.google.cn/pkg/xxx for zh-CN translation 
 * (done) use as early as possible SDK to generate testdata.json.tar.gz
 * (done) debug ast file not found, why so many goroutines panics.

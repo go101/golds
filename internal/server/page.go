@@ -11,6 +11,7 @@ type pageResType string
 const (
 	ResTypeNone       pageResType = ""
 	ResTypeAPI        pageResType = "api"
+	ResTypeModule     pageResType = "mod"
 	ResTypePackage    pageResType = "pkg"
 	ResTypeDependency pageResType = "dep"
 	ResTypeSource     pageResType = "src"

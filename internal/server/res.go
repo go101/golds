@@ -19,6 +19,9 @@ type Translation interface {
 	Name() string
 	LangTag() string
 
+	// server
+	Text_Server_Started() string
+
 	// analyzing
 	Text_Analyzing() string
 	Text_AnalyzingRefresh(currentPageURL string) string // also used in other pages
@@ -41,7 +44,7 @@ type Translation interface {
 	// overview page
 	Text_Overview() string
 	Text_PackageList() string
-	Text_Statistics() string
+	Text_StatisticsWithMoreLink(detailedStatsLink string) string
 	Text_SimpleStats(stats *code.Stats) string
 	Text_Modules() string                                    // to use
 	Text_BelongingModule() string                            // to use
@@ -78,10 +81,15 @@ type Translation interface {
 	Text_SourceFilePath() string
 	Text_GeneratedFrom() string
 
-	// server
-	Text_Server_Started() string
+	// statistics
+	Text_Statistics() string
+	Text_ChartTitle(chartName string) string
+	Text_PackageStatistics(values map[string]interface{}) string
+	Text_TypeStatistics(values map[string]interface{}) string
+	Text_ValueStatistics(values map[string]interface{}) string
+	Text_Othertatistics(values map[string]interface{}) string
 
-	// HTML generation
+	// Footer
 	Text_GeneratedPageFooter(goldVersion string) string
 }
 

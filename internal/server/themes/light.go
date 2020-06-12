@@ -6,7 +6,7 @@ func (*Light) Name() string { return "light" }
 
 func (*Light) CSS() string {
 	return `
-body {color: #333;}
+body {color: #333; font-family:"Courier New", Courier, monospace;}
 .grey {color: #ccc;}
 a {color: #079;}
 a.path-duplicate {color: #9cd;}

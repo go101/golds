@@ -74,57 +74,80 @@ type CodeAnalyzer struct {
 const KindCount = reflect.UnsafePointer + 1
 
 type Stats struct {
-	Packages,
+	Packages       int32
+	StdPackages    int32
 	AllPackageDeps int32
-	PackagesByDeps [64]int32
+	PackagesByDeps [100]int32
 	//PackagesByImportBys [1024]int32 // use sorting packages by importBys instead.
 
-	FilesWithoutGenerateds, // without generated ones
-	FilesWithGenerateds, // with generated ones
-	//ToDo: stat code lines. Use the info in AstFile?
-	CodeLines,
-	BlankCodeLines,
-	CommentCodeLines,
+	FilesWithoutGenerateds int32 // without generated ones
+	FilesWithGenerateds    int32 // with generated ones
+	CodeLines              int32 // ToDo: stat code lines. Use the info in AstFile?
+	BlankCodeLines         int32
+	CommentCodeLines       int32
 
 	// To calculate imports per file.
 	// Deps per packages are available in other ways.
-	AstFiles,
-	Imports int32
-	FilesByImportCount [64]int32
+	AstFiles           int32
+	Imports            int32
+	FilesByImportCount [100]int32
 
 	// Types
-	//NamedStructTypesWithEmbeddingField,
-	//NamedStructTypeFields
-	ExportedTypeNames,
-	ExportedTypeAliases int32
+	ExportedTypeNamesByKind    [KindCount]int32
+	ExportedTypeNames          int32
+	ExportedTypeAliases        int32
+	ExportedCompositeTypeNames int32
+	ExportedBasicTypeNames     int32
+	ExportedNumericTypeNames   int32
+	ExportedIntergerTypeNames  int32
+	ExportedUnsignedTypeNames  int32
 
-	//ExportedTypeAliasesByKind
-	ExportedTypeNamesByKind [KindCount]int32
-	ExportedNamedIntergerTypes,
-	ExportedNamedUnsignedIntergerTypes,
-	ExportedNamedNumericTypes int32
+	//ExportedNamedStructTypeNames                        int32 // should be equal to ExportedTypeNamesByKind[reflect.Struct]
+	ExportedNamedStructTypesWithEmbeddingFields   int32
+	ExportedNamedStructTypesWithPromotedFields    int32
+	ExportedNamedStructTypeFields                 int32
+	ExportedNamedStructTypeExplicitFields         int32
+	ExportedNamedStructTypeExportedFields         int32
+	ExportedNamedStructTypeExportedExplicitFields int32
 
-	NamedStructsByFieldCount, // including promoteds and non-exporteds
-	NamedStructsByExplicitFieldCount, // including non-exporteds but not including promoted
-	NamedStructsByExportedFieldCount, // including promoteds
-	NamedStructsByExportedExplicitFieldCount, // not including promoteds
-	ExportedNamedNonInterfaceTypesByMethodCount, // T and * T combined
-	ExportedNamedNonInterfaceTypesByExportedMethodCount, // T and * T combined
-	ExportedNamedInterfacesByMethodCount,
-	ExportedNamedInterfacesByExportedMethodCount [64]int32 // the last element means (N-1)+
+	ExportedNamedStructsByEmbeddingFieldCount        [100]int32
+	ExportedNamedStructsByFieldCount                 [100]int32 // including promoteds and non-exporteds
+	ExportedNamedStructsByExplicitFieldCount         [100]int32 // including non-exporteds but not including promoted
+	ExportedNamedStructsByExportedFieldCount         [100]int32 // including promoteds
+	ExportedNamedStructsByExportedExplicitFieldCount [100]int32 // not including promoteds
+	ExportedNamedStructsByExportedPromotedFieldCount [100]int32
+
+	ExportedNamedNonInterfaceTypesByMethodCount         [100]int32 // T and * T combined
+	ExportedNamedNonInterfaceTypesByExportedMethodCount [100]int32 // T and * T combined
+	ExportedNamedNonInterfacesExportedMethods           int32
+	ExportedNamedNonInterfacesWithExportedMethods       int32
+
+	ExportedNamedInterfacesByMethodCount         [100]int32
+	ExportedNamedInterfacesByExportedMethodCount [100]int32 // the last element means (N-1)+
+	ExportedNamedInterfacesExportedMethods       int32
 
 	// Values
-	ExportedVariables,
-	ExportedConstants,
-	Functions,
-	ExportedFunctions,
-	Methods,
-	ExportedMethods int32
+	ExportedVariables int32
+	ExportedConstants int32
+	ExportedFunctions int32
+	ExportedMethods   int32 // non-interface methods
 
-	FunctionsByParameterCount,
-	MethodsByParameterCount [32]int32 // the last element means (N-1)+
-	FunctionsByResultCount,
-	MethodsByResultCount [16]int32 // the last element means (N-1)+
+	ExportedVariablesByTypeKind [KindCount]int32
+	ExportedConstantsByTypeKind [KindCount]int32
+
+	// ToDo: Methods corresponding the same interface method should be viewed as one method in counting.
+	ExportedFunctionParameters          int32      // including methods
+	ExportedFunctionResults             int32      // including methods
+	ExportedFunctionWithLastErrorResult int32      // including methods
+	ExportedFunctionsByParameterCount   [100]int32 // including methods
+	ExportedFunctionsByResultCount      [100]int32 // including methods
+	//ExportedMethodsByParameterCount   [100]int32 // the last element means (N-1)+
+	//ExportedMethodsByResultCount      [100]int32 // the last element means (N-1)+
+
+	// Others.
+	ExportedIdentifers          int32
+	ExportedIdentifersSumLength int32
+	ExportedIdentifiersByLength [100]int32
 }
 
 func incSliceStat(stats []int32, index int) {
@@ -546,6 +569,8 @@ func (d *CodeAnalyzer) registerDirectFields(typeInfo *TypeInfo, astStructNode *a
 				tag = field.Tag.Value
 			}
 
+			typeInfo.EmbeddingFields++
+
 			register(&Field{
 				Pkg:  pkg,
 				Name: tn.Name(),
@@ -863,7 +888,7 @@ func (d *CodeAnalyzer) registerExplicitlyDeclaredMethod(f *Function) {
 
 // ToDo: also register function variables?
 // Return parameter and result counts.
-func (d *CodeAnalyzer) registerFunctionForInvolvedTypeNames(f *Function) (ins, outs int) {
+func (d *CodeAnalyzer) registerFunctionForInvolvedTypeNames(f *Function) (ins, outs int, lastResultIsError bool) {
 	// ToDo: unepxorted function should also reged,
 	//       but then they should be filtered out when in listing.
 	notToReg := !f.Exported()
@@ -901,6 +926,8 @@ func (d *CodeAnalyzer) registerFunctionForInvolvedTypeNames(f *Function) (ins, o
 
 	if fType.Results != nil {
 		for _, fld := range fType.Results.List {
+			lastResultIsError = false
+
 			if n := len(fld.Names); n == 0 {
 				outs++
 			} else {
@@ -917,6 +944,9 @@ func (d *CodeAnalyzer) registerFunctionForInvolvedTypeNames(f *Function) (ins, o
 				//	log.Println("================", f.Pkg.Path(), t.TT)
 				//}
 				if t.TypeName.Pkg.Path() == "builtin" {
+					if t.TypeName.Name() == "error" {
+						lastResultIsError = true
+					}
 					return
 				}
 				if t.AsOutputsOf == nil {

@@ -78,13 +78,15 @@ func resHrefID(resType pageResType, resPath string) (int, bool) {
 }
 
 var resType2ExtTable = map[pageResType]string{
-	"":    ".html",
-	"pkg": ".html",
-	"dep": ".html",
-	"src": ".html",
-	"mod": ".html",
-	"css": ".css",
-	"jvs": ".js",
+	ResTypeNone:       ".html",
+	ResTypePackage:    ".html",
+	ResTypeDependency: ".html",
+	ResTypeSource:     ".html",
+	ResTypeModule:     ".html",
+	ResTypeCSS:        ".css",
+	ResTypeJS:         ".js",
+	ResTypeSVG:        ".svg",
+	//ResTypeAPI
 }
 
 var dotdotslashes = strings.Repeat("../", 256)
@@ -143,9 +145,6 @@ func buildPageHref(currentPageInfo, linkedPageInfo pagePathInfo, page *htmlPage,
 	}
 
 	if linkedPageInfo.resType == ResTypeNone {
-		if linkedPageInfo.resPath != "" {
-			panic("should not now")
-		}
 		if page != nil {
 			page.writePageLink(func() {
 				page.WriteByte('/')
@@ -173,10 +172,12 @@ Generate:
 
 	var makeHref = func(pathInfo pagePathInfo) string {
 		if pathInfo.resType == ResTypeNone { // homepages
-			if pathInfo.resPath != "" {
-				panic("should not now")
+			switch pathInfo.resPath {
+			case "":
+				return "index" + resType2ExtTable[pathInfo.resType]
+			default:
+				return pathInfo.resPath + resType2ExtTable[pathInfo.resType]
 			}
-			return "index" + resType2ExtTable[pathInfo.resType]
 		} else {
 
 			return string(pathInfo.resType) + "/" + pathInfo.resPath + resType2ExtTable[pathInfo.resType]

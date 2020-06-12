@@ -331,6 +331,7 @@ type TypeInfo struct {
 	// * For named interface types, all explicitly specified methods and embedded types (as fields).
 	// * For unnamed struct types, only direct fields. Only built for strct{...}, not for *struct{...}.
 	DirectSelectors []*Selector
+	EmbeddingFields int32 // for struct types only now. ToDo: also for interface types.
 
 	// All methods, including extended/promoted ones.
 	AllMethods []*Selector
@@ -360,7 +361,11 @@ type TypeInfo struct {
 }
 
 func (t *TypeInfo) Kind() reflect.Kind {
-	switch tt := t.TT.Underlying().(type) {
+	return Kind(t.TT)
+}
+
+func Kind(tt types.Type) reflect.Kind {
+	switch tt := tt.Underlying().(type) {
 	default:
 		log.Printf("unknown kind of type: %T", tt)
 		return reflect.Invalid

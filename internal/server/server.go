@@ -47,10 +47,11 @@ type docServer struct {
 	analyzingLogs   []LoadingLogMessage
 
 	// Cached pages
-	packageListPage []byte
-	packagePages    map[string][]byte
-	sourcePages     map[string][]byte
-	dependencyPages map[string][]byte
+	theOverviewPage   []byte
+	theStatisticsPage []byte
+	packagePages      map[string][]byte
+	sourcePages       map[string][]byte
+	dependencyPages   map[string][]byte
 
 	//
 	currentTheme       Theme
@@ -145,8 +146,7 @@ func (ds *docServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			ds.startUpdatingGold()
 			http.Redirect(w, r, "/", http.StatusTemporaryRedirect)
 		case "statistics":
-			w.WriteHeader(http.StatusNotImplemented)
-			fmt.Fprint(w, "Not implemented yet")
+			ds.statisticsPage(w, r)
 		}
 		return
 	}

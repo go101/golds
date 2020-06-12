@@ -939,8 +939,9 @@ func (ds *docServer) writeFieldForListing(page *htmlPage, pkg *code.Package, sel
 	pos := sel.Position()
 	//pos.Line += ds.analyzer.SourceFileLineOffset(pos.Filename)
 	ds.writeSrouceCodeLineLink(page, sel.Pkg(), pos, selField.Name, "", false)
-	page.WriteByte(' ')
+	page.WriteString(" <i>")
 	ds.WriteAstType(page, selField.AstField.Type, selField.Pkg, pkg, true, nil, forTypeName)
+	page.WriteString("</i>")
 }
 
 func (ds *docServer) writeMethodForListing(page *htmlPage, pkg *code.Package, sel *code.Selector, forTypeName *code.TypeName) {

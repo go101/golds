@@ -14,6 +14,14 @@ func (*Chinese) Name() string { return "简体中文" }
 func (*Chinese) LangTag() string { return "zh-CN" }
 
 ///////////////////////////////////////////////////////////////////
+// server
+///////////////////////////////////////////////////////////////////
+
+func (*Chinese) Text_Server_Started() string {
+	return "服务已启动："
+}
+
+///////////////////////////////////////////////////////////////////
 // analyzing
 ///////////////////////////////////////////////////////////////////
 
@@ -93,8 +101,8 @@ func (*Chinese) Text_PackageList() string {
 	return "代码包列表"
 }
 
-func (*Chinese) Text_Statistics() string {
-	return "统计信息"
+func (*Chinese) Text_StatisticsWithMoreLink(detailedStatsLink string) string {
+	return fmt.Sprintf(`统计信息（<a href="%s">更多详细信息</a>）`, detailedStatsLink)
 }
 
 func (*Chinese) Text_SimpleStats(stats *code.Stats) string {
@@ -252,15 +260,189 @@ func (*Chinese) Text_SourceFilePath() string { return "源文件：" }
 func (*Chinese) Text_GeneratedFrom() string { return "从此文件生成" }
 
 ///////////////////////////////////////////////////////////////////
-// server
+// statistics
 ///////////////////////////////////////////////////////////////////
 
-func (*Chinese) Text_Server_Started() string {
-	return "服务已启动："
+func (*Chinese) Text_Statistics() string {
+	return "统计信息"
+}
+
+func (*Chinese) Text_ChartTitle(chartName string) string {
+	switch chartName {
+	case "gosourcefiles-by-imports":
+		return "Go源文件数量按照引入数量的分布"
+	case "packages-by-dependencies":
+		return "库包数量按照依赖数量的分布"
+	case "exportedtypenames-by-kinds":
+		return "导出的类型名数量按照类型种类的分布"
+	case "exportedstructtypes-by-embeddingfields":
+		return "导出的结构体类型数量按照内嵌字段数量的分布"
+	//case "exportedstructtypes-by-allfields":
+	//	return "导出的结构体类型数量按照字段数量的分布"
+	case "exportedstructtypes-by-explicitfields":
+		return "导出的结构体类型数量按照显式字段数量的分布"
+	case "exportedstructtypes-by-exportedfields":
+		return "导出的结构体类型数量按照导出字段数量的分布"
+	case "exportedstructtypes-by-exportedexplicitfields":
+		return "导出的结构体类型数量按照导出显式字段数量的分布"
+	//case "exportedstructtypes-by-exportedpromotedfields":
+	//	return "导出的结构体类型数量按照导出提升字段数量的分布"
+	case "exportedfunctions-by-parameters":
+		return "导出的函数（包括方法）数量按照参数个数的分布"
+	case "exportedfunctions-by-results":
+		return "导出的函数（包括方法）数量按照返回结果个数的分布"
+	case "exportedidentifiers-by-lengths":
+		return "导出的标识符数量按照标识符长度的分布"
+	case "exportedvariables-by-typekinds":
+		return "导出的变量数量按照变量类型种类的分布"
+	case "exportedconstants-by-typekinds":
+		return "导出的常量数量按照常量类型（或者默认类型）种类的分布"
+	case "exportednoninterfacetypes-by-exportedmethods":
+		return "导出的非接口类型名数量按照导出方法数的分布"
+	case "exportedinterfacetypes-by-exportedmethods":
+		return "导出的接口类型名数量按照导出方法数的分布"
+	default:
+		panic("unknown char name: " + chartName)
+	}
+}
+
+func (*Chinese) Text_PackageStatistics(values map[string]interface{}) string {
+	return fmt.Sprintf(`
+<pre><code><span class="title">库包</span></code>
+	共<a href="%s">%d个库包</a>，其中%d个是标准库包。
+	共%d个源文件，其中%d个为Go源文件。
+	平均说来：
+	- 每个库包含有%.2f个源文件；
+	- 每个Go源文件引入了%.2f个库包；
+	- 每个库包依赖于%.2f个其它库包。
+
+	<img src="%s"></image>
+	<img src="%s"></image>
+`,
+		values["overviewPageURL"],
+		values["packageCount"],
+		values["standardPackageCount"],
+		values["sourceFileCount"], 	
+		values["goSourceFileCount"],
+		values["averageSourceFileCountPerPackage"], 
+		values["averageImportCountPerFile"], 	
+		values["averageDependencyCountPerPackage"],
+
+		values["gosourcefilesByImportsChartURL"], 
+		values["packagesByDependenciesChartURL"], 
+	)
+}
+
+func (*Chinese) Text_TypeStatistics(values map[string]interface{}) string {
+	return fmt.Sprintf(`
+<pre><code><span class="title">类型</span></code>
+	共%d个导出类型名，其中%d个为类型别名。
+	它们中有%d个为组合类型、%d个为基本类型。
+	在基本类型中，%d个为整数型（其中%d个为无符号类型）。
+
+	<img src="%s"></image>
+
+	在%d个导出结构体类型中，%d个含有内嵌字段，%d个拥有提升字段。
+
+	<img src="%s"></image>
+
+	平均说来，每个导出结构体类型拥有
+	* %.2f个字段（包括提升字段和非导出字段）；
+	* %.2f个显式字段（包括非导出字段）；
+	* %.2f个导出字段（包括提升字段）；
+	* %.2f个导出显式字段。
+
+	<img src="%s"></image>
+	<img src="%s"></image>
+	<img src="%s"></image>
+
+	平均说来，
+	- 对于拥有至少一个导出方法的导出非接口类型，每个拥有%.2f个导出方法。
+	- 每个导出接口类型指定了%.2f个导出方法。
+
+	<img src="%s"></image>
+	<img src="%s"></image>
+`,
+		values["exportedTypeNameCount"],
+		values["exportedTypeAliases"],
+		values["exportedCompositeTypeNames"],
+		values["exportedBasicTypeNames"],
+		values["exportedIntergerTypeNames"],
+		values["exportedUnsignedTypeNames"],
+
+		values["exportedtypenamesByKindsChartURL"],
+
+		values["exportedStructTypeNames"],
+		values["exportedNamedStructTypesWithEmbeddingFields"],
+		values["exportedNamedStructTypesWithPromotedFields"],
+
+		values["exportedstructtypesByEmbeddingfieldsChartURL"],
+
+		values["exportedNamedStructTypeFieldsPerExportedStruct"],
+		values["exportedNamedStructTypeExplicitFieldsPerExportedStruct"],
+		values["exportedNamedStructTypeExportedFieldsPerExportedStruct"],
+		values["exportedNamedStructTypeExportedExplicitFieldsPerExportedStruct"],
+
+		values["exportedstructtypesByExplicitfieldsChartURL"],
+		values["exportedstructtypesByExportedexplicitfieldsChartURL"],
+		values["exportedstructtypesByExportedfieldsChartURL"],
+
+		values["exportedNamedNonInterfacesExportedMethodsPerExportedNonInterfaceType"],
+		values["exportedNamedInterfacesExportedMethodsPerExportedInterfaceType"],
+
+		values["exportednoninterfacetypesByExportedmethodsChartURL"],
+		values["exportedinterfacetypesByExportedmethodsChartURL"],
+	)
+}
+
+func (*Chinese) Text_ValueStatistics(values map[string]interface{}) string {
+	return fmt.Sprintf(`
+<pre><code><span class="title">Values</span></code>
+	共%d个导出变量和%d个导出常量。
+
+	<img src="%s"></image>
+	<img src="%s"></image>
+
+	共%d个导出函数和%d个导出显式方法。
+	平均说来，每个这样的函数或方法拥有%.2f个参数和%.2f个输出结果。
+	这些函数和方法中的%d个（占%d%%）的最后一个输出结果的类型为<code>error</code>。
+
+	<img src="%s"></image>
+	<img src="%s"></image>
+`,
+		values["exportedVariables"],
+		values["exportedConstants"],
+
+		values["exportedvariablesByTypekindsChartURL"],
+		values["exportedconstantsByTypekindsChartURL"],
+
+		values["exportedFunctions"],
+		values["exportedMethods"],
+		values["averageParameterCountPerExportedFunction"],
+		values["averageResultCountPerExportedFunction"],
+		values["exportedFunctionWithLastErrorResult"],
+		values["exportedFunctionWithLastErrorResultPercentage"],
+
+		values["exportedfunctionsByParametersChartURL"],
+		values["exportedfunctionsByResultsChartURL"],
+	)
+}
+
+func (*Chinese) Text_Othertatistics(values map[string]interface{}) string {
+	return fmt.Sprintf(`
+<pre><code><span class="title">Others</span></code>
+	输出标识符的平均长度为%.2f。
+
+	<img src="%s"></image>
+`,
+		values["averageIdentiferLength"],
+
+		values["exportedidentifiersByLengthsChartURL"],
+	)
 }
 
 ///////////////////////////////////////////////////////////////////
-// HTML generation
+// footer
 ///////////////////////////////////////////////////////////////////
 
 func (*Chinese) Text_GeneratedPageFooter(goldVersion string) string {
