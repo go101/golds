@@ -4,6 +4,8 @@ It tries to extract as much information as possible from Go code.
 
 ([Demo](https://docs.go101.org/index.html) and [FAQ](https://go101.org/article/tool-gold.html#faq))
 
+Please follow [Go100and1](https://twitter.com/go100and1) to get the latest news of **Gold**.
+
 ### Installation
 
 Run `go get -u go101.org/gold` to install (and update) **Gold**.

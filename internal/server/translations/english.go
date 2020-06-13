@@ -321,7 +321,7 @@ func (*English) Text_ChartTitle(chartName string) string {
 	case "exportedvariables-by-typekinds":
 		return "Numbers of Exported Variables by Type Kinds"
 	case "exportedconstants-by-typekinds":
-		return "Numbers of Exported Constants by Type Kinds (or Default Kinds)"
+		return "Numbers of Exported Constants by Type (or Default Type) Kinds"
 	case "exportednoninterfacetypes-by-exportedmethods":
 		return "Numbers of Exported Non-Interface Types by Exported Method Counts"
 	case "exportedinterfacetypes-by-exportedmethods":
@@ -376,7 +376,7 @@ func (*English) Text_TypeStatistics(values map[string]interface{}) string {
 	* %.2f fields (including promoteds and unexporteds),
 	* %.2f explicit fields (including unexporteds),
 	* %.2f exported fields (including promoteds),
-	* %.2f explicit exported fields.
+	* %.2f exported explicit fields.
 
 	<img src="%s"></image>
 	<img src="%s"></image>
