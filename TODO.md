@@ -2,9 +2,10 @@
 
 ### Soon to do
 
+* sort types by popularity
+  filter values (var | const | func)
+
 * html escape some doc texts
-* move stat title out of translation. (translations should not contain html)
-* implement registerNamedInterfaceMethodsForInvolvedTypeNames
 * enhance tests
   * test by ast comments
 * css style
@@ -19,8 +20,8 @@
   * filter values (var | const | func)
     filter types (interfaces)
     fitler packages (main | std)
-    sort packages by importedBys (by most imports is non-sense)
-    sort types (by method count or popularity, used as parameters/results)
+    sort packages by importedBys
+    fitler packages (main | std)
   * search on pkg details pages, and filter packages on overview page
   * click "package"/overview to switch theme/language
 
@@ -30,6 +31,8 @@
   * or for any modules
 
 * change theme and language
+
+* not cache pages in gen mode
 
 * FindPackageCommonPrefixPaths(pa, pb string) string
 	ToDo: ToLower both?
@@ -115,14 +118,13 @@
   * all alias list
   * values which can be converted to (some functions can be used as (implicitly converted to) http.HandleFunc values, alike)    
   * asParams/asResults lists exclude the methods of unexported types now.
-  * asTypeOf items: sort by value | sort by position | sort by name
+  * asTypeOf items: sort by value | sort by code position | sort by name
   * method: show whether or not is promoted
   * as fields of types list (and embedded-in list, this is important, must do)
   * for interface: subset of list
   * for non-interface: embedded by list
   * convertible/assignable types
   * show struct paddings/sizes
-  * sort types by popularity
   * filter by kind
   * as-type / as-params / as-results lists detail:
     * merge method with the same signature
@@ -144,6 +146,8 @@
 
 ### Done
 
+* (done) implement registerNamedInterfaceMethodsForInvolvedTypeNames
+* (done) move stat title out of translation. (translations should not contain html)
 * (done) stat:
   * n interfaces, m structs, ... (on overview and package detail pages)
   * exported variables/constants by type kinds

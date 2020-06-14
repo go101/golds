@@ -85,12 +85,12 @@ func (ds *docServer) svgFile(w http.ResponseWriter, r *http.Request, svgFile str
 	//	svgData = createSourcefileImportsSVG(chartTitle, stats.ExportedNamedStructsByFieldCount[:], xName(len(stats.ExportedNamedStructsByFieldCount)-1))
 	case "exportedstructtypes-by-explicitfields":
 		svgData = createSourcefileImportsSVG(chartTitle, stats.ExportedNamedStructsByExplicitFieldCount[:], xName(len(stats.ExportedNamedStructsByExplicitFieldCount)-1))
-	case "exportedstructtypes-by-exportedfields":
-		svgData = createSourcefileImportsSVG(chartTitle, stats.ExportedNamedStructsByExportedFieldCount[:], xName(len(stats.ExportedNamedStructsByExportedFieldCount)-1))
+	//case "exportedstructtypes-by-exportedfields":
+	//	svgData = createSourcefileImportsSVG(chartTitle, stats.ExportedNamedStructsByExportedFieldCount[:], xName(len(stats.ExportedNamedStructsByExportedFieldCount)-1))
 	case "exportedstructtypes-by-exportedexplicitfields":
 		svgData = createSourcefileImportsSVG(chartTitle, stats.ExportedNamedStructsByExportedExplicitFieldCount[:], xName(len(stats.ExportedNamedStructsByExportedExplicitFieldCount)-1))
-	//case "exportedstructtypes-by-exportedpromotedfields":
-	//	svgData = createSourcefileImportsSVG(chartTitle, stats.ExportedNamedStructsByExportedPromotedFieldCount[:], xName(len(stats.ExportedNamedStructsByExportedPromotedFieldCount)-1))
+	case "exportedstructtypes-by-exportedpromotedfields":
+		svgData = createSourcefileImportsSVG(chartTitle, stats.ExportedNamedStructsByExportedPromotedFieldCount[:], xName(len(stats.ExportedNamedStructsByExportedPromotedFieldCount)-1))
 	case "exportedfunctions-by-parameters":
 		svgData = createSourcefileImportsSVG(chartTitle, stats.ExportedFunctionsByParameterCount[:], xName(len(stats.ExportedFunctionsByParameterCount)-1))
 	case "exportedfunctions-by-results":

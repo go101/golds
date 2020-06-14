@@ -49,7 +49,7 @@ type docServer struct {
 	// Cached pages
 	theOverviewPage   []byte
 	theStatisticsPage []byte
-	packagePages      map[string][]byte
+	packagePages      map[string]packagePage
 	sourcePages       map[string][]byte
 	dependencyPages   map[string][]byte
 
@@ -226,7 +226,7 @@ func (ds *docServer) analyze(args []string, printUsage func(io.Writer)) {
 	{
 		ds.mutex.Lock()
 		ds.phase = Phase_Analyzed
-		ds.packagePages = make(map[string][]byte, ds.analyzer.NumPackages())
+		ds.packagePages = make(map[string]packagePage, ds.analyzer.NumPackages())
 		ds.sourcePages = make(map[string][]byte, ds.analyzer.NumSourceFiles())
 		ds.dependencyPages = make(map[string][]byte, ds.analyzer.NumPackages())
 		ds.mutex.Unlock()

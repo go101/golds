@@ -79,7 +79,7 @@ func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*Package
 
 	for i, pkg := range packages {
 		if writeAnchorTarget {
-			fmt.Fprintf(page, `<div class="anchor" id="pkg-%s">`, pkg.Path)
+			fmt.Fprintf(page, `<div class="anchor" id="pkg-%s" data-importedbys="%d">`, pkg.Path, pkg.NumImportedBys)
 		} else {
 			page.WriteByte('\n')
 		}
@@ -173,6 +173,8 @@ type PackageForListing struct {
 	Path      string // blank for not analyzed yet
 	Prefix    string // the part shared with the last one in list
 	Remaining string // the part different from the last one in list
+
+	NumImportedBys int
 }
 
 func (ds *docServer) buildOverviewData() *Overview {
@@ -192,6 +194,8 @@ func (ds *docServer) buildOverviewData() *Overview {
 		pkg.Remaining = p.Path()
 		pkg.Name = p.PPkg.Name
 		pkg.Index = p.Index
+
+		pkg.NumImportedBys = len(p.DepedBys)
 	}
 
 	// ToDo: might be problematic sometimes. Should sort token by token.

@@ -1,8 +1,7 @@
-**Gold** is an experimental Go local docs server and Go docs generation tool.
-It tries to extract as much information as possible from Go code.
-**Gold** is expected to be helpful to reading not only Go docs, but also Go code.
+**Gold** is a Go local docs server, Go docs generator, and a Go code reader.
+It tries to extract as much information as possible from Go code to help gophers use and study Go packages.
 
-([Demo](https://docs.go101.org/index.html) and [FAQ](https://go101.org/article/tool-gold.html#faq))
+([Demo of the generated docs for standard packages](https://docs.go101.org/index.html) and [FAQ](https://go101.org/article/tool-gold.html#faq))
 
 Please follow [@Go100and1](https://twitter.com/go100and1) to get the latest news of **Gold**.
 
@@ -12,20 +11,26 @@ Run `go get -u go101.org/gold` to install (and update) **Gold**.
 
 Notes:
 * If the tool name `gold` conflicts with another tool with the same name you are using,
-you can run `go get -u go101.org/gold/godoge` instead to install **Gold** as `godoge`.
+you can run `go get -u go101.org/gold/godoge` instead to install **Gold** as _**godoge**_.
 * The `GO111MODULE` enviroment variable might need to be set as `on` to utilize the `GOPROXY` setting,
 depending on your Go Toolchain version and the directory in which the installation command runs.
 
 ### Features
 
-* Show type implemention relations.
-* Show promoted selectors, even on unexported embedded fields.
-* Rich code view experiences (good for studying Go projects without opening IDEs).
+* Rich type information collection:
+  * Show type implemention relations ([demo 1](https://docs.go101.org/pkg/go/ast.html#name-Node) and [demo 2](https://docs.go101.org/pkg/bytes.html#name-Buffer)).
+  * Show promoted selectors, even on unexported embedded fields ([demo](https://docs.go101.org/pkg:archive/zip#name-File)).
+  * Show as-parameters-of and as-results-of funciton/method list (including interface methods).
+* Smooth code view experiences (good for studying Go projects without opening IDEs):
+  * Click a local identifier to highlight all the occurences of the identifier.
+  * Click a reference to a non-local identifier to jump to the declaration of the non-local identifier, 
+    and freely open pages in new browser windows as needed.
+* Show code statistics ([demo](https://docs.go101.org/statistics.html)).
+* Support generating static HTML docs pages, to avoid rebuilding the docs later.
+  And this is good for package developers to host docs of their packages.
 * JavaScript-off friendly.
-* Support generating static HTML docs pages (good for package developers to host docs of their packages).
-* Show code statistics.
 
-This tool is still in its early phase. More new features will be supported from time to time in future versions.
+This tool is still in its early experimental phase. More new features will be supported from time to time in future versions.
 
 ### Limitations
 

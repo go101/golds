@@ -195,6 +195,15 @@ func (*Chinese) Text_UnexportedTypeNames(num int) string {
 	return "非导出类型名"
 }
 
+func (*Chinese) Text_SortTypesBy(by string) string {
+	switch by {
+	case "popularity":
+		return "按流行度排序"
+	default:
+		return "按字母排序"
+	}
+}
+
 ///////////////////////////////////////////////////////////////////
 // package details page: type details
 ///////////////////////////////////////////////////////////////////
@@ -281,12 +290,12 @@ func (*Chinese) Text_ChartTitle(chartName string) string {
 	//	return "导出的结构体类型数量按照字段数量的分布"
 	case "exportedstructtypes-by-explicitfields":
 		return "导出的结构体类型数量按照显式字段数量的分布"
-	case "exportedstructtypes-by-exportedfields":
-		return "导出的结构体类型数量按照导出字段数量的分布"
+	//case "exportedstructtypes-by-exportedfields":
+	//	return "导出的结构体类型数量按照导出字段数量的分布"
 	case "exportedstructtypes-by-exportedexplicitfields":
 		return "导出的结构体类型数量按照导出显式字段数量的分布"
-	//case "exportedstructtypes-by-exportedpromotedfields":
-	//	return "导出的结构体类型数量按照导出提升字段数量的分布"
+	case "exportedstructtypes-by-exportedpromotedfields":
+		return "导出的结构体类型数量按照导出提升字段数量的分布"
 	case "exportedfunctions-by-parameters":
 		return "导出的函数（包括方法）数量按照参数个数的分布"
 	case "exportedfunctions-by-results":
@@ -336,14 +345,14 @@ func (*Chinese) Text_PackageStatistics(values map[string]interface{}) string {
 		values["overviewPageURL"],
 		values["packageCount"],
 		values["standardPackageCount"],
-		values["sourceFileCount"], 	
+		values["sourceFileCount"],
 		values["goSourceFileCount"],
-		values["averageSourceFileCountPerPackage"], 
-		values["averageImportCountPerFile"], 	
+		values["averageSourceFileCountPerPackage"],
+		values["averageImportCountPerFile"],
 		values["averageDependencyCountPerPackage"],
 
-		values["gosourcefilesByImportsChartURL"], 
-		values["packagesByDependenciesChartURL"], 
+		values["gosourcefilesByImportsChartURL"],
+		values["packagesByDependenciesChartURL"],
 	)
 }
 
@@ -398,7 +407,8 @@ func (*Chinese) Text_TypeStatistics(values map[string]interface{}) string {
 
 		values["exportedstructtypesByExplicitfieldsChartURL"],
 		values["exportedstructtypesByExportedexplicitfieldsChartURL"],
-		values["exportedstructtypesByExportedfieldsChartURL"],
+		//values["exportedstructtypesByExportedfieldsChartURL"],
+		values["exportedstructtypesByExportedpromotedfieldsChartURL"],
 
 		values["exportedNamedNonInterfacesExportedMethodsPerExportedNonInterfaceType"],
 		values["exportedNamedInterfacesExportedMethodsPerExportedInterfaceType"],

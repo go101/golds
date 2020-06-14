@@ -214,6 +214,17 @@ func (*English) Text_UnexportedTypeNames(num int) string {
 	return "Unexported Type Names"
 }
 
+func (*English) Text_SortTypesBy(by string) string {
+	switch by {
+	case "popularity":
+		return "sort by popularity"
+	case "alphabet":
+		return "sort by alphabet"
+	default:
+		panic("unknown sort-by: " + by)
+	}
+}
+
 ///////////////////////////////////////////////////////////////////
 // package details page: type details
 ///////////////////////////////////////////////////////////////////
@@ -306,12 +317,12 @@ func (*English) Text_ChartTitle(chartName string) string {
 	//	return "Numbers of Exported Struct Types by All Field Counts"
 	case "exportedstructtypes-by-explicitfields":
 		return "Numbers of Exported Struct Types by Explicit Field Counts"
-	case "exportedstructtypes-by-exportedfields":
-		return "Numbers of Exported Struct Types by Exported (incl. Promoted) Field Counts"
+	//case "exportedstructtypes-by-exportedfields":
+	//	return "Numbers of Exported Struct Types by Exported (incl. Promoted) Field Counts"
 	case "exportedstructtypes-by-exportedexplicitfields":
 		return "Numbers of Exported Struct Types by Exported Explicit Field Counts"
-	//case "exportedstructtypes-by-exportedpromotedfields":
-	//	return "Numbers of Exported Struct Types by Exported Promoted Field Counts"
+	case "exportedstructtypes-by-exportedpromotedfields":
+		return "Numbers of Exported Struct Types by Exported Promoted Field Counts"
 	case "exportedfunctions-by-parameters":
 		return "Numbers of Exported Functions/Methods by Parameter Counts"
 	case "exportedfunctions-by-results":
@@ -361,14 +372,14 @@ func (*English) Text_PackageStatistics(values map[string]interface{}) string {
 		values["overviewPageURL"],
 		values["packageCount"],
 		values["standardPackageCount"],
-		values["sourceFileCount"], 	
+		values["sourceFileCount"],
 		values["goSourceFileCount"],
-		values["averageSourceFileCountPerPackage"], 
-		values["averageImportCountPerFile"], 	
+		values["averageSourceFileCountPerPackage"],
+		values["averageImportCountPerFile"],
 		values["averageDependencyCountPerPackage"],
 
-		values["gosourcefilesByImportsChartURL"], 
-		values["packagesByDependenciesChartURL"], 
+		values["gosourcefilesByImportsChartURL"],
+		values["packagesByDependenciesChartURL"],
 	)
 }
 
@@ -425,7 +436,8 @@ func (*English) Text_TypeStatistics(values map[string]interface{}) string {
 
 		values["exportedstructtypesByExplicitfieldsChartURL"],
 		values["exportedstructtypesByExportedexplicitfieldsChartURL"],
-		values["exportedstructtypesByExportedfieldsChartURL"],
+		//values["exportedstructtypesByExportedfieldsChartURL"],
+		values["exportedstructtypesByExportedpromotedfieldsChartURL"],
 
 		values["exportedNamedNonInterfacesExportedMethodsPerExportedNonInterfaceType"],
 		values["exportedNamedInterfacesExportedMethodsPerExportedInterfaceType"],
@@ -492,5 +504,3 @@ PR and bug reports are welcomed and can be submitted <a href="https://github.com
 		goldVersion,
 	)
 }
-
-

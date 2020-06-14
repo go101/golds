@@ -20,6 +20,12 @@ import (
 
 var _ = log.Print
 
+type packagePage struct {
+	content []byte
+
+	sortByPopularity bool
+}
+
 func (ds *docServer) packageDetailsPage(w http.ResponseWriter, r *http.Request, pkgPath string) {
 	w.Header().Set("Content-Type", "text/html")
 
@@ -34,23 +40,29 @@ func (ds *docServer) packageDetailsPage(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	if ds.packagePages[pkgPath] == nil {
+	sortByPopularity := r.FormValue("sortby") == "popularity"
+
+	if page, ok := ds.packagePages[pkgPath]; !ok || page.sortByPopularity != sortByPopularity {
 		// ToDo: not found
 
 		//details := ds.buildPackageDetailsData(pkgPath)
-		details := buildPackageDetailsData(ds.analyzer, pkgPath)
+		details := buildPackageDetailsData(ds.analyzer, pkgPath, sortByPopularity)
 		if details == nil {
 			w.WriteHeader(http.StatusNotFound)
 			fmt.Fprintf(w, "Package (%s) not found", pkgPath)
 			return
 		}
 
-		ds.packagePages[pkgPath] = ds.buildPackageDetailsPage(details)
+		ds.packagePages[pkgPath] = packagePage{
+			content: ds.buildPackageDetailsPage(details, sortByPopularity),
+
+			sortByPopularity: sortByPopularity,
+		}
 	}
-	w.Write(ds.packagePages[pkgPath])
+	w.Write(ds.packagePages[pkgPath].content)
 }
 
-func (ds *docServer) buildPackageDetailsPage(pkg *PackageDetails) []byte {
+func (ds *docServer) buildPackageDetailsPage(pkg *PackageDetails, sortByPopularity bool) []byte {
 	page := NewHtmlPage(ds.goldVersion, ds.currentTranslation.Text_Package(pkg.ImportPath), ds.currentTheme.Name(), pagePathInfo{ResTypePackage, pkg.ImportPath})
 
 	fmt.Fprintf(page, `
@@ -100,11 +112,26 @@ func (ds *docServer) buildPackageDetailsPage(pkg *PackageDetails) []byte {
 		goto WriteValues
 	}
 
-	fmt.Fprint(page, "\n\n", `<span class="title">`, ds.currentTranslation.Text_ExportedTypeNames(len(pkg.ExportedTypeNames)), `</span>`)
-	page.WriteByte('\n')
+	if genDocsMode {
+		page.WriteString("\n\n")
+		fmt.Fprintf(page, `<span class="title">%s</span>`, ds.currentTranslation.Text_ExportedTypeNames(len(pkg.ExportedTypeNames)))
+		page.WriteByte('\n')
+	} else {
+		var textSortByPopularity, textSortByAlphabet string
+		if sortByPopularity {
+			textSortByPopularity = ds.currentTranslation.Text_SortTypesBy("popularity")
+			textSortByAlphabet = fmt.Sprintf(`<a href="%s">%s</a>`, "?", ds.currentTranslation.Text_SortTypesBy("alphabet"))
+		} else {
+			textSortByPopularity = fmt.Sprintf(`<a href="%s">%s</a>`, "?sortby=popularity", ds.currentTranslation.Text_SortTypesBy("popularity"))
+			textSortByAlphabet = ds.currentTranslation.Text_SortTypesBy("alphabet")
+		}
+		page.WriteString("\n\n")
+		fmt.Fprintf(page, `<span class="title">%s (%s | %s)</span>`, ds.currentTranslation.Text_ExportedTypeNames(len(pkg.ExportedTypeNames)), textSortByPopularity, textSortByAlphabet)
+		page.WriteByte('\n')
+	}
 	for _, et := range pkg.ExportedTypeNames {
 		page.WriteString("\n")
-		fmt.Fprintf(page, `<div class="anchor" id="name-%s">`, et.TypeName.Name())
+		fmt.Fprintf(page, `<div class="anchor" id="name-%s" data-popularity="%d">`, et.TypeName.Name(), et.Popularity)
 		page.WriteByte('\t')
 		ds.writeResourceIndexHTML(page, et.TypeName, true, false)
 		if doc := et.TypeName.Documentation(); doc != "" {
@@ -301,11 +328,23 @@ type ExportedType struct {
 	//AsOutputsOf []code.ValueResource
 	AsInputsOf  []ValueForListing
 	AsOutputsOf []ValueForListing
+
+	Popularity int
+}
+
+// ToDo: adjust the coefficients
+func (et *ExportedType) calculatePopularity() {
+	et.Popularity = len(et.Values)*5 +
+		len(et.Methods)*25 +
+		len(et.Implements)*50 +
+		len(et.ImplementedBys)*150 +
+		len(et.AsInputsOf)*75 +
+		len(et.AsOutputsOf)*100
 }
 
 // ds should be locked before calling this method.
 //func (ds *docServer) buildPackageDetailsData(pkgPath string) *PackageDetails {
-func buildPackageDetailsData(analyzer *code.CodeAnalyzer, pkgPath string) *PackageDetails {
+func buildPackageDetailsData(analyzer *code.CodeAnalyzer, pkgPath string, sortByPopularity bool) *PackageDetails {
 	pkg := analyzer.PackageByPath(pkgPath)
 	if pkg == nil {
 		return nil
@@ -517,9 +556,16 @@ func buildPackageDetailsData(analyzer *code.CodeAnalyzer, pkgPath string) *Packa
 			et.Values = buildValueList(values)
 		}
 	}
+	for _, et := range exportedTypesResources {
+		et.calculatePopularity()
+	}
 	sort.Slice(exportedTypesResources, func(i, j int) bool {
-		// ToDo: cache lower names?
-		return strings.ToLower(exportedTypesResources[i].TypeName.Name()) < strings.ToLower(exportedTypesResources[j].TypeName.Name())
+		if sortByPopularity {
+			return exportedTypesResources[i].Popularity > exportedTypesResources[j].Popularity
+		} else {
+			// ToDo: cache lower names?
+			return strings.ToLower(exportedTypesResources[i].TypeName.Name()) < strings.ToLower(exportedTypesResources[j].TypeName.Name())
+		}
 	})
 	//sort.Slice(unexportedTypesResources, func(i, j int) bool {
 	//	// ToDo: cache lower names?

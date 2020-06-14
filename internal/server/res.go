@@ -26,7 +26,9 @@ type Translation interface {
 	Text_Analyzing() string
 	Text_AnalyzingRefresh(currentPageURL string) string // also used in other pages
 	Text_Analyzing_Start() string
-	Text_Analyzing_PreparationDone(d time.Duration) string
+	Text_Analyzing_Done(d time.Duration, memoryUse string) string
+
+	Text_Analyzing_PreparationDone(d time.Duration) string // ToDo: merge these into one?
 	Text_Analyzing_NFilesParsed(numFiles int, d time.Duration) string
 	Text_Analyzing_ParsePackagesDone(numFiles int, d time.Duration) string
 	Text_Analyzing_CollectPackages(numPkgs int, d time.Duration) string
@@ -39,7 +41,6 @@ type Translation interface {
 	Text_Analyzing_RegisterInterfaceMethodsForTypes(d time.Duration) string
 	Text_Analyzing_MakeStatistics(d time.Duration) string
 	Text_Analyzing_CollectSourceFiles(d time.Duration) string
-	Text_Analyzing_Done(d time.Duration, memoryUse string) string
 
 	// overview page
 	Text_Overview() string
@@ -62,7 +63,9 @@ type Translation interface {
 	Text_ExportedTypeNames(num int) string
 	Text_UnexportedTypeNames(num int) string // to use
 
-	Text_Fields(num int) string
+	Text_SortTypesBy(by string) string
+
+	Text_Fields(num int) string // ToDo: merge these into one?
 	Text_Methods(num int) string
 	Text_ImplementedBy(num int) string
 	Text_Implements(num int) string

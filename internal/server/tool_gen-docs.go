@@ -124,6 +124,13 @@ func RelativePath(a, b string) string {
 }
 
 // ToDo:
+//buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, "builtin"}, nil, "")+"#name-"+obj.Name()
+//=>
+//buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, "builtin"}, nil, "#", name-"+obj.Name())
+//
+//buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, "builtin"}, nil, "?", "key=value", "#")
+
+// ToDo:
 // path prefixes should be removed from srouce file paths.
 // * project root path
 // * module cache root path

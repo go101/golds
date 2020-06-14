@@ -74,7 +74,8 @@ func (ds *docServer) buildStatisticsData() []byte {
 
 		"exportedstructtypesByExplicitfieldsChartURL":         buildPageHref(page.PathInfo, pagePathInfo{ResTypeSVG, "exportedstructtypes-by-explicitfields"}, nil, ""),
 		"exportedstructtypesByExportedexplicitfieldsChartURL": buildPageHref(page.PathInfo, pagePathInfo{ResTypeSVG, "exportedstructtypes-by-exportedexplicitfields"}, nil, ""),
-		"exportedstructtypesByExportedfieldsChartURL":         buildPageHref(page.PathInfo, pagePathInfo{ResTypeSVG, "exportedstructtypes-by-exportedfields"}, nil, ""),
+		//"exportedstructtypesByExportedfieldsChartURL":         buildPageHref(page.PathInfo, pagePathInfo{ResTypeSVG, "exportedstructtypes-by-exportedfields"}, nil, ""),
+		"exportedstructtypesByExportedpromotedfieldsChartURL": buildPageHref(page.PathInfo, pagePathInfo{ResTypeSVG, "exportedstructtypes-by-exportedpromotedfields"}, nil, ""),
 
 		"exportedNamedNonInterfacesExportedMethodsPerExportedNonInterfaceType": float64(stats.ExportedNamedNonInterfacesExportedMethods) / float64(stats.ExportedNamedNonInterfacesWithExportedMethods),
 		"exportedNamedInterfacesExportedMethodsPerExportedInterfaceType":       float64(stats.ExportedNamedInterfacesExportedMethods) / float64(stats.ExportedTypeNamesByKind[reflect.Interface]),

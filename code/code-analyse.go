@@ -2152,6 +2152,9 @@ func (d *CodeAnalyzer) analyzePackage_CollectMoreStatistics(pkg *Package) {
 				d.stats.ExportedNamedStructTypeExportedExplicitFields += int32(numExportedExpliciteds)
 
 				incSliceStat(d.stats.ExportedNamedStructsByExportedPromotedFieldCount[:], numExportedPromoteds)
+				//if numExportedPromoteds >= 5 {
+				//	log.Println(numExportedPromoteds, tn.Package().Path(), tn.Name())
+				//}
 			}
 		}
 	}
