@@ -28,6 +28,10 @@ func Run() {
 	// This is used for updating Gold. It is invisible to users.
 	var roughBuildTimeFlag = flag.Bool("rough-build-time", false, "show rough build time")
 
+	flag.CommandLine.Usage = func() {
+		printUsage(os.Stdout)
+	}
+
 	flag.Parse()
 	if *hFlag || *helpFlag {
 		printUsage(os.Stdout)
@@ -65,6 +69,8 @@ func Run() {
 	var validateDiir = func(dir string) string {
 		if dir == "" {
 			dir = "."
+		} else if dir == "memory" {
+			dir = "" // not to save, for testing purpose.
 		} else {
 			dir = strings.TrimRight(dir, "\\/")
 			dir = strings.Replace(dir, "/", string(filepath.Separator), -1)
@@ -122,6 +128,7 @@ Options:
 		Specifiy the docs generation or file
 		serving diretory. Current directory
 		will be used if no arguments specified.
+		"memory" means not to save (for testing).
 	-port=ServicePort
 		Service port, default to 56789. If
 		the specified or default port is not
@@ -154,5 +161,7 @@ Examples:
 		Serving the files in working directory
 		without opening a browser window.
 `,
-		os.Args[0], Version)
+		filepath.Base(os.Args[0]),
+		Version,
+	)
 }

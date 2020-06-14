@@ -217,7 +217,7 @@ func createSourcefileImportsSVG(title string, stat []int32, xName func(i int) st
 				)
 			}
 
-			textY := barY + barH - 2
+			textY := barY + barH - 3
 			nameTextX := barX - barMarginLeft
 			nameText := xName(i)
 

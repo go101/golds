@@ -72,9 +72,11 @@ func (d *CodeAnalyzer) AnalyzePackages(onSubTaskDone func(int, time.Duration, ..
 
 	logProgress(SubTask_FindImplementations)
 
-	//ds.registerNamedInterfaceMethodsForInvolvedTypeNames()
+	for _, pkg := range d.packageList {
+		d.registerNamedInterfaceMethodsForInvolvedTypeNames(pkg)
+	}
 
-	//logProgress(SubTask_RegisterInterfaceMethodsForTypes)
+	logProgress(SubTask_RegisterInterfaceMethodsForTypes)
 
 	d.CollectSourceFiles()
 
@@ -133,16 +135,6 @@ func sortPackagesByDepLevels(pkgs []*Package) {
 }
 
 func (d *CodeAnalyzer) analyzePackages_FindImplementations() { // (resultMethodCache *typeutil.MethodSetCache) {
-
-	//
-
-	//2. search implementations
-	//a. 1st pass: collect all interface method signatures. Each interface method signature maintains a type list.
-	//   map[sigID][]*type
-	//b. 2nd pass: for each method of every type, if it is an interface method, register the type to the interface method
-	//c. 3rd pass: for each interface type, iterate its method, increase Type.counter (must be handled in a single thread)
-	//d. sort the implementations by package distances to the interface type. The shorter common prefixm the longer two packages distance.
-
 	// step 1: register all method signatures of underlying interface types.
 	//         create a type list for each signature.
 	// step 2: iteration all types, calculate their method signatures,
@@ -490,15 +482,6 @@ func (d *CodeAnalyzer) analyzePackages_FindImplementations() { // (resultMethodC
 // However, it looks the current implementation is fast enough.
 
 func (d *CodeAnalyzer) analyzePackages_FindImplementations_Old() (resultMethodCache *typeutil.MethodSetCache) {
-	//
-
-	//2. search implementations
-	//a. 1st pass: collect all interface method signatures. Each interface method signature maintains a type list.
-	//   map[sigID][]*type
-	//b. 2nd pass: for each method of every type, if it is an interface method, register the type to the interface method
-	//c. 3rd pass: for each interface type, iterate its method, increase Type.counter (must be handled in a single thread)
-	//d. sort the implementations by package distances to the interface type. The shorter common prefixm the longer two packages distance.
-
 	// step 1: register all method signatures of underlying interface types.
 	//         create a type list for each signature.
 	// step 2: iteration all types, calculate their method signatures,
@@ -796,11 +779,38 @@ func (d *CodeAnalyzer) registerNamedInterfaceMethodsForInvolvedTypeNames(pkg *Pa
 		}
 
 		t := tn.Denoting()
+		if _, ok := t.TT.Underlying().(*types.Interface); !ok {
+			continue
+		}
+
 		for _, sel := range t.AllMethods {
+			// need? registerFunctionForInvolvedTypeNames will also check it.
 			if !token.IsExported(sel.Name()) {
 				continue
 			}
 
+			sig, ok := sel.Method.Type.TT.(*types.Signature)
+			if !ok {
+				panic("impossible")
+			}
+
+			params, results := sig.Params(), sig.Results()
+			m, n := 0, 0
+			if params != nil {
+				m = params.Len()
+			}
+			if results != nil {
+				n = results.Len()
+			}
+			if m == 0 && n == 0 {
+				continue
+			}
+
+			im := &InterfaceMethod{
+				InterfaceTypeName: tn,
+				Method:            sel.Method,
+			}
+			_, _, _ = d.registerFunctionForInvolvedTypeNames(im)
 		}
 	}
 }
@@ -1930,6 +1940,18 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 		}
 	}
 
+	// We must do this after the methods of all interface types are collected.
+	//
+	// We must do the collection work after all types are collected.
+	//for _, t := range pkg.PackageAnalyzeResult.AllTypeNames {
+	//	itt, ok := t.Denoting().TT.Underlying().(*types.Interface)
+	//	if !ok {
+	//		continue
+	//	}
+	//
+	//	// ...
+	//}
+
 	//  We must do the collection work after all types are collected.
 	for _, f := range pkg.PackageAnalyzeResult.AllFunctions {
 		if f.Func != nil {
@@ -1966,6 +1988,7 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 		//}
 		numParams, numResults, lastResultIsError := d.registerFunctionForInvolvedTypeNames(f)
 
+		// ToDo: sometimes unexported ones are also needed to read code.
 		if f.Exported() {
 			if f.IsMethod() {
 				d.stats.ExportedMethods++

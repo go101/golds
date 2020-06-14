@@ -331,9 +331,23 @@ func (*English) Text_ChartTitle(chartName string) string {
 	}
 }
 
+func (*English) Text_StatisticsTitle(titleName string) string {
+	switch titleName {
+	case "packages":
+		return "Packages"
+	case "types":
+		return "Types"
+	case "values":
+		return "Values"
+	case "others":
+		return "Others"
+	default:
+		panic("unknown statistics tile: " + titleName)
+	}
+}
+
 func (*English) Text_PackageStatistics(values map[string]interface{}) string {
 	return fmt.Sprintf(`
-<pre><code><span class="title">Packages</span></code>
 	Total <a href="%s">%d packages</a>, %d of them are standard packages.
 	Total %d source files, %d of them are Go source files.
 	Averagely,
@@ -360,7 +374,6 @@ func (*English) Text_PackageStatistics(values map[string]interface{}) string {
 
 func (*English) Text_TypeStatistics(values map[string]interface{}) string {
 	return fmt.Sprintf(`
-<pre><code><span class="title">Types</span></code>
 	Total %d exported type names, %d of them are aliases.
 	In them, %d are composite types and %d are basic types.
 	In the basic types, %d are integers (%d are unsigneds).
@@ -424,7 +437,6 @@ func (*English) Text_TypeStatistics(values map[string]interface{}) string {
 
 func (*English) Text_ValueStatistics(values map[string]interface{}) string {
 	return fmt.Sprintf(`
-<pre><code><span class="title">Values</span></code>
 	Total %d exported variables and %d exported constants.
 
 	<img src="%s"></image>
@@ -458,7 +470,6 @@ func (*English) Text_ValueStatistics(values map[string]interface{}) string {
 
 func (*English) Text_Othertatistics(values map[string]interface{}) string {
 	return fmt.Sprintf(`
-<pre><code><span class="title">Others</span></code>
 	The average length of exported identifiers is %.2f.
 
 	<img src="%s"></image>

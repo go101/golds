@@ -306,9 +306,23 @@ func (*Chinese) Text_ChartTitle(chartName string) string {
 	}
 }
 
+func (*Chinese) Text_StatisticsTitle(titleName string) string {
+	switch titleName {
+	case "packages":
+		return "库包"
+	case "types":
+		return "类型"
+	case "values":
+		return "值（变量/常量/函数）"
+	case "others":
+		return "其它"
+	default:
+		panic("unknown statistics tile: " + titleName)
+	}
+}
+
 func (*Chinese) Text_PackageStatistics(values map[string]interface{}) string {
 	return fmt.Sprintf(`
-<pre><code><span class="title">库包</span></code>
 	共<a href="%s">%d个库包</a>，其中%d个是标准库包。
 	共%d个源文件，其中%d个为Go源文件。
 	平均说来：
@@ -335,7 +349,6 @@ func (*Chinese) Text_PackageStatistics(values map[string]interface{}) string {
 
 func (*Chinese) Text_TypeStatistics(values map[string]interface{}) string {
 	return fmt.Sprintf(`
-<pre><code><span class="title">类型</span></code>
 	共%d个导出类型名，其中%d个为类型别名。
 	它们中有%d个为组合类型、%d个为基本类型。
 	在基本类型中，%d个为整数型（其中%d个为无符号类型）。
@@ -397,7 +410,6 @@ func (*Chinese) Text_TypeStatistics(values map[string]interface{}) string {
 
 func (*Chinese) Text_ValueStatistics(values map[string]interface{}) string {
 	return fmt.Sprintf(`
-<pre><code><span class="title">Values</span></code>
 	共%d个导出变量和%d个导出常量。
 
 	<img src="%s"></image>
@@ -430,7 +442,6 @@ func (*Chinese) Text_ValueStatistics(values map[string]interface{}) string {
 
 func (*Chinese) Text_Othertatistics(values map[string]interface{}) string {
 	return fmt.Sprintf(`
-<pre><code><span class="title">Others</span></code>
 	输出标识符的平均长度为%.2f。
 
 	<img src="%s"></image>

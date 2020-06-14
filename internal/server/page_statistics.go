@@ -35,6 +35,7 @@ func (ds *docServer) buildStatisticsData() []byte {
 
 	stats := ds.analyzer.Statistics()
 
+	fmt.Fprintf(page, `<pre><code><span class="title">%s</span></code>`, ds.currentTranslation.Text_StatisticsTitle("packages"))
 	page.WriteString(ds.currentTranslation.Text_PackageStatistics(map[string]interface{}{
 		"overviewPageURL":                  buildPageHref(page.PathInfo, pagePathInfo{ResTypeNone, ""}, nil, ""),
 		"packageCount":                     stats.Packages,
@@ -49,6 +50,7 @@ func (ds *docServer) buildStatisticsData() []byte {
 		"packagesByDependenciesChartURL": buildPageHref(page.PathInfo, pagePathInfo{ResTypeSVG, "packages-by-dependencies"}, nil, ""),
 	}))
 
+	fmt.Fprintf(page, `<pre><code><span class="title">%s</span></code>`, ds.currentTranslation.Text_StatisticsTitle("types"))
 	page.WriteString(ds.currentTranslation.Text_TypeStatistics(map[string]interface{}{
 		"exportedTypeNameCount":      stats.ExportedTypeNames,
 		"exportedTypeAliases":        stats.ExportedTypeAliases,
@@ -81,6 +83,7 @@ func (ds *docServer) buildStatisticsData() []byte {
 		"exportedinterfacetypesByExportedmethodsChartURL":    buildPageHref(page.PathInfo, pagePathInfo{ResTypeSVG, "exportedinterfacetypes-by-exportedmethods"}, nil, ""),
 	}))
 
+	fmt.Fprintf(page, `<pre><code><span class="title">%s</span></code>`, ds.currentTranslation.Text_StatisticsTitle("values"))
 	page.WriteString(ds.currentTranslation.Text_ValueStatistics(map[string]interface{}{
 		"exportedVariables": stats.ExportedVariables,
 		"exportedConstants": stats.ExportedConstants,
@@ -99,6 +102,7 @@ func (ds *docServer) buildStatisticsData() []byte {
 		"exportedfunctionsByResultsChartURL":    buildPageHref(page.PathInfo, pagePathInfo{ResTypeSVG, "exportedfunctions-by-results"}, nil, ""),
 	}))
 
+	fmt.Fprintf(page, `<pre><code><span class="title">%s</span></code>`, ds.currentTranslation.Text_StatisticsTitle("others"))
 	page.WriteString(ds.currentTranslation.Text_Othertatistics(map[string]interface{}{
 		"averageIdentiferLength": float64(stats.ExportedIdentifersSumLength) / float64(stats.ExportedIdentifers),
 

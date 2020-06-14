@@ -1,10 +1,10 @@
 **Gold** is an experimental Go local docs server and Go docs generation tool.
 It tries to extract as much information as possible from Go code.
-**Gold** is expected to be helpful for reading only only Go docs, but also Go code.
+**Gold** is expected to be helpful to reading not only Go docs, but also Go code.
 
 ([Demo](https://docs.go101.org/index.html) and [FAQ](https://go101.org/article/tool-gold.html#faq))
 
-Please follow [Go100and1](https://twitter.com/go100and1) to get the latest news of **Gold**.
+Please follow [@Go100and1](https://twitter.com/go100and1) to get the latest news of **Gold**.
 
 ### Installation
 
@@ -20,12 +20,12 @@ depending on your Go Toolchain version and the directory in which the installati
 
 * Show type implemention relations.
 * Show promoted selectors, even on unexported embedded fields.
-* Rich code view experience (good for studying Go projects without opening IDEs).
+* Rich code view experiences (good for studying Go projects without opening IDEs).
 * JavaScript-off friendly.
 * Support generating static HTML docs pages (good for package developers to host docs of their packages).
 * Show code statistics.
 
-This tool is still in its early phase. More features will be supported from time to time.
+This tool is still in its early phase. More new features will be supported from time to time in future versions.
 
 ### Limitations
 

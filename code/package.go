@@ -114,6 +114,32 @@ type ValueResource interface {
 	TypeInfo(d *CodeAnalyzer) *TypeInfo
 }
 
+type FunctionResource interface {
+	ValueResource
+	IsMethod() bool
+	ReceiverTypeName() (paramField *ast.Field, typeIdent *ast.Ident, isStar bool)
+	AstFuncType() *ast.FuncType
+
+	// For *Function, the result is the same as ValueResource.Package().
+	// For *InterfaceMethod, this might be different (caused by embedding, or other reasons).
+	AstPackage() *Package
+}
+
+var (
+	_ FunctionResource = (*Function)(nil)
+	_ FunctionResource = (*InterfaceMethod)(nil)
+)
+
+type AstValueSpecOwner interface {
+	AstValueSpec() *ast.ValueSpec
+	Package() *Package
+}
+
+var (
+	_ AstValueSpecOwner = (*Variable)(nil)
+	_ AstValueSpecOwner = (*Constant)(nil)
+)
+
 type Attribute uint32
 
 const (
@@ -576,11 +602,6 @@ func (v *Variable) AstValueSpec() *ast.ValueSpec {
 	return v.AstSpec
 }
 
-type AstValueSpecOwner interface {
-	AstValueSpec() *ast.ValueSpec
-	Package() *Package
-}
-
 //func (v *Variable) IndexString() string {
 //	var b strings.Builder
 //
@@ -706,6 +727,85 @@ func (f *Function) ReceiverTypeName() (paramField *ast.Field, typeIdent *ast.Ide
 	}
 }
 
+func (f *Function) AstFuncType() *ast.FuncType {
+	return f.AstDecl.Type
+}
+
+func (f *Function) AstPackage() *Package {
+	return f.Package()
+}
+
+// As Function.
+type InterfaceMethod struct {
+	InterfaceTypeName *TypeName
+	Method            *Method // .AstFunc == nil, .AstInterface != nil
+
+	// ToDo: an interface method might have several ast sources,
+	//       so there should be multiple Methods ([]*Method).
+}
+
+func (im *InterfaceMethod) Name() string {
+	return im.Method.Name
+}
+
+func (im *InterfaceMethod) Exported() bool {
+	return token.IsExported(im.Name())
+}
+
+func (im *InterfaceMethod) Position() token.Position {
+	return im.Method.Pkg.PPkg.Fset.PositionFor(im.Method.AstField.Pos(), false)
+}
+
+func (im *InterfaceMethod) Documentation() string {
+	return im.Method.AstField.Doc.Text()
+}
+
+func (im *InterfaceMethod) Comment() string {
+	return im.Method.AstField.Comment.Text()
+}
+
+func (im *InterfaceMethod) Package() *Package {
+	return im.InterfaceTypeName.Pkg
+}
+
+func (im *InterfaceMethod) TType() types.Type {
+	return im.Method.Type.TT
+}
+
+func (im *InterfaceMethod) TypeInfo(d *CodeAnalyzer) *TypeInfo {
+	return im.Method.Type
+}
+
+func (im *InterfaceMethod) IsMethod() bool {
+	return true
+}
+
+func (im *InterfaceMethod) String() string {
+	// ToDo: show the inteface receiver in result.
+	return im.Method.Type.TT.String()
+}
+
+//func (im *InterfaceMethod) IndexString() string {
+//	var b strings.Builder
+//	b.WriteString(f.Name())
+//	b.WriteByte(' ')
+//	WriteType(&b, f.AstDecl.Type, f.Pkg.PPkg.TypesInfo, true)
+//	return b.String()
+//}
+
+// Please make sure the Funciton is a method when calling this method.
+func (im *InterfaceMethod) ReceiverTypeName() (paramField *ast.Field, typeIdent *ast.Ident, isStar bool) {
+	return nil, im.InterfaceTypeName.AstSpec.Name, false
+}
+
+func (im *InterfaceMethod) AstFuncType() *ast.FuncType {
+	return im.Method.AstField.Type.(*ast.FuncType)
+}
+
+func (im *InterfaceMethod) AstPackage() *Package {
+	return im.Method.Pkg
+}
+
 type MethodSignature struct {
 	Name string // must be an identifier other than "_"
 	Pkg  string // the import path, for unepxorted method names only
@@ -729,9 +829,9 @@ const (
 type Field struct {
 	astStruct    *ast.StructType
 	AstField     *ast.Field
-	astInterface *ast.InterfaceType // for embedding interface in interface
+	AstInterface *ast.InterfaceType // for embedding interface in interface
 
-	Pkg  *Package // nil for exported
+	Pkg  *Package // (nil for exported. ??? Seems not true.)
 	Name string
 	Type *TypeInfo
 
@@ -745,10 +845,10 @@ func (fld *Field) Position() token.Position {
 
 type Method struct {
 	AstFunc      *ast.FuncDecl      // for concrete methods
-	astInterface *ast.InterfaceType // for interface methods
+	AstInterface *ast.InterfaceType // for interface methods
 	AstField     *ast.Field         // for interface methods
 
-	Pkg  *Package // nil for exported
+	Pkg  *Package // (nil for exported. ??? Seems not true.)
 	Name string
 	Type *TypeInfo // ToDo: use custom struct including PointerRecv instead.
 

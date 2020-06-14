@@ -683,7 +683,8 @@ func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pk
 				ds.writeValueTType(page, res.TType(), specOwner.Package(), true, forTypeName)
 			}
 		}
-	case *code.Function:
+	//case *code.Function, *code.InterfaceMethod:
+	case code.FunctionResource:
 
 		page.WriteString("func ")
 		if vpkg := v.Package(); vpkg != pkg {
@@ -694,6 +695,7 @@ func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pk
 		}
 
 		if res.IsMethod() {
+			// note: recvParam might be nil for interface method.
 			recvParam, typeId, isStar := res.ReceiverTypeName()
 			if isStar {
 				if v.Package() != pkg {
@@ -715,11 +717,12 @@ func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pk
 				//fmt.Fprintf(page, "(%s) ", typeId.Name)
 			}
 
-			ds.writeSrouceCodeLineLink(page, v.Package(), pos, v.Name(), "", false)
+			//ds.writeSrouceCodeLineLink(page, v.Package(), pos, v.Name(), "", false)
+			ds.writeSrouceCodeLineLink(page, res.AstPackage(), pos, v.Name(), "", false)
 
 			//ds.WriteAstType(page, res.AstDecl.Type, res.Pkg, pkg, false, recvParam, forTypeName)
-			ds.WriteAstType(page, res.AstDecl.Type, res.Pkg, pkg, false, nil, forTypeName)
-			_ = recvParam
+			ds.WriteAstType(page, res.AstFuncType(), res.AstPackage(), pkg, false, nil, forTypeName)
+			_ = recvParam // might be nil for interface method.
 		} else {
 			if v.Package() != pkg {
 				//fmt.Fprintf(page, `<a href="/pkg:%[1]s#name-%[2]s">%[2]s</a>`, v.Package().Path(), v.Name())
@@ -728,7 +731,7 @@ func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pk
 				fmt.Fprintf(page, `<a href="#name-%[1]s">%[1]s</a>`, v.Name())
 			}
 
-			ds.WriteAstType(page, res.AstDecl.Type, res.Pkg, pkg, false, nil, forTypeName)
+			ds.WriteAstType(page, res.AstFuncType(), res.AstPackage(), pkg, false, nil, forTypeName)
 		}
 	}
 }

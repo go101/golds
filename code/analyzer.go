@@ -66,9 +66,11 @@ type CodeAnalyzer struct {
 	// Not concurrent safe.
 	tempTypeLookup map[uint32]struct{}
 
+	stats Stats
+
 	forbidRegisterTypes bool // for debug
 
-	stats Stats
+	debug bool
 }
 
 const KindCount = reflect.UnsafePointer + 1
@@ -406,10 +408,12 @@ func (d *CodeAnalyzer) iterateTypenames(typeLiteral ast.Expr, pkg *Package, onTy
 	case *ast.Ident:
 		tt := pkg.PPkg.TypesInfo.TypeOf(node)
 		if tt == nil {
+			// ToDo: good?
 			if pkg.Path() == "unsafe" {
 				return
 			}
-			log.Println("node:", node.Name)
+			log.Println("??? type of node is nil:", node.Name, pkg.Path())
+			return
 		}
 		typeInfo := d.RegisterType(tt)
 		if typeInfo.TypeName == nil {
@@ -782,7 +786,7 @@ func (d *CodeAnalyzer) registerExplicitlySpecifiedMethods(typeInfo *TypeInfo, as
 				Type: fieldTypeInfo,
 				Mode: embedMode,
 
-				astInterface: astInterfaceNode,
+				AstInterface: astInterfaceNode,
 				AstField:     method,
 			})
 
@@ -812,7 +816,7 @@ func (d *CodeAnalyzer) registerExplicitlySpecifiedMethods(typeInfo *TypeInfo, as
 
 				PointerRecv: false,
 
-				astInterface: astInterfaceNode,
+				AstInterface: astInterfaceNode,
 				AstField:     method,
 			})
 
@@ -888,11 +892,13 @@ func (d *CodeAnalyzer) registerExplicitlyDeclaredMethod(f *Function) {
 
 // ToDo: also register function variables?
 // Return parameter and result counts.
-func (d *CodeAnalyzer) registerFunctionForInvolvedTypeNames(f *Function) (ins, outs int, lastResultIsError bool) {
+//func (d *CodeAnalyzer) registerFunctionForInvolvedTypeNames(f *Function) (ins, outs int, lastResultIsError bool) {
+func (d *CodeAnalyzer) registerFunctionForInvolvedTypeNames(f FunctionResource) (ins, outs int, lastResultIsError bool) {
 	// ToDo: unepxorted function should also reged,
 	//       but then they should be filtered out when in listing.
 	notToReg := !f.Exported()
-	fType := f.AstDecl.Type
+	//fType := f.AstDecl.Type
+	fType := f.AstFuncType()
 
 	//log.Println("=========================", f.Pkg.Path(), f.Name())
 
@@ -906,7 +912,8 @@ func (d *CodeAnalyzer) registerFunctionForInvolvedTypeNames(f *Function) (ins, o
 			if notToReg {
 				continue
 			}
-			d.iterateTypenames(fld.Type, f.Pkg, func(t *TypeInfo) {
+			//d.iterateTypenames(fld.Type, f.Package(), func(t *TypeInfo) {
+			d.iterateTypenames(fld.Type, f.AstPackage(), func(t *TypeInfo) {
 				if t.TypeName == nil {
 					panic("shoud not")
 				}
@@ -919,7 +926,7 @@ func (d *CodeAnalyzer) registerFunctionForInvolvedTypeNames(f *Function) (ins, o
 				if t.AsInputsOf == nil {
 					t.AsInputsOf = make([]ValueResource, 0, 4)
 				}
-				t.AsInputsOf = append(t.AsInputsOf, f)
+				t.AsInputsOf = append(t.AsInputsOf, f.(ValueResource))
 			})
 		}
 	}
@@ -936,7 +943,8 @@ func (d *CodeAnalyzer) registerFunctionForInvolvedTypeNames(f *Function) (ins, o
 			if notToReg {
 				continue
 			}
-			d.iterateTypenames(fld.Type, f.Pkg, func(t *TypeInfo) {
+			//d.iterateTypenames(fld.Type, f.Package(), func(t *TypeInfo) {
+			d.iterateTypenames(fld.Type, f.AstPackage(), func(t *TypeInfo) {
 				if t.TypeName == nil {
 					panic("shoud not")
 				}
@@ -952,7 +960,7 @@ func (d *CodeAnalyzer) registerFunctionForInvolvedTypeNames(f *Function) (ins, o
 				if t.AsOutputsOf == nil {
 					t.AsOutputsOf = make([]ValueResource, 0, 4)
 				}
-				t.AsOutputsOf = append(t.AsOutputsOf, f)
+				t.AsOutputsOf = append(t.AsOutputsOf, f.(ValueResource))
 			})
 		}
 	}

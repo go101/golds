@@ -84,6 +84,7 @@ type Translation interface {
 	// statistics
 	Text_Statistics() string
 	Text_ChartTitle(chartName string) string
+	Text_StatisticsTitle(titleName string) string
 	Text_PackageStatistics(values map[string]interface{}) string
 	Text_TypeStatistics(values map[string]interface{}) string
 	Text_ValueStatistics(values map[string]interface{}) string

@@ -2,6 +2,7 @@
 
 ### Soon to do
 
+* html escape some doc texts
 * move stat title out of translation. (translations should not contain html)
 * implement registerNamedInterfaceMethodsForInvolvedTypeNames
 * enhance tests
@@ -75,6 +76,10 @@
 		"golang.org/x/sys/windows":                     true,
 		"golang.org/x/sys/windows/registry":            true,
 	}
+
+* also list unexported resources in code reading mode
+  * collect unexported functions for types (asInputs/asOutputs/...)
+  * ...
 
 * packakge list
   * show by alpha order / by importedBys / by dependency level
