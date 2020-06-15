@@ -11,6 +11,12 @@ import (
 	"go101.org/gold/code"
 )
 
+type overviewPage struct {
+	content []byte
+
+	sortBy string // "alphabet", "importedbys"
+}
+
 func (ds *docServer) overviewPage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 
@@ -34,14 +40,28 @@ func (ds *docServer) overviewPage(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if ds.theOverviewPage == nil {
-		overview := ds.buildOverviewData()
-		ds.theOverviewPage = ds.buildOverviewPage(overview)
+	var sortBy = r.FormValue("sortby")
+	switch sortBy {
+	case "alphabet", "importedbys":
+	default:
+		if ds.theOverviewPage != nil {
+			sortBy = ds.theOverviewPage.sortBy
+		} else {
+			sortBy = "alphabet"
+		}
 	}
-	w.Write(ds.theOverviewPage)
+
+	if ds.theOverviewPage == nil || sortBy != ds.theOverviewPage.sortBy {
+		overview := ds.buildOverviewData(sortBy)
+		ds.theOverviewPage = &overviewPage{
+			content: ds.buildOverviewPage(overview, sortBy),
+			sortBy:  sortBy,
+		}
+	}
+	w.Write(ds.theOverviewPage.content)
 }
 
-func (ds *docServer) buildOverviewPage(overview *Overview) []byte {
+func (ds *docServer) buildOverviewPage(overview *Overview, sortBy string) []byte {
 	page := NewHtmlPage(ds.goldVersion, ds.currentTranslation.Text_Overview(), ds.currentTheme.Name(), pagePathInfo{ResTypeNone, ""})
 	fmt.Fprintf(page, `
 <pre><code><span style="font-size:xx-large;">%s</span></code></pre>
@@ -55,19 +75,39 @@ func (ds *docServer) buildOverviewPage(overview *Overview) []byte {
 
 	ds.writeSimpleStatsBlock(page, &overview.Stats)
 
-	fmt.Fprintf(page, `
+	if genDocsMode {
+		fmt.Fprintf(page, `
 <pre><code><span class="title">%s</span></code>`,
-		ds.currentTranslation.Text_PackageList(),
-	)
+			ds.currentTranslation.Text_PackageList(),
+		)
+	} else {
+		var textSortByAlphabet = ds.currentTranslation.Text_SortByItem("alphabet")
+		var textSortByImportedBys = ds.currentTranslation.Text_SortByItem("importedbys")
 
-	ds.writePackagesForListing(page, overview.Packages, true, true)
+		switch sortBy {
+		case "alphabet":
+			textSortByImportedBys = fmt.Sprintf(`<a href="%s">%s</a>`, "?sortby=importedbys", textSortByImportedBys)
+		case "importedbys":
+			textSortByAlphabet = fmt.Sprintf(`<a href="%s">%s</a>`, "?sortby=alphabet", textSortByAlphabet)
+		}
+
+		fmt.Fprintf(page, `
+<pre><code><span class="title">%s (%s%s | %s)</span></code>`,
+			ds.currentTranslation.Text_PackageList(),
+			ds.currentTranslation.Text_SortBy(),
+			textSortByAlphabet,
+			textSortByImportedBys,
+		)
+	}
+
+	ds.writePackagesForListing(page, overview.Packages, true, true, sortBy)
 
 	page.WriteString("</pre>")
 
 	return page.Done(ds.currentTranslation)
 }
 
-func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*PackageForListing, writeAnchorTarget, inGenModeRootPages bool) {
+func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*PackageForListing, writeAnchorTarget, inGenModeRootPages bool, sortBy string) {
 	const MainPkgArrow = "m-&gt;"
 	const MainPkgArrowCharCount = 3
 	const MinPrefixSpacesCount = 3
@@ -77,9 +117,16 @@ func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*Package
 	}
 	var SPACES = strings.Repeat(" ", maxDigitCount+MainPkgArrowCharCount+MinPrefixSpacesCount+1) // +1 for space after MainPkgArrow
 
+	var maxDepLevel int32
+	for _, pkg := range packages {
+		if pkg.DepLevel > maxDepLevel {
+			maxDepLevel = pkg.DepLevel
+		}
+	}
+
 	for i, pkg := range packages {
 		if writeAnchorTarget {
-			fmt.Fprintf(page, `<div class="anchor" id="pkg-%s" data-importedbys="%d">`, pkg.Path, pkg.NumImportedBys)
+			fmt.Fprintf(page, `<div class="anchor" id="pkg-%s" data-importedbys="%d" data-dependencylevel="%d">`, pkg.Path, pkg.NumImportedBys, pkg.DepLevel)
 		} else {
 			page.WriteByte('\n')
 		}
@@ -124,6 +171,9 @@ func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*Package
 				pkg.Remaining,
 			)
 
+		}
+		if sortBy == "importedbys" {
+			fmt.Fprintf(page, ` <i>(%d)</i>`, pkg.NumImportedBys)
 		}
 		page.WriteString(`</code>`)
 		if writeAnchorTarget {
@@ -174,10 +224,11 @@ type PackageForListing struct {
 	Prefix    string // the part shared with the last one in list
 	Remaining string // the part different from the last one in list
 
-	NumImportedBys int
+	DepLevel       int32
+	NumImportedBys int32
 }
 
-func (ds *docServer) buildOverviewData() *Overview {
+func (ds *docServer) buildOverviewData(sortBy string) *Overview {
 	numPkgs := ds.analyzer.NumPackages()
 	var pkgs = make([]PackageForListing, numPkgs)
 	var result = make([]*PackageForListing, numPkgs)
@@ -195,15 +246,37 @@ func (ds *docServer) buildOverviewData() *Overview {
 		pkg.Name = p.PPkg.Name
 		pkg.Index = p.Index
 
-		pkg.NumImportedBys = len(p.DepedBys)
+		pkg.DepLevel = int32(p.DepLevel)
+		pkg.NumImportedBys = int32(len(p.DepedBys))
 	}
 
-	// ToDo: might be problematic sometimes. Should sort token by token.
-	sort.Slice(result, func(a, b int) bool {
-		return result[a].Path < result[b].Path
-	})
-
-	ImprovePackagesForListing(result)
+	switch sortBy {
+	case "alphabet":
+		// ToDo: might be problematic sometimes. Should sort token by token.
+		sort.Slice(result, func(a, b int) bool {
+			return result[a].Path < result[b].Path
+		})
+		ImprovePackagesForListing(result)
+	case "importedbys":
+		var pkgs = result
+		for i, pkg := range pkgs {
+			if pkg.Path == "builtin" {
+				pkg.NumImportedBys = int32(len(pkgs) - 1)
+				pkgs[0], pkgs[i] = pkg, pkgs[0]
+				pkgs = pkgs[1:]
+				break
+			}
+		}
+		sort.Slice(pkgs, func(a, b int) bool {
+			switch n := pkgs[a].NumImportedBys - pkgs[b].NumImportedBys; {
+			case n > 0:
+				return true
+			case n < 0:
+				return false
+			}
+			return pkgs[a].Path < pkgs[b].Path
+		})
+	}
 
 	return &Overview{
 		Packages: result,
@@ -224,7 +297,9 @@ func ImprovePackagesForListing(pkgs []*PackageForListing) {
 	}
 	for i := 1; i < len(pkgs); i++ {
 		current := pkgs[i]
-		current.Remaining = current.Remaining[len(current.Prefix):]
+		if len(current.Prefix) < len(current.Remaining) {
+			current.Remaining = current.Remaining[len(current.Prefix):]
+		}
 	}
 }
 

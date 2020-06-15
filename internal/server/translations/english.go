@@ -156,6 +156,40 @@ func (*English) Text_UpdateTip(tipName string) string {
 	return ""
 }
 
+func (*English) Text_SortBy() string {
+	return "sort by "
+}
+
+func (*English) Text_Filter() string {
+	return "show "
+}
+
+func (*English) Text_SortByItem(by string) string {
+	switch by {
+	case "alphabet":
+		return "alphabet"
+	case "popularity":
+		return "popularity"
+	case "importedbys":
+		return "imported-by count"
+	default:
+		panic("unknown sort-by: " + by)
+	}
+}
+
+func (*English) Text_FilterItem(fltr string) string {
+	switch fltr {
+	case "all":
+		return "all"
+	case "mainpackages":
+		return "main"
+	case "testingpackages":
+		return "testing"
+	default:
+		panic("unknown filter item: " + fltr)
+	}
+}
+
 ///////////////////////////////////////////////////////////////////
 // package details page: type details
 ///////////////////////////////////////////////////////////////////
@@ -212,17 +246,6 @@ func (*English) Text_ExportedTypeNames(num int) string {
 
 func (*English) Text_UnexportedTypeNames(num int) string {
 	return "Unexported Type Names"
-}
-
-func (*English) Text_SortTypesBy(by string) string {
-	switch by {
-	case "popularity":
-		return "sort by popularity"
-	case "alphabet":
-		return "sort by alphabet"
-	default:
-		panic("unknown sort-by: " + by)
-	}
 }
 
 ///////////////////////////////////////////////////////////////////

@@ -147,6 +147,40 @@ func (*Chinese) Text_UpdateTip(tipName string) string {
 	return ""
 }
 
+func (*Chinese) Text_SortBy() string {
+	return "排序依据："
+}
+
+func (*Chinese) Text_Filter() string {
+	return "列出："
+}
+
+func (*Chinese) Text_SortByItem(by string) string {
+	switch by {
+	case "alphabet":
+		return "按字母排序"
+	case "popularity":
+		return "按流行度排序"
+	case "importedbys":
+		return "按被引入量排序"
+	default:
+		panic("unknown sort-by: " + by)
+	}
+}
+
+func (*Chinese) Text_FilterItem(fltr string) string {
+	switch fltr {
+	case "all":
+		return "所有"
+	case "mainpackages":
+		return "main包"
+	case "testingpackages":
+		return "测试包"
+	default:
+		panic("unknown filter item: " + fltr)
+	}
+}
+
 ///////////////////////////////////////////////////////////////////
 // package details page: type details
 ///////////////////////////////////////////////////////////////////
@@ -193,15 +227,6 @@ func (*Chinese) Text_ExportedTypeNames(num int) string {
 
 func (*Chinese) Text_UnexportedTypeNames(num int) string {
 	return "非导出类型名"
-}
-
-func (*Chinese) Text_SortTypesBy(by string) string {
-	switch by {
-	case "popularity":
-		return "按流行度排序"
-	default:
-		return "按字母排序"
-	}
 }
 
 ///////////////////////////////////////////////////////////////////

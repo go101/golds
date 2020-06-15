@@ -47,7 +47,7 @@ type docServer struct {
 	analyzingLogs   []LoadingLogMessage
 
 	// Cached pages
-	theOverviewPage   []byte
+	theOverviewPage   *overviewPage
 	theStatisticsPage []byte
 	packagePages      map[string]packagePage
 	sourcePages       map[string][]byte

@@ -52,6 +52,11 @@ type Translation interface {
 	Text_RequireStat(numRequires, numRequiredBys int) string // to use
 	Text_UpdateTip(tipName string) string                    // tip names: "ToUpdate", "Updating", "Updated"
 
+	Text_SortBy() string                // also used in other pages
+	Text_Filter() string                // also used in other pages
+	Text_SortByItem(by string) string   // also used in other pages
+	Text_FilterItem(fltr string) string // also used in other pages
+
 	// package details page
 	Text_Package(pkgPath string) string
 	Text_BelongingPackage() string // also used in source code page
@@ -62,8 +67,6 @@ type Translation interface {
 	Text_ExportedValues(num int) string
 	Text_ExportedTypeNames(num int) string
 	Text_UnexportedTypeNames(num int) string // to use
-
-	Text_SortTypesBy(by string) string
 
 	Text_Fields(num int) string // ToDo: merge these into one?
 	Text_Methods(num int) string

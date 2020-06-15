@@ -3,6 +3,7 @@
 ### Soon to do
 
 * sort types by popularity
+  sort packages by dep level
   filter values (var | const | func)
 
 * html escape some doc texts

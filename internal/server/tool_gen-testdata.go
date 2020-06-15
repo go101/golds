@@ -86,7 +86,7 @@ func buildTestData(args []string, silent bool, printUsage func(io.Writer)) map[s
 	pkgTestDatas := make(map[string]TestData_Package, numPkgs)
 	for i := 0; i < numPkgs; i++ {
 		pkg := analyzer.PackageAt(i)
-		details := buildPackageDetailsData(&analyzer, pkg.Path(), false)
+		details := buildPackageDetailsData(&analyzer, pkg.Path(), "alphabet")
 		pkgTestDatas[pkg.Path()] = buildTestData_Package(details)
 
 		if !silent {

@@ -111,12 +111,12 @@ func (ds *docServer) buildPackageDependenciesPage(depInfo *PackageDependencyInfo
 
 	if len(depInfo.Imports) > 0 {
 		fmt.Fprint(page, "\n\n", `<span class="title">`, ds.currentTranslation.Text_Imports(), `</span>`)
-		ds.writePackagesForListing(page, depInfo.Imports, false, false)
+		ds.writePackagesForListing(page, depInfo.Imports, false, false, "")
 	}
 
 	if len(depInfo.ImportedBys) > 0 {
 		fmt.Fprint(page, "\n\n", `<span class="title" id="imported-by">`, ds.currentTranslation.Text_ImportedBy(), `</span>`)
-		ds.writePackagesForListing(page, depInfo.ImportedBys, false, false)
+		ds.writePackagesForListing(page, depInfo.ImportedBys, false, false, "")
 	}
 
 	return page.Done(ds.currentTranslation)
