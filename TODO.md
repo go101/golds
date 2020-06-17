@@ -2,9 +2,8 @@
 
 ### Soon to do
 
-* sort types by popularity
-  sort packages by dep level
-  filter values (var | const | func)
+* click interface method to multiple concrete methods
+* show identifier uses
 
 * html escape some doc texts
 * enhance tests
@@ -22,7 +21,7 @@
     filter types (interfaces)
     fitler packages (main | std)
     sort packages by importedBys
-    fitler packages (main | std)
+    fitler packages (all | main | std)
   * search on pkg details pages, and filter packages on overview page
   * click "package"/overview to switch theme/language
 
@@ -147,6 +146,7 @@
 
 ### Done
 
+* (done) sort types by popularity
 * (done) implement registerNamedInterfaceMethodsForInvolvedTypeNames
 * (done) move stat title out of translation. (translations should not contain html)
 * (done) stat:

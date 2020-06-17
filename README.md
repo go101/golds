@@ -1,9 +1,10 @@
 **Gold** is a Go local docs server, Go docs generator, and a Go code reader.
 It tries to extract as much information as possible from Go code to help gophers use and study Go packages.
 
-([Demo of the generated docs for standard packages](https://docs.go101.org/index.html) and [FAQ](https://go101.org/article/tool-gold.html#faq))
-
-Please follow [@Go100and1](https://twitter.com/go100and1) to get the latest news of **Gold**.
+* [Demo of the generated docs for standard packages](https://docs.go101.org/index.html)
+  (please note that the demo site lacks several features in the local server version).
+* [FAQ](https://go101.org/article/tool-gold.html#faq).
+* Please follow [@Go100and1](https://twitter.com/go100and1) to get the latest news of **Gold**.
 
 ### Installation
 
@@ -17,7 +18,7 @@ depending on your Go Toolchain version and the directory in which the installati
 
 ### Features
 
-* Support lists exported types not only by alphabet, but also by popularity, which is good to understanding some packages export many types.
+* Support lists exported types not only by alphabet, but also by popularity, which is good to understanding some packages exporting many types.
 * Rich type information collection:
   * Show type implemention relations ([demo 1](https://docs.go101.org/pkg/go/ast.html#name-Node) and [demo 2](https://docs.go101.org/pkg/bytes.html#name-Buffer)).
   * Show promoted selectors, even on unexported embedded fields ([demo](https://docs.go101.org/pkg:archive/zip#name-File)).

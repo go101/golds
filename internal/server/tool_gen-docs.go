@@ -8,7 +8,9 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"path"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -22,13 +24,15 @@ func init() {
 
 var (
 	genDocsMode    bool
+	goldVersion    string
 	pageHrefList   *list.List // elements are *string
 	resHrefs       map[pageResType]map[string]int
 	pageHrefsMutex sync.Mutex // in fact, for the current implementation, the lock is not essential
 )
 
-func enabledHtmlGenerationMod() {
+func enabledHtmlGenerationMod(goldVer string) {
 	genDocsMode = true
+	goldVersion = goldVer
 	pageHrefList = list.New()
 	resHrefs = make(map[pageResType]map[string]int, 8)
 }
@@ -123,6 +127,52 @@ func RelativePath(a, b string) string {
 	return DotDotSlashes(n) + b[len(c):]
 }
 
+// Return "" for invalid.
+// Assume the digits of major/minor/patch are all from 0 to 9.
+func PreviousVersion(version string) string {
+	vs := strings.SplitN(version, ".", 3)
+	if len(vs) < 3 {
+		return ""
+	}
+	if i := strings.Index(vs[2], "-"); i >= 0 {
+		vs[2] = vs[2][:i]
+	}
+	patch, err := strconv.Atoi(vs[2])
+	if err != nil {
+		return ""
+	}
+	if patch > 0 {
+		vs[2] = strconv.Itoa(patch-1)
+		return strings.Join(vs, ".")
+	}
+	minor, err := strconv.Atoi(vs[1])
+	if err != nil {
+		return ""
+	}
+	vs[2] = "9"
+	if minor > 0 {
+		vs[1] = strconv.Itoa(minor-1)
+		return strings.Join(vs, ".")
+	}
+	prefix := ""
+	for i := len(vs[0])-1; i >= 0; i-- {
+		if vs[0][i] < '0' || vs[0][i] > '9' {
+			prefix, vs[0] = vs[0][:i+1], vs[0][i+1:]
+			break
+		}
+	}
+	major, err := strconv.Atoi(vs[0])
+	if err != nil {
+		return ""
+	}
+	vs[1] = "9"
+	if major > 0 {
+		vs[0] = strconv.Itoa(major-1)
+		return prefix + vs[0] + "." + vs[1] + "." + vs[2]
+	}
+	return ""
+}
+
 // ToDo:
 //buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, "builtin"}, nil, "")+"#name-"+obj.Name()
 //=>
@@ -186,7 +236,6 @@ Generate:
 				return pathInfo.resPath + resType2ExtTable[pathInfo.resType]
 			}
 		} else {
-
 			return string(pathInfo.resType) + "/" + pathInfo.resPath + resType2ExtTable[pathInfo.resType]
 		}
 	}
@@ -216,13 +265,32 @@ Generate:
 			HrefPath: hrefNotForGenerating,
 			FilePath: generatedHref,
 		})
+		
+		if ext := filepath.Ext(generatedHref); ext != ".html" {
+			//dir, file := filepath.Split(generatedHref)
+			dir, file := path.Split(generatedHref)
+			if i := strings.LastIndex(file, goldVersion); i >= 0 {
+				version := goldVersion
+				for range [5]struct{}{} {
+					version = PreviousVersion(version)
+					if version == "" {
+						break
+					}
+
+					registerPageHref(genPageInfo{
+						HrefPath: hrefNotForGenerating,
+						FilePath: dir + file[:i] + version + file[i+len(goldVersion):] + ext,
+					})
+				}
+			}
+		}
 	}
 
 	return
 }
 
 func GenDocs(outputDir string, args []string, lang string, silent bool, goldVersion string, printUsage func(io.Writer), viewDocsCommand func(string) string) {
-	enabledHtmlGenerationMod()
+	enabledHtmlGenerationMod(goldVersion)
 	forTesting := outputDir == ""
 	silent = silent || forTesting
 	//

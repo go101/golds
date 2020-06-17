@@ -142,8 +142,8 @@ func (ds *docServer) buildPackageDetailsPage(pkg *PackageDetails, sortBy string)
 		fmt.Fprintf(page, `<span class="title">%s (%s%s | %s)</span>`,
 			ds.currentTranslation.Text_ExportedTypeNames(len(pkg.ExportedTypeNames)),
 			ds.currentTranslation.Text_SortBy(),
-			textSortByPopularity,
 			textSortByAlphabet,
+			textSortByPopularity,
 		)
 		page.WriteByte('\n')
 	}

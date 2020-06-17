@@ -11,7 +11,7 @@ import (
 )
 
 func init() {
-	enabledHtmlGenerationMod() // to test buildPageHref
+	enabledHtmlGenerationMod("0.0.0") // to test buildPageHref
 }
 
 func TestFindPackageCommonPrefixPaths(t *testing.T) {
@@ -119,6 +119,30 @@ func TestAssureSubsetStringSlice(t *testing.T) {
 		}
 		if err := assureSubsetStringSlice(tc.b, tc.a); (err == nil) != tc.isSubsetOfA {
 			t.Errorf("assure string slice subset not match: {a: %v, b: %v}", tc.b, tc.a)
+		}
+	}
+}
+
+func TestPreviousVersion(t *testing.T) {
+	type testCase struct {
+		version, previous string
+	}
+	var testCases = []testCase{
+		{"0.0.0", ""},
+		{"0.0.1", "0.0.0"},
+		{"0.0.1-pre", "0.0.0"},
+		{"0.0.x", ""},
+		{"0.1.1", "0.1.0"},
+		{"0.1.0", "0.0.9"},
+		{"1.1.0", "1.0.9"},
+		{"1.0.0", "0.9.9"},
+		{"v1.0.0", "v0.9.9"},
+		{"1.0.0-pre", "0.9.9"},
+		{"v1.0.0-pre", "v0.9.9"},
+	}
+	for _, tc := range testCases {
+		if PreviousVersion(tc.version) != tc.previous {
+			t.Errorf("wrong previous version (%s) for %s", tc.previous, tc.version)
 		}
 	}
 }
