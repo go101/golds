@@ -18,7 +18,7 @@ depending on your Go Toolchain version and the directory in which the installati
 
 ### Features
 
-* Support lists exported types not only by alphabet, but also by popularity, which is good to understanding some packages exporting many types.
+* Support listing exported types not only by alphabet, but also by popularity, which is good to understanding some packages exporting many types.
 * Rich type information collection:
   * Show type implemention relations ([demo 1](https://docs.go101.org/pkg/go/ast.html#name-Node) and [demo 2](https://docs.go101.org/pkg/bytes.html#name-Buffer)).
   * Show promoted selectors, even on unexported embedded fields ([demo](https://docs.go101.org/pkg:archive/zip#name-File)).
