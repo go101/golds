@@ -4,6 +4,9 @@
 
 * click interface method to multiple concrete methods
 * show identifier uses
+* sort packages: ab-cd should after ab/xy
+* search
+* ref list
 
 * html escape some doc texts
 * enhance tests
