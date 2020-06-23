@@ -584,7 +584,7 @@ func buildPackageDetailsData(analyzer *code.CodeAnalyzer, pkgPath string, sortBy
 			// ToDo: cache lower names?
 			return strings.ToLower(exportedTypesResources[i].TypeName.Name()) < strings.ToLower(exportedTypesResources[j].TypeName.Name())
 		})
-	case "importedbys":
+	case "popularity":
 		sort.Slice(exportedTypesResources, func(i, j int) bool {
 			return exportedTypesResources[i].Popularity > exportedTypesResources[j].Popularity
 		})
