@@ -116,7 +116,7 @@
   * click "type" keyword to unhide the source type definition.
     And show underlying type in a further click.
   * show the types with the same underlying type.
-  * embedding in n types
+  * as field types of, and embedded in n types
   * show comparable/embeddable or not. Fill TypeInfo.attributes.
   * all alias list
   * values which can be converted to (some functions can be used as (implicitly converted to) http.HandleFunc values, alike)    

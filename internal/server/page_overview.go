@@ -77,7 +77,7 @@ func (ds *docServer) buildOverviewPage(overview *Overview, sortBy string) []byte
 
 	if genDocsMode {
 		fmt.Fprintf(page, `
-<pre><code><span class="title">%s</span></code>`,
+<code><span class="title">%s</span></code>`,
 			ds.currentTranslation.Text_PackageList(),
 		)
 	} else {
@@ -92,7 +92,7 @@ func (ds *docServer) buildOverviewPage(overview *Overview, sortBy string) []byte
 		}
 
 		fmt.Fprintf(page, `
-<pre><code><span class="title">%s (%s%s | %s)</span></code>`,
+<code><span class="title">%s (%s%s | %s)</span></code>`,
 			ds.currentTranslation.Text_PackageList(),
 			ds.currentTranslation.Text_SortBy(),
 			textSortByAlphabet,

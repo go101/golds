@@ -20,14 +20,14 @@ depending on your Go Toolchain version and the directory in which the installati
 
 * Support listing exported types not only by alphabet, but also by popularity, which is good to understanding some packages exporting many types.
 * Rich type information collection:
-  * Show type implemention relations ([demo 1](https://docs.go101.org/pkg/go/ast.html#name-Node) and [demo 2](https://docs.go101.org/pkg/bytes.html#name-Buffer)).
-  * Show promoted selectors, even on unexported embedded fields ([demo](https://docs.go101.org/pkg/archive/zip.html#name-File)).
+  * Show type implemention relations ([demo 1](https://docs.go101.org/std/pkg/go/ast.html#name-Node) and [demo 2](https://docs.go101.org/std/pkg/bytes.html#name-Buffer)).
+  * Show promoted selectors, even on unexported embedded fields ([demo](https://docs.go101.org/std/pkg/archive/zip.html#name-File)).
   * Show as-parameters-of and as-results-of funciton/method list (including interface methods).
 * Smooth code view experiences (good for studying Go projects without opening IDEs):
   * Click a local identifier to highlight all the occurences of the identifier.
   * Click a reference to a non-local identifier to jump to the declaration of the non-local identifier, 
     and fell free to open pages in new browser windows as needed.
-* Show code statistics ([demo](https://docs.go101.org/statistics.html)).
+* Show code statistics ([demo](https://docs.go101.org/std/statistics.html)).
 * Support generating static HTML docs pages, to avoid rebuilding the docs later.
   And this is good for package developers to host docs of their packages.
 * JavaScript-off friendly.
