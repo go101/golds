@@ -779,6 +779,7 @@ func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pk
 				if v.Package() != pkg {
 					//fmt.Fprintf(page, `<a href="/pkg:%[1]s#name-%[2]s">%[2]s</a>.`, v.Package().Path(), typeId.Name)
 					buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, v.Package().Path()}, page, typeId.Name, "name-", typeId.Name)
+					page.WriteString(".")
 				} else {
 					fmt.Fprintf(page, `<a href="#name-%[1]s">%[1]s</a>.`, typeId.Name)
 				}
