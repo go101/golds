@@ -23,7 +23,12 @@ var _ = log.Print
 type packagePage struct {
 	content []byte
 
+	options packagePageOptions
+}
+
+type packagePageOptions struct {
 	sortBy string // "alphabet", "popularity"
+	filter string // "all", "exported"
 }
 
 func (ds *docServer) packageDetailsPage(w http.ResponseWriter, r *http.Request, pkgPath string) {
@@ -47,15 +52,31 @@ func (ds *docServer) packageDetailsPage(w http.ResponseWriter, r *http.Request, 
 	case "alphabet", "popularity":
 	default:
 		if ok {
-			sortBy = ds.theOverviewPage.sortBy
+			sortBy = page.options.sortBy
 		} else {
 			sortBy = "alphabet"
 		}
 	}
 
-	if !ok || page.sortBy != sortBy {
+	var filter = r.FormValue("filter")
+	switch filter {
+	case "all", "exporteds":
+	default:
+		if ok {
+			filter = page.options.filter
+		} else {
+			filter = "exporteds"
+		}
+	}
+
+	options := packagePageOptions{
+		sortBy: sortBy,
+		filter: filter,
+	}
+
+	if !ok || page.options != options {
 		//details := ds.buildPackageDetailsData(pkgPath)
-		details := buildPackageDetailsData(ds.analyzer, pkgPath, sortBy)
+		details := buildPackageDetailsData(ds.analyzer, pkgPath, options)
 		if details == nil {
 			w.WriteHeader(http.StatusNotFound)
 			fmt.Fprintf(w, "Package (%s) not found", pkgPath)
@@ -63,15 +84,14 @@ func (ds *docServer) packageDetailsPage(w http.ResponseWriter, r *http.Request, 
 		}
 
 		ds.packagePages[pkgPath] = packagePage{
-			content: ds.buildPackageDetailsPage(details, sortBy),
-
-			sortBy: sortBy,
+			content: ds.buildPackageDetailsPage(details, options),
+			options: options,
 		}
 	}
 	w.Write(ds.packagePages[pkgPath].content)
 }
 
-func (ds *docServer) buildPackageDetailsPage(pkg *PackageDetails, sortBy string) []byte {
+func (ds *docServer) buildPackageDetailsPage(pkg *PackageDetails, options packagePageOptions) []byte {
 	page := NewHtmlPage(ds.goldVersion, ds.currentTranslation.Text_Package(pkg.ImportPath), ds.currentTheme.Name(), pagePathInfo{ResTypePackage, pkg.ImportPath})
 
 	fmt.Fprintf(page, `
@@ -130,7 +150,7 @@ func (ds *docServer) buildPackageDetailsPage(pkg *PackageDetails, sortBy string)
 		page.WriteByte('\n')
 	} else {
 		var textSortByPopularity, textSortByAlphabet string
-		switch sortBy {
+		switch options.sortBy {
 		case "alphabet":
 			textSortByPopularity = fmt.Sprintf(`<a href="%s">%s</a>`, "?sortby=popularity", ds.currentTranslation.Text_SortByItem("popularity"))
 			textSortByAlphabet = ds.currentTranslation.Text_SortByItem("alphabet")
@@ -366,13 +386,15 @@ func (et *ExportedType) calculatePopularity() {
 
 // ds should be locked before calling this method.
 //func (ds *docServer) buildPackageDetailsData(pkgPath string) *PackageDetails {
-func buildPackageDetailsData(analyzer *code.CodeAnalyzer, pkgPath string, sortBy string) *PackageDetails {
+func buildPackageDetailsData(analyzer *code.CodeAnalyzer, pkgPath string, options packagePageOptions) *PackageDetails {
 	pkg := analyzer.PackageByPath(pkgPath)
 	if pkg == nil {
 		return nil
 	}
 
 	//analyzer.BuildCgoFileMappings(pkg)
+
+	alsoShowNonExporteds := options.filter == "all"
 
 	isBuiltin := pkgPath == "builtin"
 
@@ -449,7 +471,7 @@ func buildPackageDetailsData(analyzer *code.CodeAnalyzer, pkgPath string, sortBy
 	var exportedTypesResources = make([]*ExportedType, 0, len(pkg.PackageAnalyzeResult.AllTypeNames))
 	//var unexportedTypesResources = make([]*code.TypeName, 0, len(pkg.PackageAnalyzeResult.AllTypeNames))
 	for _, tn := range pkg.PackageAnalyzeResult.AllTypeNames {
-		if tn.Exported() {
+		if alsoShowNonExporteds || tn.Exported() {
 			denoting := tn.Denoting()
 			et := &ExportedType{TypeName: tn}
 			exportedTypesResources = append(exportedTypesResources, et)
@@ -467,18 +489,18 @@ func buildPackageDetailsData(analyzer *code.CodeAnalyzer, pkgPath string, sortBy
 			et.Implements = make([]TypeForListing, 0, len(denoting.Implements))
 
 			for _, mthd := range denoting.AllMethods {
-				if token.IsExported(mthd.Name()) {
+				if alsoShowNonExporteds || token.IsExported(mthd.Name()) {
 					et.Methods = append(et.Methods, mthd)
 				}
 			}
 			for _, fld := range denoting.AllFields {
-				if token.IsExported(fld.Name()) {
+				if alsoShowNonExporteds || token.IsExported(fld.Name()) {
 					et.Fields = append(et.Fields, fld)
 				}
 			}
 			for _, impledBy := range denoting.ImplementedBys {
 				bytn, isPointer := analyzer.RetrieveTypeName(impledBy)
-				if bytn != nil && bytn != tn && bytn.Exported() {
+				if bytn != nil && bytn != tn && (alsoShowNonExporteds || bytn.Exported()) {
 					et.ImplementedBys = append(et.ImplementedBys, TypeForListing{
 						TypeName:  bytn,
 						IsPointer: isPointer,
@@ -490,7 +512,7 @@ func buildPackageDetailsData(analyzer *code.CodeAnalyzer, pkgPath string, sortBy
 				//	et.Implements = append(et.Implements, impl)
 				//}
 				// Might miss: interface {Unwrap() error}
-				if itn := impl.Interface.TypeName; itn != nil && itn.Exported() {
+				if itn := impl.Interface.TypeName; itn != nil && (alsoShowNonExporteds || itn.Exported()) {
 					_, isPointer := impl.Impler.TT.(*types.Pointer)
 					et.Implements = append(et.Implements, TypeForListing{
 						TypeName:  itn,
@@ -582,7 +604,7 @@ func buildPackageDetailsData(analyzer *code.CodeAnalyzer, pkgPath string, sortBy
 		et.calculatePopularity()
 	}
 
-	switch sortBy {
+	switch options.sortBy {
 	case "alphabet":
 		sort.Slice(exportedTypesResources, func(i, j int) bool {
 			// ToDo: cache lower names?
