@@ -352,12 +352,16 @@ type ExportedType struct {
 
 // ToDo: adjust the coefficients
 func (et *ExportedType) calculatePopularity() {
-	et.Popularity = len(et.Values)*5 +
-		len(et.Methods)*25 +
+	numValues := len(et.Values)
+	if numValues > 3 {
+		numValues = 3
+	}
+	et.Popularity = numValues*5 +
+		len(et.Methods)*50 +
 		len(et.Implements)*50 +
 		len(et.ImplementedBys)*150 +
-		len(et.AsInputsOf)*75 +
-		len(et.AsOutputsOf)*100
+		len(et.AsInputsOf)*35 +
+		len(et.AsOutputsOf)*75
 }
 
 // ds should be locked before calling this method.
@@ -649,8 +653,9 @@ func (ds *docServer) sortValueList(valueList []ValueForListing, pkg *code.Packag
 	}
 
 	compareWithoutPackges := func(a, b *ValueForListing) bool {
-		fa, oka := a.ValueResource.(*code.Function)
-		fb, okb := b.ValueResource.(*code.Function)
+		fa, oka := a.ValueResource.(code.FunctionResource)
+		fb, okb := b.ValueResource.(code.FunctionResource)
+
 		if oka && okb {
 			if p, q := fa.IsMethod(), fb.IsMethod(); p && q {
 				_, ida, _ := fa.ReceiverTypeName()

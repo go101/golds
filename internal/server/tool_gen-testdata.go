@@ -64,7 +64,8 @@ func buildTestData_Package(details *PackageDetails) TestData_Package {
 			varNames = append(varNames, v.Name())
 		case *code.Constant:
 			constNames = append(constNames, v.Name())
-		case *code.Function:
+		//case *code.Function:
+		case code.FunctionResource:
 			funcNames = append(funcNames, v.Name())
 		}
 	}

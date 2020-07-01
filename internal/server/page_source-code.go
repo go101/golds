@@ -1140,9 +1140,10 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 	}
 
 	objPos := objPkg.PPkg.Fset.PositionFor(obj.Pos(), false)
+
 	//objPos.Line += v.dataAnalyzer.SourceFileLineOffset(objPos.Filename)
 	//v.correctPosition(&objPos)
-	objPos.Filename = v.dataAnalyzer.OriginalGoSourceFile(objPos.Filename) // import for the following if-condition
+	//objPos.Filename = v.dataAnalyzer.OriginalGoSourceFile(objPos.Filename)
 
 	//log.Println(ident.Name, " >>> v.topLevelFuncNode == nil?", v.topLevelFuncNode == nil)
 
