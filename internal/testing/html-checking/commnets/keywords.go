@@ -63,3 +63,28 @@ func foo() {
 		_ = a
 	}
 }
+
+func foo2() {
+	if true {
+	}/*aaa*//*bbbb else*/else {
+	}
+
+	for /*aaa*///bbb
+/*ccc*//*dddd*/
+//eeee	range
+	range [3]int{} {}
+	
+	switch func() interface{} {
+		return interface{}(1)
+	}().(/*aaa*//*bbbb*///cccc
+//ddd type
+/*eee
+
+*///fff type
+		type/*ggg*/ ) {
+	}
+}
+
+/*dddd*//*dddddd
+*/// aaaaa
+

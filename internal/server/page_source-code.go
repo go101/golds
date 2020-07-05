@@ -749,22 +749,25 @@ var (
 	StarSlash = []byte("*/")
 )
 
-func (v *astVisitor) findToken(start, maxPos token.Pos, token string) *KeywordToken {
+func (v *astVisitor) findTokenBetween(start, maxPos token.Pos, token string, returnFirst bool) *KeywordToken {
 	offset := v.file.Offset(start)
 	max := v.file.Offset(maxPos)
 
+	var min = offset
+	var lastMatchOffset = -1
 Loop:
 	for ; offset < max; offset++ {
 		//log.Println("#", offset, max)
 		switch v.content[offset] {
 		case '/':
-			if v.content[offset-1] == '/' {
+			if offset-1 >= min && v.content[offset-1] == '/' {
 				index := bytes.IndexByte(v.content[offset+1:], '\n')
 				if index < 0 {
 					break Loop
 				}
 				//offset = (offset + 1) + index + 1 - 1
-				offset += index + 1
+				min = offset + 1 + index + len("\n")
+				offset = min - 1
 				//log.Println(" 111: ", offset)
 			}
 		case '*':
@@ -775,7 +778,8 @@ Loop:
 				}
 				//log.Println(" 222: ", offset, index, index+len(StarSlash)-1)
 				//offset = (offset+1) + index + len(StarSlash) - 1
-				offset += index + len(StarSlash)
+				min = offset + 1 + index + len(StarSlash)
+				offset = min - 1
 			}
 		case token[0]:
 			if offset+len(token) > max {
@@ -783,13 +787,21 @@ Loop:
 			}
 
 			if string(v.content[offset:offset+len(token)]) == token {
-				return &KeywordToken{
-					keyword: token,
-					pos:     v.file.Pos(offset),
+				lastMatchOffset = offset
+				if returnFirst {
+					break Loop
 				}
-			}
 
-			break Loop
+				min = offset + len(token)
+				offset = min - 1
+			}
+		}
+	}
+
+	if lastMatchOffset >= 0 {
+		return &KeywordToken{
+			keyword: token,
+			pos:     v.file.Pos(lastMatchOffset),
 		}
 	}
 
@@ -797,7 +809,8 @@ Loop:
 }
 
 func (v *astVisitor) findElseToken(ifstmt *ast.IfStmt) *KeywordToken {
-	return v.findToken(ifstmt.Body.End(), ifstmt.Else.Pos(), "else")
+	// There might be some comments between ...
+	return v.findTokenBetween(ifstmt.Body.End(), ifstmt.Else.Pos(), "else", true)
 }
 
 func (v *astVisitor) findRangeToken(rangeStmt *ast.RangeStmt) *KeywordToken {
@@ -805,7 +818,13 @@ func (v *astVisitor) findRangeToken(rangeStmt *ast.RangeStmt) *KeywordToken {
 	if rangeStmt.Key != nil {
 		pos = rangeStmt.TokPos + token.Pos(len(rangeStmt.Tok.String()))
 	}
-	return v.findToken(pos, rangeStmt.X.Pos(), "range")
+	// There might be some comments between ...
+	return v.findTokenBetween(pos, rangeStmt.X.Pos(), "range", true)
+}
+
+func (v *astVisitor) findTypeToken(typeswitchStmt *ast.TypeSwitchStmt) *KeywordToken {
+	// There might be some comments before ...
+	return v.findTokenBetween(typeswitchStmt.Assign.Pos(), typeswitchStmt.Assign.End(), "type", false)
 }
 
 func (v *astVisitor) Visit(n ast.Node) (w ast.Visitor) {
@@ -889,6 +908,9 @@ func (v *astVisitor) Visit(n ast.Node) (w ast.Visitor) {
 		v.handleKeyword(node.Package, token.PACKAGE)
 	case *ast.SwitchStmt:
 		v.handleKeyword(node.Switch, token.SWITCH)
+	case *ast.TypeSwitchStmt:
+		v.handleKeyword(node.Switch, token.SWITCH)
+		v.addSpecialNode(v.findTypeToken(node))
 	case *ast.SelectStmt:
 		//v.handleKeyword(node.Select, token.SELECT)
 
@@ -992,7 +1014,7 @@ func (v *astVisitor) Visit(n ast.Node) (w ast.Visitor) {
 			v.addSpecialNode(v.findElseToken(node))
 		}
 	case *ast.ForStmt:
-		v.handleKeyword(node.For, token.IF)
+		v.handleKeyword(node.For, token.FOR)
 	case *ast.RangeStmt:
 		v.handleKeyword(node.For, token.FOR)
 		//v.pendingTokenPoses = append(v.pendingTokenPoses, v.findRangeToken(node))
@@ -1015,7 +1037,7 @@ func (v *astVisitor) Visit(n ast.Node) (w ast.Visitor) {
 		//v.handleKeyword(node.Begin, token.CHAN)
 		chanPos := node.Begin
 		if chanPos == node.Arrow {
-			chanPos = v.findToken(node.Arrow, node.End(), "chan").pos
+			chanPos = v.findTokenBetween(node.Arrow, node.End(), "chan", true).pos
 		}
 		v.handleKeyword(chanPos, token.CHAN)
 	// ...
@@ -1061,8 +1083,10 @@ func (v *astVisitor) handleKeywordToken(pos token.Pos, token string) {
 }
 
 func (v *astVisitor) handleToken(pos token.Pos, token, class, link string) {
+
 	length := len(token)
 	start := v.fset.PositionFor(pos, false)
+
 	//v.correctPosition(&start)
 	end := start
 	end.Column += length
@@ -1227,6 +1251,10 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 		case scp == nil: // methods or fields
 			// For embedded ones, click to type declarations.
 			// For non-embedded ones, click to show reference list.
+
+			// ToDo: if isMethod: click to show all implemented methods.
+			//       or click to open a new page which list all implemented methods.
+
 		case scp.Parent() == types.Universe: // package-level elements
 			if obj.Exported() {
 				//v.buildIdentifier(start, end, -1, "/pkg:"+objPkgPath+"#name-"+obj.Name())
