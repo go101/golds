@@ -6,7 +6,7 @@ func (*Light) Name() string { return "light" }
 
 func (*Light) CSS() string {
 	return `
-body {color: #333; font-family:"Courier New", Courier, monospace;}
+body {color: #333; font-family: {{ .Fonts }};}
 .grey {color: #ccc;}
 a {color: #079;}
 a.path-duplicate {color: #9cd;}
@@ -22,15 +22,15 @@ input + label + .stat-content {display: none;}
 input:checked + label + .stat-content {display: inline;}
 input + label:before {content: "+ ";}
 input:checked + label:before {content: "- ";}
-input:checked + label:after {content: ":";}
+input:checked + label:after {content: "{{ .Colon }}";}
 
-.title:after {content: ":";}
+.title:after {content: "{{ .Colon }}";}
 
 /* code page */
 pre.line-numbers {
 	counter-reset: line;
 }
-pre.line-numbers span.anchor {
+pre.line-numbers span.codeline {
 	counter-increment: line;
 	margin-left: 44pt;
 	tab-size: 7;
@@ -38,7 +38,7 @@ pre.line-numbers span.anchor {
 	-moz-tab-size: 7;
 	-ms-tab-size: 7;
 }
-pre.line-numbers span.anchor:before {
+pre.line-numbers span.codeline:before {
 	display: inline-block;
 	text-align:right;
 	position: absolute;
@@ -56,8 +56,9 @@ pre.line-numbers span.anchor:before {
 hr {color: #888;}
 
 .anchor {}
+.codeline {}
 
-.anchor:target {border-top: 2px solid #D4D4D4; border-bottom: 2px solid #D4D4D4; background-color: #e5eecc;}
+.codeline:target, .anchor:target {border-top: 2px solid #D4D4D4; border-bottom: 2px solid #D4D4D4; background-color: #e5eecc;}
 
 code .ident {color: blue;}
 code .id-type {color: blue;}

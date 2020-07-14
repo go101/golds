@@ -75,9 +75,10 @@ func (ds *docServer) buildOverviewPage(overview *Overview, sortBy string) []byte
 
 	ds.writeSimpleStatsBlock(page, &overview.Stats)
 
+	page.WriteString("<pre>")
+
 	if genDocsMode {
-		fmt.Fprintf(page, `
-<code><span class="title">%s</span></code>`,
+		fmt.Fprintf(page, `<code><span class="title">%s</span></code>`,
 			ds.currentTranslation.Text_PackageList(),
 		)
 	} else {
@@ -91,8 +92,7 @@ func (ds *docServer) buildOverviewPage(overview *Overview, sortBy string) []byte
 			textSortByAlphabet = fmt.Sprintf(`<a href="%s">%s</a>`, "?sortby=alphabet", textSortByAlphabet)
 		}
 
-		fmt.Fprintf(page, `
-<code><span class="title">%s (%s%s | %s)</span></code>`,
+		fmt.Fprintf(page, `<code><span class="title">%s (%s%s | %s)</span></code>`,
 			ds.currentTranslation.Text_PackageList(),
 			ds.currentTranslation.Text_SortBy(),
 			textSortByAlphabet,
@@ -202,7 +202,8 @@ func (ds *docServer) writeSimpleStatsBlock(page *htmlPage, stats *code.Stats) {
 	moreLink := buildPageHref(page.PathInfo, pagePathInfo{ResTypeNone, "statistics"}, nil, "")
 	fmt.Fprintf(page, `
 <pre><code><span class="title">%s</span></code>
-	%s`,
+	%s
+</pre>`,
 		ds.currentTranslation.Text_StatisticsWithMoreLink(moreLink),
 		text,
 	)

@@ -19,6 +19,12 @@ type Translation interface {
 	Name() string
 	LangTag() string
 
+	// common
+	Text_Comma() string
+	Text_Colon() string
+	Text_Period(paragraphEnd bool) string
+	Text_PreferredFontList() string
+
 	// server
 	Text_Server_Started() string
 
@@ -66,7 +72,8 @@ type Translation interface {
 	Text_InvolvedFiles(num int) string
 	Text_ExportedValues(num int) string
 	Text_ExportedTypeNames(num int) string
-	Text_UnexportedTypeNames(num int) string // to use
+	Text_AllPackageLevelTypeNames(num int) string
+	Text_TypeNameListShowOption(exportedsOnly bool) string
 
 	Text_Fields(num int) string // ToDo: merge these into one?
 	Text_Methods(num int) string

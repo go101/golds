@@ -2,13 +2,21 @@
 
 ### Soon to do
 
-* click interface method to multiple concrete methods
-* show identifier uses
+* show code example (as source code)
+  * run source code, run main package, run main file
+* click interface method to show multiple concrete methods.
+  Open a new page to avoid using JavaScropt?
+* click a field to show all the assignments to it (inc. explicits and implicits)
+* show identifier uses/references (open in new window)
 * sort packages: ab-cd should after ab/xy
 * search
-* ref list
+* add links in import sections
+* show *** for unexproted
+  * ...
+* show non-exporteds for main packages, show main func entry "m->" before source file
 
 * html escape some doc texts
+  use htmp.Escape
 * enhance tests
   * test by ast comments
 * css style
@@ -27,6 +35,15 @@
     fitler packages (all | main | std)
   * search on pkg details pages, and filter packages on overview page
   * click "package"/overview to switch theme/language
+
+* Rewrite some implemenrations
+  * global.pacakgeList, each pkg has a unique id (int32)
+  * global.functionProtoypes, each has a unique id (int32)
+  * global.identifierList, each has unique id
+  * global.selectorNameIds {pkgId, identId int32}
+  * global.methodPrototypes {selNameId, funcProtoId}, each correspods a unique id (int32(
+  * global.method2typesTable map[methodProtoId][]*type. All the []*type share a common big []*type slice.
+    The length of the big slice is sum(type[i].methodCount)
 
 ### More to do
 

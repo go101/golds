@@ -136,7 +136,7 @@ func (ds *docServer) buildSourceCodePage(result *SourceFileAnalyzeResult) []byte
 		if lineNumber == result.DocStartLine {
 			page.WriteString(`<div class="anchor" id="doc">`)
 		}
-		fmt.Fprintf(page, `<span class="anchor" id="line-%d"><code>%s</code></span>`, lineNumber, line)
+		fmt.Fprintf(page, `<span class="codeline" id="line-%d"><code>%s</code></span>`, lineNumber, line)
 		if lineNumber == result.DocEndLine {
 			page.WriteString(`</div>`)
 			outputNewLine = false

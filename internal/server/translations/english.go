@@ -14,6 +14,24 @@ func (*English) Name() string { return "English" }
 func (*English) LangTag() string { return "en-US" }
 
 ///////////////////////////////////////////////////////////////////
+// common
+///////////////////////////////////////////////////////////////////
+
+func (*English) Text_Comma() string { return ", " }
+
+func (*English) Text_Colon() string { return ":" }
+
+func (*English) Text_Period(paragraphEnd bool) string {
+	if paragraphEnd {
+		return "."
+	} else {
+		return ". "
+	}
+}
+
+func (*English) Text_PreferredFontList() string { return `"Courier New", Courier, monospace` }
+
+///////////////////////////////////////////////////////////////////
 // server
 ///////////////////////////////////////////////////////////////////
 
@@ -244,8 +262,16 @@ func (*English) Text_ExportedTypeNames(num int) string {
 	return "Exported Type Names"
 }
 
-func (*English) Text_UnexportedTypeNames(num int) string {
-	return "Unexported Type Names"
+func (*English) Text_AllPackageLevelTypeNames(num int) string {
+	return "Package-Level Type Names"
+}
+
+func (*English) Text_TypeNameListShowOption(exportedsOnly bool) string {
+	if exportedsOnly {
+		return "only show exported types"
+	} else {
+		return "also show unexported types"
+	}
 }
 
 ///////////////////////////////////////////////////////////////////

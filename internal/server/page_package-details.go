@@ -58,7 +58,7 @@ func (ds *docServer) packageDetailsPage(w http.ResponseWriter, r *http.Request, 
 		}
 	}
 
-	var filter = r.FormValue("filter")
+	var filter = r.FormValue("show")
 	switch filter {
 	case "all", "exporteds":
 	default:
@@ -149,18 +149,37 @@ func (ds *docServer) buildPackageDetailsPage(pkg *PackageDetails, options packag
 		fmt.Fprintf(page, `<span class="title">%s</span>`, ds.currentTranslation.Text_ExportedTypeNames(len(pkg.ExportedTypeNames)))
 		page.WriteByte('\n')
 	} else {
-		var textSortByPopularity, textSortByAlphabet string
+		var textTypeNames, filterLinkText, filterQuery, filterQuery2 string
+		switch options.filter {
+		case "exporteds":
+			textTypeNames = ds.currentTranslation.Text_ExportedTypeNames(len(pkg.ExportedTypeNames))
+			filterLinkText = ds.currentTranslation.Text_TypeNameListShowOption(false)
+			filterQuery = "&show=exporteds"
+			filterQuery2 = "&show=all"
+		case "all":
+			textTypeNames = ds.currentTranslation.Text_AllPackageLevelTypeNames(len(pkg.ExportedTypeNames))
+			filterLinkText = ds.currentTranslation.Text_TypeNameListShowOption(true)
+			filterQuery = "&show=all"
+			filterQuery2 = "&show=exporteds"
+		}
+
+		var textSortByPopularity, textSortByAlphabet, textFilter string
 		switch options.sortBy {
 		case "alphabet":
-			textSortByPopularity = fmt.Sprintf(`<a href="%s">%s</a>`, "?sortby=popularity", ds.currentTranslation.Text_SortByItem("popularity"))
+			textSortByPopularity = fmt.Sprintf(`<a href="%s%s">%s</a>`, "?sortby=popularity", filterQuery, ds.currentTranslation.Text_SortByItem("popularity"))
 			textSortByAlphabet = ds.currentTranslation.Text_SortByItem("alphabet")
+			textFilter = fmt.Sprintf(`<a href="%s%s">%s</a>`, "?sortby=alphabet", filterQuery2, filterLinkText)
 		case "popularity":
 			textSortByPopularity = ds.currentTranslation.Text_SortByItem("popularity")
-			textSortByAlphabet = fmt.Sprintf(`<a href="%s">%s</a>`, "?sortby=alphabet", ds.currentTranslation.Text_SortByItem("alphabet"))
+			textSortByAlphabet = fmt.Sprintf(`<a href="%s%s">%s</a>`, "?sortby=alphabet", filterQuery, ds.currentTranslation.Text_SortByItem("alphabet"))
+			textFilter = fmt.Sprintf(`<a href="%s%s">%s</a>`, "?sortby=popularity", filterQuery2, filterLinkText)
 		}
+
 		page.WriteString("\n\n")
-		fmt.Fprintf(page, `<span class="title">%s (%s%s | %s)</span>`,
-			ds.currentTranslation.Text_ExportedTypeNames(len(pkg.ExportedTypeNames)),
+		fmt.Fprintf(page, `<span class="title">%s (%s%s%s%s | %s)</span>`,
+			textTypeNames,
+			textFilter,
+			ds.currentTranslation.Text_Comma(),
 			ds.currentTranslation.Text_SortBy(),
 			textSortByAlphabet,
 			textSortByPopularity,

@@ -14,6 +14,20 @@ func (*Chinese) Name() string { return "简体中文" }
 func (*Chinese) LangTag() string { return "zh-CN" }
 
 ///////////////////////////////////////////////////////////////////
+// common
+///////////////////////////////////////////////////////////////////
+
+func (*Chinese) Text_Comma() string { return "，" }
+
+func (*Chinese) Text_Colon() string { return "：" }
+
+func (*Chinese) Text_Period(paragraphEnd bool) string { return "。" }
+
+func (*Chinese) Text_PreferredFontList() string {
+	return `"Courier New", Courier, monospace, "Microsoft YaHei,'宋体'`
+}
+
+///////////////////////////////////////////////////////////////////
 // server
 ///////////////////////////////////////////////////////////////////
 
@@ -225,8 +239,16 @@ func (*Chinese) Text_ExportedTypeNames(num int) string {
 	return "导出类型名"
 }
 
-func (*Chinese) Text_UnexportedTypeNames(num int) string {
-	return "非导出类型名"
+func (*Chinese) Text_AllPackageLevelTypeNames(num int) string {
+	return "包级类型名"
+}
+
+func (*Chinese) Text_TypeNameListShowOption(exportedsOnly bool) string {
+	if exportedsOnly {
+		return "只展示导出类型"
+	} else {
+		return "亦展示非导出类型"
+	}
 }
 
 ///////////////////////////////////////////////////////////////////

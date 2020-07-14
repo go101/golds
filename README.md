@@ -18,21 +18,22 @@ depending on your Go Toolchain version and the directory in which the installati
 
 ### Features
 
-* Support listing exported types not only by alphabet, but also by popularity, which is good to understanding some packages exporting many types.
+* Supports listing exported types not only by alphabet, but also by popularity, which is good to understanding some packages exporting many types.
 * Rich type information collection:
-  * Show type implemention relations ([demo 1](https://docs.go101.org/std/pkg/go/ast.html#name-Node) and [demo 2](https://docs.go101.org/std/pkg/bytes.html#name-Buffer)).
-  * Show promoted selectors, even on unexported embedded fields ([demo](https://docs.go101.org/std/pkg/archive/zip.html#name-File)).
-  * Show as-parameters-of and as-results-of funciton/method list (including interface methods).
+  * Shows type implemention relations ([demo 1](https://docs.go101.org/std/pkg/go/ast.html#name-Node) and [demo 2](https://docs.go101.org/std/pkg/bytes.html#name-Buffer)).
+  * Shows promoted selectors, even on unexported embedded fields ([demo](https://docs.go101.org/std/pkg/archive/zip.html#name-File)).
+  * Shows as-parameters-of and as-results-of funciton/method list (including interface methods).
 * Smooth code view experiences (good for studying Go projects without opening IDEs):
   * Click a local identifier to highlight all the occurences of the identifier.
   * Click a reference to a non-local identifier to jump to the declaration of the non-local identifier, 
     and fell free to open pages in new browser windows as needed.
-* Show code statistics ([demo](https://docs.go101.org/std/statistics.html)).
-* Support generating static HTML docs pages, to avoid rebuilding the docs later.
+* Shows code statistics ([demo](https://docs.go101.org/std/statistics.html)).
+* Supports generating static HTML docs pages, to avoid rebuilding the docs later.
   And this is good for package developers to host docs of their packages.
-* JavaScript-off friendly.
+* All functionalities are implemented locally, no external websites are needed.
+* JavaScript-off friendly. No tracing, no auto external websites visiting.
 
-This tool is still in its early experimental phase. More new features will be supported from time to time in future versions.
+_(NOTE: This tool is still in its early experimental phase. More new features will be added from time to time in future versions.)_
 
 ### Limitations
 
