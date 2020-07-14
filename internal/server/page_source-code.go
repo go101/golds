@@ -1261,6 +1261,13 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 				v.buildIdentifier(start, end, -1, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, objPkgPath}, nil, "")+"#name-"+obj.Name())
 				return
 			} else {
+				if !genDocsMode {
+					if _, ok := obj.(*types.TypeName); ok {
+						v.buildIdentifier(start, end, -1, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, objPkgPath}, nil, "")+"?show=all#name-"+obj.Name())
+						return
+					}
+				}
+
 				// ToDo: open reference list page
 			}
 			// ToDo:
