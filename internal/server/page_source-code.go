@@ -17,6 +17,11 @@ import (
 	"go101.org/gold/code"
 )
 
+type sourcePageKey struct {
+	pkg string
+	src string
+}
+
 func (ds *docServer) sourceCodePage(w http.ResponseWriter, r *http.Request, pkgPath, bareFilename string) {
 	w.Header().Set("Content-Type", "text/html")
 
@@ -45,7 +50,7 @@ func (ds *docServer) sourceCodePage(w http.ResponseWriter, r *http.Request, pkgP
 	//}
 	//w.Write(ds.sourcePages[srcPath])
 
-	pageKey := pkgPath + ":" + bareFilename
+	pageKey := sourcePageKey{pkg: pkgPath, src: bareFilename}
 	if ds.sourcePages[pageKey] == nil {
 		result, err := ds.analyzeSoureCode(pkgPath, bareFilename)
 		if err != nil {

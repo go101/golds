@@ -47,12 +47,14 @@ type docServer struct {
 	analyzingLogs   []LoadingLogMessage
 
 	// Cached pages
-	theCSSFile        cssFile
-	theOverviewPage   *overviewPage
-	theStatisticsPage []byte
-	packagePages      map[string]packagePage
-	sourcePages       map[string][]byte
-	dependencyPages   map[string][]byte
+	theCSSFile         cssFile
+	theOverviewPage    *overviewPage
+	theStatisticsPage  []byte
+	packagePages       map[string]packagePage
+	implPages          map[implPageKey][]byte
+	identifierUsePages map[usePageKey][]byte
+	sourcePages        map[sourcePageKey][]byte
+	dependencyPages    map[string][]byte
 
 	//
 	currentTheme       Theme
@@ -181,9 +183,26 @@ func (ds *docServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case ResTypeSource: // "src"
 		index := strings.LastIndex(resPath, "/")
 		if index < 0 {
-			ds.sourceCodePage(w, r, "", resPath)
+			//ds.sourceCodePage(w, r, "", resPath)
+			fmt.Fprint(w, "Source file containing package is not specified")
 		} else {
 			ds.sourceCodePage(w, r, resPath[:index], resPath[index+1:])
+		}
+	case ResTypeImplementation: // "imp"
+		index := strings.LastIndex(resPath, ".")
+		if index < 0 {
+			//ds.sourceCodePage(w, r, "", resPath)
+			fmt.Fprint(w, "Interface type containing package is not specified")
+		} else {
+			ds.methodImplementationPage(w, r, resPath[:index], resPath[index+1:])
+		}
+	case ResTypeUse: // "use"
+		index := strings.LastIndex(resPath, ".")
+		if index < 0 {
+			//ds.sourceCodePage(w, r, "", resPath)
+			fmt.Fprint(w, "Identifer containing package is not specified")
+		} else {
+			ds.identifierUsesPage(w, r, resPath[:index], resPath[index+1:])
 		}
 	}
 }
@@ -228,7 +247,9 @@ func (ds *docServer) analyze(args []string, printUsage func(io.Writer)) {
 		ds.mutex.Lock()
 		ds.phase = Phase_Analyzed
 		ds.packagePages = make(map[string]packagePage, ds.analyzer.NumPackages())
-		ds.sourcePages = make(map[string][]byte, ds.analyzer.NumSourceFiles())
+		ds.implPages = make(map[implPageKey][]byte, ds.analyzer.RoughTypeNameCount())
+		ds.identifierUsePages = make(map[usePageKey][]byte, ds.analyzer.RoughExportedIdentifierCount())
+		ds.sourcePages = make(map[sourcePageKey][]byte, ds.analyzer.NumSourceFiles())
 		ds.dependencyPages = make(map[string][]byte, ds.analyzer.NumPackages())
 		ds.mutex.Unlock()
 	}

@@ -104,6 +104,15 @@ type Stats struct {
 	ExportedIntergerTypeNames  int32
 	ExportedUnsignedTypeNames  int32
 
+	// This records the count of all package-level declared types.
+	// However,
+	// * types without methods should not be counted.
+	// * some lecal declared types with methods should also be counted.
+	roughTypeNameCount int32
+	// This recoreds the count of all package-level declared exported identifiers,
+	// exported field/method names, and fake identifiers (#HashOrderID) for unnamed types.
+	roughExportedIdentifierCount int32
+
 	//ExportedNamedStructTypeNames                        int32 // should be equal to ExportedTypeNamesByKind[reflect.Struct]
 	ExportedNamedStructTypesWithEmbeddingFields   int32
 	ExportedNamedStructTypesWithPromotedFields    int32
@@ -119,8 +128,8 @@ type Stats struct {
 	ExportedNamedStructsByExportedExplicitFieldCount [100]int32 // not including promoteds
 	ExportedNamedStructsByExportedPromotedFieldCount [100]int32
 
-	ExportedNamedNonInterfaceTypesByMethodCount         [100]int32 // T and * T combined
-	ExportedNamedNonInterfaceTypesByExportedMethodCount [100]int32 // T and * T combined
+	ExportedNamedNonInterfaceTypesByMethodCount         [100]int32 // T and *T combined
+	ExportedNamedNonInterfaceTypesByExportedMethodCount [100]int32 // T and *T combined
 	ExportedNamedNonInterfacesExportedMethods           int32
 	ExportedNamedNonInterfacesWithExportedMethods       int32
 
@@ -162,6 +171,14 @@ func incSliceStat(stats []int32, index int) {
 
 func (d *CodeAnalyzer) Statistics() Stats {
 	return d.stats
+}
+
+func (d *CodeAnalyzer) RoughTypeNameCount() int32 {
+	return d.stats.roughTypeNameCount
+}
+
+func (d *CodeAnalyzer) RoughExportedIdentifierCount() int32 {
+	return d.stats.roughExportedIdentifierCount
 }
 
 // Please reset it after using.

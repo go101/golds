@@ -2074,6 +2074,8 @@ func (d *CodeAnalyzer) analyzePackage_CollectMoreStatistics(pkg *Package) {
 	var isBuiltinPkg = pkg.Path() == "builtin"
 
 	for _, tn := range pkg.PackageAnalyzeResult.AllTypeNames {
+		d.stats.roughTypeNameCount++
+
 		if isBuiltinPkg != token.IsExported(tn.Name()) {
 			incSliceStat(d.stats.ExportedIdentifiersByLength[:], len(tn.Name()))
 			d.stats.ExportedIdentifersSumLength += int32(len(tn.Name()))
@@ -2100,6 +2102,7 @@ func (d *CodeAnalyzer) analyzePackage_CollectMoreStatistics(pkg *Package) {
 				incSliceStat(d.stats.ExportedNamedInterfacesByMethodCount[:], len(denoting.AllMethods))
 				incSliceStat(d.stats.ExportedNamedInterfacesByExportedMethodCount[:], numExportedMethods)
 				d.stats.ExportedNamedInterfacesExportedMethods += int32(numExportedMethods)
+				d.stats.roughExportedIdentifierCount += int32(numExportedMethods)
 				continue
 			}
 			incSliceStat(d.stats.ExportedNamedNonInterfaceTypesByMethodCount[:], len(denoting.AllMethods))
@@ -2107,6 +2110,7 @@ func (d *CodeAnalyzer) analyzePackage_CollectMoreStatistics(pkg *Package) {
 
 			if numExportedMethods > 0 {
 				d.stats.ExportedNamedNonInterfacesExportedMethods += int32(numExportedMethods)
+				d.stats.roughExportedIdentifierCount += int32(numExportedMethods)
 				d.stats.ExportedNamedNonInterfacesWithExportedMethods++
 			}
 
@@ -2150,6 +2154,7 @@ func (d *CodeAnalyzer) analyzePackage_CollectMoreStatistics(pkg *Package) {
 				d.stats.ExportedNamedStructTypeExportedFields += int32(numExporteds)
 				incSliceStat(d.stats.ExportedNamedStructsByExportedExplicitFieldCount[:], numExportedExpliciteds)
 				d.stats.ExportedNamedStructTypeExportedExplicitFields += int32(numExportedExpliciteds)
+				d.stats.roughExportedIdentifierCount += int32(numExportedExpliciteds)
 
 				incSliceStat(d.stats.ExportedNamedStructsByExportedPromotedFieldCount[:], numExportedPromoteds)
 				//if numExportedPromoteds >= 5 {
@@ -2183,6 +2188,8 @@ func (d *CodeAnalyzer) analyzePackage_CollectMoreStatisticsFinal() {
 		d.stats.AllPackageDeps += int32(len(pkg.Deps))
 		incSliceStat(d.stats.PackagesByDeps[:], len(pkg.Deps))
 	}
+
+	d.stats.roughExportedIdentifierCount += d.stats.ExportedIdentifers
 }
 
 func (d *CodeAnalyzer) analyzePackage_CollectSomeRuntimeFunctionPositions() {

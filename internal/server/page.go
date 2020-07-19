@@ -9,15 +9,17 @@ import (
 type pageResType string
 
 const (
-	ResTypeNone       pageResType = ""
-	ResTypeAPI        pageResType = "api"
-	ResTypeModule     pageResType = "mod"
-	ResTypePackage    pageResType = "pkg"
-	ResTypeDependency pageResType = "dep"
-	ResTypeSource     pageResType = "src"
-	ResTypeCSS        pageResType = "css"
-	ResTypeJS         pageResType = "jvs"
-	ResTypeSVG        pageResType = "svg"
+	ResTypeNone           pageResType = ""
+	ResTypeAPI            pageResType = "api"
+	ResTypeModule         pageResType = "mod"
+	ResTypePackage        pageResType = "pkg"
+	ResTypeDependency     pageResType = "dep"
+	ResTypeImplementation pageResType = "imp"
+	ResTypeSource         pageResType = "src"
+	ResTypeUse            pageResType = "use"
+	ResTypeCSS            pageResType = "css"
+	ResTypeJS             pageResType = "jvs"
+	ResTypeSVG            pageResType = "svg"
 )
 
 type htmlPage struct {
