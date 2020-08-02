@@ -177,44 +177,45 @@ func TestDocsForStandardPackages(t *testing.T) {
 		pkgTestDataNew, ok := testdataNew[pkgPath]
 		if !ok {
 			t.Errorf("Package %s is missing", pkgPath)
+			continue
 		}
 
 		if err := assureSubsetStringSlice(mapStringKeys(pkgTestDataOld.Types), mapStringKeys(pkgTestDataNew.Types)); err != nil {
-			t.Errorf("Types become less: %s", err)
+			t.Errorf("[%s] Types become less: %s", pkgPath, err)
 		}
 		for typeName, typeTestDataOld := range pkgTestDataOld.Types {
 			typesTestDataNew := pkgTestDataNew.Types[typeName]
 			if err := assureSubsetStringSlice(typeTestDataOld.FieldNames, typesTestDataNew.FieldNames); err != nil {
-				t.Errorf("%s fields become less: %s", typeName, err)
+				t.Errorf("[%s] %s fields become less: %s", pkgPath, typeName, err)
 			}
 			if err := assureSubsetStringSlice(typeTestDataOld.MethodNames, typesTestDataNew.MethodNames); err != nil {
-				t.Errorf("%s methods become less: %s", typeName, err)
+				t.Errorf("[%s] %s methods become less: %s", pkgPath, typeName, err)
 			}
 			if n, m := typeTestDataOld.ImplementedByCount, typesTestDataNew.ImplementedByCount; n > m {
-				t.Errorf("%s implementdBy count becomes less: %d > %d", typeName, n, m)
+				t.Errorf("[%s] %s implementdBy count becomes less: %d > %d", pkgPath, typeName, n, m)
 			}
 			if n, m := typeTestDataOld.ImplementCount, typesTestDataNew.ImplementCount; n > m {
-				t.Errorf("%s implement count becomes less: %d > %d", typeName, n, m)
+				t.Errorf("[%s] %s implement count becomes less: %d > %d", pkgPath, typeName, n, m)
 			}
 			if n, m := typeTestDataOld.ValueCount, typesTestDataNew.ValueCount; n > m {
-				t.Errorf("%s value count becomes less: %d > %d", typeName, n, m)
+				t.Errorf("[%s] %s value count becomes less: %d > %d", pkgPath, typeName, n, m)
 			}
 			if n, m := typeTestDataOld.AsInputCount, typesTestDataNew.AsInputCount; n > m {
-				t.Errorf("%s asInput count becomes less: %d > %d", typeName, n, m)
+				t.Errorf("[%s] %s asInput count becomes less: %d > %d", pkgPath, typeName, n, m)
 			}
 			if n, m := typeTestDataOld.AsOutputCount, typesTestDataNew.AsOutputCount; n > m {
-				t.Errorf("%s asOutput count becomes less: %d > %d", typeName, n, m)
+				t.Errorf("[%s] %s asOutput count becomes less: %d > %d", pkgPath, typeName, n, m)
 			}
 		}
 
 		if err := assureSubsetStringSlice(pkgTestDataOld.VarNames, pkgTestDataNew.VarNames); err != nil {
-			t.Errorf("Vars become less: %s", err)
+			t.Errorf("[%s] Vars become less: %s", pkgPath, err)
 		}
 		if err := assureSubsetStringSlice(pkgTestDataOld.ConstNames, pkgTestDataNew.ConstNames); err != nil {
-			t.Errorf("Consts become less: %s", err)
+			t.Errorf("[%s] Consts become less: %s", pkgPath, err)
 		}
 		if err := assureSubsetStringSlice(pkgTestDataOld.FuncNames, pkgTestDataNew.FuncNames); err != nil {
-			t.Errorf("Funcs become less: %s", err)
+			t.Errorf("[%s] Funcs become less: %s", pkgPath, err)
 		}
 	}
 }

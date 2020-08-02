@@ -136,7 +136,7 @@ func (ds *docServer) buildPackageDetailsPage(pkg *PackageDetails, options packag
 	}
 
 	needOneMoreLine := false
-	if len(pkg.ExportedTypeNames) == 0 {
+	if len(pkg.ExportedTypeNames) == 0 && !pkg.HasHiddenTypeNames {
 		needOneMoreLine = true
 		goto WriteValues
 	}
@@ -163,29 +163,43 @@ func (ds *docServer) buildPackageDetailsPage(pkg *PackageDetails, options packag
 			filterQuery2 = "&show=exporteds"
 		}
 
-		var textSortByPopularity, textSortByAlphabet, textFilter string
+		var textFilter string
 		switch options.sortBy {
 		case "alphabet":
-			textSortByPopularity = fmt.Sprintf(`<a href="%s%s">%s</a>`, "?sortby=popularity", filterQuery, ds.currentTranslation.Text_SortByItem("popularity"))
-			textSortByAlphabet = ds.currentTranslation.Text_SortByItem("alphabet")
 			textFilter = fmt.Sprintf(`<a href="%s%s">%s</a>`, "?sortby=alphabet", filterQuery2, filterLinkText)
 		case "popularity":
-			textSortByPopularity = ds.currentTranslation.Text_SortByItem("popularity")
-			textSortByAlphabet = fmt.Sprintf(`<a href="%s%s">%s</a>`, "?sortby=alphabet", filterQuery, ds.currentTranslation.Text_SortByItem("alphabet"))
 			textFilter = fmt.Sprintf(`<a href="%s%s">%s</a>`, "?sortby=popularity", filterQuery2, filterLinkText)
 		}
 
 		page.WriteString("\n\n")
-		fmt.Fprintf(page, `<span class="title">%s (%s%s%s%s | %s)</span>`,
-			textTypeNames,
-			textFilter,
-			ds.currentTranslation.Text_Comma(),
-			ds.currentTranslation.Text_SortBy(),
-			textSortByAlphabet,
-			textSortByPopularity,
-		)
+		if len(pkg.ExportedTypeNames) <= 1 {
+			fmt.Fprintf(page, `<span class="title">%s (%s)</span>`,
+				textTypeNames,
+				textFilter,
+			)
+		} else {
+			var textSortByPopularity, textSortByAlphabet string
+			switch options.sortBy {
+			case "alphabet":
+				textSortByPopularity = fmt.Sprintf(`<a href="%s%s">%s</a>`, "?sortby=popularity", filterQuery, ds.currentTranslation.Text_SortByItem("popularity"))
+				textSortByAlphabet = ds.currentTranslation.Text_SortByItem("alphabet")
+			case "popularity":
+				textSortByPopularity = ds.currentTranslation.Text_SortByItem("popularity")
+				textSortByAlphabet = fmt.Sprintf(`<a href="%s%s">%s</a>`, "?sortby=alphabet", filterQuery, ds.currentTranslation.Text_SortByItem("alphabet"))
+			}
+
+			fmt.Fprintf(page, `<span class="title">%s (%s%s%s%s | %s)</span>`,
+				textTypeNames,
+				textFilter,
+				ds.currentTranslation.Text_Comma(),
+				ds.currentTranslation.Text_SortBy(),
+				textSortByAlphabet,
+				textSortByPopularity,
+			)
+		}
 		page.WriteByte('\n')
 	}
+
 	for _, et := range pkg.ExportedTypeNames {
 		page.WriteString("\n")
 		fmt.Fprintf(page, `<div class="anchor" id="name-%s" data-popularity="%d">`, et.TypeName.Name(), et.Popularity)
@@ -220,7 +234,7 @@ func (ds *docServer) buildPackageDetailsPage(pkg *PackageDetails, options packag
 					methods := ds.sortMethodList(et.Methods)
 					for _, mthd := range methods {
 						page.WriteString("\n\t\t\t")
-						ds.writeMethodForListing(page, pkg.Package, mthd, et.TypeName)
+						ds.writeMethodForListing(page, pkg.Package, mthd, et.TypeName, true)
 					}
 				})
 		}
@@ -233,7 +247,7 @@ func (ds *docServer) buildPackageDetailsPage(pkg *PackageDetails, options packag
 					impledLys := ds.sortTypeList(et.ImplementedBys, pkg.Package)
 					for _, by := range impledLys {
 						page.WriteString("\n\t\t\t")
-						writeTypeForListing(page, by, pkg.Package, "")
+						ds.writeTypeForListing(page, by, pkg.Package, "", DotMStyle_NotShow)
 					}
 				})
 		}
@@ -246,7 +260,7 @@ func (ds *docServer) buildPackageDetailsPage(pkg *PackageDetails, options packag
 					impls := ds.sortTypeList(et.Implements, pkg.Package)
 					for _, impl := range impls {
 						page.WriteString("\n\t\t\t")
-						writeTypeForListing(page, impl, pkg.Package, et.TypeName.Name())
+						ds.writeTypeForListing(page, impl, pkg.Package, et.TypeName.Name(), DotMStyle_NotShow)
 					}
 				})
 		}
@@ -341,7 +355,9 @@ type PackageDetails struct {
 	ValueResources []code.ValueResource
 	//ExportedTypeNames []*code.TypeName
 	//UnexportedTypeNames []*code.TypeName
-	ExportedTypeNames []*ExportedType
+	ExportedTypeNames []*ExportedType // also including unexported ones when "show=all" query parameter is set.
+
+	HasHiddenTypeNames bool
 
 	// Line dismatches exist in some cgo generated files.
 	//FileLineNumberOffsets map[string][]int
@@ -500,45 +516,12 @@ func buildPackageDetailsData(analyzer *code.CodeAnalyzer, pkgPath string, option
 				continue
 			}
 
-			et.Fields = make([]*code.Selector, 0, len(denoting.AllFields))
-			et.Methods = make([]*code.Selector, 0, len(denoting.AllMethods))
+			et.Fields = buildTypeFieldList(denoting, alsoShowNonExporteds)
+			et.Methods = buildTypeMethodsList(denoting, alsoShowNonExporteds)
 			//et.ImplementedBys = make([]*code.TypeInfo, 0, len(denoting.ImplementedBys))
-			et.ImplementedBys = make([]TypeForListing, 0, len(denoting.ImplementedBys))
+			et.ImplementedBys = buildTypeImplementedByList(analyzer, denoting, alsoShowNonExporteds, tn)
 			//et.Implements = make([]code.Implementation, 0, len(denoting.Implements))
-			et.Implements = make([]TypeForListing, 0, len(denoting.Implements))
-
-			for _, mthd := range denoting.AllMethods {
-				if alsoShowNonExporteds || token.IsExported(mthd.Name()) {
-					et.Methods = append(et.Methods, mthd)
-				}
-			}
-			for _, fld := range denoting.AllFields {
-				if alsoShowNonExporteds || token.IsExported(fld.Name()) {
-					et.Fields = append(et.Fields, fld)
-				}
-			}
-			for _, impledBy := range denoting.ImplementedBys {
-				bytn, isPointer := analyzer.RetrieveTypeName(impledBy)
-				if bytn != nil && bytn != tn && (alsoShowNonExporteds || bytn.Exported()) {
-					et.ImplementedBys = append(et.ImplementedBys, TypeForListing{
-						TypeName:  bytn,
-						IsPointer: isPointer,
-					})
-				}
-			}
-			for _, impl := range analyzer.CleanImplements(denoting) {
-				//if impl.Interface.TypeName == nil || token.IsExported(impl.Interface.TypeName.Name()) {
-				//	et.Implements = append(et.Implements, impl)
-				//}
-				// Might miss: interface {Unwrap() error}
-				if itn := impl.Interface.TypeName; itn != nil && (alsoShowNonExporteds || itn.Exported()) {
-					_, isPointer := impl.Impler.TT.(*types.Pointer)
-					et.Implements = append(et.Implements, TypeForListing{
-						TypeName:  itn,
-						IsPointer: isPointer,
-					})
-				}
-			}
+			et.Implements = buildTypeImplementsList(analyzer, denoting, alsoShowNonExporteds)
 
 			if isBuiltin {
 				continue
@@ -656,11 +639,66 @@ func buildPackageDetailsData(analyzer *code.CodeAnalyzer, pkgPath string, option
 		ExportedTypeNames: exportedTypesResources,
 		//UnexportedTypeNames: unexportedTypesResources,
 
+		HasHiddenTypeNames: len(pkg.PackageAnalyzeResult.AllTypeNames) > len(exportedTypesResources),
+
 		//FileLineNumberOffsets: lineStartOffsets,
 
 		NumDeps:     uint32(len(pkg.Deps)),
 		NumDepedBys: uint32(len(pkg.DepedBys)),
 	}
+}
+
+func buildTypeFieldList(denoting *code.TypeInfo, alsoShowNonExporteds bool) []*code.Selector {
+	fields := make([]*code.Selector, 0, len(denoting.AllFields))
+	for _, fld := range denoting.AllFields {
+		if alsoShowNonExporteds || token.IsExported(fld.Name()) {
+			fields = append(fields, fld)
+		}
+	}
+	return fields
+}
+
+func buildTypeMethodsList(denoting *code.TypeInfo, alsoShowNonExporteds bool) []*code.Selector {
+	methods := make([]*code.Selector, 0, len(denoting.AllMethods))
+	for _, mthd := range denoting.AllMethods {
+		if alsoShowNonExporteds || token.IsExported(mthd.Name()) {
+			methods = append(methods, mthd)
+		}
+	}
+	return methods
+}
+
+func buildTypeImplementedByList(analyzer *code.CodeAnalyzer, denoting *code.TypeInfo, alsoShowNonExporteds bool, exceptTypeName *code.TypeName) []TypeForListing {
+	implementedBys := make([]TypeForListing, 0, len(denoting.ImplementedBys))
+	for _, impledBy := range denoting.ImplementedBys {
+		bytn, isPointer := analyzer.RetrieveTypeName(impledBy)
+		if bytn != nil && bytn != exceptTypeName && (alsoShowNonExporteds || bytn.Exported()) {
+			implementedBys = append(implementedBys, TypeForListing{
+				TypeName:  bytn,
+				IsPointer: isPointer,
+			})
+		}
+	}
+	return implementedBys
+}
+
+func buildTypeImplementsList(analyzer *code.CodeAnalyzer, denoting *code.TypeInfo, alsoShowNonExporteds bool) []TypeForListing {
+	//implements = make([]code.Implementation, 0, len(denoting.Implements))
+	implements := make([]TypeForListing, 0, len(denoting.Implements))
+	for _, impl := range analyzer.CleanImplements(denoting) {
+		//if impl.Interface.TypeName == nil || token.IsExported(impl.Interface.TypeName.Name()) {
+		//	et.Implements = append(et.Implements, impl)
+		//}
+		// Might miss: interface {Unwrap() error}
+		if itn := impl.Interface.TypeName; itn != nil && (alsoShowNonExporteds || itn.Exported()) {
+			_, isPointer := impl.Impler.TT.(*types.Pointer)
+			implements = append(implements, TypeForListing{
+				TypeName:  itn,
+				IsPointer: isPointer,
+			})
+		}
+	}
+	return implements
 }
 
 type ValueForListing struct {
@@ -908,14 +946,22 @@ func (ds *docServer) sortTypeList(typeList []TypeForListing, pkg *code.Package) 
 	return result
 }
 
-func writeTypeForListing(page *htmlPage, t *TypeForListing, pkg *code.Package, implerName string) {
+const (
+	DotMStyle_Unexported = -1
+	DotMStyle_NotShow    = 0
+	DotMStyle_Exported   = 1
+)
+
+// writeReceiverLink=false means for method implementation page.
+// exportMethod is for method implementation page only.
+func (ds *docServer) writeTypeForListing(page *htmlPage, t *TypeForListing, pkg *code.Package, implerName string, dotMStyle int) {
 	if implerName == "" {
 		if t.IsPointer {
 			page.WriteByte('*')
 		} else {
 			page.WriteByte(' ')
 		}
-	} else {
+	} else if dotMStyle == DotMStyle_NotShow {
 		if t.IsPointer {
 			page.WriteString("*T : ")
 			//fmt.Fprintf(page, "*%s : ", implerName)
@@ -923,24 +969,49 @@ func writeTypeForListing(page *htmlPage, t *TypeForListing, pkg *code.Package, i
 			page.WriteString(" T : ")
 			//fmt.Fprintf(page, " %s : ", implerName)
 		}
+	} else if dotMStyle > 0 { // DotMStyle_Exported
+		if t.IsPointer {
+			page.WriteString("(*T).M : ")
+			//fmt.Fprintf(page, "*%s : ", implerName)
+		} else {
+			page.WriteString("     M : ")
+			//fmt.Fprintf(page, " %s : ", implerName)
+		}
+	} else { // DotMStyle_Unexported
+		if t.IsPointer {
+			page.WriteString("(*T).m : ")
+			//fmt.Fprintf(page, "*%s : ", implerName)
+		} else {
+			page.WriteString("     m : ")
+			//fmt.Fprintf(page, " %s : ", implerName)
+		}
 	}
+
 	if t.Package() != pkg {
 		if t.Pkg.Path() != "builtin" {
 			page.WriteString(t.Pkg.Path())
 			page.WriteByte('.')
 		}
-		fmt.Fprintf(page, `<a href="`)
-		//page.WriteString("/pkg:")
-		//page.WriteString(t.Pkg.Path())
-		buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, t.Pkg.Path()}, page, "")
-	} else {
-		fmt.Fprintf(page, `<a href="`)
 	}
-	page.WriteString("#name-")
-	page.WriteString(t.Name())
-	fmt.Fprintf(page, `">`)
-	page.WriteString(t.Name())
-	page.WriteString("</a>")
+
+	if t.Exported() {
+		if t.Package() != pkg {
+			fmt.Fprintf(page, `<a href="`)
+			//page.WriteString("/pkg:")
+			//page.WriteString(t.Pkg.Path())
+			buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, t.Pkg.Path()}, page, "")
+		} else {
+			fmt.Fprintf(page, `<a href="`)
+		}
+		page.WriteString("#name-")
+		page.WriteString(t.Name())
+		fmt.Fprintf(page, `">`)
+		page.WriteString(t.Name())
+		page.WriteString("</a>")
+	} else {
+		//page.WriteString("?show=all")
+		ds.writeSrouceCodeLineLink(page, t.Pkg, t.Position(), t.Name(), "", false)
+	}
 }
 
 type FieldForListing struct {
@@ -1031,6 +1102,22 @@ func (ds *docServer) sortMethodList(selectors []*code.Selector) []*code.Selector
 	return selectors
 }
 
+func (ds *docServer) WriteEmbeddingChain(page *htmlPage, embedding *code.EmbeddedField) {
+	if embedding == nil {
+		return
+	}
+
+	if embedding.Prev != nil {
+		ds.WriteEmbeddingChain(page, embedding.Prev)
+	}
+
+	pos := embedding.Field.Position()
+	page.WriteString("<i>")
+	ds.writeSrouceCodeLineLink(page, embedding.Field.Pkg, pos, embedding.Field.Name, "", false)
+	page.WriteString("</i>")
+	page.WriteByte('.')
+}
+
 func (ds *docServer) writeFieldForListing(page *htmlPage, pkg *code.Package, sel *FieldForListing, forTypeName *code.TypeName) {
 	for i, fld := range sel.Middles {
 		pos := fld.Position()
@@ -1062,15 +1149,17 @@ func (ds *docServer) writeFieldForListing(page *htmlPage, pkg *code.Package, sel
 	page.WriteString("</i>")
 }
 
-func (ds *docServer) writeMethodForListing(page *htmlPage, pkg *code.Package, sel *code.Selector, forTypeName *code.TypeName) {
+func (ds *docServer) writeMethodForListing(page *htmlPage, pkg *code.Package, sel *code.Selector, forTypeName *code.TypeName, writeReceiver bool) {
 	setMethod := sel.Method
 	if setMethod == nil {
 		panic("should not")
 	}
-	if sel.PointerReceiverOnly() {
-		page.WriteString("(*T) ")
-	} else {
-		page.WriteString(" (T) ")
+	if writeReceiver {
+		if sel.PointerReceiverOnly() {
+			page.WriteString("(*T) ")
+		} else {
+			page.WriteString(" (T) ")
+		}
 	}
 	pos := sel.Position()
 	//pos.Line += ds.analyzer.SourceFileLineOffset(pos.Filename)

@@ -56,6 +56,9 @@ type CodeAnalyzer struct {
 	lastTypeNameIndex uint32
 	allTypeNameTable  map[string]*TypeName
 
+	// ToDo: need a better implementation.
+	typeMethodsContributingToTypeImplementations map[[3]string]struct{}
+
 	// Position info of some runtime functions.
 	runtimeFuncPositions map[string]token.Position
 
@@ -373,6 +376,40 @@ func (d *CodeAnalyzer) RetrieveTypeName(t *TypeInfo) (*TypeName, bool) {
 	}
 
 	return nil, false
+}
+
+// Methods contribute to type implementations.
+// The key is typeIndex << 32 | methodIndex.
+// typeIndex must be the index of a non-interface type.
+//
+// typeMethodsContributingToTypeImplementations map[uint64]]struct{}
+//
+//func (d *CodeAnalyzer) registerTypeMethodContributingToTypeImplementations(typeIndex, methodIndex uint32) {
+//	if d.typeMethodsContributingToTypeImplementations == nil {
+//		d.typeMethodsContributingToTypeImplementations = make(map[int64]struct{}, d.lastTypeIndex*3)
+//	}
+//	key := uint64(typeIndex)<<32 | uint64(methodIndex)
+//	d.typeMethodsContributingToTypeImplementations[key] = struct{}{}
+//}
+//
+//// typeIndex must be the index of a non-interface type.
+//func (d *CodeAnalyzer) CheckTypeMethodContributingToTypeImplementations(typeIndex, methodIndex uint32) bool {
+//	key := uint64(typeIndex)<<32 | uint64(methodIndex)
+//	_, ok := d.typeMethodsContributingToTypeImplementations[key]
+//	return ok
+//}
+
+func (d *CodeAnalyzer) registerTypeMethodContributingToTypeImplementations(pkg, typ, method string) {
+	if d.typeMethodsContributingToTypeImplementations == nil {
+		d.typeMethodsContributingToTypeImplementations = make(map[[3]string]struct{}, d.lastTypeIndex*3)
+	}
+	d.typeMethodsContributingToTypeImplementations[[3]string{pkg, typ, method}] = struct{}{}
+}
+
+// typeIndex must be the index of a non-interface type.
+func (d *CodeAnalyzer) CheckTypeMethodContributingToTypeImplementations(pkg, typ, method string) bool {
+	_, ok := d.typeMethodsContributingToTypeImplementations[[3]string{pkg, typ, method}]
+	return ok
 }
 
 func (d *CodeAnalyzer) CleanImplements(self *TypeInfo) []Implementation {

@@ -852,7 +852,10 @@ type Method struct {
 	Name string
 	Type *TypeInfo // ToDo: use custom struct including PointerRecv instead.
 
-	PointerRecv bool // duplicated info, for faster access
+	PointerRecv         bool // duplicated info, for faster access
+	ImplementsSomething bool // false if the method is unimportant for its reveiver to implement some interface type
+
+	index uint32 // 0 means this method doesn;t contribute to any type implementations for sure.
 }
 
 func (mthd *Method) Position() token.Position {

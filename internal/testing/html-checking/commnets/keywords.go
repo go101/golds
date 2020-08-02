@@ -66,25 +66,25 @@ func foo() {
 
 func foo2() {
 	if true {
-	}/*aaa*//*bbbb else*/else {
+	} else /*aaa*/ /*bbbb else*/ {
 	}
 
-	for /*aaa*///bbb
-/*ccc*//*dddd*/
-//eeee	range
-	range [3]int{} {}
-	
+	for range /*aaa*/ //bbb
+	/*ccc*/ /*dddd*/
+	//eeee	range
+	[3]int{} {
+	}
+
 	switch func() interface{} {
 		return interface{}(1)
-	}().(/*aaa*//*bbbb*///cccc
-//ddd type
-/*eee
+	}().(type /*aaa*/ /*bbbb*/ //cccc
+	//ddd type
+	/*eee
 
-*///fff type
-		type/*ggg*/ ) {
+	 */ //fff type
+	/*ggg*/) {
 	}
 }
 
-/*dddd*//*dddddd
-*/// aaaaa
-
+/*dddd*/ /*dddddd
+ */ // aaaaa

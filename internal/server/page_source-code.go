@@ -466,9 +466,28 @@ type astVisitor struct {
 	//comments          []*ast.Comment
 	//pendingTokenPoses []KeywordToken
 
-	sameFileObjects  map[types.Object]int32
-	scopeDepth       int
-	topLevelFuncNode ast.Node
+	sameFileObjects map[types.Object]int32
+
+	astNodeDepth int32
+
+	topLevelFuncNodeDepth int32
+	topLevelFuncInfo      *astFunctionInfo
+
+	// ToDo: also support implementation page for local interface types (including unnamed ones).
+	//       Local interface types should get IDs like Name-1234.
+	topLevelInterfaceTypeNodeDepth int32
+	topLevelInterfaceTypeInfo      *astInterfaceTypeInfo
+}
+
+type astFunctionInfo struct {
+	Node         ast.Node
+	Name         *ast.Ident
+	RecvTypeName string
+}
+
+type astInterfaceTypeInfo struct {
+	TypeName string
+	Methods  []*ast.Field
 }
 
 // see https://groups.google.com/forum/#!topic/golang-tools/PaJBT2WjEPQ
@@ -690,6 +709,15 @@ func (v *astVisitor) buildText(litStart, litEnd token.Position, class, link stri
 	v.offset = litEnd.Offset
 }
 
+func (v *astVisitor) buildLink(idStart, idEnd token.Position, link string) {
+	v.buildConfirmedLines(idStart.Line, "")
+	v.writeEscapedHTML(v.content[v.offset:idStart.Offset], "")
+	fmt.Fprintf(&v.lineBuilder, `<a href="%s" class="%s">`, link, "ident")
+	defer v.lineBuilder.WriteString(`</a>`)
+	v.writeEscapedHTML(v.content[idStart.Offset:idEnd.Offset], "")
+	v.offset = idEnd.Offset
+}
+
 //func (v *astVisitor) buildIdentifier(idStart, idEnd token.Position, ratioId int32, link, id string) {
 func (v *astVisitor) buildIdentifier(idStart, idEnd token.Position, ratioId int32, link string) {
 	var class = "ident"
@@ -711,7 +739,11 @@ func (v *astVisitor) buildIdentifier(idStart, idEnd token.Position, ratioId int3
 	if ratioId >= 0 {
 		fmt.Fprintf(&v.lineBuilder, `<label for="r%d" class="%s">`, ratioId, class)
 		defer v.lineBuilder.WriteString(`</label>`)
-	} else if link != "" {
+	}
+
+	if link != "" {
+		if ratioId >= 0 {
+		}
 		//if id == "" {
 		fmt.Fprintf(&v.lineBuilder, `<a href="%s" class="%s">`, link, class)
 		//} else {
@@ -719,6 +751,7 @@ func (v *astVisitor) buildIdentifier(idStart, idEnd token.Position, ratioId int3
 		//}
 		defer v.lineBuilder.WriteString(`</a>`)
 	}
+
 	//v.lineBuilder.Write(v.content[startOffset:endOffset])
 	v.writeEscapedHTML(v.content[idStart.Offset:idEnd.Offset], "")
 
@@ -837,31 +870,72 @@ func (v *astVisitor) Visit(n ast.Node) (w ast.Visitor) {
 	//log.Println(">>>>>>>>>>> node:", n)
 	//log.Printf(">>>>>>>>>>> node type: %T", n)
 	if n == nil {
-		v.scopeDepth--
-		//println(v.scopeDepth)
-		if v.scopeDepth < 0 {
+		v.astNodeDepth--
+		if v.astNodeDepth < 0 {
 			panic("should not")
 		}
-		if v.scopeDepth == 1 {
-			v.topLevelFuncNode = nil
-			//log.Println("v.topLevelFuncNode = nil")
+		if v.topLevelFuncInfo != nil && v.astNodeDepth == v.topLevelFuncNodeDepth {
+			v.topLevelFuncInfo = nil
+		}
+		if v.topLevelInterfaceTypeInfo != nil && v.astNodeDepth == v.topLevelInterfaceTypeNodeDepth {
+			v.topLevelInterfaceTypeInfo = nil
 		}
 		return
 	}
 
-	v.scopeDepth++
-	//println(v.scopeDepth)
-	if v.scopeDepth == 2 {
-		switch n := n.(type) {
+	if v.topLevelFuncInfo == nil {
+		switch f := n.(type) {
 		case *ast.FuncDecl:
-			//v.topLevelFuncNode = n.Name
-			v.topLevelFuncNode = n
-			//log.Println("v.topLevelFuncNode = n")
+			v.topLevelFuncNodeDepth = v.astNodeDepth
+
+			var recvTypeName string
+			if f.Recv != nil {
+				recvTypeName = func(typeExpr ast.Expr) string {
+					for {
+						switch e := typeExpr.(type) {
+						case *ast.Ident:
+							// ToDo: what if this ident is an alias to a pointer type?
+							return e.Name
+						case *ast.ParenExpr:
+							typeExpr = e.X
+						case *ast.StarExpr:
+							typeExpr = e.X
+						default:
+							panic(fmt.Sprintf("impossible type: %T", e))
+						}
+					}
+				}(f.Recv.List[0].Type)
+			}
+
+			v.topLevelFuncInfo = &astFunctionInfo{
+				Node:         n,
+				Name:         f.Name,
+				RecvTypeName: recvTypeName,
+			}
 		case *ast.FuncLit:
-			v.topLevelFuncNode = n
-			//log.Println("v.topLevelFuncNode = n")
+			v.topLevelFuncNodeDepth = v.astNodeDepth
+			v.topLevelFuncInfo = &astFunctionInfo{
+				Node: n,
+			}
 		}
 	}
+
+	if v.topLevelInterfaceTypeInfo == nil {
+		switch ts := n.(type) {
+		case *ast.TypeSpec:
+			it, ok1 := ts.Type.(*ast.InterfaceType)
+			tn, ok2 := v.info.ObjectOf(ts.Name).(*types.TypeName)
+			if ok1 && ok2 {
+				v.topLevelInterfaceTypeNodeDepth = v.astNodeDepth
+				v.topLevelInterfaceTypeInfo = &astInterfaceTypeInfo{
+					TypeName: tn.Name(),
+					Methods:  it.Methods.List,
+				}
+			}
+		}
+	}
+
+	v.astNodeDepth++
 
 	// ...
 	//for {
@@ -1102,15 +1176,7 @@ func (v *astVisitor) handleToken(pos token.Pos, token, class, link string) {
 func (v *astVisitor) handleIdent(ident *ast.Ident) {
 	start := v.fset.PositionFor(ident.Pos(), false)
 	end := v.fset.PositionFor(ident.End(), false)
-	//fmt.Println("========= 111 start=", start)
-	//fmt.Println("========= 111 end=", end)
-	// ToDo: correctPosition is (a little) faster than SourceFileLineOffset
-	//       Maybe it is better to keep consistency.
-	//v.correctPosition(&start)
-	//v.correctPosition(&end)
 
-	//fmt.Println("========= 222 start=", start)
-	//fmt.Println("========= 222 end=", end)
 	if start.Line != end.Line {
 		panic(fmt.Sprintf("start.Line != end.Line. %d : %d", start.Line, end.Line))
 	}
@@ -1122,12 +1188,12 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 		obj = v.info.ObjectOf(ident)
 	}
 
-	//alreadyCheckedEmbeddingType := false
-	//AgainForEmbeddingType:
 	if obj == nil {
 		//log.Println(fmt.Sprintf("object for identifier %s (%v) is not found", ident.Name, ident.Pos()))
 		return
 	}
+
+	//log.Printf("=== %s: %T\n", ident.Name, obj)
 
 	if pkgName, ok := obj.(*types.PkgName); ok {
 		//v.buildIdentifier(start, end, -1, "/pkg:"+pkgName.Imported().Path())
@@ -1174,12 +1240,10 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 	//v.correctPosition(&objPos)
 	//objPos.Filename = v.dataAnalyzer.OriginalGoSourceFile(objPos.Filename)
 
-	//log.Println(ident.Name, " >>> v.topLevelFuncNode == nil?", v.topLevelFuncNode == nil)
-
 	var sameFileObjOrderId int32 = -1
-	if v.topLevelFuncNode != nil &&
-		obj.Pos() > v.topLevelFuncNode.Pos() &&
-		obj.Pos() < v.topLevelFuncNode.End() &&
+	if v.topLevelFuncInfo != nil &&
+		obj.Pos() > v.topLevelFuncInfo.Node.Pos() &&
+		obj.Pos() < v.topLevelFuncInfo.Node.End() &&
 		objPos.Filename == v.goFilePath {
 
 		n, ok := v.sameFileObjects[obj]
@@ -1195,8 +1259,22 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 
 	// The declaration of the id is locally, certainly for its uses.
 	if sameFileObjOrderId >= 0 {
+		var link string
+		if v.topLevelFuncInfo.Name != nil {
+			funcName := v.topLevelFuncInfo.Name.Name
+			if v.topLevelFuncInfo.RecvTypeName != "" {
+				if v.dataAnalyzer.CheckTypeMethodContributingToTypeImplementations(v.pkg.Path(), v.topLevelFuncInfo.RecvTypeName, funcName) {
+					link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeImplementation, v.pkg.Path() + "." + v.topLevelFuncInfo.RecvTypeName}, nil, "") + "#name-" + funcName
+				}
+			} else if token.IsExported(funcName) {
+				link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, v.pkg.Path()}, nil, "") + "#name-" + funcName
+			} else if !genDocsMode {
+				link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, v.pkg.Path()}, nil, "") + "?show=all#name-" + funcName
+			}
+		}
+
 		//v.buildIdentifier(start, end, sameFileObjOrderId, "#line-"+strconv.Itoa(objPos.Line), "")
-		v.buildIdentifier(start, end, sameFileObjOrderId, "")
+		v.buildIdentifier(start, end, sameFileObjOrderId, link)
 		return
 	}
 
@@ -1253,12 +1331,29 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 		//}
 
 		switch scp := obj.Parent(); {
-		case scp == nil: // methods or fields
+		case scp == nil: // fields
 			// For embedded ones, click to type declarations.
 			// For non-embedded ones, click to show reference list.
 
 			// ToDo: if isMethod: click to show all implemented methods.
 			//       or click to open a new page which list all implemented methods.
+
+			switch o := obj.(type) {
+			case *types.Func: // interface method
+				//log.Printf("   parent: %v\n", o.Parent())
+				//log.Printf("   scope : %v\n", o.Scope())
+				//ot := o.Type().(*types.Signature)
+				_ = o
+				//log.Printf("   reciver: %v\n", ot.Recv())
+
+				if v.topLevelInterfaceTypeInfo != nil && v.topLevelInterfaceTypeInfo.TypeName != "_" && len(v.topLevelInterfaceTypeInfo.Methods) > 0 {
+					if ident.Pos() == v.topLevelInterfaceTypeInfo.Methods[0].Pos() {
+						v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeImplementation, objPkgPath + "." + v.topLevelInterfaceTypeInfo.TypeName}, nil, "")+"#name-"+obj.Name())
+						v.topLevelInterfaceTypeInfo.Methods = v.topLevelInterfaceTypeInfo.Methods[1:]
+					}
+				}
+			case *types.Var: // struct field
+			}
 
 		case scp.Parent() == types.Universe: // package-level elements
 			if obj.Exported() {
@@ -1284,6 +1379,13 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 	}
 
 	v.buildIdentifier(start, end, -1, buildSrouceCodeLineLink(v.currentPathInfo, v.dataAnalyzer, objPkg, objPos))
+
+	// Handle interface embedding interface cases.
+	if v.topLevelInterfaceTypeInfo != nil && len(v.topLevelInterfaceTypeInfo.Methods) > 0 {
+		if ident.Pos() == v.topLevelInterfaceTypeInfo.Methods[0].Pos() {
+			v.topLevelInterfaceTypeInfo.Methods = v.topLevelInterfaceTypeInfo.Methods[1:]
+		}
+	}
 
 	return
 }

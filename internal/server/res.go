@@ -89,6 +89,9 @@ type Translation interface {
 	Text_Imports() string
 	Text_ImportedBy() string
 
+	// method impelementation page
+	Text_MethodImplementation() string
+
 	// source code page
 	Text_SourceCode(pkgPath, bareFilename string) string
 	Text_SourceFilePath() string

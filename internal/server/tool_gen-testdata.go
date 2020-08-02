@@ -32,6 +32,19 @@ type TestData_Type struct {
 	AsOutputCount      int
 }
 
+func isInformalPackage(pkgPath string) bool {
+	if strings.HasPrefix(pkgPath, "vendor/") {
+		return true
+	}
+	if strings.HasSuffix(pkgPath, "/internal") {
+		return true
+	}
+	if strings.Contains(pkgPath, "/internal/") {
+		return true
+	}
+	return false
+}
+
 func buildTestData_Package(details *PackageDetails) TestData_Package {
 	ts := make(map[string]TestData_Type, len(details.ExportedTypeNames))
 	varNames := make([]string, 0, len(details.ValueResources))
@@ -47,14 +60,57 @@ func buildTestData_Package(details *PackageDetails) TestData_Package {
 		for _, m := range t.Methods {
 			methodNames = append(methodNames, m.Name())
 		}
+
+		// ...
+		var implementedByCount int
+		for _, impedBy := range t.ImplementedBys {
+			if isInformalPackage(impedBy.Package().Path()) {
+				continue
+			}
+			implementedByCount++
+		}
+
+		var implementsCount int
+		for _, impl := range t.Implements {
+			if isInformalPackage(impl.Package().Path()) {
+				continue
+			}
+			implementsCount++
+		}
+
+		var valueCount int
+		for _, v := range t.Values {
+			if isInformalPackage(v.Package().Path()) {
+				continue
+			}
+			valueCount++
+		}
+
+		var asInputCount int
+		for _, v := range t.AsInputsOf {
+			if isInformalPackage(v.Package().Path()) {
+				continue
+			}
+			asInputCount++
+		}
+
+		var asOutputCount int
+		for _, v := range t.AsOutputsOf {
+			if isInformalPackage(v.Package().Path()) {
+				continue
+			}
+			asOutputCount++
+		}
+
+		// ...
 		ts[t.TypeName.Name()] = TestData_Type{
 			FieldNames:         fieldNames,
 			MethodNames:        methodNames,
-			ImplementedByCount: len(t.ImplementedBys),
-			ImplementCount:     len(t.Implements),
-			ValueCount:         len(t.Values),
-			AsInputCount:       len(t.AsInputsOf),
-			AsOutputCount:      len(t.AsOutputsOf),
+			ImplementedByCount: implementedByCount, //len(t.ImplementedBys),
+			ImplementCount:     implementsCount,    // len(t.Implements),
+			ValueCount:         valueCount,         // len(t.Values),
+			AsInputCount:       asInputCount,       // len(t.AsInputsOf),
+			AsOutputCount:      asOutputCount,      // len(t.AsOutputsOf),
 		}
 	}
 
@@ -87,6 +143,10 @@ func buildTestData(args []string, silent bool, printUsage func(io.Writer)) map[s
 	pkgTestDatas := make(map[string]TestData_Package, numPkgs)
 	for i := 0; i < numPkgs; i++ {
 		pkg := analyzer.PackageAt(i)
+		if isInformalPackage(pkg.Path()) {
+			continue
+		}
+
 		details := buildPackageDetailsData(&analyzer, pkg.Path(), packagePageOptions{sortBy: "alphabet", filter: "exported"})
 		pkgTestDatas[pkg.Path()] = buildTestData_Package(details)
 

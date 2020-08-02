@@ -14,6 +14,7 @@ a.path-duplicate {color: #9cd;}
 ol.package-list {line-height: 139%;}
 h3 {background: #ddd;}
 
+.b {font-weight: bold;}
 
 /* type stat list */
 label {cursor: pointer; padding-left: 1px; padding-right: 1px;}
@@ -58,7 +59,7 @@ hr {color: #888;}
 .anchor {}
 .codeline {}
 
-.codeline:target, .anchor:target {border-top: 2px solid #D4D4D4; border-bottom: 2px solid #D4D4D4; background-color: #e5eecc;}
+.codeline:target, .anchor:target {border-top: 1px solid #d5ddbb; border-bottom: 1px solid #d5ddbb; background-color: #e5eecc;}
 
 code .ident {color: blue;}
 code .id-type {color: blue;}

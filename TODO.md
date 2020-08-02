@@ -2,6 +2,9 @@
 
 ### Soon to do
 
+* fix registerTypeMethodContributingToTypeImplementations
+  * and buildImplementationData: match unexported method needs consider containing package
+
 * show code example (as source code)
   * run source code, run main package, run main file
 * click interface method to show multiple concrete methods.
@@ -14,6 +17,9 @@
 * show *** for unexproted
   * ...
 * show non-exporteds for main packages, show main func entry "m->" before source file
+* show values by file/position order
+* put unexported function in asParams/asResult lists
+* in code, show tooltip as the full selector path for shortened selectors.
 
 * html escape some doc texts
   use htmp.Escape

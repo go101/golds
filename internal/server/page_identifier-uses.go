@@ -22,6 +22,20 @@ func (ds *docServer) identifierUsesPage(w http.ResponseWriter, r *http.Request, 
 
 	//log.Println(pkgPath, bareFilename)
 
+	// To avoid some too time-comsuming cases,
+	// now only supporting unexported identfiers, which
+	// don't need page caching.
+
+	// Add query parameter: scope=a/b/pkg, default is the id containing package.
+	// If the id is exported, list the pacakges importing the containing package
+	// by use each of them as the scope parameter value.
+	// Only search one package for each page show.
+
+	// The search result should be be cached.
+	// Use don't care most id uses.
+	// Cache the ever searcheds is ok.
+	//    map[*ast.Ident][]token.Pos
+
 	ds.mutex.Lock()
 	defer ds.mutex.Unlock()
 

@@ -142,7 +142,7 @@ func PreviousVersion(version string) string {
 		return ""
 	}
 	if patch > 0 {
-		vs[2] = strconv.Itoa(patch-1)
+		vs[2] = strconv.Itoa(patch - 1)
 		return strings.Join(vs, ".")
 	}
 	minor, err := strconv.Atoi(vs[1])
@@ -151,11 +151,11 @@ func PreviousVersion(version string) string {
 	}
 	vs[2] = "9"
 	if minor > 0 {
-		vs[1] = strconv.Itoa(minor-1)
+		vs[1] = strconv.Itoa(minor - 1)
 		return strings.Join(vs, ".")
 	}
 	prefix := ""
-	for i := len(vs[0])-1; i >= 0; i-- {
+	for i := len(vs[0]) - 1; i >= 0; i-- {
 		if vs[0][i] < '0' || vs[0][i] > '9' {
 			prefix, vs[0] = vs[0][:i+1], vs[0][i+1:]
 			break
@@ -167,7 +167,7 @@ func PreviousVersion(version string) string {
 	}
 	vs[1] = "9"
 	if major > 0 {
-		vs[0] = strconv.Itoa(major-1)
+		vs[0] = strconv.Itoa(major - 1)
 		return prefix + vs[0] + "." + vs[1] + "." + vs[2]
 	}
 	return ""
@@ -265,7 +265,7 @@ Generate:
 			HrefPath: hrefNotForGenerating,
 			FilePath: generatedHref,
 		})
-		
+
 		if ext := filepath.Ext(generatedHref); ext != ".html" {
 			//dir, file := filepath.Split(generatedHref)
 			dir, file := path.Split(generatedHref)

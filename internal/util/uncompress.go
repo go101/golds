@@ -1,11 +1,11 @@
 package util
 
 import (
-	"bytes"
-	"io"
-	"fmt"
 	"archive/tar"
+	"bytes"
 	"compress/gzip"
+	"fmt"
+	"io"
 )
 
 // This funciton is very simple. It is intended to get a single file.

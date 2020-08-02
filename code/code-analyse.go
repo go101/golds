@@ -197,6 +197,12 @@ func (d *CodeAnalyzer) analyzePackages_FindImplementations() { // (resultMethodC
 	//var cache typeutil.MethodSetCache
 	//resultMethodCache = &cache
 
+	// 0 is an in valid method index
+	allInterfaceMethods[MethodSignature{}] = 0
+	method2TypeIndexes = append(method2TypeIndexes, nil)
+	lastMethodIndex++
+
+	// ...
 	interfaceUnderlyings.Iterate(func(_ types.Type, info interface{}) {
 		uiInfo := info.(*UnderlyingInterfaceInfo)
 		//log.Printf("### %d %T\n", uiInfo.t.index, uiInfo.t.TT)
@@ -238,6 +244,8 @@ func (d *CodeAnalyzer) analyzePackages_FindImplementations() { // (resultMethodC
 				method2TypeIndexes[methodIndex] = append(method2TypeIndexes[methodIndex], uiInfo.t.index)
 			} else {
 				methodIndex = lastMethodIndex
+				sel.Method.index = methodIndex
+
 				lastMethodIndex++
 				allInterfaceMethods[sig] = methodIndex
 
@@ -385,10 +393,21 @@ func (d *CodeAnalyzer) analyzePackages_FindImplementations() { // (resultMethodC
 			}
 		}
 
+		// ToDo: also apply this for analyzePackages_FindImplementations_Old
+		registerTypeMethod := func(ti *TypeInfo) {
+			if ti.TypeName == nil {
+				return
+			}
+			pathPath := ti.TypeName.Package().Path()
+			for _, sel := range uiInfo.t.AllMethods {
+				d.registerTypeMethodContributingToTypeImplementations(pathPath, ti.TypeName.Name(), sel.Name())
+			}
+		}
+
 		// Register non-pointer ones firstly, then
 		// register pointer ones whose bases have not been registered.
 		d.resetTempTypeLookupTable()
-		impBy := make([]*TypeInfo, 0, count)
+		impBys := make([]*TypeInfo, 0, count)
 		for _, typeIndex := range typeIndexes {
 			t := d.allTypeInfos[typeIndex]
 			if t.counter == searchRound {
@@ -396,12 +415,14 @@ func (d *CodeAnalyzer) analyzePackages_FindImplementations() { // (resultMethodC
 					if itt, ok := t.TT.Underlying().(*types.Interface); ok {
 						ittInfo := interfaceUnderlyings.At(itt).(*UnderlyingInterfaceInfo)
 						for _, it := range ittInfo.underlieds {
-							impBy = append(impBy, it)
+							impBys = append(impBys, it)
 							typeLookupTable[it.index] = struct{}{}
 						}
 					} else {
-						impBy = append(impBy, t)
+						impBys = append(impBys, t)
 						typeLookupTable[typeIndex] = struct{}{}
+
+						registerTypeMethod(t)
 					}
 				}
 			}
@@ -410,18 +431,20 @@ func (d *CodeAnalyzer) analyzePackages_FindImplementations() { // (resultMethodC
 			t := d.allTypeInfos[typeIndex]
 			if t.counter == searchRound {
 				if ptt, ok := t.TT.(*types.Pointer); ok {
-					bt := d.RegisterType(ptt.Elem()) // 333 a: here to check why new types are registered
+					bt := d.RegisterType(ptt.Elem())
 					if _, reged := typeLookupTable[bt.index]; !reged {
-						impBy = append(impBy, t)
+						impBys = append(impBys, t)
+
+						registerTypeMethod(t)
 					}
 				}
 			}
 		}
-		uiInfo.t.ImplementedBys = impBy
+		uiInfo.t.ImplementedBys = impBys
 
 		//log.Println("111 @@@", uiInfo.t.TT, ", uiInfo.methodIndexes:", uiInfo.methodIndexes)
-		//for _, impBy := range impBy {
-		//	log.Println("     ", impBy.TT)
+		//for _, impBys := range impBys {
+		//	log.Println("     ", impBys.TT)
 		//}
 	})
 
@@ -544,6 +567,12 @@ func (d *CodeAnalyzer) analyzePackages_FindImplementations_Old() (resultMethodCa
 	var cache typeutil.MethodSetCache
 	resultMethodCache = &cache
 
+	// 0 is an in valid method index
+	allInterfaceMethods[MethodSignature{}] = 0
+	method2TypeIndexes = append(method2TypeIndexes, nil)
+	lastMethodIndex++
+
+	// ...
 	interfaceUnderlyings.Iterate(func(_ types.Type, info interface{}) {
 		uiInfo := info.(*UnderlyingInterfaceInfo)
 		//log.Printf("### %d %T\n", uiInfo.t.index, uiInfo.t.TT)
@@ -700,7 +729,7 @@ func (d *CodeAnalyzer) analyzePackages_FindImplementations_Old() (resultMethodCa
 			t := d.allTypeInfos[typeIndex]
 			if t.counter == searchRound {
 				if ptt, ok := t.TT.(*types.Pointer); ok {
-					bt := d.RegisterType(ptt.Elem()) // 333 a: here to check why new types are registered
+					bt := d.RegisterType(ptt.Elem())
 					if _, reged := typeLookupTable[bt.index]; !reged {
 						impBy = append(impBy, t)
 					}
