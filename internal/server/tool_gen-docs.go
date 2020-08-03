@@ -82,14 +82,17 @@ func resHrefID(resType pageResType, resPath string) (int, bool) {
 }
 
 var resType2ExtTable = map[pageResType]string{
-	ResTypeNone:       ".html",
-	ResTypePackage:    ".html",
-	ResTypeDependency: ".html",
-	ResTypeSource:     ".html",
-	ResTypeModule:     ".html",
-	ResTypeCSS:        ".css",
-	ResTypeJS:         ".js",
-	ResTypeSVG:        ".svg",
+	ResTypeNone:           ".html", // index, ...
+	ResTypeAPI:            ".json",
+	ResTypePackage:        ".html",
+	ResTypeDependency:     ".html",
+	ResTypeImplementation: ".html",
+	ResTypeSource:         ".html",
+	ResTypeModule:         ".html",
+	ResTypeUse:            ".html",
+	ResTypeCSS:            ".css",
+	ResTypeJS:             ".js",
+	ResTypeSVG:            ".svg",
 	//ResTypeAPI
 }
 
