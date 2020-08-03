@@ -8,7 +8,7 @@ import (
 	"time"
 )
 
-func RunShellCommand(timeout time.Duration, wd, cmd string, args ...string) ([]byte, error) {
+func RunShellCommand(timeout time.Duration, wd string, envs []string, cmd string, args ...string) ([]byte, error) {
 	if wd == "" {
 		var err error
 		wd, err = os.Getwd()
@@ -21,5 +21,6 @@ func RunShellCommand(timeout time.Duration, wd, cmd string, args ...string) ([]b
 	defer cancel()
 	command := exec.CommandContext(ctx, cmd, args...)
 	command.Dir = wd
+	command.Env = append(os.Environ(), envs...)
 	return command.CombinedOutput()
 }

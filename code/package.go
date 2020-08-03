@@ -915,6 +915,7 @@ func (s *Selector) Name() string {
 	}
 }
 
+// ToDo: change to Package() for consistency.
 func (s *Selector) Pkg() *Package {
 	if s.Field != nil {
 		return s.Field.Pkg

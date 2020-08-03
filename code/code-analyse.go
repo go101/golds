@@ -398,9 +398,14 @@ func (d *CodeAnalyzer) analyzePackages_FindImplementations() { // (resultMethodC
 			if ti.TypeName == nil {
 				return
 			}
+
 			pathPath := ti.TypeName.Package().Path()
 			for _, sel := range uiInfo.t.AllMethods {
-				d.registerTypeMethodContributingToTypeImplementations(pathPath, ti.TypeName.Name(), sel.Name())
+				var selPkg string
+				if !token.IsExported(sel.Name()) {
+					selPkg = sel.Pkg().Path()
+				}
+				d.registerTypeMethodContributingToTypeImplementations(pathPath, ti.TypeName.Name(), selPkg, sel.Name())
 			}
 		}
 
@@ -435,7 +440,8 @@ func (d *CodeAnalyzer) analyzePackages_FindImplementations() { // (resultMethodC
 					if _, reged := typeLookupTable[bt.index]; !reged {
 						impBys = append(impBys, t)
 
-						registerTypeMethod(t)
+						//registerTypeMethod(t)
+						registerTypeMethod(bt)
 					}
 				}
 			}

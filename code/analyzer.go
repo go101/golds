@@ -57,7 +57,7 @@ type CodeAnalyzer struct {
 	allTypeNameTable  map[string]*TypeName
 
 	// ToDo: need a better implementation.
-	typeMethodsContributingToTypeImplementations map[[3]string]struct{}
+	typeMethodsContributingToTypeImplementations map[[4]string]struct{}
 
 	// Position info of some runtime functions.
 	runtimeFuncPositions map[string]token.Position
@@ -399,16 +399,16 @@ func (d *CodeAnalyzer) RetrieveTypeName(t *TypeInfo) (*TypeName, bool) {
 //	return ok
 //}
 
-func (d *CodeAnalyzer) registerTypeMethodContributingToTypeImplementations(pkg, typ, method string) {
+func (d *CodeAnalyzer) registerTypeMethodContributingToTypeImplementations(pkg, typ, methodPkg, method string) {
 	if d.typeMethodsContributingToTypeImplementations == nil {
-		d.typeMethodsContributingToTypeImplementations = make(map[[3]string]struct{}, d.lastTypeIndex*3)
+		d.typeMethodsContributingToTypeImplementations = make(map[[4]string]struct{}, d.lastTypeIndex*3)
 	}
-	d.typeMethodsContributingToTypeImplementations[[3]string{pkg, typ, method}] = struct{}{}
+	d.typeMethodsContributingToTypeImplementations[[4]string{pkg, typ, methodPkg, method}] = struct{}{}
 }
 
 // typeIndex must be the index of a non-interface type.
-func (d *CodeAnalyzer) CheckTypeMethodContributingToTypeImplementations(pkg, typ, method string) bool {
-	_, ok := d.typeMethodsContributingToTypeImplementations[[3]string{pkg, typ, method}]
+func (d *CodeAnalyzer) CheckTypeMethodContributingToTypeImplementations(pkg, typ, methodPkg, method string) bool {
+	_, ok := d.typeMethodsContributingToTypeImplementations[[4]string{pkg, typ, methodPkg, method}]
 	return ok
 }
 

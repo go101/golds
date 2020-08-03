@@ -107,9 +107,9 @@ func (ds *docServer) updateGold() {
 		}
 
 		ds.updateLogger.Println("Run: go get -u go101.org/gold")
-		output, err := util.RunShellCommand(time.Minute*2, dir, "go", "get", "-u", "go101.org/gold")
+		output, err := util.RunShellCommand(time.Minute*2, dir, []string{"GO111MODULE=on"}, "go", "get", "-u", "go101.org/gold")
 		if len(output) > 0 {
-			ds.updateLogger.Printf("\n%s", output)
+			ds.updateLogger.Printf("\n%s\n", output)
 		}
 		if err != nil {
 			return err

@@ -1260,10 +1260,15 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 	// The declaration of the id is locally, certainly for its uses.
 	if sameFileObjOrderId >= 0 {
 		var link string
-		if v.topLevelFuncInfo.Name != nil {
+		if v.topLevelFuncInfo.Name == ident {
 			funcName := v.topLevelFuncInfo.Name.Name
 			if v.topLevelFuncInfo.RecvTypeName != "" {
-				if v.dataAnalyzer.CheckTypeMethodContributingToTypeImplementations(v.pkg.Path(), v.topLevelFuncInfo.RecvTypeName, funcName) {
+				var methodPkgPath string
+				if !token.IsExported(funcName) {
+					// This might be not essential, see registerTypeMethodContributingToTypeImplementations
+					methodPkgPath = v.pkg.Path()
+				}
+				if v.dataAnalyzer.CheckTypeMethodContributingToTypeImplementations(v.pkg.Path(), v.topLevelFuncInfo.RecvTypeName, methodPkgPath, funcName) {
 					link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeImplementation, v.pkg.Path() + "." + v.topLevelFuncInfo.RecvTypeName}, nil, "") + "#name-" + funcName
 				}
 			} else if token.IsExported(funcName) {

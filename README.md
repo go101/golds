@@ -38,7 +38,7 @@ _(NOTE: This tool is still in its early experimental phase. More new features wi
 
 ### Limitations
 
-Go Toolchain 1.13+ is needed to build and run **Gold** (testing needs 1.14+).
+Go Toolchain 1.13+ is needed to run and run **Gold** (and 1.14+ is needed to build).
 
 This project uses the [golang.org/x/tools/go/packages](https://pkg.go.dev/golang.org/x/tools/go/packages) package to parse code. The `golang.org/x/tools/go/package` is great, but it also has a shortcoming: there are no ways to get module/package downloading/preparing progress.
 

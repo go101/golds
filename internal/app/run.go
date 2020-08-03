@@ -48,7 +48,7 @@ func Run() {
 		return
 	}
 	var getRoughBuildTime = func() time.Time {
-		output, err := util.RunShellCommand(time.Second*3, "", os.Args[0], "-rough-build-time")
+		output, err := util.RunShellCommand(time.Second*5, "", nil, os.Args[0], "-rough-build-time")
 		if err != nil {
 			log.Printf("Run: %s -rough-build-time error: %s", os.Args[0], err)
 			return time.Now()

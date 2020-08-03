@@ -170,10 +170,15 @@ func (ds *docServer) buildImplementationData(analyzer *code.CodeAnalyzer, pkgPat
 		for _, sel := range methodSelectors {
 			impls := make([]MethodInfo, 0, len(typeInfo.ImplementedBys))
 			impBys := ds.sortTypeList(buildTypeImplementedByList(analyzer, typeInfo, true, typeNameRes), pkg)
+			selNameIsUnexported := !token.IsExported(sel.Name())
 			for _, impBy := range impBys {
 				impByDenoting := impBy.TypeName.Denoting()
 				for _, m := range impByDenoting.AllMethods {
-					if sel.Name() == m.Name() {
+					matched := sel.Name() == m.Name()
+					if matched && selNameIsUnexported {
+						matched = matched && m.Pkg().Path() == sel.Pkg().Path()
+					}
+					if matched {
 						explicit := sel.EmbeddingChain == nil
 						_, inteface := impByDenoting.TT.Underlying().(*types.Interface)
 						impls = append(impls, MethodInfo{
@@ -199,10 +204,15 @@ func (ds *docServer) buildImplementationData(analyzer *code.CodeAnalyzer, pkgPat
 		for _, sel := range methodSelectors {
 			impls := make([]MethodInfo, 0, len(typeInfo.Implements))
 			imps := ds.sortTypeList(buildTypeImplementsList(analyzer, typeInfo, true), pkg)
+			selNameIsUnexported := !token.IsExported(sel.Name())
 			for _, imp := range imps {
 				impDenoting := imp.TypeName.Denoting()
 				for _, m := range impDenoting.AllMethods {
-					if sel.Name() == m.Name() {
+					matched := sel.Name() == m.Name()
+					if matched && selNameIsUnexported {
+						matched = matched && m.Pkg().Path() == sel.Pkg().Path()
+					}
+					if matched {
 						explicit := sel.EmbeddingChain == nil
 						inteface := true
 						impls = append(impls, MethodInfo{
