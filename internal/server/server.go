@@ -174,6 +174,8 @@ func (ds *docServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		ds.javascriptFile(w, r, removeVersionFromFilename(resPath, ds.goldVersion))
 	case ResTypeSVG: // "svg"
 		ds.svgFile(w, r, resPath)
+	case ResTypePNG: // "png"
+		ds.pngFile(w, r, resPath)
 	//case "mod:": // module
 	//	ds.modulePage(w, r, path)
 	case ResTypePackage: // "pkg"

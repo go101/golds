@@ -23,7 +23,7 @@ func (ds *docServer) cssFile(w http.ResponseWriter, r *http.Request, themeName s
 	defer ds.mutex.Unlock()
 
 	options := cssFileOptions{
-		Colon: ds.currentTranslation.Text_Colon(),
+		Colon: ds.currentTranslation.Text_Colon(false),
 		Fonts: ds.currentTranslation.Text_PreferredFontList(),
 	}
 

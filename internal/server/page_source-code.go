@@ -1269,13 +1269,17 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 					methodPkgPath = v.pkg.Path()
 				}
 				if v.dataAnalyzer.CheckTypeMethodContributingToTypeImplementations(v.pkg.Path(), v.topLevelFuncInfo.RecvTypeName, methodPkgPath, funcName) {
-					link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeImplementation, v.pkg.Path() + "." + v.topLevelFuncInfo.RecvTypeName}, nil, "") + "#name-" + funcName
+					anchorName := funcName
+					if !token.IsExported(funcName) {
+						anchorName = methodPkgPath + "." + anchorName
+					}
+					link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeImplementation, v.pkg.Path() + "." + v.topLevelFuncInfo.RecvTypeName}, nil, "") + "#name-" + anchorName
 				}
 			} else if token.IsExported(funcName) {
 				link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, v.pkg.Path()}, nil, "") + "#name-" + funcName
-			} else if !genDocsMode {
-				link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, v.pkg.Path()}, nil, "") + "?show=all#name-" + funcName
-			}
+			} // else if !genDocsMode {
+			//	link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, v.pkg.Path()}, nil, "") + "?show=all#name-" + funcName
+			//}
 		}
 
 		//v.buildIdentifier(start, end, sameFileObjOrderId, "#line-"+strconv.Itoa(objPos.Line), "")
@@ -1353,7 +1357,11 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 
 				if v.topLevelInterfaceTypeInfo != nil && v.topLevelInterfaceTypeInfo.TypeName != "_" && len(v.topLevelInterfaceTypeInfo.Methods) > 0 {
 					if ident.Pos() == v.topLevelInterfaceTypeInfo.Methods[0].Pos() {
-						v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeImplementation, objPkgPath + "." + v.topLevelInterfaceTypeInfo.TypeName}, nil, "")+"#name-"+obj.Name())
+						anchorName := obj.Name()
+						if !token.IsExported(anchorName) {
+							anchorName = objPkgPath + "." + anchorName
+						}
+						v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeImplementation, objPkgPath + "." + v.topLevelInterfaceTypeInfo.TypeName}, nil, "")+"#name-"+anchorName)
 						v.topLevelInterfaceTypeInfo.Methods = v.topLevelInterfaceTypeInfo.Methods[1:]
 					}
 				}
@@ -1455,6 +1463,16 @@ func (ds *docServer) writeSourceCodeDocLink(page *htmlPage, pkg *code.Package, s
 	////fmt.Fprintf(page, `<a href="/src:%s#doc">d-&gt;</a> `, originalFile)
 	//buildPageHref(ResTypeSource, originalFile, false, "d-&gt;", page, "doc")
 	buildPageHref(page.PathInfo, pagePathInfo{ResTypeSource, pkg.Path() + "/" + sourceFilename}, page, "d-&gt;", "doc")
+	page.WriteByte(' ')
+}
+
+func (ds *docServer) writeMainFunctionArrow(page *htmlPage, pkg *code.Package, mainPos token.Position) {
+	if mainPos.IsValid() {
+		//mainPos.Line += ds.analyzer.SourceFileLineOffset(mainPos.Filename)
+		ds.writeSrouceCodeLineLink(page, pkg, mainPos, "m-&gt;", "", true)
+	} else {
+		page.WriteString("m-&gt;")
+	}
 	page.WriteByte(' ')
 }
 

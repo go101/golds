@@ -21,7 +21,7 @@ depending on your Go Toolchain version and the directory in which the installati
 * Supports listing exported types not only by alphabet, but also by popularity, which is good to understanding some packages exporting many types.
 * Rich type information collection:
   * Shows type implemention relations ([demo 1](https://docs.go101.org/std/pkg/go/ast.html#name-Node) and [demo 2](https://docs.go101.org/std/pkg/bytes.html#name-Buffer)).
-  * Shows method implementation relations.
+  * Shows method implementation relations ([demo](https://docs.go101.org/std/imp/io.Reader.html#name-Read)).
   * Shows promoted selectors, even on unexported embedded fields ([demo](https://docs.go101.org/std/pkg/archive/zip.html#name-File)).
   * Shows as-parameters-of and as-results-of function/method list (including interface methods).
 * Smooth code view experiences (good for studying Go projects without opening IDEs):
@@ -38,7 +38,7 @@ _(NOTE: This tool is still in its early experimental phase. More new features wi
 
 ### Limitations
 
-Go Toolchain 1.13+ is needed to run and run **Gold** (and 1.14+ is needed to build).
+Go Toolchain 1.13+ is needed to run **Gold** (and 1.14+ is needed to build **Gold**).
 
 This project uses the [golang.org/x/tools/go/packages](https://pkg.go.dev/golang.org/x/tools/go/packages) package to parse code. The `golang.org/x/tools/go/package` is great, but it also has a shortcoming: there are no ways to get module/package downloading/preparing progress.
 

@@ -108,7 +108,6 @@ func (ds *docServer) buildOverviewPage(overview *Overview, sortBy string) []byte
 }
 
 func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*PackageForListing, writeAnchorTarget, inGenModeRootPages bool, sortBy string) {
-	const MainPkgArrow = "m-&gt;"
 	const MainPkgArrowCharCount = 3
 	const MinPrefixSpacesCount = 3
 	var maxDigitCount = 2 // 2 for ". " suffix
@@ -130,6 +129,7 @@ func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*Package
 		} else {
 			page.WriteByte('\n')
 		}
+		
 		page.WriteString(`<code>`)
 		page.WriteString(SPACES[:MinPrefixSpacesCount])
 		var index = fmt.Sprintf("%d. ", i+1)
@@ -141,13 +141,7 @@ func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*Package
 			} else {
 				mainPos = pkg.Package.PPkg.Fset.PositionFor(mainObj.Pos(), false)
 			}
-			if mainPos.IsValid() {
-				//mainPos.Line += ds.analyzer.SourceFileLineOffset(mainPos.Filename)
-				ds.writeSrouceCodeLineLink(page, pkg.Package, mainPos, MainPkgArrow, "", true)
-			} else {
-				page.WriteString(MainPkgArrow)
-			}
-			page.WriteByte(' ')
+			ds.writeMainFunctionArrow(page, pkg.Package, mainPos)
 			page.WriteString(SPACES[:maxDigitCount-len(index)])
 			page.WriteString(index)
 		} else {

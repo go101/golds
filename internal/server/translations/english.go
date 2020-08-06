@@ -1,4 +1,4 @@
-package translation
+package translations
 
 import (
 	"fmt"
@@ -17,9 +17,17 @@ func (*English) LangTag() string { return "en-US" }
 // common
 ///////////////////////////////////////////////////////////////////
 
+func (*English) Text_Space() string { return " " }
+
 func (*English) Text_Comma() string { return ", " }
 
-func (*English) Text_Colon() string { return ":" }
+func (*English) Text_Colon(spaceTail bool) string {
+	if spaceTail {
+		return ": "
+	} else {
+		return ":"
+	}
+}
 
 func (*English) Text_Period(paragraphEnd bool) string {
 	if paragraphEnd {
@@ -337,7 +345,18 @@ func (*English) Text_ImportedBy() string { return "Imported By" }
 ///////////////////////////////////////////////////////////////////
 
 func (*English) Text_MethodImplementation() string {
-	return "Method Impelmentations: "
+	return "Method Impelmentations"
+}
+
+func (*English) Text_NumMethodsImplementingNothing(count int) string {
+	if count == 0 {
+		return ""
+	}
+	s1, s2 := "", "s"
+	if count > 1 {
+		s1, s2 = s2, s1
+	}
+	return fmt.Sprintf(" (%d other method%s implement%s nothing)", count, s1, s2)
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -553,7 +572,7 @@ func (*English) Text_Othertatistics(values map[string]interface{}) string {
 // footer
 ///////////////////////////////////////////////////////////////////
 
-func (*English) Text_GeneratedPageFooter(goldVersion string) string {
+func (*English) Text_GeneratedPageFooter(goldVersion, qrCodeLink string) string {
 	return fmt.Sprintf(`Generated with <a href="https://go101.org/article/tool-gold.html"><b>Gold</b></a> <i>%s</i>.
 <b>Gold</b> is a <a href="https://go101.org">Go 101</a> project started by <a href="https://tapirgames.com">TapirLiu</a>.
 Please follow <a href="https://twitter.com/go100and1">@Go100and1</a> to get the latest news of <b>Gold</b>.

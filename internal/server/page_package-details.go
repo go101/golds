@@ -11,6 +11,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"path/filepath"
 	"reflect"
 	"sort"
 	"strings"
@@ -124,11 +125,32 @@ func (ds *docServer) buildPackageDetailsPage(pkg *PackageDetails, options packag
 	if len(pkg.Files) > 0 {
 		fmt.Fprint(page, "\n\n", `<span class="title">`, ds.currentTranslation.Text_InvolvedFiles(len(pkg.Files)), `</span>`)
 
+		numArrows := 0
+		for _, info := range pkg.Files {
+			if info.MainPosition != nil && info.HasDocs {
+				numArrows = 2
+				break
+			} else if numArrows == 0 && (info.MainPosition != nil || info.HasDocs) {
+				numArrows = 1
+			}
+		}
+
 		for _, info := range pkg.Files {
 			page.WriteString("\n\t")
-			if info.HasDocs {
+			if info.MainPosition != nil && info.HasDocs {
+				ds.writeMainFunctionArrow(page, pkg.Package, *info.MainPosition)
+				ds.writeSourceCodeDocLink(page, pkg.Package, info.Filename)
+			} else if info.MainPosition != nil {
+				ds.writeMainFunctionArrow(page, pkg.Package, *info.MainPosition)
+			} else if info.HasDocs {
+				if numArrows == 2 {
+					page.WriteString("    ")
+				}
 				ds.writeSourceCodeDocLink(page, pkg.Package, info.Filename)
 			} else {
+				if numArrows == 2 {
+					page.WriteString("    ")
+				}
 				page.WriteString("    ")
 			}
 			ds.writeSrouceCodeFileLink(page, pkg.Package, info.Filename)
@@ -337,6 +359,7 @@ Done:
 
 type FileInfo struct {
 	Filename string
+	MainPosition *token.Position // for main packages only
 	HasDocs  bool
 }
 
@@ -462,6 +485,20 @@ func buildPackageDetailsData(analyzer *code.CodeAnalyzer, pkgPath string, option
 	//for _, path := range pkg.PPkg.OtherFiles {
 	//	files = append(files, FileInfo{FilePath: path})
 	//}
+	
+	if pkg.PPkg.Name == "main" {
+		for _, f := range pkg.PackageAnalyzeResult.AllFunctions {
+			if f.Name() == "main" {
+				mainPos := f.Position()
+				filename := filepath.Base(mainPos.Filename)
+				for i := range files {
+					if files[i].Filename == filename {
+						files[i].MainPosition = &mainPos
+					}
+				}
+			}
+		}
+	}
 
 	// ...
 	var valueResources = make([]code.ValueResource, 0,
@@ -956,11 +993,6 @@ const (
 // exportMethod is for method implementation page only.
 func (ds *docServer) writeTypeForListing(page *htmlPage, t *TypeForListing, pkg *code.Package, implerName string, dotMStyle int) {
 	if implerName == "" {
-		if t.IsPointer {
-			page.WriteByte('*')
-		} else {
-			page.WriteByte(' ')
-		}
 	} else if dotMStyle == DotMStyle_NotShow {
 		if t.IsPointer {
 			page.WriteString("*T : ")
@@ -992,6 +1024,11 @@ func (ds *docServer) writeTypeForListing(page *htmlPage, t *TypeForListing, pkg 
 			page.WriteString(t.Pkg.Path())
 			page.WriteByte('.')
 		}
+	}
+	
+	if implerName == "" && t.IsPointer {
+		page.WriteString("(*")
+		defer page.WriteByte(')')
 	}
 
 	if t.Exported() {

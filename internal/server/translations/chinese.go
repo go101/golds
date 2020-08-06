@@ -1,4 +1,4 @@
-package translation
+package translations
 
 import (
 	"fmt"
@@ -17,14 +17,16 @@ func (*Chinese) LangTag() string { return "zh-CN" }
 // common
 ///////////////////////////////////////////////////////////////////
 
+func (*Chinese) Text_Space() string { return "" }
+
 func (*Chinese) Text_Comma() string { return "，" }
 
-func (*Chinese) Text_Colon() string { return "：" }
+func (*Chinese) Text_Colon(tailSpace bool) string { return "：" }
 
 func (*Chinese) Text_Period(paragraphEnd bool) string { return "。" }
 
 func (*Chinese) Text_PreferredFontList() string {
-	return `"Courier New", Courier, monospace, "Microsoft YaHei,'宋体'`
+	return `"Courier New", Courier, monospace, "Microsoft YaHei", "宋体"`
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -308,7 +310,14 @@ func (*Chinese) Text_ImportedBy() string { return "被这些代码包引入" }
 ///////////////////////////////////////////////////////////////////
 
 func (*Chinese) Text_MethodImplementation() string {
-	return "方法实现列表："
+	return "方法实现列表"
+}
+
+func (*Chinese) Text_NumMethodsImplementingNothing(count int) string {
+	if count == 0 {
+		return ""
+	}
+	return fmt.Sprintf("（%d个其它房方法什么也没实现）", count)
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -521,9 +530,17 @@ func (*Chinese) Text_Othertatistics(values map[string]interface{}) string {
 // footer
 ///////////////////////////////////////////////////////////////////
 
-func (*Chinese) Text_GeneratedPageFooter(goldVersion string) string {
-	return fmt.Sprintf(`由 <a href="https://go101.org/article/tool-gold.html"><b>Gold</b></a> <i>%s</i> 生成。<b>Gold</b> 是由<a href="https://gfw.tapirgames.com">老貘</a>创建的一个 <a href="https://go101.org">Go 101</a>项目。欢迎在 <a href="https://github.com/go101/gold">Gold 项目</a>中提交 PR 和 bug 报告。
-请关注 Go 101 官方 Twitter 帐号 <a href="https://twitter.com/go100and1">@Go100and1</a> 或者 “Go 101” 微信公众号以获取 <b>Gold</b> 的最新消息。`,
+func (*Chinese) Text_GeneratedPageFooter(goldVersion, qrCodeLink string) string {
+	var qrImg string
+	if qrCodeLink != "" {
+		qrImg = fmt.Sprintf(`<img src="%s">`, qrCodeLink)
+	}
+	return fmt.Sprintf(`<table><tr><td>%s</td>
+<td>由 <a href="https://go101.org/article/tool-gold.html"><b>Gold</b></a> <i>%s</i> 生成。
+<b>Gold</b> 是由<a href="https://gfw.tapirgames.com">老貘</a>创建的一个 <a href="https://go101.org">Go 101</a>项目。
+欢迎在 <a href="https://github.com/go101/gold">Gold 项目</a>中提交 PR 和 bug 报告。
+请关注 “Go 101” 微信公众号（扫描左边的二维码）以获取 <b>Gold</b> 的最新消息。</td></tr></table>`,
+		qrImg,
 		goldVersion,
 	)
 }

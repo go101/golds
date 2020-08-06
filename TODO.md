@@ -2,12 +2,11 @@
 
 ### Soon to do
 
-* fix registerTypeMethodContributingToTypeImplementations
-  * and buildImplementationData: match unexported method needs consider containing package
+* translate method implementation page
+* module page. Containing Module: xxxx/xxxx
 
 * show code example (as source code)
   * run source code, run main package, run main file
-* click interface method to show multiple concrete methods.
   Open a new page to avoid using JavaScropt?
 * click a field to show all the assignments to it (inc. explicits and implicits)
 * show identifier uses/references (open in new window)
@@ -158,6 +157,7 @@
   * implementBy and implement lists should include exported aliases of unnmaed types.
   * it is important to find a way to list implemented unexported types, which is good for code reading.
   * list variables of function types in asParams and asResults lists.
+  * for function types, also list functions of its underlying type as values
 * for a value
   * if its type is unexported, but its type has exported methods, list the methods under the value.
 * for a method
@@ -172,6 +172,9 @@
 
 ### Done
 
+
+* (done) click interface method to show multiple concrete methods.
+  Use the method implementation page instead.
 * (done) sort types by popularity
 * (done) implement registerNamedInterfaceMethodsForInvolvedTypeNames
 * (done) move stat title out of translation. (translations should not contain html)

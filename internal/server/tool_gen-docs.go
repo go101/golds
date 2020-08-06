@@ -93,6 +93,7 @@ var resType2ExtTable = map[pageResType]string{
 	ResTypeCSS:            ".css",
 	ResTypeJS:             ".js",
 	ResTypeSVG:            ".svg",
+	ResTypePNG:            ".png",
 	//ResTypeAPI
 }
 

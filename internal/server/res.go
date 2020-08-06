@@ -20,8 +20,9 @@ type Translation interface {
 	LangTag() string
 
 	// common
+	Text_Space() string
 	Text_Comma() string
-	Text_Colon() string
+	Text_Colon(tailSpace bool) string
 	Text_Period(paragraphEnd bool) string
 	Text_PreferredFontList() string
 
@@ -91,6 +92,7 @@ type Translation interface {
 
 	// method impelementation page
 	Text_MethodImplementation() string
+	Text_NumMethodsImplementingNothing(count int) string
 
 	// source code page
 	Text_SourceCode(pkgPath, bareFilename string) string
@@ -107,7 +109,7 @@ type Translation interface {
 	Text_Othertatistics(values map[string]interface{}) string
 
 	// Footer
-	Text_GeneratedPageFooter(goldVersion string) string
+	Text_GeneratedPageFooter(goldVersion, qrCodeLink string) string
 }
 
 func (ds *docServer) currentSettings() (Theme, Translation) {

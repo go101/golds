@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"strings"
+
+	"go101.org/gold/internal/server/translations"
 )
 
 type pageResType string
@@ -20,6 +22,7 @@ const (
 	ResTypeCSS            pageResType = "css"
 	ResTypeJS             pageResType = "jvs"
 	ResTypeSVG            pageResType = "svg"
+	ResTypePNG            pageResType = "png"
 )
 
 type htmlPage struct {
@@ -63,10 +66,15 @@ func NewHtmlPage(goldVersion, title, themeName string, currentPageInfo pagePathI
 func (page *htmlPage) Done(translation Translation) []byte {
 	//if genDocsMode {}
 
+	var qrImgLink string
+	if _, ok := translation.(*translations.Chinese); ok {
+		qrImgLink = buildPageHref(page.PathInfo, pagePathInfo{ResTypePNG, "go101-wechat"}, nil, "")
+	}
+
 	fmt.Fprintf(page, `<pre id="footer">
 %s
 </pre>`,
-		translation.Text_GeneratedPageFooter(page.goldVersion),
+		translation.Text_GeneratedPageFooter(page.goldVersion, qrImgLink),
 	)
 
 	page.WriteString(`

@@ -47,7 +47,7 @@ func (ds *docServer) buildImplementationPage(result *MethodImplementationResult)
 	// Use the same design for local id: click such methods to highlight all same-origin ones.
 
 	qualifiedTypeName := result.Package.Path() + "." + result.TypeName.Name()
-	title := ds.currentTranslation.Text_MethodImplementation() + qualifiedTypeName
+	title := ds.currentTranslation.Text_MethodImplementation() + ds.currentTranslation.Text_Colon(true) +  qualifiedTypeName
 	page := NewHtmlPage(ds.goldVersion, title, ds.currentTheme.Name(), pagePathInfo{ResTypeImplementation, qualifiedTypeName})
 
 	fmt.Fprintf(page, `<pre><code><span style="font-size:larger;">type <a href="%s">%s</a>.`,
@@ -60,12 +60,13 @@ func (ds *docServer) buildImplementationPage(result *MethodImplementationResult)
 
 	nonImplementingMethodCountText := ""
 	if !result.IsInterface {
-		nonImplementingMethodCountText = fmt.Sprintf(" (%d other methods implement nothing)", result.NonImplementingMethodCount)
+		nonImplementingMethodCountText = ds.currentTranslation.Text_NumMethodsImplementingNothing(int(result.NonImplementingMethodCount))
 	}
-
+	
 	fmt.Fprintf(page, `
-Method Implementations%s:
+<code><span class="title">%s%s</span>
 `,
+		ds.currentTranslation.Text_MethodImplementation(),
 		nonImplementingMethodCountText,
 	)
 
@@ -76,7 +77,11 @@ Method Implementations%s:
 			dotMStyle = DotMStyle_Exported
 		}
 		page.WriteString("\n")
-		fmt.Fprintf(page, `<div class="anchor" id="name-%s">`, methodName)
+		anchorName := methodName
+		if !token.IsExported(methodName) {
+			anchorName = method.Method.Pkg().Path() + "." + methodName
+		}
+		fmt.Fprintf(page, `<div class="anchor" id="name-%s">`, anchorName)
 		page.WriteByte('\t')
 		ds.writeMethodForListing(page, result.Package, method.Method, nil, false)
 		for _, imp := range method.Implementations {
