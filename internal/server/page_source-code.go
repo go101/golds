@@ -1120,6 +1120,14 @@ func (v *astVisitor) Visit(n ast.Node) (w ast.Visitor) {
 		}
 		v.handleKeyword(chanPos, token.CHAN)
 	// ...
+	case *ast.ImportSpec:
+		// ToDo: click the import name to highlight all uses.
+		//       For imports without names, insert a name.
+
+		if node.Name == nil {
+		}
+
+	//...
 	case *ast.BasicLit:
 		v.handleBasicLit(node)
 	case *ast.Ident:

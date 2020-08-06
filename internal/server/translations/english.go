@@ -573,10 +573,16 @@ func (*English) Text_Othertatistics(values map[string]interface{}) string {
 ///////////////////////////////////////////////////////////////////
 
 func (*English) Text_GeneratedPageFooter(goldVersion, qrCodeLink string) string {
-	return fmt.Sprintf(`Generated with <a href="https://go101.org/article/tool-gold.html"><b>Gold</b></a> <i>%s</i>.
+	var qrImg string
+	if qrCodeLink != "" {
+		qrImg = fmt.Sprintf(`<img src="%s">`, qrCodeLink)
+	}
+	return fmt.Sprintf(`<table><tr><td>%s</td>
+<td>Generated with <a href="https://go101.org/article/tool-gold.html"><b>Gold</b></a> <i>%s</i>.
 <b>Gold</b> is a <a href="https://go101.org">Go 101</a> project started by <a href="https://tapirgames.com">TapirLiu</a>.
-Please follow <a href="https://twitter.com/go100and1">@Go100and1</a> to get the latest news of <b>Gold</b>.
-PR and bug reports are welcomed and can be submitted <a href="https://github.com/go101/gold">here</a>.`,
+PR and bug reports are welcomed and can be submitted <a href="https://github.com/go101/gold">here</a>.
+Please follow <a href="https://twitter.com/go100and1">@Go100and1</a> (reachable from the left QR code) to get the latest news of <b>Gold</b>.</td></tr></table`,
+		qrImg,
 		goldVersion,
 	)
 }

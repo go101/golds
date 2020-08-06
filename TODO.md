@@ -2,30 +2,26 @@
 
 ### Soon to do
 
-* translate method implementation page
 * module page. Containing Module: xxxx/xxxx
 
 * show code example (as source code)
   * run source code, run main package, run main file
-  Open a new page to avoid using JavaScropt?
+  Open a new page to avoid using JavaScript?
 * click a field to show all the assignments to it (inc. explicits and implicits)
 * show identifier uses/references (open in new window)
 * sort packages: ab-cd should after ab/xy
 * search
 * add links in import sections
-* show *** for unexproted
-  * ...
-* show non-exporteds for main packages, show main func entry "m->" before source file
-* show values by file/position order
+
+* show values by file/position order (only for javascript on)
 * put unexported function in asParams/asResult lists
 * in code, show tooltip as the full selector path for shortened selectors.
 
-* html escape some doc texts
-  use htmp.Escape
 * enhance tests
   * test by ast comments
+* add more comments
+
 * css style
-* add comments
 * js:
   * shortcuts:
     * ~, Backspace: back
@@ -172,7 +168,8 @@
 
 ### Done
 
-
+* (cancelled) html escape some doc texts. use htmp.Escape 
+* (done) show non-exporteds for main packages, show main func entry "m->" before source file
 * (done) click interface method to show multiple concrete methods.
   Use the method implementation page instead.
 * (done) sort types by popularity

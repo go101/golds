@@ -317,7 +317,7 @@ func (*Chinese) Text_NumMethodsImplementingNothing(count int) string {
 	if count == 0 {
 		return ""
 	}
-	return fmt.Sprintf("（%d个其它房方法什么也没实现）", count)
+	return fmt.Sprintf("（%d个其它方法什么也没实现）", count)
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -325,7 +325,7 @@ func (*Chinese) Text_NumMethodsImplementingNothing(count int) string {
 ///////////////////////////////////////////////////////////////////
 
 func (*Chinese) Text_SourceCode(pkgPath, bareFilename string) string {
-	return fmt.Sprintf("源文件%s（%s代码包中）", bareFilename, pkgPath)
+	return fmt.Sprintf("源文件：%s（%s代码包中）", bareFilename, pkgPath)
 }
 
 func (*Chinese) Text_SourceFilePath() string { return "源文件：" }
@@ -536,7 +536,7 @@ func (*Chinese) Text_GeneratedPageFooter(goldVersion, qrCodeLink string) string 
 		qrImg = fmt.Sprintf(`<img src="%s">`, qrCodeLink)
 	}
 	return fmt.Sprintf(`<table><tr><td>%s</td>
-<td>由 <a href="https://go101.org/article/tool-gold.html"><b>Gold</b></a> <i>%s</i> 生成。
+<td>本页面由 <a href="https://go101.org/article/tool-gold.html"><b>Gold</b></a> <i>%s</i> 生成。
 <b>Gold</b> 是由<a href="https://gfw.tapirgames.com">老貘</a>创建的一个 <a href="https://go101.org">Go 101</a>项目。
 欢迎在 <a href="https://github.com/go101/gold">Gold 项目</a>中提交 PR 和 bug 报告。
 请关注 “Go 101” 微信公众号（扫描左边的二维码）以获取 <b>Gold</b> 的最新消息。</td></tr></table>`,

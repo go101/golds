@@ -67,8 +67,11 @@ func (page *htmlPage) Done(translation Translation) []byte {
 	//if genDocsMode {}
 
 	var qrImgLink string
-	if _, ok := translation.(*translations.Chinese); ok {
+	switch translation.(type) {
+	case *translations.Chinese:
 		qrImgLink = buildPageHref(page.PathInfo, pagePathInfo{ResTypePNG, "go101-wechat"}, nil, "")
+	case *translations.English:
+		qrImgLink = buildPageHref(page.PathInfo, pagePathInfo{ResTypePNG, "go101-twitter"}, nil, "")
 	}
 
 	fmt.Fprintf(page, `<pre id="footer">
