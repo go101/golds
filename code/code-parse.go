@@ -40,6 +40,7 @@ func collectPPackages(ppkgs []*packages.Package) map[string]*packages.Package {
 		if _, present := allPPkgs[ppkg.PkgPath]; present {
 			return
 		}
+
 		allPPkgs[ppkg.PkgPath] = ppkg
 		for _, p := range ppkg.Imports {
 			regPkgs(p)
@@ -109,6 +110,8 @@ Start:
 			packages.NeedCompiledGoFiles | packages.NeedTypesSizes |
 			packages.NeedSyntax | packages.NeedTypesInfo,
 		Tests: false, // ToDo: parse tests
+		// It looks, if Tests is set to true, then run "GOOS=windows gold std" will fail with
+		//		panic: TypeName for runtime.LFNode not found
 
 		//Logf: func(format string, args ...interface{}) {
 		//	log.Println("================================================\n", args)

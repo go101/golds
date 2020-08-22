@@ -3,6 +3,7 @@ package server
 import (
 	"bytes"
 	"fmt"
+	"go/build"
 	"strings"
 
 	"go101.org/gold/internal/server/translations"
@@ -77,7 +78,7 @@ func (page *htmlPage) Done(translation Translation) []byte {
 	fmt.Fprintf(page, `<pre id="footer">
 %s
 </pre>`,
-		translation.Text_GeneratedPageFooter(page.goldVersion, qrImgLink),
+		translation.Text_GeneratedPageFooter(page.goldVersion, qrImgLink, build.Default.GOOS, build.Default.GOARCH),
 	)
 
 	page.WriteString(`

@@ -72,7 +72,7 @@ type docServer struct {
 	visited       int32
 }
 
-func Run(port, lang string, args []string, silentMode bool, goldVersion string, printUsage func(io.Writer), roughBuildTime func() time.Time) {
+func Run(recommendedPort, lang string, args []string, silentMode bool, goldVersion string, printUsage func(io.Writer), roughBuildTime func() time.Time) {
 	ds := &docServer{
 		goldVersion: goldVersion,
 
@@ -92,14 +92,32 @@ func Run(port, lang string, args []string, silentMode bool, goldVersion string, 
 		ds.changeTranslationByAcceptLanguage(lang)
 	}
 
+	port, delta := recommendedPort, -1
+	defaultPort, err := strconv.Atoi(recommendedPort)
+	if err != nil {
+		log.Printf("Invalid port: %s. A new one will be selected automatically.", recommendedPort)
+		defaultPort = 56789
+		port = strconv.Itoa(defaultPort)
+	}
+
+	if defaultPort > 65535 {
+		defaultPort = 65535
+	} else if defaultPort < 1024 {
+		defaultPort = 1024
+	}
+	if defaultPort < 9000 {
+		delta = 1
+	}
+
 NextTry:
 	l, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
 	if err != nil {
 		if strings.Index(err.Error(), "bind: address already in use") >= 0 {
-			port = strconv.Itoa(50000 + 1 + rand.Int()%9999)
+			defaultPort += delta
+			port = strconv.Itoa(defaultPort)
+			//port = strconv.Itoa(50000 + 1 + rand.Int()%9999)
 			goto NextTry
 		}
-		// ToDo: random port
 		log.Fatal(err)
 	}
 

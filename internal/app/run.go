@@ -89,8 +89,22 @@ func Run() {
 		return
 	}
 
-	if dir := *dirFlag; dir != "" {
-		util.ServeFiles(validateDiir(dir), *portFlag, silentMode, Version)
+	if flag.NArg() == 0 {
+		log.SetFlags(0)
+
+		if *dirFlag == "" {
+			log.Printf(`Running in directory serving mode.
+If docs serving mode is expected, please run "%s ." instead.
+
+`,
+				filepath.Base(os.Args[0]),
+			)
+		}
+		if *portFlag == "" {
+			*portFlag = "9999" // to be consistent with the one used in the old golf program.
+		}
+
+		util.ServeFiles(validateDiir(*dirFlag), *portFlag, silentMode, Version)
 		return
 	}
 
@@ -104,7 +118,7 @@ var genFlag = flag.Bool("gen", false, "HTML generation mode")
 var genIntentFlag = flag.String("gen-intent", "docs", "docs | testdata")
 var langFlag = flag.String("lang", "", "docs generation language tag")
 var dirFlag = flag.String("dir", "", "directory for file serving or HTML generation")
-var portFlag = flag.String("port", "56789", "preferred server port")
+var portFlag = flag.String("port", "", "preferred server port [1024, 65536]. Default: 56789")
 var sFlag = flag.Bool("s", false, "not open a browser automatically")
 var silentFlag = flag.Bool("silent", false, "not open a browser automatically")
 

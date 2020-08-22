@@ -9,12 +9,15 @@ It tries to extract as much information as possible from Go code to help gophers
 ### Installation
 
 Run `go get -u go101.org/gold` to install (and update) **Gold**.
+_(The `GO111MODULE` enviroment variable might need to be set as `on` to utilize the `GOPROXY` setting,
+depending on your Go Toolchain version and the directory in which the installation command runs.)_
 
-Notes:
-* If the tool name `gold` conflicts with another tool with the same name you are using,
-you can run `go get -u go101.org/gold/godoge` instead to install **Gold** as _**godoge**_.
-* The `GO111MODULE` enviroment variable might need to be set as `on` to utilize the `GOPROXY` setting,
-depending on your Go Toolchain version and the directory in which the installation command runs.
+We may also clone this project firstly, then use `go install` command to install **Gold**.
+
+Note, if the tool name `gold` conflicts with another tool with the same name you are using,
+you can install `gold` as `godoge` or `golds` by running one of the following commands:
+* `go get -u go101.org/gold/godoge`
+* `go get -u go101.org/gold/golds`
 
 ### Features
 
@@ -40,7 +43,8 @@ _(NOTE: This tool is still in its early experimental phase. More new features wi
 
 Go Toolchain 1.13+ is needed to run **Gold** (and 1.14+ is needed to build **Gold**).
 
-This project uses the [golang.org/x/tools/go/packages](https://pkg.go.dev/golang.org/x/tools/go/packages) package to parse code. The `golang.org/x/tools/go/package` is great, but it also has a shortcoming: there are no ways to get module/package downloading/preparing progress.
+This project uses the [golang.org/x/tools/go/packages](https://pkg.go.dev/golang.org/x/tools/go/packages) package to parse code.
+The `golang.org/x/tools/go/package` package is great, but it also has a shortcoming: there are no ways to get module/package downloading/preparing progress.
 
 All packages must compile okay to get their docs shown.
 
@@ -53,9 +57,10 @@ Code examples in docs are not shown currently.
 ### Usage
 
 Start the docs server:
-* Run `gold .` or `gold` to show docs of the package in the current directory (and all its dependency packages).
+* Run `gold .` to show docs of the package in the current directory (and all its dependency packages).
 * Run `gold ./...` to show docs of all packages under the current directory (and all their dependency packages).
 * Run `gold std` to show docs of standard packages.
+* Run `gold aPackage` to show docs of the specified package (and all its dependency packages).
 
 Each of the above commands will open a browser window automatically.
 We can use the `-s` or `-silent` flags to turn off the behavior.
@@ -65,7 +70,9 @@ Generate static HTML docs pages (the `-dir` flag is optional in this mode, its d
 * `gold -gen -dir=generated ./...`
 * `gold -gen -dir=generated std`
 
-We can run `gold -dir=.` from the HTML docs generation directory to view the generated docs.
+We can run `gold -dir=.` (or simply `gold`) from the HTML docs generation directory to view the generated docs in browser. (**Gold** also means __Go local directory server__.)
+
+The `gold` command recognizes the `GOOS` and `GOARCH` environment variables.
 
 ### Analyzation Cases
 

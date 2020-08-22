@@ -109,7 +109,7 @@ type Translation interface {
 	Text_Othertatistics(values map[string]interface{}) string
 
 	// Footer
-	Text_GeneratedPageFooter(goldVersion, qrCodeLink string) string
+	Text_GeneratedPageFooter(goldVersion, qrCodeLink, goOS, goArch string) string
 }
 
 func (ds *docServer) currentSettings() (Theme, Translation) {

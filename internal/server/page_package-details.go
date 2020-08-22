@@ -358,9 +358,9 @@ Done:
 }
 
 type FileInfo struct {
-	Filename string
+	Filename     string
 	MainPosition *token.Position // for main packages only
-	HasDocs  bool
+	HasDocs      bool
 }
 
 type PackageDetails struct {
@@ -485,7 +485,7 @@ func buildPackageDetailsData(analyzer *code.CodeAnalyzer, pkgPath string, option
 	//for _, path := range pkg.PPkg.OtherFiles {
 	//	files = append(files, FileInfo{FilePath: path})
 	//}
-	
+
 	if pkg.PPkg.Name == "main" {
 		for _, f := range pkg.PackageAnalyzeResult.AllFunctions {
 			if f.Name() == "main" {
@@ -1024,11 +1024,15 @@ func (ds *docServer) writeTypeForListing(page *htmlPage, t *TypeForListing, pkg 
 			page.WriteString(t.Pkg.Path())
 			page.WriteByte('.')
 		}
-	}
-	
-	if implerName == "" && t.IsPointer {
-		page.WriteString("(*")
-		defer page.WriteByte(')')
+
+		if implerName == "" && t.IsPointer {
+			page.WriteString("(*")
+			defer page.WriteByte(')')
+		}
+	} else {
+		if implerName == "" && t.IsPointer {
+			page.WriteString("*")
+		}
 	}
 
 	if t.Exported() {

@@ -129,7 +129,7 @@ func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*Package
 		} else {
 			page.WriteByte('\n')
 		}
-		
+
 		page.WriteString(`<code>`)
 		page.WriteString(SPACES[:MinPrefixSpacesCount])
 		var index = fmt.Sprintf("%d. ", i+1)

@@ -2,20 +2,31 @@
 
 ### Soon to do
 
+* server state:
+  * highlight id 0-n
+  * searching uses for id goroutine 0-n
+
 * module page. Containing Module: xxxx/xxxx
 
-* show code example (as source code)
-  * run source code, run main package, run main file
-  Open a new page to avoid using JavaScript?
-* click a field to show all the assignments to it (inc. explicits and implicits)
+* show/run examples/tests/banchmarks
+  * run source code, run main package
+  * Open a new page to avoid using JavaScript?
+  * "go/doc": doc.Examples(...)
+  * websocket: monitor page leave and shutdown unfinished Go processes.
+
 * show identifier uses/references (open in new window)
+  * first step: show uses of unexported identifiers.
+  * including variable, constants, fields, functions, ...
+  * for fields, also show all the assignments to it (inc. explicits and implicits)
+
 * sort packages: ab-cd should after ab/xy
-* search
 * add links in import sections
+* in code, show tooltip as the full selector path for shortened selectors.
 
 * show values by file/position order (only for javascript on)
 * put unexported function in asParams/asResult lists
-* in code, show tooltip as the full selector path for shortened selectors.
+
+* search
 
 * enhance tests
   * test by ast comments
@@ -83,10 +94,7 @@
 
 * module info
 * code search
-* show/run examples/tests/banchmarks
-  * "go/doc": doc.Examples(...)
-  * use go/doc to retrieve package docs
-  * websocket: monitor page leave and shutdown unfinished Go processes.
+
 * support multi GOOS pages, show all OS specified packages
   * show used build tags and other available ones
   * https://stackoverflow.com/questions/7044944/jquery-javascript-to-detect-os-without-a-plugin

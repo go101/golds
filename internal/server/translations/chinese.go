@@ -530,17 +530,19 @@ func (*Chinese) Text_Othertatistics(values map[string]interface{}) string {
 // footer
 ///////////////////////////////////////////////////////////////////
 
-func (*Chinese) Text_GeneratedPageFooter(goldVersion, qrCodeLink string) string {
+func (*Chinese) Text_GeneratedPageFooter(goldVersion, qrCodeLink, goOS, goArch string) string {
 	var qrImg string
 	if qrCodeLink != "" {
 		qrImg = fmt.Sprintf(`<img src="%s">`, qrCodeLink)
 	}
 	return fmt.Sprintf(`<table><tr><td>%s</td>
-<td>本页面由 <a href="https://go101.org/article/tool-gold.html"><b>Gold</b></a> <i>%s</i> 生成。
+<td>本页面由 <a href="https://go101.org/article/tool-gold.html"><b>Gold</b></a> <i>%s</i> 生成。（GOOS=%s GOARCH=%s）。
 <b>Gold</b> 是由<a href="https://gfw.tapirgames.com">老貘</a>创建的一个 <a href="https://go101.org">Go 101</a>项目。
 欢迎在 <a href="https://github.com/go101/gold">Gold 项目</a>中提交 PR 和 bug 报告。
-请关注 “Go 101” 微信公众号（扫描左边的二维码）以获取 <b>Gold</b> 的最新消息。</td></tr></table>`,
+请关注 “Go 101” 微信公众号（扫描左边的二维码）以获取 <b>Gold</b> 的最新消息以及各种 Go 细节和事实。</td></tr></table>`,
 		qrImg,
 		goldVersion,
+		goOS,
+		goArch,
 	)
 }
