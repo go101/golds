@@ -1036,7 +1036,8 @@ func (ds *docServer) writeTypeForListing(page *htmlPage, t *TypeForListing, pkg 
 	}
 
 	if t.Exported() {
-		if t.Package() != pkg {
+		// dotMStyle != DotMStyle_NotShow means in method implementation list page.
+		if t.Package() != pkg || dotMStyle != DotMStyle_NotShow {
 			fmt.Fprintf(page, `<a href="`)
 			//page.WriteString("/pkg:")
 			//page.WriteString(t.Pkg.Path())

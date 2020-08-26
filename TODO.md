@@ -32,6 +32,8 @@
   * test by ast comments
 * add more comments
 
+* gen mode: merge docs for several (GOOS, GOARCH) compositions.
+
 * css style
 * js:
   * shortcuts:
@@ -56,6 +58,10 @@
   * global.methodPrototypes {selNameId, funcProtoId}, each correspods a unique id (int32(
   * global.method2typesTable map[methodProtoId][]*type. All the []*type share a common big []*type slice.
     The length of the big slice is sum(type[i].methodCount)
+
+* is LSIF helpful?
+  https://lsif.dev/
+  lsif-c++ for cgo etc.
 
 ### More to do
 
