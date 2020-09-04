@@ -25,6 +25,10 @@ func (*Chinese) Text_Colon(tailSpace bool) string { return "：" }
 
 func (*Chinese) Text_Period(paragraphEnd bool) string { return "。" }
 
+func (*Chinese) Text_EnclosedInOarentheses(text string) string {
+	return "（" + text + "）"
+}
+
 func (*Chinese) Text_PreferredFontList() string {
 	return `"Courier New", Courier, monospace, "Microsoft YaHei", "宋体"`
 }
@@ -101,6 +105,14 @@ func (*Chinese) Text_Analyzing_MakeStatistics(d time.Duration) string {
 
 func (*Chinese) Text_Analyzing_CollectSourceFiles(d time.Duration) string {
 	return fmt.Sprintf("搜集源文件：%s", d)
+}
+
+func (*Chinese) Text_Analyzing_CollectObjectReferences(d time.Duration) string {
+	return fmt.Sprintf("搜集代码元素对象引用：%s", d)
+}
+
+func (*Chinese) Text_Analyzing_CacheSourceFiles(d time.Duration) string {
+	return fmt.Sprintf("缓存源文件：%s", d)
 }
 
 func (*Chinese) Text_Analyzing_Done(d time.Duration, memoryUse string) string {
@@ -306,10 +318,10 @@ func (*Chinese) Text_Imports() string { return "引入了这些代码包" }
 func (*Chinese) Text_ImportedBy() string { return "被这些代码包引入" }
 
 ///////////////////////////////////////////////////////////////////
-// method impelementation page
+// method implementation page
 ///////////////////////////////////////////////////////////////////
 
-func (*Chinese) Text_MethodImplementation() string {
+func (*Chinese) Text_MethodImplementations() string {
 	return "方法实现列表"
 }
 
@@ -318,6 +330,25 @@ func (*Chinese) Text_NumMethodsImplementingNothing(count int) string {
 		return ""
 	}
 	return fmt.Sprintf("（%d个其它方法什么也没实现）", count)
+}
+
+///////////////////////////////////////////////////////////////////
+// object reference page
+///////////////////////////////////////////////////////////////////
+
+func (*Chinese) Text_ReferenceList() string {
+	return "引用列表"
+}
+
+func (*Chinese) Text_ObjectKind(kind string) string {
+	switch kind {
+	case "field":
+		return "字段"
+	case "method":
+		return "方法"
+	default:
+		panic("unknown object kind name: " + kind)
+	}
 }
 
 ///////////////////////////////////////////////////////////////////

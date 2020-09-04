@@ -24,6 +24,7 @@ type Translation interface {
 	Text_Comma() string
 	Text_Colon(tailSpace bool) string
 	Text_Period(paragraphEnd bool) string
+	Text_EnclosedInOarentheses(text string) string
 	Text_PreferredFontList() string
 
 	// server
@@ -48,6 +49,8 @@ type Translation interface {
 	Text_Analyzing_RegisterInterfaceMethodsForTypes(d time.Duration) string
 	Text_Analyzing_MakeStatistics(d time.Duration) string
 	Text_Analyzing_CollectSourceFiles(d time.Duration) string
+	Text_Analyzing_CollectObjectReferences(d time.Duration) string
+	Text_Analyzing_CacheSourceFiles(d time.Duration) string
 
 	// overview page
 	Text_Overview() string
@@ -90,9 +93,13 @@ type Translation interface {
 	Text_Imports() string
 	Text_ImportedBy() string
 
-	// method impelementation page
-	Text_MethodImplementation() string
+	// method implementation page
+	Text_MethodImplementations() string
 	Text_NumMethodsImplementingNothing(count int) string
+
+	// object reference page
+	Text_ReferenceList() string
+	Text_ObjectKind(kind string) string
 
 	// source code page
 	Text_SourceCode(pkgPath, bareFilename string) string

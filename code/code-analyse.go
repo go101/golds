@@ -82,6 +82,14 @@ func (d *CodeAnalyzer) AnalyzePackages(onSubTaskDone func(int, time.Duration, ..
 
 	logProgress(SubTask_CollectSourceFiles)
 
+	d.CollectObjectReferences()
+
+	logProgress(SubTask_CollectObjectReferences)
+
+	d.CacheSourceFiles()
+
+	logProgress(SubTask_CacheSourceFiles)
+
 	d.analyzePackage_CollectSomeRuntimeFunctionPositions()
 
 	logProgress(SubTask_CollectRuntimeFunctionPositions)
@@ -403,7 +411,7 @@ func (d *CodeAnalyzer) analyzePackages_FindImplementations() { // (resultMethodC
 			for _, sel := range uiInfo.t.AllMethods {
 				var selPkg string
 				if !token.IsExported(sel.Name()) {
-					selPkg = sel.Pkg().Path()
+					selPkg = sel.Package().Path()
 				}
 				d.registerTypeMethodContributingToTypeImplementations(pathPath, ti.TypeName.Name(), selPkg, sel.Name())
 			}
@@ -1039,10 +1047,10 @@ func (d *CodeAnalyzer) collectSelectorsForInterfaceType(t *TypeInfo, depth int, 
 		panic(fmt.Sprint("should never happen:", t.TT))
 
 		// ToDo: move to RegisterType.
-		underlying := t.TT.Underlying()
-		UnderlyingTypeInfo := d.RegisterType(underlying)
-		t.Underlying = UnderlyingTypeInfo
-		UnderlyingTypeInfo.Underlying = UnderlyingTypeInfo
+		//underlying := t.TT.Underlying()
+		//UnderlyingTypeInfo := d.RegisterType(underlying)
+		//t.Underlying = UnderlyingTypeInfo
+		//UnderlyingTypeInfo.Underlying = UnderlyingTypeInfo
 	}
 
 	t.attributes |= promotedSelectorsCollected

@@ -66,7 +66,7 @@ Each of the above commands will open a browser window automatically.
 We can use the `-s` or `-silent` flags to turn off the behavior.
 
 Generate static HTML docs pages (the `-dir` flag is optional in this mode, its default value is `.`):
-* `gold -gen -dir=generated`
+* `gold -gen -dir=generated .`
 * `gold -gen -dir=generated ./...`
 * `gold -gen -dir=generated std`
 

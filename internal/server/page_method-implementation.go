@@ -47,14 +47,16 @@ func (ds *docServer) buildImplementationPage(result *MethodImplementationResult)
 	// Use the same design for local id: click such methods to highlight all same-origin ones.
 
 	qualifiedTypeName := result.Package.Path() + "." + result.TypeName.Name()
-	title := ds.currentTranslation.Text_MethodImplementation() + ds.currentTranslation.Text_Colon(true) + qualifiedTypeName
+	title := ds.currentTranslation.Text_MethodImplementations() + ds.currentTranslation.Text_Colon(true) + qualifiedTypeName
 	page := NewHtmlPage(ds.goldVersion, title, ds.currentTheme.Name(), pagePathInfo{ResTypeImplementation, qualifiedTypeName})
 
 	fmt.Fprintf(page, `<pre><code><span style="font-size:larger;">type <a href="%s">%s</a>.`,
 		buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, result.Package.Path()}, nil, ""),
 		result.Package.Path(),
 	)
+	page.WriteString("<b>")
 	ds.writeSrouceCodeLineLink(page, result.TypeName.Package(), result.TypeName.Position(), result.TypeName.Name(), "", false)
+	page.WriteString("</b>")
 	writeKindText(page, result.TypeName.Denoting().TT)
 	page.WriteString("</span>\n")
 
@@ -66,7 +68,7 @@ func (ds *docServer) buildImplementationPage(result *MethodImplementationResult)
 	fmt.Fprintf(page, `
 <code><span class="title">%s%s</span>
 `,
-		ds.currentTranslation.Text_MethodImplementation(),
+		ds.currentTranslation.Text_MethodImplementations(),
 		nonImplementingMethodCountText,
 	)
 
@@ -79,7 +81,7 @@ func (ds *docServer) buildImplementationPage(result *MethodImplementationResult)
 		page.WriteString("\n")
 		anchorName := methodName
 		if !token.IsExported(methodName) {
-			anchorName = method.Method.Pkg().Path() + "." + methodName
+			anchorName = method.Method.Package().Path() + "." + methodName
 		}
 		fmt.Fprintf(page, `<div class="anchor" id="name-%s">`, anchorName)
 		page.WriteByte('\t')
@@ -93,7 +95,7 @@ func (ds *docServer) buildImplementationPage(result *MethodImplementationResult)
 			}
 			page.WriteByte('.')
 			ds.WriteEmbeddingChain(page, imp.Method.EmbeddingChain)
-			ds.writeSrouceCodeLineLink(page, imp.Method.Pkg(), imp.Method.Position(), methodName, "b", false)
+			ds.writeSrouceCodeLineLink(page, imp.Method.Package(), imp.Method.Position(), methodName, "b", false)
 		}
 		page.WriteString("</div>")
 	}
@@ -181,7 +183,7 @@ func (ds *docServer) buildImplementationData(analyzer *code.CodeAnalyzer, pkgPat
 				for _, m := range impByDenoting.AllMethods {
 					matched := sel.Name() == m.Name()
 					if matched && selNameIsUnexported {
-						matched = matched && m.Pkg().Path() == sel.Pkg().Path()
+						matched = matched && m.Package().Path() == sel.Package().Path()
 					}
 					if matched {
 						explicit := sel.EmbeddingChain == nil
@@ -215,7 +217,7 @@ func (ds *docServer) buildImplementationData(analyzer *code.CodeAnalyzer, pkgPat
 				for _, m := range impDenoting.AllMethods {
 					matched := sel.Name() == m.Name()
 					if matched && selNameIsUnexported {
-						matched = matched && m.Pkg().Path() == sel.Pkg().Path()
+						matched = matched && m.Package().Path() == sel.Package().Path()
 					}
 					if matched {
 						explicit := sel.EmbeddingChain == nil

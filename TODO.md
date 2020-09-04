@@ -2,6 +2,12 @@
 
 ### Soon to do
 
+* cache all source code (not much memory consumed, but will get some convenience)
+* show reference count for types/vars/.../methods/fields
+
+* show references: also show implicit references
+  * unkeyed struct literals
+
 * server state:
   * highlight id 0-n
   * searching uses for id goroutine 0-n
@@ -18,6 +24,8 @@
   * first step: show uses of unexported identifiers.
   * including variable, constants, fields, functions, ...
   * for fields, also show all the assignments to it (inc. explicits and implicits)
+  * use fake ids for unnamed types, string literals, ...
+  * from dep pages, to list what identifiers are used by the importing package.
 
 * sort packages: ab-cd should after ab/xy
 * add links in import sections
@@ -32,16 +40,17 @@
   * test by ast comments
 * add more comments
 
-* gen mode: merge docs for several (GOOS, GOARCH) compositions.
+* gen mode: merge docs for several (GOOS, GOARCH) compositions. At least for std.
+* gen mode: no need to cache pages
 
 * css style
 * js:
   * shortcuts:
+    * -: collapse value/type docs
+    * +: expand value/type docs
     * ~, Backspace: back
     * HOME: to overview page
     * P: from code page to package detail page
-    * -: collapse value/type docs
-    * +: expand value/type docs
   * filter values (var | const | func)
     filter types (interfaces)
     fitler packages (main | std)
@@ -67,6 +76,8 @@
 
 * For std pacakges: show which version of Go introduced a particular function/type, etc.
   * or for any modules
+
+* go-callvis like, call relations
 
 * change theme and language
 

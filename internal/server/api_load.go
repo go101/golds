@@ -193,6 +193,10 @@ func (ds *docServer) onAnalyzingSubTaskDone(task int, d time.Duration, args ...i
 			msg = ds.currentTranslation.Text_Analyzing_MakeStatistics(d)
 		case code.SubTask_CollectSourceFiles:
 			msg = ds.currentTranslation.Text_Analyzing_CollectSourceFiles(d)
+		case code.SubTask_CollectObjectReferences:
+			msg = ds.currentTranslation.Text_Analyzing_CollectObjectReferences(d)
+		case code.SubTask_CacheSourceFiles:
+			msg = ds.currentTranslation.Text_Analyzing_CacheSourceFiles(d)
 		}
 		return msg
 	}

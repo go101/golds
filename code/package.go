@@ -19,7 +19,7 @@ type Module struct {
 
 type Package struct {
 	Index int
-	PPkg  *packages.Package
+	PPkg  *packages.Package // ToDo: renamed to PP to be consistent with TypeInfo.TT?
 
 	Mod      *Module
 	Deps     []*Package
@@ -27,7 +27,7 @@ type Package struct {
 	DepedBys []*Package
 
 	// This field might be shared with PackageForDisplay
-	// for concurrenct reads.
+	// for concurrent reads.
 	*PackageAnalyzeResult
 }
 
@@ -829,7 +829,7 @@ const (
 type Field struct {
 	astStruct    *ast.StructType
 	AstField     *ast.Field
-	AstInterface *ast.InterfaceType // for embedding interface in interface
+	AstInterface *ast.InterfaceType // for embedding interface in interface (the owner interface)
 
 	Pkg  *Package // (nil for exported. ??? Seems not true.)
 	Name string
@@ -845,7 +845,7 @@ func (fld *Field) Position() token.Position {
 
 type Method struct {
 	AstFunc      *ast.FuncDecl      // for concrete methods
-	AstInterface *ast.InterfaceType // for interface methods
+	AstInterface *ast.InterfaceType // for interface methods (the owner interface)
 	AstField     *ast.Field         // for interface methods
 
 	Pkg  *Package // (nil for exported. ??? Seems not true.)
@@ -897,6 +897,25 @@ func (s *Selector) Reset() {
 	*s = Selector{}
 }
 
+func (s *Selector) Object() types.Object {
+	if s.Field != nil {
+		for _, ident := range s.Field.AstField.Names {
+			if ident.Name == s.Field.Name {
+				return s.Field.Pkg.PPkg.TypesInfo.ObjectOf(ident)
+			}
+		}
+		return nil // ToDo: handle the embedded field case
+	}
+
+	// Non-interface method
+	if s.Method.AstFunc != nil {
+		return s.Method.Pkg.PPkg.TypesInfo.ObjectOf(s.Method.AstFunc.Name)
+	}
+
+	// Interface method
+	return s.Method.Pkg.PPkg.TypesInfo.ObjectOf(s.Method.AstField.Names[0])
+}
+
 func (s *Selector) Position() token.Position {
 	if s.Field != nil {
 		return s.Field.Pkg.PPkg.Fset.PositionFor(s.Field.AstField.Pos(), false)
@@ -916,7 +935,7 @@ func (s *Selector) Name() string {
 }
 
 // ToDo: change to Package() for consistency.
-func (s *Selector) Pkg() *Package {
+func (s *Selector) Package() *Package {
 	if s.Field != nil {
 		return s.Field.Pkg
 	} else {
@@ -939,6 +958,22 @@ func (s *Selector) PointerReceiverOnly() bool {
 func (s *Selector) String() string {
 	return EmbededFieldsPath(s.EmbeddingChain, nil, s.Name(), s.Field != nil)
 }
+
+//func (s *Selector) Comment() string {
+//	return "" // ToDo:
+//}
+//
+//func (s *Selector) Documentation() string {
+//	return "" // ToDo:
+//}
+//
+//func (s *Selector) Exported() bool {
+//	if s.Field != nil {
+//		return token.IsExported(s.Field.Name)
+//	} else {
+//		return token.IsExported(s.Method.Name)
+//	}
+//}
 
 func EmbededFieldsPath(embedding *EmbeddedField, b *strings.Builder, selName string, isField bool) (r string) {
 	if embedding == nil {

@@ -37,6 +37,10 @@ func (*English) Text_Period(paragraphEnd bool) string {
 	}
 }
 
+func (*English) Text_EnclosedInOarentheses(text string) string {
+	return " (" + text + ")"
+}
+
 func (*English) Text_PreferredFontList() string { return `"Courier New", Courier, monospace` }
 
 ///////////////////////////////////////////////////////////////////
@@ -120,6 +124,14 @@ func (*English) Text_Analyzing_MakeStatistics(d time.Duration) string {
 
 func (*English) Text_Analyzing_CollectSourceFiles(d time.Duration) string {
 	return fmt.Sprintf("Collect Source Files: %s", d)
+}
+
+func (*English) Text_Analyzing_CollectObjectReferences(d time.Duration) string {
+	return fmt.Sprintf("Collect Object References: %s", d)
+}
+
+func (*English) Text_Analyzing_CacheSourceFiles(d time.Duration) string {
+	return fmt.Sprintf("Cache Source Files: %s", d)
 }
 
 func (*English) Text_Analyzing_Done(d time.Duration, memoryUse string) string {
@@ -341,11 +353,11 @@ func (*English) Text_Imports() string { return "Imports" }
 func (*English) Text_ImportedBy() string { return "Imported By" }
 
 ///////////////////////////////////////////////////////////////////
-// method impelementation page
+// method implementation page
 ///////////////////////////////////////////////////////////////////
 
-func (*English) Text_MethodImplementation() string {
-	return "Method Impelmentations"
+func (*English) Text_MethodImplementations() string {
+	return "Method Implmentations"
 }
 
 func (*English) Text_NumMethodsImplementingNothing(count int) string {
@@ -357,6 +369,25 @@ func (*English) Text_NumMethodsImplementingNothing(count int) string {
 		s1, s2 = s2, s1
 	}
 	return fmt.Sprintf(" (%d other method%s implement%s nothing)", count, s1, s2)
+}
+
+///////////////////////////////////////////////////////////////////
+// object reference page
+///////////////////////////////////////////////////////////////////
+
+func (*English) Text_ReferenceList() string {
+	return "References"
+}
+
+func (*English) Text_ObjectKind(kind string) string {
+	switch kind {
+	case "field":
+		return "field"
+	case "method":
+		return "method"
+	default:
+		panic("unknown object kind name: " + kind)
+	}
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -579,8 +610,8 @@ func (*English) Text_GeneratedPageFooter(goldVersion, qrCodeLink, goOS, goArch s
 	}
 	return fmt.Sprintf(`<table><tr><td>%s</td>
 <td>Generated with <a href="https://go101.org/article/tool-gold.html"><b>Gold</b></a> <i>%s</i>. (GOOS=%s GOARCH=%s).
-<b>Gold</b> is a <a href="https://go101.org">Go 101</a> project started by <a href="https://tapirgames.com">TapirLiu</a>.
-PR and bug reports are welcomed and can be submitted <a href="https://github.com/go101/gold">here</a>.
+<b>Gold</b> is a <a href="https://go101.org">Go 101</a> project started by <a href="https://tapirgames.com">Tapir Liu</a>.
+PR and bug reports are welcome and can be submitted <a href="https://github.com/go101/gold">here</a>.
 Please follow <a href="https://twitter.com/go100and1">@Go100and1</a> (reachable from the left QR code) to get the latest news of <b>Gold</b>.</td></tr></table`,
 		qrImg,
 		goldVersion,

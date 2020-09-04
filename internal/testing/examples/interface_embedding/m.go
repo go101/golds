@@ -1,4 +1,4 @@
-package foo
+package interface_embedding
 
 type ByteScanner interface {
 	ByteReader

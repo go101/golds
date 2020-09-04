@@ -270,6 +270,9 @@ func (ds *docServer) buildPackageDetailsPage(pkg *PackageDetails, options packag
 					for _, by := range impledLys {
 						page.WriteString("\n\t\t\t")
 						ds.writeTypeForListing(page, by, pkg.Package, "", DotMStyle_NotShow)
+						if _, ok := by.TypeName.Denoting().TT.Underlying().(*types.Interface); ok {
+							page.WriteString(" <i>(interface)</i>")
+						}
 					}
 				})
 		}
@@ -930,7 +933,7 @@ type TypeForListing struct {
 	*code.TypeName
 	IsPointer    bool
 	InCurrentPkg bool
-	CommonPath   string
+	CommonPath   string // relative to the current package
 }
 
 // Assume all types are named or pointer to named.
@@ -942,7 +945,9 @@ func (ds *docServer) sortTypeList(typeList []TypeForListing, pkg *code.Package) 
 		t := &typeList[i]
 		result[i] = t
 		t.InCurrentPkg = t.Package() == pkg
-		if !t.InCurrentPkg {
+		if t.InCurrentPkg {
+			t.CommonPath = pkgPath
+		} else {
 			t.CommonPath = FindPackageCommonPrefixPaths(t.Package().Path(), pkgPath)
 		}
 	}
@@ -1185,7 +1190,7 @@ func (ds *docServer) writeFieldForListing(page *htmlPage, pkg *code.Package, sel
 	}
 	pos := sel.Position()
 	//pos.Line += ds.analyzer.SourceFileLineOffset(pos.Filename)
-	ds.writeSrouceCodeLineLink(page, sel.Pkg(), pos, selField.Name, "", false)
+	ds.writeSrouceCodeLineLink(page, sel.Package(), pos, selField.Name, "", false)
 	page.WriteString(" <i>")
 	ds.WriteAstType(page, selField.AstField.Type, selField.Pkg, pkg, true, nil, forTypeName)
 	page.WriteString("</i>")
@@ -1205,7 +1210,7 @@ func (ds *docServer) writeMethodForListing(page *htmlPage, pkg *code.Package, se
 	}
 	pos := sel.Position()
 	//pos.Line += ds.analyzer.SourceFileLineOffset(pos.Filename)
-	ds.writeSrouceCodeLineLink(page, sel.Pkg(), pos, setMethod.Name, "", false)
+	ds.writeSrouceCodeLineLink(page, sel.Package(), pos, setMethod.Name, "", false)
 	if setMethod.AstFunc != nil {
 		ds.WriteAstType(page, setMethod.AstFunc.Type, setMethod.Pkg, pkg, false, nil, forTypeName)
 	} else {

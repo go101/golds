@@ -22,10 +22,12 @@ func ServeFiles(dir, recommendedPort string, silentMode bool, goldVersion string
 		log.Fatal(err)
 	}
 
-	port, delta := recommendedPort, -1
+	port := recommendedPort
 	defaultPort, err := strconv.Atoi(recommendedPort)
 	if err != nil {
-		log.Printf("Invalid port: %s. A new one will be selected automatically.", recommendedPort)
+		if recommendedPort != "" {
+			log.Printf("Invalid port: %s. A new one will be selected automatically.", recommendedPort)
+		}
 		defaultPort = 9999
 		port = strconv.Itoa(defaultPort)
 	}
@@ -35,15 +37,15 @@ func ServeFiles(dir, recommendedPort string, silentMode bool, goldVersion string
 	} else if defaultPort < 1024 {
 		defaultPort = 1024
 	}
-	if defaultPort < 9000 {
-		delta = 1
-	}
 
 NextTry:
 	l, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
 	if err != nil {
 		if strings.Index(err.Error(), "bind: address already in use") >= 0 {
-			defaultPort += delta
+			if defaultPort == 1024 {
+				defaultPort = 65536
+			}
+			defaultPort--
 			port = strconv.Itoa(defaultPort)
 			//port = strconv.Itoa(50000 + 1 + rand.Int()%9999)
 			goto NextTry

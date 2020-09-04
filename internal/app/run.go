@@ -93,11 +93,12 @@ func Run() {
 		log.SetFlags(0)
 
 		if *dirFlag == "" {
-			log.Printf(`Running in directory serving mode.
-If docs serving mode is expected, please run "%s ." instead.
+			log.Printf(`Running in directory serving mode. If docs serving mode
+is expected, please run the following command instead:
+	%s .
 
 `,
-				filepath.Base(os.Args[0]),
+				strings.Join(os.Args, " ")[len(os.Args[0])-len(filepath.Base(os.Args[0])):],
 			)
 		}
 		if *portFlag == "" {
@@ -138,7 +139,7 @@ Options:
 		present, others will be ignored.
 	-gen
 		Static HTML docs generation mode.
-	-dir=DocsDirectory
+	-dir=ContentDirectory
 		Specifiy the docs generation or file
 		serving diretory. Current directory
 		will be used if no arguments specified.
@@ -157,9 +158,6 @@ Examples:
 		Show docs of standard packages.
 	%[1]v x.y.z/myapp
 		Show docs of package x.y.z/myapp.
-	%[1]v
-		Show docs of the package in the
-		current directory.
 	%[1]v .
 		Show docs of the package in the
 		current directory.
@@ -172,8 +170,13 @@ Examples:
 		packages under the current directory
 		and their dependency packages.
 	%[1]v -dir=. -s
-		Serving the files in working directory
+		Serve the files in working directory
 		without opening a browser window.
+	%[1]v
+		Serve the files in working directory and
+		open a browser window to list items. If
+		there is a file named "index.html", then
+		it will be rendered in the browser window.
 `,
 		filepath.Base(os.Args[0]),
 		Version,

@@ -9,7 +9,6 @@ import (
 	"go/token"
 	"go/types"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
@@ -1190,6 +1189,7 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 	}
 
 	var obj types.Object
+	// ToDo: why not just call ObjectOf?
 	if use, ok := v.info.Uses[ident]; ok {
 		obj = use
 	} else {
@@ -1545,9 +1545,13 @@ func (ds *docServer) analyzeSoureCode(pkgPath, bareFilename string) (*SourceFile
 			generatedFilePath = ""
 		}
 	}
-	content, err := ioutil.ReadFile(filePath)
-	if err != nil {
-		return nil, err
+	//content, err := ioutil.ReadFile(filePath)
+	//if err != nil {
+	//	return nil, err
+	//}
+	content := fileInfo.Content
+	if content == nil {
+		return nil, errors.New("source code content not available")
 	}
 
 	//log.Println("===================== goFilePath=", srcPath)

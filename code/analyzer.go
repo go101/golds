@@ -27,6 +27,8 @@ const (
 	SubTask_RegisterInterfaceMethodsForTypes
 	SubTask_MakeStatistics
 	SubTask_CollectSourceFiles
+	SubTask_CollectObjectReferences
+	SubTask_CacheSourceFiles
 )
 
 type CodeAnalyzer struct {
@@ -66,11 +68,16 @@ type CodeAnalyzer struct {
 	// Why not put []RefPos in TypeInfo, Variable, ...?
 	refPositions map[interface{}][]RefPos
 
+	// ToDo: some TopN lists
+	stats Stats
+
+	// Identifer references (ToDo: need optimizations)
+	objectRefs map[types.Object][]Identifier
+
 	// Not concurrent safe.
 	tempTypeLookup map[uint32]struct{}
 
-	stats Stats
-
+	//
 	forbidRegisterTypes bool // for debug
 
 	debug bool
@@ -182,6 +189,37 @@ func (d *CodeAnalyzer) RoughTypeNameCount() int32 {
 
 func (d *CodeAnalyzer) RoughExportedIdentifierCount() int32 {
 	return d.stats.roughExportedIdentifierCount
+}
+
+type Identifier struct {
+	//Pkg *Package // gettable from FileInfo
+
+	FileInfo *SourceFileInfo
+	AstIdent *ast.Ident
+}
+
+func (d *CodeAnalyzer) regObjectReference(obj types.Object, fileInfo *SourceFileInfo, id *ast.Ident) {
+	if d.objectRefs == nil {
+		d.objectRefs = map[types.Object][]Identifier{} // ToDo: estimate an initial minimum capacity
+	}
+
+	ids := d.objectRefs[obj]
+	if ids == nil {
+		ids = make([]Identifier, 0, 2) // ToDo: estimate an initial minimum capacity. How?
+	}
+	ids = append(ids, Identifier{FileInfo: fileInfo, AstIdent: id})
+	d.objectRefs[obj] = ids
+}
+
+// Package by package, file by file, by positions in source.
+func (d *CodeAnalyzer) ObjectReferences(obj types.Object) []Identifier {
+	ids := d.objectRefs[obj]
+	if ids == nil {
+		return nil
+	}
+	dups := make([]Identifier, len(ids))
+	copy(dups, ids)
+	return dups
 }
 
 // Please reset it after using.
@@ -802,9 +840,9 @@ func (d *CodeAnalyzer) registerExplicitlySpecifiedMethods(typeInfo *TypeInfo, as
 	//log.Println("!!!!!! registerExplicitlySpecifiedMethods:", typeInfo)
 
 	for _, method := range astInterfaceNode.Methods.List {
-		if len(method.Names) == 0 {
-			//log.Println("   embed")
-			//continue // embed interface type. ToDo
+		// method is a *ast.Field.
+
+		if len(method.Names) == 0 { // embed interface type (annoymous field)
 
 			var id string
 			switch expr := method.Type.(type) {

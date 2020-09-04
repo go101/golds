@@ -47,14 +47,14 @@ type docServer struct {
 	analyzingLogs   []LoadingLogMessage
 
 	// Cached pages
-	theCSSFile         cssFile
-	theOverviewPage    *overviewPage
-	theStatisticsPage  []byte
-	packagePages       map[string]packagePage
-	implPages          map[implPageKey][]byte
-	identifierUsePages map[usePageKey][]byte
-	sourcePages        map[sourcePageKey][]byte
-	dependencyPages    map[string][]byte
+	theCSSFile                cssFile
+	theOverviewPage           *overviewPage
+	theStatisticsPage         []byte
+	packagePages              map[string]packagePage
+	implPages                 map[implPageKey][]byte
+	identifierReferencesPages map[usePageKey][]byte
+	sourcePages               map[sourcePageKey][]byte
+	dependencyPages           map[string][]byte
 
 	//
 	currentTheme       Theme
@@ -95,7 +95,9 @@ func Run(recommendedPort, lang string, args []string, silentMode bool, goldVersi
 	port, delta := recommendedPort, -1
 	defaultPort, err := strconv.Atoi(recommendedPort)
 	if err != nil {
-		log.Printf("Invalid port: %s. A new one will be selected automatically.", recommendedPort)
+		if recommendedPort != "" {
+			log.Printf("Invalid port: %s. A new one will be selected automatically.", recommendedPort)
+		}
 		defaultPort = 56789
 		port = strconv.Itoa(defaultPort)
 	}
@@ -216,13 +218,14 @@ func (ds *docServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		} else {
 			ds.methodImplementationPage(w, r, resPath[:index], resPath[index+1:])
 		}
-	case ResTypeUse: // "use"
-		index := strings.LastIndex(resPath, ".")
+	case ResTypeReference: // "ref"
+		const sep = "::" // we can't use "." as seperator, for some package paths might contain ".".
+		index := strings.LastIndex(resPath, sep) 
 		if index < 0 {
 			//ds.sourceCodePage(w, r, "", resPath)
 			fmt.Fprint(w, "Identifer containing package is not specified")
 		} else {
-			ds.identifierUsesPage(w, r, resPath[:index], resPath[index+1:])
+			ds.identifierReferencePage(w, r, resPath[:index], resPath[index+len(sep):])
 		}
 	}
 }
@@ -268,7 +271,7 @@ func (ds *docServer) analyze(args []string, printUsage func(io.Writer)) {
 		ds.phase = Phase_Analyzed
 		ds.packagePages = make(map[string]packagePage, ds.analyzer.NumPackages())
 		ds.implPages = make(map[implPageKey][]byte, ds.analyzer.RoughTypeNameCount())
-		ds.identifierUsePages = make(map[usePageKey][]byte, ds.analyzer.RoughExportedIdentifierCount())
+		ds.identifierReferencesPages = make(map[usePageKey][]byte, ds.analyzer.RoughExportedIdentifierCount())
 		ds.sourcePages = make(map[sourcePageKey][]byte, ds.analyzer.NumSourceFiles())
 		ds.dependencyPages = make(map[string][]byte, ds.analyzer.NumPackages())
 		ds.mutex.Unlock()
