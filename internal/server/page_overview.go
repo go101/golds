@@ -11,9 +11,7 @@ import (
 	"go101.org/gold/code"
 )
 
-type overviewPage struct {
-	content []byte
-
+type overviewPageOptions struct {
 	sortBy string // "alphabet", "importedbys"
 }
 
@@ -35,30 +33,60 @@ func (ds *docServer) overviewPage(w http.ResponseWriter, r *http.Request) {
 
 	if !genDocsMode {
 		if ds.confirmUpdateTip(); ds.updateTip != ds.cachedUpdateTip {
-			ds.theOverviewPage = nil
 			ds.cachedUpdateTip = ds.updateTip
+			//ds.theOverviewPage = nil
+
+			// clear possible cached pages
+			pageKey := pageCacheKey{
+				resType: ResTypePackage,
+				res:     "",
+			}
+			pageKey.options = overviewPageOptions{sortBy: "alphabet"}
+			ds.cachePage(pageKey, nil)
+			pageKey.options = overviewPageOptions{sortBy: "importedbys"}
+			ds.cachePage(pageKey, nil)
 		}
 	}
+
+	pageKey := pageCacheKey{
+		resType: ResTypeNone,
+		res:     "",
+	}
+	oldOptions, ok := ds.cachedPageOptions(pageKey).(overviewPageOptions)
 
 	var sortBy = r.FormValue("sortby")
 	switch sortBy {
 	case "alphabet", "importedbys":
 	default:
-		if ds.theOverviewPage != nil {
-			sortBy = ds.theOverviewPage.sortBy
+		if ok {
+			sortBy = oldOptions.sortBy
 		} else {
 			sortBy = "alphabet"
 		}
 	}
 
-	if ds.theOverviewPage == nil || sortBy != ds.theOverviewPage.sortBy {
-		overview := ds.buildOverviewData(sortBy)
-		ds.theOverviewPage = &overviewPage{
-			content: ds.buildOverviewPage(overview, sortBy),
-			sortBy:  sortBy,
-		}
+	newOptions := overviewPageOptions{sortBy: sortBy}
+	if newOptions != oldOptions {
+		ds.cachePageOptions(pageKey, newOptions)
 	}
-	w.Write(ds.theOverviewPage.content)
+
+	//if ds.theOverviewPage == nil || sortBy != ds.theOverviewPage.sortBy {
+	//	overview := ds.buildOverviewData(sortBy)
+	//	ds.theOverviewPage = &overviewPage{
+	//		content: ds.buildOverviewPage(overview, sortBy),
+	//		sortBy:  sortBy,
+	//	}
+	//}
+	//w.Write(ds.theOverviewPage.content)
+
+	pageKey.options = newOptions
+	data, ok := ds.cachedPage(pageKey)
+	if !ok {
+		overview := ds.buildOverviewData(newOptions.sortBy)
+		data = ds.buildOverviewPage(overview, newOptions.sortBy)
+		ds.cachePage(pageKey, data)
+	}
+	w.Write(data)
 }
 
 func (ds *docServer) buildOverviewPage(overview *Overview, sortBy string) []byte {

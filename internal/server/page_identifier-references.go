@@ -14,14 +14,14 @@ import (
 	"go101.org/gold/code"
 )
 
-type usePageKey struct {
-	pkg string
-
-	// ToDo: Generally, this is a pacakge-level identifer and selector identifier.
-	// It might be extended to fake identiers for unnamed types later.
-	// It should be nerver a local identifer.
-	id string
-}
+//type usePageKey struct {
+//	pkg string
+//
+//	// ToDo: Generally, this is a pacakge-level identifer and selector identifier.
+//	// It might be extended to fake identiers for unnamed types later.
+//	// It should be nerver a local identifer.
+//	id string
+//}
 
 // ToDo: for types, also list its values, including locals
 
@@ -57,17 +57,35 @@ func (ds *docServer) identifierReferencePage(w http.ResponseWriter, r *http.Requ
 
 	// Pages for non-exported identifiers will not be cached.
 
-	useKey := usePageKey{pkg: pkgPath, id: identifier}
-	if ds.identifierReferencesPages[useKey] == nil {
+	//useKey := usePageKey{pkg: pkgPath, id: identifier}
+	//if ds.identifierReferencesPages[useKey] == nil {
+	//	result, err := ds.buildReferencesData(pkgPath, identifier)
+	//	if err != nil {
+	//		w.WriteHeader(http.StatusNotFound)
+	//		fmt.Fprint(w, "error: ", err)
+	//		return
+	//	}
+	//	ds.identifierReferencesPages[useKey] = ds.buildReferencesPage(result)
+	//}
+	//w.Write(ds.identifierReferencesPages[useKey])
+
+	pageKey := pageCacheKey{
+		resType: ResTypeReference,
+		res:     [...]string{pkgPath, identifier},
+	}
+	data, ok := ds.cachedPage(pageKey)
+	if !ok {
 		result, err := ds.buildReferencesData(pkgPath, identifier)
 		if err != nil {
 			w.WriteHeader(http.StatusNotFound)
 			fmt.Fprint(w, "error: ", err)
 			return
 		}
-		ds.identifierReferencesPages[useKey] = ds.buildReferencesPage(result)
+
+		data = ds.buildReferencesPage(result)
+		ds.cachePage(pageKey, data)
 	}
-	w.Write(ds.identifierReferencesPages[useKey])
+	w.Write(data)
 }
 
 func (ds *docServer) buildReferencesPage(result *ReferencesResult) []byte {

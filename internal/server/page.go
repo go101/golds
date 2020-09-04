@@ -26,6 +26,47 @@ const (
 	ResTypePNG            pageResType = "png"
 )
 
+type pageCacheKey struct {
+	resType pageResType
+	res     interface{}
+	options interface{}
+}
+
+type pageCacheValue struct {
+	data    []byte
+	options interface{}
+}
+
+func (ds *docServer) cachePage(key pageCacheKey, data []byte) {
+	if !genDocsMode {
+		ds.cachedPages[key] = data
+	}
+}
+
+func (ds *docServer) cachedPage(key pageCacheKey) (data []byte, ok bool) {
+	if genDocsMode {
+	} else {
+		data, ok = ds.cachedPages[key]
+	}
+	return
+}
+
+func (ds *docServer) cachePageOptions(key pageCacheKey, options interface{}) {
+	if !genDocsMode {
+		key.options = nil
+		ds.cachedPagesOptions[key] = options
+	}
+}
+
+func (ds *docServer) cachedPageOptions(key pageCacheKey) (options interface{}) {
+	if genDocsMode {
+	} else {
+		key.options = nil
+		options = ds.cachedPagesOptions[key]
+	}
+	return
+}
+
 type htmlPage struct {
 	bytes.Buffer
 

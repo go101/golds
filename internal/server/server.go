@@ -47,14 +47,16 @@ type docServer struct {
 	analyzingLogs   []LoadingLogMessage
 
 	// Cached pages
-	theCSSFile                cssFile
-	theOverviewPage           *overviewPage
-	theStatisticsPage         []byte
-	packagePages              map[string]packagePage
-	implPages                 map[implPageKey][]byte
-	identifierReferencesPages map[usePageKey][]byte
-	sourcePages               map[sourcePageKey][]byte
-	dependencyPages           map[string][]byte
+	//theCSSFile                cssFile
+	//theOverviewPage           *overviewPage
+	//theStatisticsPage         []byte
+	//packagePages              map[string]packagePage
+	//implPages                 map[implPageKey][]byte
+	//identifierReferencesPages map[usePageKey][]byte
+	//sourcePages               map[sourcePageKey][]byte
+	//dependencyPages           map[string][]byte
+	cachedPages        map[pageCacheKey][]byte
+	cachedPagesOptions map[pageCacheKey]interface{} // key.options must be nil in this map
 
 	//
 	currentTheme       Theme
@@ -220,7 +222,7 @@ func (ds *docServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	case ResTypeReference: // "ref"
 		const sep = "::" // we can't use "." as seperator, for some package paths might contain ".".
-		index := strings.LastIndex(resPath, sep) 
+		index := strings.LastIndex(resPath, sep)
 		if index < 0 {
 			//ds.sourceCodePage(w, r, "", resPath)
 			fmt.Fprint(w, "Identifer containing package is not specified")
@@ -269,11 +271,19 @@ func (ds *docServer) analyze(args []string, printUsage func(io.Writer)) {
 	{
 		ds.mutex.Lock()
 		ds.phase = Phase_Analyzed
-		ds.packagePages = make(map[string]packagePage, ds.analyzer.NumPackages())
-		ds.implPages = make(map[implPageKey][]byte, ds.analyzer.RoughTypeNameCount())
-		ds.identifierReferencesPages = make(map[usePageKey][]byte, ds.analyzer.RoughExportedIdentifierCount())
-		ds.sourcePages = make(map[sourcePageKey][]byte, ds.analyzer.NumSourceFiles())
-		ds.dependencyPages = make(map[string][]byte, ds.analyzer.NumPackages())
+		//ds.packagePages = make(map[string]packagePage, ds.analyzer.NumPackages())
+		//ds.implPages = make(map[implPageKey][]byte, ds.analyzer.RoughTypeNameCount())
+		//ds.identifierReferencesPages = make(map[usePageKey][]byte, ds.analyzer.RoughExportedIdentifierCount())
+		//ds.sourcePages = make(map[sourcePageKey][]byte, ds.analyzer.NumSourceFiles())
+		//ds.dependencyPages = make(map[string][]byte, ds.analyzer.NumPackages())
+
+		n := ds.analyzer.NumPackages() +
+			ds.analyzer.NumPackages() +
+			ds.analyzer.NumSourceFiles() +
+			int(ds.analyzer.RoughTypeNameCount()) +
+			int(ds.analyzer.RoughExportedIdentifierCount())
+		ds.cachedPages = make(map[pageCacheKey][]byte, int(n))
+		ds.cachedPagesOptions = make(map[pageCacheKey]interface{}, ds.analyzer.NumPackages())
 		ds.mutex.Unlock()
 	}
 }

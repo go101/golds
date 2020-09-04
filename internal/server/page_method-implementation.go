@@ -10,10 +10,10 @@ import (
 	"go101.org/gold/code"
 )
 
-type implPageKey struct {
-	pkg string
-	typ string
-}
+//type implPageKey struct {
+//	pkg string
+//	typ string
+//}
 
 func (ds *docServer) methodImplementationPage(w http.ResponseWriter, r *http.Request, pkgPath, typeName string) {
 	w.Header().Set("Content-Type", "text/html")
@@ -29,17 +29,35 @@ func (ds *docServer) methodImplementationPage(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	pageKey := implPageKey{pkg: pkgPath, typ: typeName}
-	if ds.implPages[pageKey] == nil {
+	//pageKey := implPageKey{pkg: pkgPath, typ: typeName}
+	//if ds.implPages[pageKey] == nil {
+	//	result, err := ds.buildImplementationData(ds.analyzer, pkgPath, typeName)
+	//	if err != nil {
+	//		w.WriteHeader(http.StatusNotFound)
+	//		fmt.Fprint(w, "Build implementation info for (", typeName, ") in ", pkgPath, " error: ", err)
+	//		return
+	//	}
+	//	ds.implPages[pageKey] = ds.buildImplementationPage(result)
+	//}
+	//w.Write(ds.implPages[pageKey])
+
+	pageKey := pageCacheKey{
+		resType: ResTypeImplementation,
+		res:     [...]string{pkgPath, typeName},
+	}
+	data, ok := ds.cachedPage(pageKey)
+	if !ok {
 		result, err := ds.buildImplementationData(ds.analyzer, pkgPath, typeName)
 		if err != nil {
 			w.WriteHeader(http.StatusNotFound)
 			fmt.Fprint(w, "Build implementation info for (", typeName, ") in ", pkgPath, " error: ", err)
 			return
 		}
-		ds.implPages[pageKey] = ds.buildImplementationPage(result)
+
+		data = ds.buildImplementationPage(result)
+		ds.cachePage(pageKey, data)
 	}
-	w.Write(ds.implPages[pageKey])
+	w.Write(data)
 }
 
 func (ds *docServer) buildImplementationPage(result *MethodImplementationResult) []byte {

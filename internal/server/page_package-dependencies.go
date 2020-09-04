@@ -18,8 +18,26 @@ func (ds *docServer) packageDependenciesPage(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if ds.dependencyPages[pkgPath] == nil {
-		// ToDo: not found
+	//if ds.dependencyPages[pkgPath] == nil {
+	//	// ToDo: not found
+	//
+	//	depInfo := ds.buildPackageDependenciesData(pkgPath)
+	//	if depInfo == nil {
+	//		w.WriteHeader(http.StatusNotFound)
+	//		fmt.Fprintf(w, "Package (%s) not found", pkgPath)
+	//		return
+	//	}
+	//
+	//	ds.dependencyPages[pkgPath] = ds.buildPackageDependenciesPage(depInfo)
+	//}
+	//w.Write(ds.dependencyPages[pkgPath])
+
+	pageKey := pageCacheKey{
+		resType: ResTypeDependency,
+		res:     pkgPath,
+	}
+	data, ok := ds.cachedPage(pageKey)
+	if !ok {
 
 		depInfo := ds.buildPackageDependenciesData(pkgPath)
 		if depInfo == nil {
@@ -28,9 +46,10 @@ func (ds *docServer) packageDependenciesPage(w http.ResponseWriter, r *http.Requ
 			return
 		}
 
-		ds.dependencyPages[pkgPath] = ds.buildPackageDependenciesPage(depInfo)
+		data = ds.buildPackageDependenciesPage(depInfo)
+		ds.cachePage(pageKey, data)
 	}
-	w.Write(ds.dependencyPages[pkgPath])
+	w.Write(data)
 }
 
 type PackageDependencyInfo struct {

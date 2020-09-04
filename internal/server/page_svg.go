@@ -9,7 +9,6 @@ import (
 )
 
 func (ds *docServer) svgFile(w http.ResponseWriter, r *http.Request, svgFile string) {
-
 	var svgData []byte
 
 	defer func() {
@@ -35,6 +34,19 @@ func (ds *docServer) svgFile(w http.ResponseWriter, r *http.Request, svgFile str
 		return
 	}
 
+	pageKey := pageCacheKey{
+		resType: ResTypeSVG,
+		res:     svgFile,
+	}
+	data, ok := ds.cachedPage(pageKey)
+	if !ok {
+		data = ds.buildSVG(svgFile)
+		ds.cachePage(pageKey, data)
+	}
+	svgData = data
+}
+
+func (ds *docServer) buildSVG(svgFile string) (svgData []byte) {
 	xName := func(max int) func(int) string {
 		return func(i int) string {
 			if i == max {
@@ -107,6 +119,8 @@ func (ds *docServer) svgFile(w http.ResponseWriter, r *http.Request, svgFile str
 		svgData = createSourcefileImportsSVG(chartTitle, stats.ExportedNamedInterfacesByExportedMethodCount[:], xName(len(stats.ExportedNamedInterfacesByExportedMethodCount)-1))
 	default:
 	}
+
+	return
 }
 
 // ToDo: add a bgColor parameter.

@@ -16,10 +16,10 @@ import (
 	"go101.org/gold/code"
 )
 
-type sourcePageKey struct {
-	pkg string
-	src string
-}
+//type sourcePageKey struct {
+//	pkg string
+//	src string
+//}
 
 func (ds *docServer) sourceCodePage(w http.ResponseWriter, r *http.Request, pkgPath, bareFilename string) {
 	w.Header().Set("Content-Type", "text/html")
@@ -49,17 +49,35 @@ func (ds *docServer) sourceCodePage(w http.ResponseWriter, r *http.Request, pkgP
 	//}
 	//w.Write(ds.sourcePages[srcPath])
 
-	pageKey := sourcePageKey{pkg: pkgPath, src: bareFilename}
-	if ds.sourcePages[pageKey] == nil {
+	//pageKey := sourcePageKey{pkg: pkgPath, src: bareFilename}
+	//if ds.sourcePages[pageKey] == nil {
+	//	result, err := ds.analyzeSoureCode(pkgPath, bareFilename)
+	//	if err != nil {
+	//		w.WriteHeader(http.StatusNotFound)
+	//		fmt.Fprint(w, "Load file (", bareFilename, ") in ", pkgPath, " error: ", err)
+	//		return
+	//	}
+	//	ds.sourcePages[pageKey] = ds.buildSourceCodePage(result)
+	//}
+	//w.Write(ds.sourcePages[pageKey])
+
+	pageKey := pageCacheKey{
+		resType: ResTypeSource,
+		res:     [...]string{pkgPath, bareFilename},
+	}
+	data, ok := ds.cachedPage(pageKey)
+	if !ok {
 		result, err := ds.analyzeSoureCode(pkgPath, bareFilename)
 		if err != nil {
 			w.WriteHeader(http.StatusNotFound)
 			fmt.Fprint(w, "Load file (", bareFilename, ") in ", pkgPath, " error: ", err)
 			return
 		}
-		ds.sourcePages[pageKey] = ds.buildSourceCodePage(result)
+
+		data = ds.buildSourceCodePage(result)
+		ds.cachePage(pageKey, data)
 	}
-	w.Write(ds.sourcePages[pageKey])
+	w.Write(data)
 }
 
 func (ds *docServer) buildSourceCodePage(result *SourceFileAnalyzeResult) []byte {

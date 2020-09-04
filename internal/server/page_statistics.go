@@ -19,10 +19,21 @@ func (ds *docServer) statisticsPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if ds.theStatisticsPage == nil {
-		ds.theStatisticsPage = ds.buildStatisticsData()
+	//if ds.theStatisticsPage == nil {
+	//	ds.theStatisticsPage = ds.buildStatisticsData()
+	//}
+	//w.Write(ds.theStatisticsPage)
+
+	pageKey := pageCacheKey{
+		resType: ResTypeNone,
+		res:     "statistics",
 	}
-	w.Write(ds.theStatisticsPage)
+	data, ok := ds.cachedPage(pageKey)
+	if !ok {
+		data = ds.buildStatisticsData()
+		ds.cachePage(pageKey, data)
+	}
+	w.Write(data)
 }
 
 func (ds *docServer) buildStatisticsData() []byte {

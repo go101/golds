@@ -21,11 +21,11 @@ import (
 
 var _ = log.Print
 
-type packagePage struct {
-	content []byte
-
-	options packagePageOptions
-}
+//type packagePage struct {
+//	content []byte
+//
+//	options packagePageOptions
+//}
 
 type packagePageOptions struct {
 	sortBy string // "alphabet", "popularity"
@@ -46,14 +46,18 @@ func (ds *docServer) packageDetailsPage(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
-	page, ok := ds.packagePages[pkgPath]
+	pageKey := pageCacheKey{
+		resType: ResTypePackage,
+		res:     pkgPath,
+	}
+	oldOptions, ok := ds.cachedPageOptions(pageKey).(packagePageOptions)
 
 	var sortBy = r.FormValue("sortby")
 	switch sortBy {
 	case "alphabet", "popularity":
 	default:
 		if ok {
-			sortBy = page.options.sortBy
+			sortBy = oldOptions.sortBy
 		} else {
 			sortBy = "alphabet"
 		}
@@ -64,32 +68,51 @@ func (ds *docServer) packageDetailsPage(w http.ResponseWriter, r *http.Request, 
 	case "all", "exporteds":
 	default:
 		if ok {
-			filter = page.options.filter
+			filter = oldOptions.filter
 		} else {
 			filter = "exporteds"
 		}
 	}
 
-	options := packagePageOptions{
+	newOptions := packagePageOptions{
 		sortBy: sortBy,
 		filter: filter,
 	}
+	if newOptions != oldOptions {
+		ds.cachePageOptions(pageKey, newOptions)
+	}
 
-	if !ok || page.options != options {
+	//if !ok || page.options != options {
+	//	//details := ds.buildPackageDetailsData(pkgPath)
+	//	details := buildPackageDetailsData(ds.analyzer, pkgPath, options)
+	//	if details == nil {
+	//		w.WriteHeader(http.StatusNotFound)
+	//		fmt.Fprintf(w, "Package (%s) not found", pkgPath)
+	//		return
+	//	}
+	//
+	//	ds.packagePages[pkgPath] = packagePage{
+	//		content: ds.buildPackageDetailsPage(details, options),
+	//		options: options,
+	//	}
+	//}
+	//w.Write(ds.packagePages[pkgPath].content)
+
+	pageKey.options = newOptions
+	data, ok := ds.cachedPage(pageKey)
+	if !ok {
 		//details := ds.buildPackageDetailsData(pkgPath)
-		details := buildPackageDetailsData(ds.analyzer, pkgPath, options)
+		details := buildPackageDetailsData(ds.analyzer, pkgPath, newOptions)
 		if details == nil {
 			w.WriteHeader(http.StatusNotFound)
 			fmt.Fprintf(w, "Package (%s) not found", pkgPath)
 			return
 		}
 
-		ds.packagePages[pkgPath] = packagePage{
-			content: ds.buildPackageDetailsPage(details, options),
-			options: options,
-		}
+		data = ds.buildPackageDetailsPage(details, newOptions)
+		ds.cachePage(pageKey, data)
 	}
-	w.Write(ds.packagePages[pkgPath].content)
+	w.Write(data)
 }
 
 func (ds *docServer) buildPackageDetailsPage(pkg *PackageDetails, options packagePageOptions) []byte {
