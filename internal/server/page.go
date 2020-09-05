@@ -19,7 +19,7 @@ const (
 	ResTypeDependency     pageResType = "dep"
 	ResTypeImplementation pageResType = "imp"
 	ResTypeSource         pageResType = "src"
-	ResTypeReference      pageResType = "ref"
+	ResTypeReference      pageResType = "use"
 	ResTypeCSS            pageResType = "css"
 	ResTypeJS             pageResType = "jvs"
 	ResTypeSVG            pageResType = "svg"

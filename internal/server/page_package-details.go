@@ -134,7 +134,8 @@ func (ds *docServer) buildPackageDetailsPage(pkg *PackageDetails, options packag
 		ds.currentTranslation.Text_PackageDocsLinksOnOtherWebsites(pkg.ImportPath, pkg.IsStandard),
 	)
 
-	if pkg.ImportPath != "builtin" {
+	isBuiltin := pkg.ImportPath == "builtin" 
+	if !isBuiltin {
 		fmt.Fprintf(page, `
 
 <span class="title">%s</span>
@@ -249,7 +250,7 @@ func (ds *docServer) buildPackageDetailsPage(pkg *PackageDetails, options packag
 		page.WriteString("\n")
 		fmt.Fprintf(page, `<div class="anchor" id="name-%s" data-popularity="%d">`, et.TypeName.Name(), et.Popularity)
 		page.WriteByte('\t')
-		ds.writeResourceIndexHTML(page, et.TypeName, true, false)
+		ds.writeResourceIndexHTML(page, pkg.Package, et.TypeName, false)
 		if doc := et.TypeName.Documentation(); doc != "" {
 			page.WriteString("\n")
 			writePageText(page, "\t\t", doc, true)
@@ -269,7 +270,7 @@ func (ds *docServer) buildPackageDetailsPage(pkg *PackageDetails, options packag
 						page.WriteString("\n\t\t\t")
 						ds.writeFieldForListing(page, pkg.Package, fld, et.TypeName)
 					}
-				})
+				}, false)
 		}
 		if count := len(et.Methods); count > 0 {
 			page.WriteString("\n\t\t")
@@ -279,9 +280,9 @@ func (ds *docServer) buildPackageDetailsPage(pkg *PackageDetails, options packag
 					methods := ds.sortMethodList(et.Methods)
 					for _, mthd := range methods {
 						page.WriteString("\n\t\t\t")
-						ds.writeMethodForListing(page, pkg.Package, mthd, et.TypeName, true)
+						ds.writeMethodForListing(page, pkg.Package, mthd, et.TypeName, true, false)
 					}
-				})
+				}, isBuiltin)
 		}
 		if count := len(et.ImplementedBys); count > 0 {
 			page.WriteString("\n\t\t")
@@ -297,7 +298,7 @@ func (ds *docServer) buildPackageDetailsPage(pkg *PackageDetails, options packag
 							page.WriteString(" <i>(interface)</i>")
 						}
 					}
-				})
+				}, false)
 		}
 		if count := len(et.Implements); count > 0 {
 			page.WriteString("\n\t\t")
@@ -310,7 +311,7 @@ func (ds *docServer) buildPackageDetailsPage(pkg *PackageDetails, options packag
 						page.WriteString("\n\t\t\t")
 						ds.writeTypeForListing(page, impl, pkg.Package, et.TypeName.Name(), DotMStyle_NotShow)
 					}
-				})
+				}, false)
 		}
 		if count := len(et.AsOutputsOf); count > 0 {
 			page.WriteString("\n\t\t")
@@ -322,7 +323,7 @@ func (ds *docServer) buildPackageDetailsPage(pkg *PackageDetails, options packag
 						page.WriteString("\n\t\t\t")
 						ds.writeValueForListing(page, v, pkg.Package, et.TypeName)
 					}
-				})
+				}, false)
 		}
 		if count := len(et.AsInputsOf); count > 0 {
 			page.WriteString("\n\t\t")
@@ -334,7 +335,7 @@ func (ds *docServer) buildPackageDetailsPage(pkg *PackageDetails, options packag
 						page.WriteString("\n\t\t\t")
 						ds.writeValueForListing(page, v, pkg.Package, et.TypeName)
 					}
-				})
+				}, false)
 		}
 		if count := len(et.Values); count > 0 {
 			page.WriteString("\n\t\t")
@@ -346,7 +347,7 @@ func (ds *docServer) buildPackageDetailsPage(pkg *PackageDetails, options packag
 						page.WriteString("\n\t\t\t")
 						ds.writeValueForListing(page, v, pkg.Package, et.TypeName)
 					}
-				})
+				}, false)
 		}
 
 		page.WriteString("</div>")
@@ -370,7 +371,7 @@ WriteValues:
 		page.WriteByte('\n')
 		fmt.Fprintf(page, `<div class="anchor" id="name-%s">`, v.Name())
 		page.WriteByte('\t')
-		ds.writeResourceIndexHTML(page, v, true, false)
+		ds.writeResourceIndexHTML(page, pkg.Package, v, false)
 		if doc := v.Documentation(); doc != "" {
 			page.WriteString("\n")
 			writePageText(page, "\t\t", doc, true)
@@ -1207,6 +1208,13 @@ func (ds *docServer) writeFieldForListing(page *htmlPage, pkg *code.Package, sel
 			page.WriteString(".</i>")
 		}
 	}
+	ds.writeFieldCodeLink(page, sel.Selector)
+	page.WriteString(" <i>")
+	ds.WriteAstType(page, sel.Field.AstField.Type, sel.Field.Pkg, pkg, true, nil, forTypeName)
+	page.WriteString("</i>")
+}
+
+func (ds *docServer) writeFieldCodeLink(page *htmlPage, sel *code.Selector) {
 	selField := sel.Field
 	if selField == nil {
 		panic("should not")
@@ -1214,16 +1222,14 @@ func (ds *docServer) writeFieldForListing(page *htmlPage, pkg *code.Package, sel
 	pos := sel.Position()
 	//pos.Line += ds.analyzer.SourceFileLineOffset(pos.Filename)
 	ds.writeSrouceCodeLineLink(page, sel.Package(), pos, selField.Name, "", false)
-	page.WriteString(" <i>")
-	ds.WriteAstType(page, selField.AstField.Type, selField.Pkg, pkg, true, nil, forTypeName)
-	page.WriteString("</i>")
 }
 
-func (ds *docServer) writeMethodForListing(page *htmlPage, pkg *code.Package, sel *code.Selector, forTypeName *code.TypeName, writeReceiver bool) {
-	setMethod := sel.Method
-	if setMethod == nil {
+func (ds *docServer) writeMethodForListing(page *htmlPage, docPkg *code.Package, sel *code.Selector, forTypeName *code.TypeName, writeReceiver, onlyWriteMethodName bool) {
+	method := sel.Method
+	if method == nil {
 		panic("should not")
 	}
+
 	if writeReceiver {
 		if sel.PointerReceiverOnly() {
 			page.WriteString("(*T) ")
@@ -1231,13 +1237,31 @@ func (ds *docServer) writeMethodForListing(page *htmlPage, pkg *code.Package, se
 			page.WriteString(" (T) ")
 		}
 	}
-	pos := sel.Position()
-	//pos.Line += ds.analyzer.SourceFileLineOffset(pos.Filename)
-	ds.writeSrouceCodeLineLink(page, sel.Package(), pos, setMethod.Name, "", false)
-	if setMethod.AstFunc != nil {
-		ds.WriteAstType(page, setMethod.AstFunc.Type, setMethod.Pkg, pkg, false, nil, forTypeName)
+
+	if method.Pkg.Path() == "builtin" {
+		if docPkg == method.Pkg {
+			page.WriteString(method.Name)
+		} else {
+			// error.Error
+			// ToDo: If later, there is other builtin methods, the function prototype needs to be changed.
+			buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, "builtin"}, page, method.Name, "name-error")
+		}
 	} else {
-		ds.WriteAstType(page, setMethod.AstField.Type, setMethod.Pkg, pkg, false, nil, forTypeName)
+		pos := sel.Position()
+		//pos.Line += ds.analyzer.SourceFileLineOffset(pos.Filename)
+		ds.writeSrouceCodeLineLink(page, sel.Package(), pos, method.Name, "", false)
+	}
+
+	if !onlyWriteMethodName {
+		ds.writeMethodType(page, docPkg, method, forTypeName)
+	}
+}
+
+func (ds *docServer) writeMethodType(page *htmlPage, docPkg *code.Package, method *code.Method, forTypeName *code.TypeName) {
+	if method.AstFunc != nil {
+		ds.WriteAstType(page, method.AstFunc.Type, method.Pkg, docPkg, false, nil, forTypeName)
+	} else {
+		ds.WriteAstType(page, method.AstField.Type, method.Pkg, docPkg, false, nil, forTypeName)
 	}
 }
 
@@ -1268,14 +1292,14 @@ func writeKindText(page *htmlPage, tt types.Type) {
 	}
 
 	if bold {
-		fmt.Fprintf(page, ` <b><i>(%s)</i></b>`, kind)
+		fmt.Fprintf(page, ` <b<i>(%s)</i></b>`, kind)
 	} else {
 		fmt.Fprintf(page, ` <i>(%s)</i>`, kind)
 	}
 }
 
 //func (ds *docServer) writeResourceIndexHTML(page *htmlPage, res code.Resource, fileLineOffsets map[string][]int, writeType, writeReceiver bool) {
-func (ds *docServer) writeResourceIndexHTML(page *htmlPage, res code.Resource, writeType, writeReceiver bool) {
+func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Package, res code.Resource, writeResNameOnly bool) {
 	pos := res.Position()
 	//if lineOffsets, ok := fileLineOffsets[pos.Filename]; ok {
 	//	correctPosition(lineOffsets, &pos)
@@ -1297,18 +1321,32 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, res code.Resource, w
 
 	isBuiltin := res.Package().Path() == "builtin"
 
+	writeResName := func() {
+		if isBuiltin {
+			if currentPkg == res.Package() && page.PathInfo.resType == ResTypePackage {
+				page.WriteString(res.Name())
+			} else {
+				buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, "builtin"}, page, res.Name(), "name-", res.Name())
+			}
+		} else {
+			ds.writeSrouceCodeLineLink(page, res.Package(), pos, res.Name(), "", false)
+		}
+	}
+
 	switch res := res.(type) {
 	default:
 		panic("should not")
 	case *code.TypeName:
-		page.WriteString(" type ")
-		if isBuiltin {
-			page.WriteString(res.Name())
-		} else {
-			ds.writeSrouceCodeLineLink(page, res.Package(), pos, res.Name(), "", false)
+		if !writeResNameOnly {
+			//page.WriteString(" type ")
+			page.WriteByte(' ')
+			buildPageHref(page.PathInfo, pagePathInfo{ResTypeReference, res.Package().Path() + ".." + res.Name()}, page, "type")
+			page.WriteByte(' ')
 		}
 
-		if writeType {
+		writeResName()
+
+		if !writeResNameOnly {
 			showSource := false
 			if isBuiltin {
 				// builtin package source code are fake.
@@ -1354,38 +1392,45 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, res code.Resource, w
 			writeKindText(page, res.Denoting().TT)
 		}
 	case *code.Constant:
-		page.WriteString("const ")
-		if isBuiltin {
-			page.WriteString(res.Name())
-		} else {
-			ds.writeSrouceCodeLineLink(page, res.Package(), pos, res.Name(), "", false)
+		if !writeResNameOnly {
+			//page.WriteString("const ")
+			buildPageHref(page.PathInfo, pagePathInfo{ResTypeReference, res.Package().Path() + ".." + res.Name()}, page, "const")
+			page.WriteByte(' ')
 		}
 
-		btt, ok := res.TType().Underlying().(*types.Basic)
-		if !ok {
-			panic("constants should be always of basic types, but " + res.String() + " : " + res.TType().String())
-		}
-		if writeType && btt.Info()&types.IsUntyped == 0 {
-			page.WriteByte(' ')
-			//page.WriteString(types.TypeString(res.TType(), types.RelativeTo(res.Package().PPkg.Types)))
-			if res.AstSpec.Type != nil {
-				ds.WriteAstType(page, res.AstSpec.Type, res.Pkg, res.Pkg, false, nil, nil)
-			} else {
-				ds.writeValueTType(page, res.TType(), res.Pkg, true, nil)
+		writeResName()
+
+		if !writeResNameOnly {
+			btt, ok := res.TType().Underlying().(*types.Basic)
+			if !ok {
+				panic("constants should be always of basic types, but " + res.String() + " : " + res.TType().String())
+			}
+			if btt.Info()&types.IsUntyped == 0 {
+				page.WriteByte(' ')
+				//page.WriteString(types.TypeString(res.TType(), types.RelativeTo(res.Package().PPkg.Types)))
+				if res.AstSpec.Type != nil {
+					ds.WriteAstType(page, res.AstSpec.Type, res.Pkg, res.Pkg, false, nil, nil)
+				} else {
+					ds.writeValueTType(page, res.TType(), res.Pkg, true, nil)
+				}
+			}
+			if !isBuiltin {
+				page.WriteString(" = ")
+				page.WriteString(res.Val().String())
 			}
 		}
-		if !isBuiltin {
-			page.WriteString(" = ")
-			page.WriteString(res.Val().String())
-		}
 	case *code.Variable:
-		page.WriteString("  var ")
-		if isBuiltin {
-			page.WriteString(res.Name())
-		} else {
-			ds.writeSrouceCodeLineLink(page, res.Package(), pos, res.Name(), "", false)
+		if !writeResNameOnly {
+			//page.WriteString("  var ")
+			page.WriteByte(' ')
+			page.WriteByte(' ')
+			buildPageHref(page.PathInfo, pagePathInfo{ResTypeReference, res.Package().Path() + ".." + res.Name()}, page, "var")
+			page.WriteByte(' ')
 		}
-		if writeType {
+
+		writeResName()
+
+		if !writeResNameOnly {
 			page.WriteByte(' ')
 			//page.WriteString(res.TType().String())
 			if res.AstSpec.Type != nil {
@@ -1396,42 +1441,46 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, res code.Resource, w
 			}
 		}
 	case *code.Function:
-		var recv *types.Var
-		if writeReceiver && res.Func != nil {
-			sig := res.Func.Type().(*types.Signature)
-			recv = sig.Recv()
-		}
-		page.WriteString(" func ")
-		// This if-block will be never entered now.
-		if recv != nil {
-			switch tt := recv.Type().(type) {
-			case *types.Named:
-				fmt.Fprintf(page, `(%s) `, tt.Obj().Name())
-			case *types.Pointer:
-				if named, ok := tt.Elem().(*types.Named); ok {
-					fmt.Fprintf(page, `(*%s) `, named.Obj().Name())
-				} else {
+		if !writeResNameOnly {
+			var recv *types.Var
+			if res.Func != nil {
+				sig := res.Func.Type().(*types.Signature)
+				recv = sig.Recv()
+			}
+			//page.WriteString(" func ")
+			page.WriteByte(' ')
+			buildPageHref(page.PathInfo, pagePathInfo{ResTypeReference, res.Package().Path() + ".." + res.Name()}, page, "func")
+			page.WriteByte(' ')
+			// This if-block will be never entered now.
+			if recv != nil {
+				switch tt := recv.Type().(type) {
+				case *types.Named:
+					fmt.Fprintf(page, `(%s) `, tt.Obj().Name())
+				case *types.Pointer:
+					if named, ok := tt.Elem().(*types.Named); ok {
+						fmt.Fprintf(page, `(*%s) `, named.Obj().Name())
+					} else {
+						panic("should not")
+					}
+				default:
 					panic("should not")
 				}
-			default:
-				panic("should not")
 			}
 		}
-		if isBuiltin {
-			page.WriteString(res.Name())
-			// ToDo: link panic/recover/... to their implementation positions.
-		} else {
-			ds.writeSrouceCodeLineLink(page, res.Package(), pos, res.Name(), "", false)
-		}
-		if writeType {
+
+		writeResName()
+
+		if !writeResNameOnly {
 			ds.WriteAstType(page, res.AstDecl.Type, res.Pkg, res.Pkg, false, nil, nil)
 			//ds.writeValueTType(page, res.TType(), res.Pkg, false)
 		}
 	}
 
-	if comment := res.Comment(); comment != "" {
-		page.WriteString(" // ")
-		writePageText(page, "", comment, true)
+	if !writeResNameOnly {
+		if comment := res.Comment(); comment != "" {
+			page.WriteString(" // ")
+			writePageText(page, "", comment, true)
+		}
 	}
 
 	//fmt.Fprint(page, ` <a href="#">{/}</a>`)
@@ -1965,9 +2014,13 @@ func (ds *docServer) WriteAstFieldList(w *htmlPage, fieldList *ast.FieldList, is
 //}
 
 // onclickCode should use single quotes in it.
-func writeNamedStatTitle(page *htmlPage, resName, statName, statTitle string, listStatContent func()) {
-	fmt.Fprintf(page, `<input type='checkbox' class="stat" id="%[1]s-stat-%[2]s"><label for="%[1]s-stat-%[2]s">%[3]s</label><span id='%[1]s-stat-%[2]s-content' class="stat-content">`,
-		resName, statName, statTitle)
+func writeNamedStatTitle(page *htmlPage, resName, statName, statTitle string, listStatContent func(), expandInitially bool) {
+	checked := ""
+	if expandInitially {
+		checked = " checked"
+	}
+	fmt.Fprintf(page, `<input type='checkbox'%[4]s class="stat" id="%[1]s-stat-%[2]s"><label for="%[1]s-stat-%[2]s">%[3]s</label><span id='%[1]s-stat-%[2]s-content' class="stat-content">`,
+		resName, statName, statTitle, checked)
 	listStatContent()
 	page.WriteString("</span>")
 }

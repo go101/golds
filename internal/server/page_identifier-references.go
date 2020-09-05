@@ -89,11 +89,12 @@ func (ds *docServer) identifierReferencePage(w http.ResponseWriter, r *http.Requ
 }
 
 func (ds *docServer) buildReferencesPage(result *ReferencesResult) []byte {
-	qualifiedIdentifier := result.PkgPath + "." + result.Identifier
+	qualifiedIdentifier := result.Package.Path() + "." + result.Identifier
 	title := ds.currentTranslation.Text_ReferenceList() + ds.currentTranslation.Text_Colon(true) + qualifiedIdentifier
 	page := NewHtmlPage(ds.goldVersion, title, ds.currentTheme.Name(), pagePathInfo{ResTypeReference, qualifiedIdentifier})
 
 	var prefix, suffix string
+	var writeSelector func()
 	if result.Selector == nil {
 		switch result.Resource.(type) {
 		case *code.Variable:
@@ -108,21 +109,59 @@ func (ds *docServer) buildReferencesPage(result *ReferencesResult) []byte {
 	} else {
 		if result.Selector.Field != nil {
 			suffix = ds.currentTranslation.Text_ObjectKind("field")
+
+			writeSelector = func() {
+				ds.writeFieldCodeLink(page, result.Selector)
+			}
 		} else {
-			suffix = ds.currentTranslation.Text_ObjectKind("method")
+			methodName := result.Selector.Method.Name
+			var methodPkgPath string
+			if !token.IsExported(methodName) {
+				// This might be not essential, see registerTypeMethodContributingToTypeImplementations
+				// ? what, forget what to mean.
+				methodPkgPath = result.Selector.Method.Pkg.Path()
+			}
+			var link string
+			if ds.analyzer.CheckTypeMethodContributingToTypeImplementations(result.Package.Path(), result.Resource.Name(), methodPkgPath, methodName) {
+				anchorName := methodName
+				if !token.IsExported(methodName) {
+					anchorName = methodPkgPath + "." + anchorName
+				}
+				link = buildPageHref(page.PathInfo, pagePathInfo{ResTypeImplementation, result.Package.Path() + "." + result.Resource.Name()}, nil, "") + "#name-" + anchorName
+			}
+
+			if link == "" {
+				suffix = ds.currentTranslation.Text_ObjectKind("method")
+			} else {
+				suffix = fmt.Sprintf(
+					`<a href="%s">%s</a>`,
+					link,
+					ds.currentTranslation.Text_ObjectKind("method"),
+				)
+			}
+
+			writeSelector = func() {
+				ds.writeMethodForListing(page, result.Package, result.Selector, nil, false, true)
+			}
 		}
 		suffix = ds.currentTranslation.Text_EnclosedInOarentheses(suffix)
-		suffix = `<span style="font-size: x-large;"><i>` + suffix + `</i></span>`
+		suffix = `<span style="font-size: large;"><i>` + suffix + `</i></span>`
 	}
 
 	fmt.Fprintf(page, `
-<pre><code><span style="font-size:xx-large;">%s<b>%s</b></span>%s
-
-%s:
-`,
-		prefix, qualifiedIdentifier, suffix,
-		ds.currentTranslation.Text_ReferenceList(),
+<pre><code><span style="font-size:x-large;">%s<b><a href="%s">%s</a>.`,
+		prefix,
+		buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, result.Package.Path()}, nil, ""),
+		result.Package.Path(),
 	)
+	ds.writeResourceIndexHTML(page, result.Package, result.Resource, true)
+	if writeSelector != nil {
+		page.WriteByte('.')
+		writeSelector()
+	}
+	fmt.Fprintf(page, `</b></span>%s`, suffix)
+
+	fmt.Fprintf(page, "\n\n%s:\n", ds.currentTranslation.Text_ObjectUses(result.UsesCount))
 
 	type idpos struct {
 		id  *ast.Ident
@@ -165,7 +204,7 @@ func (ds *docServer) buildReferencesPage(result *ReferencesResult) []byte {
 	for _, refGroup := range result.References {
 		page.WriteString("\n\t")
 		buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, refGroup.Pkg.Path()}, page, refGroup.Pkg.Path())
-		if refGroup.Pkg.Path() == result.PkgPath {
+		if refGroup.Pkg.Path() == result.Package.Path() {
 			page.WriteString(" <i>(current package)</i>")
 		}
 		page.WriteByte('\n')
@@ -234,11 +273,12 @@ func (ds *docServer) buildReferencesPage(result *ReferencesResult) []byte {
 //}
 
 type ReferencesResult struct {
-	PkgPath    string
+	Package    *code.Package
 	Identifier string
 	Resource   code.Resource
 	Selector   *code.Selector // non-nil for fields and methods
 	References []*ObjectReferences
+	UsesCount  int
 }
 
 type ObjectReferences struct {
@@ -318,7 +358,7 @@ func (ds *docServer) buildReferencesData(pkgPath, identifier string) (*Reference
 						goto SelFound
 					}
 				}
-				return nil, fmt.Errorf("selector %s is not found for tyoe %s in package %s", tokens[1], tokens[0], pkgPath)
+				return nil, fmt.Errorf("selector %s is not found for type %s in package %s", tokens[1], tokens[0], pkgPath)
 			SelFound:
 
 				res, obj = tn, sel.Object()
@@ -330,8 +370,10 @@ func (ds *docServer) buildReferencesData(pkgPath, identifier string) (*Reference
 ResFound:
 
 	var refs []*ObjectReferences
+	var usesCount int
 	if obj != nil {
 		ids := ds.analyzer.ObjectReferences(obj)
+		usesCount = len(ids)
 
 		numPkgs := 0
 		var lastPkg *code.Package
@@ -424,10 +466,11 @@ ResFound:
 	}
 
 	return &ReferencesResult{
-		PkgPath:    pkgPath,
+		Package:    pkg,
 		Identifier: identifier,
 		Resource:   res,
 		Selector:   sel,
 		References: refs,
+		UsesCount:  usesCount,
 	}, nil
 }

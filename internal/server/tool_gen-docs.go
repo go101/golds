@@ -232,16 +232,19 @@ func buildPageHref(currentPageInfo, linkedPageInfo pagePathInfo, page *htmlPage,
 Generate:
 
 	var makeHref = func(pathInfo pagePathInfo) string {
-		if pathInfo.resType == ResTypeNone { // homepages
+		switch pathInfo.resType {
+		case ResTypeNone: // top-level pages
 			switch pathInfo.resPath {
 			case "":
 				return "index" + resType2ExtTable[pathInfo.resType]
 			default:
 				return pathInfo.resPath + resType2ExtTable[pathInfo.resType]
 			}
-		} else {
-			return string(pathInfo.resType) + "/" + pathInfo.resPath + resType2ExtTable[pathInfo.resType]
+		case ResTypeReference:
+			//pathInfo.resPath = strings.ReplaceAll(pathInfo.resPath, "..", "/") // no need to convert
 		}
+
+		return string(pathInfo.resType) + "/" + pathInfo.resPath + resType2ExtTable[pathInfo.resType]
 	}
 
 	var _, needRegisterHref = resHrefID(linkedPageInfo.resType, linkedPageInfo.resPath)

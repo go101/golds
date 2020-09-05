@@ -68,13 +68,14 @@ func (ds *docServer) buildImplementationPage(result *MethodImplementationResult)
 	title := ds.currentTranslation.Text_MethodImplementations() + ds.currentTranslation.Text_Colon(true) + qualifiedTypeName
 	page := NewHtmlPage(ds.goldVersion, title, ds.currentTheme.Name(), pagePathInfo{ResTypeImplementation, qualifiedTypeName})
 
-	fmt.Fprintf(page, `<pre><code><span style="font-size:larger;">type <a href="%s">%s</a>.`,
+	fmt.Fprintf(page, `<pre><code><span style="font-size:x-large;">type <a href="%s">%s</a>.`,
 		buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, result.Package.Path()}, nil, ""),
 		result.Package.Path(),
 	)
 	page.WriteString("<b>")
-	ds.writeSrouceCodeLineLink(page, result.TypeName.Package(), result.TypeName.Position(), result.TypeName.Name(), "", false)
-	page.WriteString("</b>")
+	//ds.writeSrouceCodeLineLink(page, result.TypeName.Package(), result.TypeName.Position(), result.TypeName.Name(), "", false)
+	ds.writeResourceIndexHTML(page, result.TypeName.Package(), result.TypeName, true)
+	page.WriteString(`</b></span><span style="font-size:large;">`)
 	writeKindText(page, result.TypeName.Denoting().TT)
 	page.WriteString("</span>\n")
 
@@ -98,12 +99,18 @@ func (ds *docServer) buildImplementationPage(result *MethodImplementationResult)
 		}
 		page.WriteString("\n")
 		anchorName := methodName
-		if !token.IsExported(methodName) {
+		isExported := !token.IsExported(methodName)
+		if isExported {
 			anchorName = method.Method.Package().Path() + "." + methodName
 		}
 		fmt.Fprintf(page, `<div class="anchor" id="name-%s">`, anchorName)
 		page.WriteByte('\t')
-		ds.writeMethodForListing(page, result.Package, method.Method, nil, false)
+		//ds.writeMethodForListing(page, result.Package, method.Method, nil, false, false)
+		// ToDo: need to record which type the method is declared for.
+		//       For some rare cases, two same unexported methods from two different packages ...
+		//       
+		buildPageHref(page.PathInfo, pagePathInfo{ResTypeReference, result.Package.Path() + ".." + result.TypeName.Name() + "." + method.Method.Name()}, page, method.Method.Name())
+		ds.writeMethodType(page, result.Package, method.Method.Method, nil)
 		for _, imp := range method.Implementations {
 			page.WriteString("\n\t\t")
 			if result.IsInterface {
@@ -113,7 +120,10 @@ func (ds *docServer) buildImplementationPage(result *MethodImplementationResult)
 			}
 			page.WriteByte('.')
 			ds.WriteEmbeddingChain(page, imp.Method.EmbeddingChain)
-			ds.writeSrouceCodeLineLink(page, imp.Method.Package(), imp.Method.Position(), methodName, "b", false)
+			//ds.writeSrouceCodeLineLink(page, imp.Method.Package(), imp.Method.Position(), methodName, "b", false)
+			page.WriteString("<b>")
+			ds.writeMethodForListing(page, result.Package, imp.Method, nil, false, true)
+			page.WriteString("</b>")
 		}
 		page.WriteString("</div>")
 	}

@@ -2,12 +2,6 @@
 
 ### Soon to do
 
-* cache all source code (not much memory consumed, but will get some convenience)
-* show reference count for types/vars/.../methods/fields
-
-* show references: also show implicit references
-  * unkeyed struct literals
-
 * server state:
   * highlight id 0-n
   * searching uses for id goroutine 0-n
@@ -20,12 +14,16 @@
   * "go/doc": doc.Examples(...)
   * websocket: monitor page leave and shutdown unfinished Go processes.
 
-* show identifier uses/references (open in new window)
-  * first step: show uses of unexported identifiers.
-  * including variable, constants, fields, functions, ...
-  * for fields, also show all the assignments to it (inc. explicits and implicits)
-  * use fake ids for unnamed types, string literals, ...
-  * from dep pages, to list what identifiers are used by the importing package.
+* reference list: also count some implicit uses, such as
+  * unkeyed struct literanls
+* show identifier uses: use fake ids for some cases
+  * unnamed types
+  * string literals
+  * fields of package-level unnamed structs (current no ways to represent as TypeName.field, need a fake typename)
+    * even for named types, its files obtained by embedding have not definitions, so now uses are not collected for them
+  * methods of unnamed stricts (obtained by embedding, now uses are not collected for them)
+* from dep pages, to list what identifiers are used by the importing package.
+* for an identifier, stat how many packages use it.
 
 * sort packages: ab-cd should after ab/xy
 * add links in import sections
@@ -41,7 +39,6 @@
 * add more comments
 
 * gen mode: merge docs for several (GOOS, GOARCH) compositions. At least for std.
-* gen mode: no need to cache pages
 
 * css style
 * js:
@@ -193,6 +190,9 @@
 
 ### Done
 
+* (done) show identifier uses/references (open in new window)
+* (done) cache all source code (not much memory consumed, but will get some convenience)
+* (done) gen mode: no need to cache pages
 * (cancelled) html escape some doc texts. use htmp.Escape 
 * (done) show non-exporteds for main packages, show main func entry "m->" before source file
 * (done) click interface method to show multiple concrete methods.

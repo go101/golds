@@ -97,9 +97,10 @@ type Translation interface {
 	Text_MethodImplementations() string
 	Text_NumMethodsImplementingNothing(count int) string
 
-	// object reference page
+	// object references(uses) page
 	Text_ReferenceList() string
 	Text_ObjectKind(kind string) string
+	Text_ObjectUses(num int) string // also used in other pages
 
 	// source code page
 	Text_SourceCode(pkgPath, bareFilename string) string

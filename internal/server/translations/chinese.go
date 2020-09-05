@@ -333,7 +333,7 @@ func (*Chinese) Text_NumMethodsImplementingNothing(count int) string {
 }
 
 ///////////////////////////////////////////////////////////////////
-// object reference page
+// object references(uses) page
 ///////////////////////////////////////////////////////////////////
 
 func (*Chinese) Text_ReferenceList() string {
@@ -349,6 +349,10 @@ func (*Chinese) Text_ObjectKind(kind string) string {
 	default:
 		panic("unknown object kind name: " + kind)
 	}
+}
+
+func (*Chinese) Text_ObjectUses(num int) string {
+	return fmt.Sprintf("%d处使用", num)
 }
 
 ///////////////////////////////////////////////////////////////////

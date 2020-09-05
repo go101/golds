@@ -205,23 +205,28 @@ func (ds *docServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	case ResTypeDependency: // "dep"
 		ds.packageDependenciesPage(w, r, resPath)
 	case ResTypeSource: // "src"
-		index := strings.LastIndex(resPath, "/")
+		const sep = "/"
+		index := strings.LastIndex(resPath, sep)
 		if index < 0 {
 			//ds.sourceCodePage(w, r, "", resPath)
 			fmt.Fprint(w, "Source file containing package is not specified")
 		} else {
-			ds.sourceCodePage(w, r, resPath[:index], resPath[index+1:])
+			ds.sourceCodePage(w, r, resPath[:index], resPath[index+len(sep):])
 		}
 	case ResTypeImplementation: // "imp"
-		index := strings.LastIndex(resPath, ".")
+		const sep = "."
+		index := strings.LastIndex(resPath, sep)
 		if index < 0 {
 			//ds.sourceCodePage(w, r, "", resPath)
 			fmt.Fprint(w, "Interface type containing package is not specified")
 		} else {
-			ds.methodImplementationPage(w, r, resPath[:index], resPath[index+1:])
+			ds.methodImplementationPage(w, r, resPath[:index], resPath[index+len(sep):])
 		}
 	case ResTypeReference: // "ref"
-		const sep = "::" // we can't use "." as seperator, for some package paths might contain ".".
+		// resPath doesn't contian unexported selectors with their package path prefixes for sure.
+		// Two forms: pkg..id or pkg..type.selector.
+		// As pkg might contains ".", so here we use ".." the seperator.
+		const sep = ".."
 		index := strings.LastIndex(resPath, sep)
 		if index < 0 {
 			//ds.sourceCodePage(w, r, "", resPath)

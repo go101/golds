@@ -390,6 +390,13 @@ func (*English) Text_ObjectKind(kind string) string {
 	}
 }
 
+func (*English) Text_ObjectUses(num int) string {
+	if num == 1 {
+		return "one use"
+	}
+	return fmt.Sprintf("%d uses", num)
+}
+
 ///////////////////////////////////////////////////////////////////
 // source code page
 ///////////////////////////////////////////////////////////////////

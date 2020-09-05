@@ -494,6 +494,9 @@ type astVisitor struct {
 	//       Local interface types should get IDs like Name-1234.
 	topLevelInterfaceTypeNodeDepth int32
 	topLevelInterfaceTypeInfo      *astInterfaceTypeInfo
+
+	topLevelStructTypeNodeDepth int32
+	topLevelStructTypeSpec      *ast.TypeSpec
 }
 
 type astFunctionInfo struct {
@@ -898,6 +901,11 @@ func (v *astVisitor) Visit(n ast.Node) (w ast.Visitor) {
 			v.topLevelInterfaceTypeInfo = nil
 		}
 		return
+	} else {
+		// ToDo: also replace topLevelFuncNodeDepth and topLevelInterfaceTypeNodeDepth in this way?
+		if v.topLevelStructTypeSpec != nil && n.Pos() > v.topLevelStructTypeSpec.End() {
+			v.topLevelStructTypeSpec = nil
+		}
 	}
 
 	if v.topLevelFuncInfo == nil {
@@ -937,9 +945,8 @@ func (v *astVisitor) Visit(n ast.Node) (w ast.Visitor) {
 		}
 	}
 
-	if v.topLevelInterfaceTypeInfo == nil {
-		switch ts := n.(type) {
-		case *ast.TypeSpec:
+	if ts, ok := n.(*ast.TypeSpec); ok {
+		if v.topLevelInterfaceTypeInfo == nil {
 			it, ok1 := ts.Type.(*ast.InterfaceType)
 			tn, ok2 := v.info.ObjectOf(ts.Name).(*types.TypeName)
 			if ok1 && ok2 {
@@ -950,8 +957,17 @@ func (v *astVisitor) Visit(n ast.Node) (w ast.Visitor) {
 				}
 			}
 		}
+
+		if v.topLevelStructTypeSpec == nil {
+			_, ok := ts.Type.(*ast.StructType)
+			if ok && ts.Name.Name != "_" {
+				v.topLevelStructTypeSpec = ts
+				v.topLevelStructTypeNodeDepth = v.astNodeDepth
+			}
+		}
 	}
 
+	// ...
 	v.astNodeDepth++
 
 	// ...
@@ -1187,7 +1203,6 @@ func (v *astVisitor) handleKeywordToken(pos token.Pos, token string) {
 }
 
 func (v *astVisitor) handleToken(pos token.Pos, token, class, link string) {
-
 	length := len(token)
 	start := v.fset.PositionFor(pos, false)
 
@@ -1289,29 +1304,40 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 		if v.topLevelFuncInfo.Name == ident {
 			funcName := v.topLevelFuncInfo.Name.Name
 			if v.topLevelFuncInfo.RecvTypeName != "" {
-				var methodPkgPath string
-				if !token.IsExported(funcName) {
-					// This might be not essential, see registerTypeMethodContributingToTypeImplementations
-					methodPkgPath = v.pkg.Path()
-				}
-				if v.dataAnalyzer.CheckTypeMethodContributingToTypeImplementations(v.pkg.Path(), v.topLevelFuncInfo.RecvTypeName, methodPkgPath, funcName) {
-					anchorName := funcName
-					if !token.IsExported(funcName) {
-						anchorName = methodPkgPath + "." + anchorName
-					}
-					link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeImplementation, v.pkg.Path() + "." + v.topLevelFuncInfo.RecvTypeName}, nil, "") + "#name-" + anchorName
-				}
+				//var methodPkgPath string
+				//if !token.IsExported(funcName) {
+				//	// This might be not essential, see registerTypeMethodContributingToTypeImplementations
+				//	methodPkgPath = v.pkg.Path()
+				//}
+				//if v.dataAnalyzer.CheckTypeMethodContributingToTypeImplementations(v.pkg.Path(), v.topLevelFuncInfo.RecvTypeName, methodPkgPath, funcName) {
+				//	anchorName := funcName
+				//	if !token.IsExported(funcName) {
+				//		anchorName = methodPkgPath + "." + anchorName
+				//	}
+				//	//link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeImplementation, v.pkg.Path() + "." + v.topLevelFuncInfo.RecvTypeName}, nil, "") + "#name-" + anchorName
+				//}
+				// The above handling for unexported fileds should be unnecessary here.
+				// For a directly declared method has no duplicated methods for sure.
+				// Duplicated methods come only through embedding.
+				// ToDo: need think more.
+
+				link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeReference, v.pkg.Path() + ".." + v.topLevelFuncInfo.RecvTypeName + "." + funcName}, nil, "")
 			} else if token.IsExported(funcName) {
 				link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, v.pkg.Path()}, nil, "") + "#name-" + funcName
-			} // else if !genDocsMode {
-			//	link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, v.pkg.Path()}, nil, "") + "?show=all#name-" + funcName
-			//}
+			} else {
+				//if !genDocsMode {
+				//	link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, v.pkg.Path()}, nil, "") + "?show=all#name-" + funcName
+				//}
+				goto GoOn // see below "case scp.Parent() == types.Universe:"
+			}
 		}
 
 		//v.buildIdentifier(start, end, sameFileObjOrderId, "#line-"+strconv.Itoa(objPos.Line), "")
 		v.buildIdentifier(start, end, sameFileObjOrderId, link)
 		return
 	}
+
+GoOn:
 
 	//fmt.Println("========= obj=", obj)
 	//fmt.Println("========= objPos=", objPos)
@@ -1388,10 +1414,22 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 							anchorName = objPkgPath + "." + anchorName
 						}
 						v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeImplementation, objPkgPath + "." + v.topLevelInterfaceTypeInfo.TypeName}, nil, "")+"#name-"+anchorName)
+						//v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeReference, objPkgPath + ".." + v.topLevelInterfaceTypeInfo.TypeName + "." + anchorName}, nil, ""))
 						v.topLevelInterfaceTypeInfo.Methods = v.topLevelInterfaceTypeInfo.Methods[1:]
+						return
 					}
 				}
 			case *types.Var: // struct field
+				// ToDo: generate fake IDs for unnamed types.
+				// 5 depth distane from struct type spec to field ident.
+				if v.topLevelStructTypeSpec != nil && v.astNodeDepth - v.topLevelStructTypeNodeDepth == 5 {
+					enclosingTypeName := v.topLevelStructTypeSpec.Name.Name
+					fieldName := obj.Name()
+					if fieldName != "_" {
+						v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeReference, objPkgPath + ".." + enclosingTypeName + "." + obj.Name()}, nil, ""))
+					}
+					return
+				}
 			}
 
 		case scp.Parent() == types.Universe: // package-level elements
@@ -1400,11 +1438,17 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 				v.buildIdentifier(start, end, -1, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, objPkgPath}, nil, "")+"#name-"+obj.Name())
 				return
 			} else {
-				if !genDocsMode {
-					if _, ok := obj.(*types.TypeName); ok {
+				switch obj.(type) {
+				case *types.TypeName:
+					if !genDocsMode {
 						v.buildIdentifier(start, end, -1, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, objPkgPath}, nil, "")+"?show=all#name-"+obj.Name())
 						return
+					} else {
+						v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeReference, objPkgPath + ".." + obj.Name()}, nil, ""))
 					}
+				case *types.Func, *types.Var, *types.Const:
+					v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeReference, objPkgPath + ".." + obj.Name()}, nil, ""))
+					return
 				}
 
 				// ToDo: open reference list page
@@ -1412,6 +1456,7 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 			// ToDo:
 			// * Click to show reference list.
 			// * CTRL + click to pkg doc page.
+		
 		}
 
 		return
@@ -1442,10 +1487,11 @@ func buildSrouceCodeLineLink(currentPathInfo pagePathInfo, analyzer *code.CodeAn
 	if fileInfo == nil {
 		log.Printf("! file info for %s in package %s is not found", p.Filename, pkg.Path())
 	} else {
-		sourceFilename = fileInfo.BareFilename
-		if sourceFilename == "" {
-			sourceFilename = fileInfo.BareGeneratedFilename
-		}
+		//sourceFilename = fileInfo.BareFilename
+		//if sourceFilename == "" {
+		//	sourceFilename = fileInfo.BareGeneratedFilename
+		//}
+		sourceFilename = fileInfo.AstBareFileName()
 	}
 
 	return buildPageHref(currentPathInfo, pagePathInfo{ResTypeSource, pkg.Path() + "/" + sourceFilename}, nil, "") + "#line-" + strconv.Itoa(p.Line)
@@ -1466,10 +1512,11 @@ func (ds *docServer) writeSrouceCodeLineLink(page *htmlPage, pkg *code.Package, 
 	if fileInfo == nil {
 		panic(fmt.Sprintf("! file info for %s in package %s is not found", p.Filename, pkg.Path()))
 	} else {
-		sourceFilename = fileInfo.BareFilename
-		if sourceFilename == "" {
-			sourceFilename = fileInfo.BareGeneratedFilename
-		}
+		//sourceFilename = fileInfo.BareFilename
+		//if sourceFilename == "" {
+		//	sourceFilename = fileInfo.BareGeneratedFilename
+		//}
+		sourceFilename = fileInfo.AstBareFileName()
 	}
 
 	fmt.Fprintf(page, `<a href="`)
