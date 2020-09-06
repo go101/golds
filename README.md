@@ -22,6 +22,7 @@ you can install `gold` as `godoge` or `golds` by running one of the following co
 ### Features
 
 * Supports listing exported types not only by alphabet, but also by popularity, which is good to understanding some packages exporting many types.
+* Supports listing unexported types, which is good to read some packages.
 * Rich type information collection:
   * Shows type implemention relations ([demo 1](https://docs.go101.org/std/pkg/go/ast.html#name-Node) and [demo 2](https://docs.go101.org/std/pkg/bytes.html#name-Buffer)).
   * Shows method implementation relations ([demo](https://docs.go101.org/std/imp/io.Reader.html#name-Read)).
@@ -33,7 +34,7 @@ you can install `gold` as `godoge` or `golds` by running one of the following co
   * Click a use of a non-local identifier to jump to the declaration of the non-local identifier, 
     and fell free to open pages in new browser windows as needed.
   * Click the name of a field or a method in its declaration to show its uses (only for package-level named struct/interface types now).
-  * Click interface a method name in an interface type declaration to show the methods implementing it.
+  * Click the name of a method specified in an interface type declaration to show the methods implementing it.
 * Shows code statistics ([demo](https://docs.go101.org/std/statistics.html)).
 * Supports generating static HTML docs pages, to avoid rebuilding the docs later.
   And this is good for package developers to host docs of their packages.
