@@ -108,7 +108,7 @@ func (ds *docServer) buildImplementationPage(result *MethodImplementationResult)
 		//ds.writeMethodForListing(page, result.Package, method.Method, nil, false, false)
 		// ToDo: need to record which type the method is declared for.
 		//       For some rare cases, two same unexported methods from two different packages ...
-		//       
+		//
 		buildPageHref(page.PathInfo, pagePathInfo{ResTypeReference, result.Package.Path() + ".." + result.TypeName.Name() + "." + method.Method.Name()}, page, method.Method.Name())
 		ds.writeMethodType(page, result.Package, method.Method.Method, nil)
 		for _, imp := range method.Implementations {

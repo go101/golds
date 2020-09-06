@@ -2,14 +2,16 @@ package server
 
 import (
 	"container/list"
+	"errors"
 	"io"
-	"io/ioutil"
+	//"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -317,9 +319,80 @@ func GenDocs(outputDir string, args []string, lang string, silent bool, goldVers
 	defer fakeServer.Close()
 
 	// ...
+	const Size = 1024 * 1024
+	type Content [][]byte // all []byte with capacity Size
+	var frees Content
+	var mu sync.Mutex
+	var numByteSlices int
+	//defer func() {log.Println("============== numByteSlices:", numByteSlices)}() // 10 for std
+	apply := func() []byte {
+		mu.Lock()
+		defer mu.Unlock()
+		if n := len(frees); n == 0 {
+			numByteSlices++
+			return make([]byte, Size)
+		} else {
+			n--
+			bs := frees[n]
+			frees = frees[:n]
+			return bs[:cap(bs)]
+		}
+	}
+	release := func(c Content) {
+		mu.Lock()
+		defer mu.Unlock()
+		if frees == nil {
+			frees = make(Content, 0, 64)
+		}
+		frees = append(frees, c...)
+	}
+	readAll := func(r io.ReadCloser) (c Content, e error) {
+		defer r.Close()
+		for done := false; !done; {
+			bs, off := apply(), 0
+			for {
+				n, err := r.Read(bs[off:])
+				if err != nil {
+					if errors.Is(err, io.EOF) {
+						done = true
+					} else {
+						e = err
+						return
+					}
+				}
+				off += n
+				if done || off == cap(bs) {
+					c = append(c, bs[:off])
+					break
+				}
+			}
+		}
+		return
+	}
+	writeFile := func(path string, c Content) error {
+		f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+		if err != nil {
+			return err
+		}
+		defer func() {
+			//release(c) // should not put here.
+			err = f.Close()
+		}()
+		
+		for _, bs := range c {
+			_, err := f.Write(bs)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}
+
 	type Page struct {
 		FilePath string
-		Content  []byte
+		//Content  []byte
+		Content Content
 	}
 
 	var pages = make(chan Page, 8)
@@ -328,6 +401,7 @@ func GenDocs(outputDir string, args []string, lang string, silent bool, goldVers
 
 	// page loader
 	go func() {
+		count := 0
 		for {
 			info := nextPageToLoad()
 			if info == nil {
@@ -340,15 +414,31 @@ func GenDocs(outputDir string, args []string, lang string, silent bool, goldVers
 			}
 
 			if res.StatusCode != http.StatusOK {
-				log.Fatalf("visit %s, get non-ok status code: %d", info.HrefPath, res.StatusCode)
+				log.Fatalf("Visit %s, get non-ok status code: %d", info.HrefPath, res.StatusCode)
 			}
 
-			content, err := ioutil.ReadAll(res.Body)
-			res.Body.Close()
+			// After using the new custom implementation of ReadAll and WriteFile,
+			// memory is still hungry when generate docs for the k8s project.
+			// So it looks the root cause comes from the http server and the fact
+			// that the base memory is 4.3G after analyzing k8s source code.
+			//
+			// But the custom implementaion is faster.
+			//
+			//content, err := ioutil.ReadAll(res.Body)
+			//res.Body.Close()
+			content, err := readAll(res.Body)
 			if err != nil {
-				log.Fatal(err)
+				log.Fatalln("Read request body error:", err)
 			}
 
+			count++
+			if count&1023 == 0 {
+				// With this line, the peek memory using in generating k8s docs
+				// is 8.2G, instead of 18G.
+				runtime.GC()
+			}
+
+			//log.Println(count, count&2048, info.FilePath)
 			pages <- Page{
 				FilePath: info.FilePath,
 				Content:  content,
@@ -360,28 +450,35 @@ func GenDocs(outputDir string, args []string, lang string, silent bool, goldVers
 	// page saver
 	numPages, numBytes := 0, 0
 	for pg := range pages {
-		if forTesting {
-			continue
-		}
+		func(pg Page) {
+			defer release(pg.Content)
 
-		numPages++
-		numBytes += len(pg.Content)
+			if forTesting {
+				return
+			}
 
-		path := filepath.Join(outputDir, pg.FilePath)
-		path = strings.Replace(path, "/", string(filepath.Separator), -1)
-		path = strings.Replace(path, "\\", string(filepath.Separator), -1)
+			numPages++
+			numBytes += len(pg.Content)
 
-		if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
-			log.Fatalln("Mkdir error:", err)
-		}
+			path := filepath.Join(outputDir, pg.FilePath)
+			path = strings.Replace(path, "/", string(filepath.Separator), -1)
+			path = strings.Replace(path, "\\", string(filepath.Separator), -1)
 
-		if err := ioutil.WriteFile(path, pg.Content, 0644); err != nil {
-			log.Fatalln("Write file error:", err)
-		}
+			if err := os.MkdirAll(filepath.Dir(path), 0700); err != nil {
+				log.Fatalln("Mkdir error:", err)
+			}
 
-		if !silent {
-			log.Printf("Generated %s (size: %d).", pg.FilePath, len(pg.Content))
-		}
+			//if err := ioutil.WriteFile(path, pg.Content, 0644); err != nil {
+			//	log.Fatalln("Write file error:", err)
+			//}
+			if err := writeFile(path, pg.Content); err != nil {
+				log.Fatalln("Write file error:", err)
+			}
+
+			if !silent {
+				log.Printf("Generated %s (size: %d).", pg.FilePath, len(pg.Content))
+			}
+		}(pg)
 	}
 
 	if forTesting {

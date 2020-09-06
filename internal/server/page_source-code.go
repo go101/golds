@@ -1422,7 +1422,7 @@ GoOn:
 			case *types.Var: // struct field
 				// ToDo: generate fake IDs for unnamed types.
 				// 5 depth distane from struct type spec to field ident.
-				if v.topLevelStructTypeSpec != nil && v.astNodeDepth - v.topLevelStructTypeNodeDepth == 5 {
+				if v.topLevelStructTypeSpec != nil && v.astNodeDepth-v.topLevelStructTypeNodeDepth == 5 {
 					enclosingTypeName := v.topLevelStructTypeSpec.Name.Name
 					fieldName := obj.Name()
 					if fieldName != "_" {
@@ -1456,7 +1456,7 @@ GoOn:
 			// ToDo:
 			// * Click to show reference list.
 			// * CTRL + click to pkg doc page.
-		
+
 		}
 
 		return

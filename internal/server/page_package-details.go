@@ -134,7 +134,7 @@ func (ds *docServer) buildPackageDetailsPage(pkg *PackageDetails, options packag
 		ds.currentTranslation.Text_PackageDocsLinksOnOtherWebsites(pkg.ImportPath, pkg.IsStandard),
 	)
 
-	isBuiltin := pkg.ImportPath == "builtin" 
+	isBuiltin := pkg.ImportPath == "builtin"
 	if !isBuiltin {
 		fmt.Fprintf(page, `
 
