@@ -2,16 +2,16 @@ package server
 
 import (
 	"container/list"
-	"errors"
+	"fmt"
 	"io"
-	//"io/ioutil"
 	"log"
 	"net/http"
-	"net/http/httptest"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
 	"runtime"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"sync"
@@ -20,12 +20,18 @@ import (
 	"go101.org/gold/code"
 )
 
+var _ = runtime.GC
+
 func init() {
 	//enabledHtmlGenerationMod() // debug
 }
 
 var (
-	genDocsMode    bool
+	genDocsMode            = false
+	buildIdUsesPages       = true  // might be false in gen mode
+	enableSoruceNavigation = true  // false to disable method implementation pages and some code reading features
+	emphasizeWdPackages    = false // list packages in the current directory before other packages
+
 	goldVersion    string
 	pageHrefList   *list.List // elements are *string
 	resHrefs       map[pageResType]map[string]int
@@ -233,6 +239,13 @@ func buildPageHref(currentPageInfo, linkedPageInfo pagePathInfo, page *htmlPage,
 
 Generate:
 
+	if !buildIdUsesPages && linkedPageInfo.resType == ResTypeReference {
+		panic("identifer-uses page (" + linkedPageInfo.resPath + ") should not be build")
+	}
+	if !enableSoruceNavigation && linkedPageInfo.resType == ResTypeImplementation {
+		panic("method-implementation page (" + linkedPageInfo.resPath + ") should not be build")
+	}
+
 	var makeHref = func(pathInfo pagePathInfo) string {
 		switch pathInfo.resType {
 		case ResTypeNone: // top-level pages
@@ -298,12 +311,21 @@ Generate:
 	return
 }
 
-func GenDocs(outputDir string, args []string, lang string, silent bool, goldVersion string, printUsage func(io.Writer), viewDocsCommand func(string) string) {
+// nouses, plainsrc, silent, moregc bool
+func GenDocs(outputDir string, args []string, lang string, options DocsGenerationOptions, goldVersion string, printUsage func(io.Writer), viewDocsCommand func(string) string) {
 	enabledHtmlGenerationMod(goldVersion)
-	forTesting := outputDir == ""
-	silent = silent || forTesting
-	//
 
+	forTesting := outputDir == ""
+	silent := options.SilentMode || forTesting
+	if options.IncreaseGCFrequency {
+		debug.SetGCPercent(75)
+	}
+
+	buildIdUsesPages = !options.NoIdentifierUsesPages || forTesting
+	enableSoruceNavigation = !options.PlainSourceCodePages || forTesting
+	emphasizeWdPackages = options.EmphasizeWdPkgs || forTesting
+
+	// ...
 	ds := &docServer{
 		goldVersion: goldVersion,
 		phase:       Phase_Unprepared,
@@ -315,60 +337,23 @@ func GenDocs(outputDir string, args []string, lang string, silent bool, goldVers
 	// ...
 	outputDir = filepath.Join(outputDir, "generated-"+time.Now().Format("20060102150405"))
 
-	fakeServer := httptest.NewServer(http.HandlerFunc(ds.ServeHTTP))
-	defer fakeServer.Close()
+	// ...
+	//defer func() { log.Println("============== contentPool.numByteSlices:", contentPool.numByteSlices) }() // 10 for std
+	w := &docGenResponseWriter{}
+	r := &http.Request{URL: &url.URL{}}
+	buildPageContent := func(path string) (Content, error) {
+		w.reset()
+		r.URL.Path = path
+		ds.ServeHTTP(w, r)
+		if w.statusCode != http.StatusOK {
+			contentPool.collect(w.content)
+			return nil, fmt.Errorf("build %s, get non-ok status code: %d", path, w.statusCode)
+		}
+		return w.content, nil
+	}
 
 	// ...
-	const Size = 1024 * 1024
-	type Content [][]byte // all []byte with capacity Size
-	var frees Content
-	var mu sync.Mutex
-	var numByteSlices int
-	//defer func() {log.Println("============== numByteSlices:", numByteSlices)}() // 10 for std
-	apply := func() []byte {
-		mu.Lock()
-		defer mu.Unlock()
-		if n := len(frees); n == 0 {
-			numByteSlices++
-			return make([]byte, Size)
-		} else {
-			n--
-			bs := frees[n]
-			frees = frees[:n]
-			return bs[:cap(bs)]
-		}
-	}
-	release := func(c Content) {
-		mu.Lock()
-		defer mu.Unlock()
-		if frees == nil {
-			frees = make(Content, 0, 64)
-		}
-		frees = append(frees, c...)
-	}
-	readAll := func(r io.ReadCloser) (c Content, e error) {
-		defer r.Close()
-		for done := false; !done; {
-			bs, off := apply(), 0
-			for {
-				n, err := r.Read(bs[off:])
-				if err != nil {
-					if errors.Is(err, io.EOF) {
-						done = true
-					} else {
-						e = err
-						return
-					}
-				}
-				off += n
-				if done || off == cap(bs) {
-					c = append(c, bs[:off])
-					break
-				}
-			}
-		}
-		return
-	}
+
 	writeFile := func(path string, c Content) error {
 		f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 		if err != nil {
@@ -378,7 +363,7 @@ func GenDocs(outputDir string, args []string, lang string, silent bool, goldVers
 			//release(c) // should not put here.
 			err = f.Close()
 		}()
-		
+
 		for _, bs := range c {
 			_, err := f.Write(bs)
 			if err != nil {
@@ -401,41 +386,15 @@ func GenDocs(outputDir string, args []string, lang string, silent bool, goldVers
 
 	// page loader
 	go func() {
-		count := 0
 		for {
 			info := nextPageToLoad()
 			if info == nil {
 				break
 			}
 
-			res, err := http.Get(fakeServer.URL + info.HrefPath)
+			content, err := buildPageContent(info.HrefPath)
 			if err != nil {
-				log.Fatal(err)
-			}
-
-			if res.StatusCode != http.StatusOK {
-				log.Fatalf("Visit %s, get non-ok status code: %d", info.HrefPath, res.StatusCode)
-			}
-
-			// After using the new custom implementation of ReadAll and WriteFile,
-			// memory is still hungry when generate docs for the k8s project.
-			// So it looks the root cause comes from the http server and the fact
-			// that the base memory is 4.3G after analyzing k8s source code.
-			//
-			// But the custom implementaion is faster.
-			//
-			//content, err := ioutil.ReadAll(res.Body)
-			//res.Body.Close()
-			content, err := readAll(res.Body)
-			if err != nil {
-				log.Fatalln("Read request body error:", err)
-			}
-
-			count++
-			if count&1023 == 0 {
-				// With this line, the peek memory using in generating k8s docs
-				// is 8.2G, instead of 18G.
-				runtime.GC()
+				log.Fatalln("Read page data error:", err)
 			}
 
 			//log.Println(count, count&2048, info.FilePath)
@@ -451,7 +410,7 @@ func GenDocs(outputDir string, args []string, lang string, silent bool, goldVers
 	numPages, numBytes := 0, 0
 	for pg := range pages {
 		func(pg Page) {
-			defer release(pg.Content)
+			defer contentPool.collect(pg.Content)
 
 			if forTesting {
 				return
@@ -476,7 +435,7 @@ func GenDocs(outputDir string, args []string, lang string, silent bool, goldVers
 			}
 
 			if !silent {
-				log.Printf("Generated %s (size: %d).", pg.FilePath, len(pg.Content))
+				log.Printf("Generated %s (size: %d).", pg.FilePath, pg.Content.DataLength())
 			}
 		}(pg)
 	}

@@ -83,13 +83,13 @@ func (ds *docServer) overviewPage(w http.ResponseWriter, r *http.Request) {
 	data, ok := ds.cachedPage(pageKey)
 	if !ok {
 		overview := ds.buildOverviewData(newOptions.sortBy)
-		data = ds.buildOverviewPage(overview, newOptions.sortBy)
+		data = ds.buildOverviewPage(w, overview, newOptions.sortBy)
 		ds.cachePage(pageKey, data)
 	}
 	w.Write(data)
 }
 
-func (ds *docServer) buildOverviewPage(overview *Overview, sortBy string) []byte {
+func (ds *docServer) buildOverviewPage(w http.ResponseWriter, overview *Overview, sortBy string) []byte {
 	page := NewHtmlPage(ds.goldVersion, ds.currentTranslation.Text_Overview(), ds.currentTheme.Name(), pagePathInfo{ResTypeNone, ""})
 	fmt.Fprintf(page, `
 <pre><code><span style="font-size:xx-large;">%s</span></code></pre>
@@ -132,7 +132,7 @@ func (ds *docServer) buildOverviewPage(overview *Overview, sortBy string) []byte
 
 	page.WriteString("</pre>")
 
-	return page.Done(ds.currentTranslation)
+	return page.Done(ds.currentTranslation, w)
 }
 
 func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*PackageForListing, writeAnchorTarget, inGenModeRootPages bool, sortBy string) {
@@ -151,7 +151,8 @@ func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*Package
 		}
 	}
 
-	for i, pkg := range packages {
+	listPackage := func(i int, pkg *PackageForListing) {
+
 		if writeAnchorTarget {
 			fmt.Fprintf(page, `<div class="anchor" id="pkg-%s" data-importedbys="%d" data-dependencylevel="%d">`, pkg.Path, pkg.NumImportedBys, pkg.DepLevel)
 		} else {
@@ -202,6 +203,27 @@ func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*Package
 			page.WriteString(`</div>`)
 		}
 	}
+
+	if emphasizeWdPackages {
+		var i = 0
+		for _, pkg := range packages {
+			if strings.HasPrefix(pkg.Directory, ds.workingDirectory) {
+				listPackage(i, pkg)
+				i++
+			}
+		}
+		page.WriteByte('\n')
+		for _, pkg := range packages {
+			if !strings.HasPrefix(pkg.Directory, ds.workingDirectory) {
+				listPackage(i, pkg)
+				i++
+			}
+		}
+	} else {
+		for i, pkg := range packages {
+			listPackage(i, pkg)
+		}
+	}
 }
 
 var divVisibility = map[bool]string{false: " hidden", true: ""}
@@ -249,6 +271,8 @@ type PackageForListing struct {
 
 	DepLevel       int32
 	NumImportedBys int32
+
+	Directory string
 }
 
 func (ds *docServer) buildOverviewData(sortBy string) *Overview {
@@ -271,6 +295,8 @@ func (ds *docServer) buildOverviewData(sortBy string) *Overview {
 
 		pkg.DepLevel = int32(p.DepLevel)
 		pkg.NumImportedBys = int32(len(p.DepedBys))
+
+		pkg.Directory = p.Directory
 	}
 
 	switch sortBy {

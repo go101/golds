@@ -30,13 +30,13 @@ func (ds *docServer) statisticsPage(w http.ResponseWriter, r *http.Request) {
 	}
 	data, ok := ds.cachedPage(pageKey)
 	if !ok {
-		data = ds.buildStatisticsData()
+		data = ds.buildStatisticsPage(w)
 		ds.cachePage(pageKey, data)
 	}
 	w.Write(data)
 }
 
-func (ds *docServer) buildStatisticsData() []byte {
+func (ds *docServer) buildStatisticsPage(w http.ResponseWriter) []byte {
 	page := NewHtmlPage(ds.goldVersion, ds.currentTranslation.Text_Statistics(), ds.currentTheme.Name(), pagePathInfo{ResTypeNone, "statistics"})
 	fmt.Fprintf(page, `
 <pre><code><span style="font-size:xx-large;">%s</span></code></pre>
@@ -121,5 +121,5 @@ func (ds *docServer) buildStatisticsData() []byte {
 		"exportedidentifiersByLengthsChartURL": buildPageHref(page.PathInfo, pagePathInfo{ResTypeSVG, "exportedidentifiers-by-lengths"}, nil, ""),
 	}))
 
-	return page.Done(ds.currentTranslation)
+	return page.Done(ds.currentTranslation, w)
 }

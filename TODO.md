@@ -2,6 +2,27 @@
 
 ### Soon to do
 
+* Show unexported funcitons/methods of depending packages not shown in the method list of the types
+  when show unexported types.
+
+* make overview and package detials pages always contain unexported info, Use JS to sort and show.
+
+* generation mode option:
+  * -moregc: set GCPercent 67%.
+  * -nouses: don't generate id uses pages
+  * -simplecode: simple code pages
+
+* rate limit http requests. 1000requests/3600seconds
+
+* When showing unexporteds, some title names need change
+  * "Exported Methods"
+  * "Exported Fields"
+
+* use Page.{Theme, Translation} instead of server.XXXs.
+  * Page.Done(translation Translation) []byte => parameter and result are not needed
+
+* optimize memory more, about string confactrations, write into page buffer directly.
+
 * server state:
   * highlight id 0-n
   * searching uses for id goroutine 0-n

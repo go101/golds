@@ -82,13 +82,13 @@ func (ds *docServer) identifierReferencePage(w http.ResponseWriter, r *http.Requ
 			return
 		}
 
-		data = ds.buildReferencesPage(result)
+		data = ds.buildReferencesPage(w, result)
 		ds.cachePage(pageKey, data)
 	}
 	w.Write(data)
 }
 
-func (ds *docServer) buildReferencesPage(result *ReferencesResult) []byte {
+func (ds *docServer) buildReferencesPage(w http.ResponseWriter, result *ReferencesResult) []byte {
 	qualifiedIdentifier := result.Package.Path() + "." + result.Identifier
 	title := ds.currentTranslation.Text_ReferenceList() + ds.currentTranslation.Text_Colon(true) + qualifiedIdentifier
 	page := NewHtmlPage(ds.goldVersion, title, ds.currentTheme.Name(), pagePathInfo{ResTypeReference, qualifiedIdentifier})
@@ -127,7 +127,9 @@ func (ds *docServer) buildReferencesPage(result *ReferencesResult) []byte {
 				if !token.IsExported(methodName) {
 					anchorName = methodPkgPath + "." + anchorName
 				}
-				link = buildPageHref(page.PathInfo, pagePathInfo{ResTypeImplementation, result.Package.Path() + "." + result.Resource.Name()}, nil, "") + "#name-" + anchorName
+				if enableSoruceNavigation {
+					link = buildPageHref(page.PathInfo, pagePathInfo{ResTypeImplementation, result.Package.Path() + "." + result.Resource.Name()}, nil, "") + "#name-" + anchorName
+				}
 			}
 
 			if link == "" {
@@ -251,7 +253,7 @@ func (ds *docServer) buildReferencesPage(result *ReferencesResult) []byte {
 	}
 
 	page.WriteString("</code></pre>")
-	return page.Done(ds.currentTranslation)
+	return page.Done(ds.currentTranslation, w)
 }
 
 //func ExcerptNearbyCode(page *htmlPage, fileInfo *code.SourceFileInfo, astIdent *ast.Ident, pos token.Position) {

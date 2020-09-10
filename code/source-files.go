@@ -234,6 +234,9 @@ func (d *CodeAnalyzer) CollectObjectReferences() {
 	for _, pkg := range d.packageList {
 		for i := range pkg.SourceFiles {
 			info := &pkg.SourceFiles[i]
+			if pkg.Directory == "" && info.OriginalFile != "" {
+				pkg.Directory = filepath.Dir(info.OriginalFile)
+			}
 			//log.Println("===", info.OriginalGoFile)
 			//log.Println("   ", info.GeneratedFile, info.GoFileContentOffset)
 			if info.AstFile == nil {

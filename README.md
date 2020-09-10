@@ -21,7 +21,8 @@ you can install `gold` as `godoge` or `golds` by running one of the following co
 
 ### Features
 
-* Supports listing exported types not only by alphabet, but also by popularity, which is good to understanding some packages exporting many types.
+* Supports listing exported types not only by alphabet, but also by popularity, which is good to
+  understanding some packages exporting many types.
 * Supports listing unexported types, which is good to read some packages.
 * Rich type information collection:
   * Shows type implemention relations ([demo 1](https://docs.go101.org/std/pkg/go/ast.html#name-Node) and [demo 2](https://docs.go101.org/std/pkg/bytes.html#name-Buffer)).
@@ -31,14 +32,15 @@ you can install `gold` as `godoge` or `golds` by running one of the following co
   * Shows uses of package-level declared types/constants/variables/functions.
 * Smooth code view experiences (good for studying Go projects without opening IDEs):
   * Click a local identifier to highlight all the occurences of the identifier.
-  * Click a use of a non-local identifier to jump to the declaration of the non-local identifier, 
-    and fell free to open pages in new browser windows as needed.
+  * Click a use of a non-local identifier to jump to the declaration of the non-local identifier.
   * Click the name of a field or a method in its declaration to show its uses (only for package-level named struct/interface types now).
   * Click the name of a method specified in an interface type declaration to show the methods implementing it.
 * Shows code statistics ([demo](https://docs.go101.org/std/statistics.html)).
 * Supports generating static HTML docs pages, to avoid rebuilding the docs later.
+  (Standard packages are generated in about 7 seconds, the kubernetes project packages are generated in about one minute.)
   And this is good for package developers to host docs of their packages.
 * All functionalities are implemented locally, no external websites are needed.
+* Just fell free to open any number of pages in new browser windows as needed.
 * JavaScript-off friendly. No tracing, no auto external websites visiting.
 
 _(NOTE: This tool is still in its early experimental phase. More new features will be added from time to time in future versions.)_

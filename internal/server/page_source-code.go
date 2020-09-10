@@ -74,13 +74,13 @@ func (ds *docServer) sourceCodePage(w http.ResponseWriter, r *http.Request, pkgP
 			return
 		}
 
-		data = ds.buildSourceCodePage(result)
+		data = ds.buildSourceCodePage(w, result)
 		ds.cachePage(pageKey, data)
 	}
 	w.Write(data)
 }
 
-func (ds *docServer) buildSourceCodePage(result *SourceFileAnalyzeResult) []byte {
+func (ds *docServer) buildSourceCodePage(w http.ResponseWriter, result *SourceFileAnalyzeResult) []byte {
 	page := NewHtmlPage(ds.goldVersion, ds.currentTranslation.Text_SourceCode(result.PkgPath, result.BareFilename), ds.currentTheme.Name(), pagePathInfo{ResTypeSource, result.PkgPath + "/" + result.BareFilename})
 
 	realFilePath := result.OriginalPath
@@ -170,7 +170,7 @@ func (ds *docServer) buildSourceCodePage(result *SourceFileAnalyzeResult) []byte
 	page.WriteString(`
 </pre>`)
 
-	return page.Done(ds.currentTranslation)
+	return page.Done(ds.currentTranslation, w)
 }
 
 type SourceFileAnalyzeResult struct {
@@ -1304,24 +1304,27 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 		if v.topLevelFuncInfo.Name == ident {
 			funcName := v.topLevelFuncInfo.Name.Name
 			if v.topLevelFuncInfo.RecvTypeName != "" {
-				//var methodPkgPath string
-				//if !token.IsExported(funcName) {
-				//	// This might be not essential, see registerTypeMethodContributingToTypeImplementations
-				//	methodPkgPath = v.pkg.Path()
-				//}
-				//if v.dataAnalyzer.CheckTypeMethodContributingToTypeImplementations(v.pkg.Path(), v.topLevelFuncInfo.RecvTypeName, methodPkgPath, funcName) {
-				//	anchorName := funcName
-				//	if !token.IsExported(funcName) {
-				//		anchorName = methodPkgPath + "." + anchorName
-				//	}
-				//	//link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeImplementation, v.pkg.Path() + "." + v.topLevelFuncInfo.RecvTypeName}, nil, "") + "#name-" + anchorName
-				//}
-				// The above handling for unexported fileds should be unnecessary here.
+				// The handling for unexported fileds should be unnecessary here.
 				// For a directly declared method has no duplicated methods for sure.
 				// Duplicated methods come only through embedding.
 				// ToDo: need think more.
 
-				link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeReference, v.pkg.Path() + ".." + v.topLevelFuncInfo.RecvTypeName + "." + funcName}, nil, "")
+				if buildIdUsesPages {
+					link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeReference, v.pkg.Path() + ".." + v.topLevelFuncInfo.RecvTypeName + "." + funcName}, nil, "")
+				} else {
+					var methodPkgPath string
+					if !token.IsExported(funcName) {
+						// This might be not essential, see registerTypeMethodContributingToTypeImplementations
+						methodPkgPath = v.pkg.Path()
+					}
+					if enableSoruceNavigation && v.dataAnalyzer.CheckTypeMethodContributingToTypeImplementations(v.pkg.Path(), v.topLevelFuncInfo.RecvTypeName, methodPkgPath, funcName) {
+						anchorName := funcName
+						if !token.IsExported(funcName) {
+							anchorName = methodPkgPath + "." + anchorName
+						}
+						link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeImplementation, v.pkg.Path() + "." + v.topLevelFuncInfo.RecvTypeName}, nil, "") + "#name-" + anchorName
+					}
+				}
 			} else if token.IsExported(funcName) {
 				link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, v.pkg.Path()}, nil, "") + "#name-" + funcName
 			} else {
@@ -1408,13 +1411,12 @@ GoOn:
 				//log.Printf("   reciver: %v\n", ot.Recv())
 
 				if v.topLevelInterfaceTypeInfo != nil && v.topLevelInterfaceTypeInfo.TypeName != "_" && len(v.topLevelInterfaceTypeInfo.Methods) > 0 {
-					if ident.Pos() == v.topLevelInterfaceTypeInfo.Methods[0].Pos() {
+					if enableSoruceNavigation && ident.Pos() == v.topLevelInterfaceTypeInfo.Methods[0].Pos() {
 						anchorName := obj.Name()
 						if !token.IsExported(anchorName) {
 							anchorName = objPkgPath + "." + anchorName
 						}
 						v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeImplementation, objPkgPath + "." + v.topLevelInterfaceTypeInfo.TypeName}, nil, "")+"#name-"+anchorName)
-						//v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeReference, objPkgPath + ".." + v.topLevelInterfaceTypeInfo.TypeName + "." + anchorName}, nil, ""))
 						v.topLevelInterfaceTypeInfo.Methods = v.topLevelInterfaceTypeInfo.Methods[1:]
 						return
 					}
@@ -1425,10 +1427,10 @@ GoOn:
 				if v.topLevelStructTypeSpec != nil && v.astNodeDepth-v.topLevelStructTypeNodeDepth == 5 {
 					enclosingTypeName := v.topLevelStructTypeSpec.Name.Name
 					fieldName := obj.Name()
-					if fieldName != "_" {
+					if fieldName != "_" && buildIdUsesPages {
 						v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeReference, objPkgPath + ".." + enclosingTypeName + "." + obj.Name()}, nil, ""))
+						return
 					}
-					return
 				}
 			}
 
@@ -1443,12 +1445,15 @@ GoOn:
 					if !genDocsMode {
 						v.buildIdentifier(start, end, -1, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, objPkgPath}, nil, "")+"?show=all#name-"+obj.Name())
 						return
-					} else {
+					} else if buildIdUsesPages {
 						v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeReference, objPkgPath + ".." + obj.Name()}, nil, ""))
+						return
 					}
 				case *types.Func, *types.Var, *types.Const:
-					v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeReference, objPkgPath + ".." + obj.Name()}, nil, ""))
-					return
+					if buildIdUsesPages {
+						v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeReference, objPkgPath + ".." + obj.Name()}, nil, ""))
+						return
+					}
 				}
 
 				// ToDo: open reference list page
@@ -1623,7 +1628,7 @@ func (ds *docServer) analyzeSoureCode(pkgPath, bareFilename string) (*SourceFile
 	//log.Println("===================== filePath=", filePath)
 
 	var result *SourceFileAnalyzeResult
-	if fileInfo.AstFile == nil {
+	if !enableSoruceNavigation || fileInfo.AstFile == nil {
 		//log.Println("fileInfo == nil")
 
 		lineCount, _ := BuildLineOffsets(content, true)

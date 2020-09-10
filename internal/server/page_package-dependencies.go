@@ -46,7 +46,7 @@ func (ds *docServer) packageDependenciesPage(w http.ResponseWriter, r *http.Requ
 			return
 		}
 
-		data = ds.buildPackageDependenciesPage(depInfo)
+		data = ds.buildPackageDependenciesPage(w, depInfo)
 		ds.cachePage(pageKey, data)
 	}
 	w.Write(data)
@@ -111,7 +111,7 @@ func (ds *docServer) buildPackageDependenciesData(pkgPath string) *PackageDepend
 	return result
 }
 
-func (ds *docServer) buildPackageDependenciesPage(depInfo *PackageDependencyInfo) []byte {
+func (ds *docServer) buildPackageDependenciesPage(w http.ResponseWriter, depInfo *PackageDependencyInfo) []byte {
 	page := NewHtmlPage(ds.goldVersion, ds.currentTranslation.Text_DependencyRelations(depInfo.ImportPath), ds.currentTheme.Name(), pagePathInfo{ResTypeDependency, depInfo.ImportPath})
 
 	fmt.Fprintf(page, `
@@ -138,5 +138,5 @@ func (ds *docServer) buildPackageDependenciesPage(depInfo *PackageDependencyInfo
 		ds.writePackagesForListing(page, depInfo.ImportedBys, false, false, "")
 	}
 
-	return page.Done(ds.currentTranslation)
+	return page.Done(ds.currentTranslation, w)
 }

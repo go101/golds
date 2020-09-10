@@ -82,10 +82,17 @@ func Run() {
 	silentMode := *silentFlag || *sFlag
 
 	if gen := *genFlag; gen {
-		var viewDocsCommand = func(docsDir string) string {
+		viewDocsCommand := func(docsDir string) string {
 			return os.Args[0] + " -dir=" + docsDir
 		}
-		server.Gen(*genIntentFlag, validateDiir(*dirFlag), *langFlag, flag.Args(), silentMode, Version, printUsage, viewDocsCommand)
+		options := server.DocsGenerationOptions{
+			NoIdentifierUsesPages: *nouses,
+			PlainSourceCodePages:  *plainsrc,
+			SilentMode:            silentMode,
+			IncreaseGCFrequency:   *moregcFlag,
+			EmphasizeWdPkgs:       *emphasizeWorkingDirectoryPackages,
+		}
+		server.Gen(*genIntentFlag, validateDiir(*dirFlag), *langFlag, flag.Args(), options, Version, printUsage, viewDocsCommand)
 		return
 	}
 
@@ -122,6 +129,10 @@ var dirFlag = flag.String("dir", "", "directory for file serving or HTML generat
 var portFlag = flag.String("port", "", "preferred server port [1024, 65536]. Default: 56789")
 var sFlag = flag.Bool("s", false, "not open a browser automatically")
 var silentFlag = flag.Bool("silent", false, "not open a browser automatically")
+var moregcFlag = flag.Bool("moregc", false, "increase garbage collection frequency")
+var nouses = flag.Bool("nouses", false, "disable the identifier uses feature")
+var plainsrc = flag.Bool("plainsrc", false, "disable the source navigation feature")
+var emphasizeWorkingDirectoryPackages = flag.Bool("emphasize-wdpkgs", false, "disable the source navigation feature")
 
 func printVersion(out io.Writer) {
 	fmt.Fprintf(out, "Gold %s\n", Version)
@@ -137,13 +148,6 @@ Options:
 	-h/-help
 		Show help information. When the flags
 		present, others will be ignored.
-	-gen
-		Static HTML docs generation mode.
-	-dir=ContentDirectory
-		Specifiy the docs generation or file
-		serving diretory. Current directory
-		will be used if no arguments specified.
-		"memory" means not to save (for testing).
 	-port=ServicePort
 		Service port, default to 56789. If
 		the specified or default port is not
@@ -152,6 +156,24 @@ Options:
 		Don't open a browser automatically
 		or don't show HTML file generation
 		logs in docs generation mode.
+	-gen
+		Static HTML docs generation mode.
+	-dir=ContentDirectory
+		Specifiy the docs generation or file
+		serving diretory. Current directory
+		will be used if no arguments specified.
+		"memory" means not to save (for testing).
+	-moregc
+		Increase garbage collection frequency
+		to lower peak memroy use. For HTML docs
+		generation mode only. Enabling it will
+		slow down the docs generation speed.
+	-nouses
+		Disable the identifier uses feature.
+		For HTML docs generation mode only.
+	-plainsrc
+		Disable the source navigation feature.
+		For HTML docs generation mode only.
 
 Examples:
 	%[1]v std

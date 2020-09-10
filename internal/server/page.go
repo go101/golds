@@ -1,10 +1,13 @@
 package server
 
 import (
-	"bytes"
+	//"bytes"
 	"fmt"
 	"go/build"
+	"io"
+	"net/http"
 	"strings"
+	"sync"
 
 	"go101.org/gold/internal/server/translations"
 )
@@ -52,7 +55,8 @@ func (ds *docServer) cachedPage(key pageCacheKey) (data []byte, ok bool) {
 }
 
 func (ds *docServer) cachePageOptions(key pageCacheKey, options interface{}) {
-	if !genDocsMode {
+	if genDocsMode {
+	} else {
 		key.options = nil
 		ds.cachedPagesOptions[key] = options
 	}
@@ -67,14 +71,24 @@ func (ds *docServer) cachedPageOptions(key pageCacheKey) (options interface{}) {
 	return
 }
 
+func addVersionToFilename(filename string, version string) string {
+	return filename + "-" + version
+}
+
+func removeVersionFromFilename(filename string, version string) string {
+	return strings.TrimSuffix(filename, "-"+version)
+}
+
 type htmlPage struct {
-	bytes.Buffer
+	//bytes.Buffer
+	content Content
 
-	theme       *Theme
-	trans       Translation
 	goldVersion string
+	PathInfo    pagePathInfo
 
-	PathInfo pagePathInfo
+	// ToDo: use the two instead of server.currentXXXs.
+	theme *Theme
+	trans Translation
 }
 
 type pagePathInfo struct {
@@ -84,7 +98,7 @@ type pagePathInfo struct {
 
 func NewHtmlPage(goldVersion, title, themeName string, currentPageInfo pagePathInfo) *htmlPage {
 	page := htmlPage{PathInfo: currentPageInfo, goldVersion: goldVersion}
-	page.Grow(4 * 1024 * 1024)
+	//page.Grow(4 * 1024 * 1024)
 
 	fmt.Fprintf(&page, `<!DOCTYPE html>
 <html>
@@ -105,7 +119,8 @@ func NewHtmlPage(goldVersion, title, themeName string, currentPageInfo pagePathI
 	return &page
 }
 
-func (page *htmlPage) Done(translation Translation) []byte {
+// ToDo: w is not used now. It will be used if the page cache feature is remvoed later.s
+func (page *htmlPage) Done(translation Translation, w io.Writer) []byte {
 	//if genDocsMode {}
 
 	var qrImgLink string
@@ -125,7 +140,24 @@ func (page *htmlPage) Done(translation Translation) []byte {
 	page.WriteString(`
 </div></body></html>`,
 	)
-	return append([]byte(nil), page.Bytes()...)
+
+	//return append([]byte(nil), page.Bytes()...)
+	var data []byte
+	if genDocsMode {
+		w.(*docGenResponseWriter).content = page.content
+		page.content = nil
+		// The GenDocs function is in charge of collect page.content.
+	} else {
+		// w is a standard ResponseWriter.
+		data = make([]byte, 0, page.content.DataLength())
+		for _, bs := range page.content {
+			//w.Write(bs)
+			data = append(data, bs...)
+		}
+		contentPool.collect(page.content)
+	}
+
+	return data
 }
 
 func (page *htmlPage) writePageLink(writeHref func(), linkText string, fragments ...string) {
@@ -146,10 +178,279 @@ func (page *htmlPage) writePageLink(writeHref func(), linkText string, fragments
 	}
 }
 
-func addVersionToFilename(filename string, version string) string {
-	return filename + "-" + version
+func (page *htmlPage) Write(data []byte) (int, error) {
+	dataLen := len(data)
+	if dataLen != 0 {
+		var bs []byte
+		if page.content == nil {
+			bs = contentPool.apply()[:0]
+			page.content = [][]byte{bs, nil, nil}[:1]
+		} else {
+			bs = page.content[len(page.content)-1]
+		}
+		for len(data) > 0 {
+			if len(bs) == cap(bs) {
+				page.content[len(page.content)-1] = bs
+				bs = contentPool.apply()[:0]
+				page.content = append(page.content, bs)
+			}
+
+			n := copy(bs[len(bs):cap(bs)], data)
+			bs = bs[:len(bs)+n]
+			data = data[n:]
+		}
+		page.content[len(page.content)-1] = bs
+	}
+
+	return dataLen, nil
 }
 
-func removeVersionFromFilename(filename string, version string) string {
-	return strings.TrimSuffix(filename, "-"+version)
+func (page *htmlPage) WriteString(data string) (int, error) {
+	dataLen := len(data)
+	if dataLen != 0 {
+		var bs []byte
+		if page.content == nil {
+			bs = contentPool.apply()[:0]
+			page.content = [][]byte{bs, nil, nil}[:1]
+		} else {
+			bs = page.content[len(page.content)-1]
+		}
+		for len(data) > 0 {
+			if len(bs) == cap(bs) {
+				page.content[len(page.content)-1] = bs
+				bs = contentPool.apply()[:0]
+				page.content = append(page.content, bs)
+			}
+
+			n := copy(bs[len(bs):cap(bs)], data)
+			bs = bs[:len(bs)+n]
+			data = data[n:]
+		}
+		page.content[len(page.content)-1] = bs
+	}
+
+	return dataLen, nil
 }
+
+func (page *htmlPage) WriteByte(c byte) error {
+	var bs []byte
+	if page.content == nil {
+		bs = contentPool.apply()[:0]
+		page.content = [][]byte{bs, nil, nil}[:1]
+	} else {
+		bs = page.content[len(page.content)-1]
+	}
+	if len(bs) == cap(bs) {
+		bs = contentPool.apply()[:0]
+		page.content = append(page.content, bs)
+	}
+	n := len(bs)
+	bs = bs[:n+1]
+	bs[n] = c
+	page.content[len(page.content)-1] = bs
+	return nil
+}
+
+//========================================
+// Content is used to save memory allocations
+//========================================
+
+const Size = 1024 * 1024
+
+type Content [][]byte // all []byte with capacity Size
+type ContentPool struct {
+	frees         Content
+	mu            sync.Mutex
+	numByteSlices int
+}
+
+var contentPool ContentPool
+
+func (c Content) DataLength() int {
+	if len(c) == 0 {
+		return 0
+	}
+	return (len(c)-1)*Size + len(c[(len(c)-1)])
+}
+
+func (pool *ContentPool) apply() []byte {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+	if n := len(pool.frees); n == 0 {
+		pool.numByteSlices++
+		return make([]byte, Size)
+	} else {
+		n--
+		bs := pool.frees[n]
+		pool.frees = pool.frees[:n]
+		return bs[:cap(bs)]
+	}
+}
+
+func (pool *ContentPool) collect(c Content) {
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+	if pool.frees == nil {
+		pool.frees = make(Content, 0, 32)
+	}
+	pool.frees = append(pool.frees, c...)
+}
+
+//func readAll func(r io.Reader) (c Content, e error) {
+//	for done := false; !done; {
+//		bs, off := apply(), 0
+//		for {
+//			n, err := r.Read(bs[off:])
+//			if err != nil {
+//				if errors.Is(err, io.EOF) {
+//					done = true
+//				} else {
+//					e = err
+//					return
+//				}
+//			}
+//			off += n
+//			if done || off == cap(bs) {
+//				c = append(c, bs[:off])
+//				break
+//			}
+//		}
+//	}
+//	return
+//}
+//
+//func writeFile func(path string, c Content) error {
+//	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+//	if err != nil {
+//		return err
+//	}
+//	defer func() {
+//		//release(c) // should not put here.
+//		err = f.Close()
+//	}()
+//
+//	for _, bs := range c {
+//		_, err := f.Write(bs)
+//		if err != nil {
+//			return err
+//		}
+//	}
+//
+//	return nil
+//}
+//
+//fakeServer := httptest.NewServer(http.HandlerFunc(ds.ServeHTTP))
+//defer fakeServer.Close()
+//
+//buildPageContentFromFakeServer := func(path string) (Content, error) {
+//	res, err := http.Get(fakeServer.URL + path)
+//	if err != nil {
+//		log.Fatal(err)
+//	}
+//
+//	if res.StatusCode != http.StatusOK {
+//		log.Fatalf("Visit %s, get non-ok status code: %d", path, res.StatusCode)
+//	}
+//
+//	var content Content
+//	if useCustomReadAllWriteFile {
+//		content, err = readAll(res.Body)
+//	} else {
+//		var data []byte
+//		data, err = ioutil.ReadAll(res.Body)
+//		if err != nil {
+//			content = append(content, data)
+//		}
+//	}
+//	res.Body.Close()
+//	return content, err
+//}
+
+type docGenResponseWriter struct {
+	statusCode int
+	header     http.Header
+	content    Content
+}
+
+func (dw *docGenResponseWriter) reset() {
+	dw.statusCode = http.StatusOK
+	dw.content = nil
+	for k := range dw.header {
+		delete(dw.header, k)
+	}
+}
+
+func (dw *docGenResponseWriter) Header() http.Header {
+	if dw.header == nil {
+		dw.header = make(http.Header, 3)
+	}
+	return dw.header
+}
+
+func (dw *docGenResponseWriter) WriteHeader(statusCode int) {
+	dw.statusCode = statusCode
+}
+
+func (dw *docGenResponseWriter) Write(data []byte) (int, error) {
+	return len(data), nil
+}
+
+//header := make(http.Header, 3)
+//makeHeader := func() http.Header {
+//	for k := range header {
+//		header[k] = nil
+//	}
+//	return header
+//}
+//var responseWriter *docGenResponseWriter
+//newResponseWriter := func(writeData func([]byte) (int, error)) *docGenResponseWriter {
+//	if responseWriter == nil {
+//		responseWriter = &docGenResponseWriter{}
+//	}
+//	responseWriter.statusCode = http.StatusOK
+//	responseWriter.header = makeHeader()
+//	responseWriter.writeData = writeData
+//	return responseWriter
+//}
+//var fakeRequest *http.Request
+//newRequest := func(path string) *http.Request {
+//	if fakeRequest == nil {
+//		req, err := http.NewRequest(http.MethodGet, "http://locahost", nil)
+//		if err != nil {
+//			log.Fatalln("Construct fake request error:", err)
+//		}
+//		fakeRequest = req
+//	}
+//	fakeRequest.URL.Path = path
+//	return fakeRequest
+//}
+//buildPageContentUsingCustomWriter := func(path string) (Content, error) {
+//	var content Content
+//	var buf, off = apply(), 0
+//	writeData := func(data []byte) (int, error) {
+//		dataLen := len(data)
+//		for len(data) > 0 {
+//			if off == cap(buf) {
+//				content = append(content, buf)
+//				buf, off = apply(), 0
+//			}
+//			n := copy(buf[off:], data)
+//			//log.Println("222", len(data), n, off, cap(buf))
+//			data = data[n:]
+//			off += n
+//		}
+//		return dataLen, nil
+//	}
+//
+//	w := newResponseWriter(writeData)
+//	r := newRequest(path)
+//	ds.ServeHTTP(w, r)
+//	buf = buf[:off]
+//	content = append(content, buf)
+//
+//	if w.statusCode != http.StatusOK {
+//		log.Fatalf("Build %s, get non-ok status code: %d", path, w.statusCode)
+//	}
+//
+//	return content, nil
+//}

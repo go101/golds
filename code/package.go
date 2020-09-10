@@ -42,6 +42,7 @@ type PackageAnalyzeResult struct {
 	AllConstants []*Constant
 	AllImports   []*Import
 	SourceFiles  []SourceFileInfo
+	Directory    string
 }
 
 func NewPackageAnalyzeResult() *PackageAnalyzeResult {

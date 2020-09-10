@@ -34,6 +34,8 @@ type docServer struct {
 
 	goldVersion string
 
+	workingDirectory string
+
 	//
 	allThemes                  []Theme
 	allTranslations            []Translation
@@ -147,6 +149,11 @@ NextTry:
 }
 
 func (ds *docServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// To avoid too hight peak memory use cause by DDOS attack.
+	// Rate Limiting is not very essential, for page content are cached.
+	sem <- struct{}{}
+	defer func() { <-sem }()
+
 	if atomic.SwapInt32(&ds.visited, 1) == 0 {
 		ds.changeTranslationByAcceptLanguage(r.Header.Get("Accept-Language"))
 	}
@@ -237,7 +244,11 @@ func (ds *docServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+var sem = make(chan struct{}, 10)
+
 func (ds *docServer) analyze(args []string, printUsage func(io.Writer)) {
+	ds.workingDirectory, _ = os.Getwd()
+
 	var stopWatch = util.NewStopWatch()
 	defer func() {
 		d := stopWatch.Duration(false)

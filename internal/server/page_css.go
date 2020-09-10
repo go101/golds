@@ -1,7 +1,7 @@
 package server
 
 import (
-	"bytes"
+	//"bytes"
 	"net/http"
 	"text/template"
 )
@@ -51,18 +51,21 @@ func (ds *docServer) cssFile(w http.ResponseWriter, r *http.Request, themeName s
 	}
 	data, ok := ds.cachedPage(pageKey)
 	if !ok {
+		page := NewHtmlPage(ds.goldVersion, "", ds.currentTheme.Name(), pagePathInfo{ResTypeCSS, themeName})
+
 		theme := ds.themeByName(themeName)
 		css := theme.CSS() + commonCSS
 		t, err := template.New("css").Parse(css)
 		if err != nil {
 			panic("parse css template error: " + err.Error())
 		}
-		var buf bytes.Buffer
-		if t.Execute(&buf, options) != nil {
+		//var buf bytes.Buffer
+		//if t.Execute(&buf, options) != nil {
+		if t.Execute(page, options) != nil {
 			panic("execute css template error: " + err.Error())
 		}
 
-		data = buf.Bytes()
+		data = page.Done(ds.currentTranslation, w)
 		ds.cachePage(pageKey, data)
 	}
 	w.Write(data)

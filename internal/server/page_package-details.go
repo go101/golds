@@ -109,13 +109,13 @@ func (ds *docServer) packageDetailsPage(w http.ResponseWriter, r *http.Request, 
 			return
 		}
 
-		data = ds.buildPackageDetailsPage(details, newOptions)
+		data = ds.buildPackageDetailsPage(w, details, newOptions)
 		ds.cachePage(pageKey, data)
 	}
 	w.Write(data)
 }
 
-func (ds *docServer) buildPackageDetailsPage(pkg *PackageDetails, options packagePageOptions) []byte {
+func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *PackageDetails, options packagePageOptions) []byte {
 	page := NewHtmlPage(ds.goldVersion, ds.currentTranslation.Text_Package(pkg.ImportPath), ds.currentTheme.Name(), pagePathInfo{ResTypePackage, pkg.ImportPath})
 
 	fmt.Fprintf(page, `
@@ -381,7 +381,7 @@ WriteValues:
 
 Done:
 	page.WriteString("</code></pre>")
-	return page.Done(ds.currentTranslation)
+	return page.Done(ds.currentTranslation, w)
 }
 
 type FileInfo struct {
@@ -1338,10 +1338,13 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Pac
 		panic("should not")
 	case *code.TypeName:
 		if !writeResNameOnly {
-			//page.WriteString(" type ")
-			page.WriteByte(' ')
-			buildPageHref(page.PathInfo, pagePathInfo{ResTypeReference, res.Package().Path() + ".." + res.Name()}, page, "type")
-			page.WriteByte(' ')
+			if buildIdUsesPages {
+				page.WriteByte(' ')
+				buildPageHref(page.PathInfo, pagePathInfo{ResTypeReference, res.Package().Path() + ".." + res.Name()}, page, "type")
+				page.WriteByte(' ')
+			} else {
+				page.WriteString(" type ")
+			}
 		}
 
 		writeResName()
@@ -1393,9 +1396,12 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Pac
 		}
 	case *code.Constant:
 		if !writeResNameOnly {
-			//page.WriteString("const ")
-			buildPageHref(page.PathInfo, pagePathInfo{ResTypeReference, res.Package().Path() + ".." + res.Name()}, page, "const")
-			page.WriteByte(' ')
+			if buildIdUsesPages {
+				buildPageHref(page.PathInfo, pagePathInfo{ResTypeReference, res.Package().Path() + ".." + res.Name()}, page, "const")
+				page.WriteByte(' ')
+			} else {
+				page.WriteString("const ")
+			}
 		}
 
 		writeResName()
@@ -1421,11 +1427,14 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Pac
 		}
 	case *code.Variable:
 		if !writeResNameOnly {
-			//page.WriteString("  var ")
-			page.WriteByte(' ')
-			page.WriteByte(' ')
-			buildPageHref(page.PathInfo, pagePathInfo{ResTypeReference, res.Package().Path() + ".." + res.Name()}, page, "var")
-			page.WriteByte(' ')
+			if buildIdUsesPages {
+				page.WriteByte(' ')
+				page.WriteByte(' ')
+				buildPageHref(page.PathInfo, pagePathInfo{ResTypeReference, res.Package().Path() + ".." + res.Name()}, page, "var")
+				page.WriteByte(' ')
+			} else {
+				page.WriteString("  var ")
+			}
 		}
 
 		writeResName()
@@ -1447,10 +1456,15 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Pac
 				sig := res.Func.Type().(*types.Signature)
 				recv = sig.Recv()
 			}
-			//page.WriteString(" func ")
-			page.WriteByte(' ')
-			buildPageHref(page.PathInfo, pagePathInfo{ResTypeReference, res.Package().Path() + ".." + res.Name()}, page, "func")
-			page.WriteByte(' ')
+
+			if buildIdUsesPages {
+				page.WriteByte(' ')
+				buildPageHref(page.PathInfo, pagePathInfo{ResTypeReference, res.Package().Path() + ".." + res.Name()}, page, "func")
+				page.WriteByte(' ')
+			} else {
+				page.WriteString(" func ")
+			}
+
 			// This if-block will be never entered now.
 			if recv != nil {
 				switch tt := recv.Type().(type) {

@@ -54,13 +54,13 @@ func (ds *docServer) methodImplementationPage(w http.ResponseWriter, r *http.Req
 			return
 		}
 
-		data = ds.buildImplementationPage(result)
+		data = ds.buildImplementationPage(w, result)
 		ds.cachePage(pageKey, data)
 	}
 	w.Write(data)
 }
 
-func (ds *docServer) buildImplementationPage(result *MethodImplementationResult) []byte {
+func (ds *docServer) buildImplementationPage(w http.ResponseWriter, result *MethodImplementationResult) []byte {
 	// some methods are born by embedding other types.
 	// Use the same design for local id: click such methods to highlight all same-origin ones.
 
@@ -105,12 +105,15 @@ func (ds *docServer) buildImplementationPage(result *MethodImplementationResult)
 		}
 		fmt.Fprintf(page, `<div class="anchor" id="name-%s">`, anchorName)
 		page.WriteByte('\t')
-		//ds.writeMethodForListing(page, result.Package, method.Method, nil, false, false)
 		// ToDo: need to record which type the method is declared for.
 		//       For some rare cases, two same unexported methods from two different packages ...
 		//
-		buildPageHref(page.PathInfo, pagePathInfo{ResTypeReference, result.Package.Path() + ".." + result.TypeName.Name() + "." + method.Method.Name()}, page, method.Method.Name())
-		ds.writeMethodType(page, result.Package, method.Method.Method, nil)
+		if buildIdUsesPages {
+			buildPageHref(page.PathInfo, pagePathInfo{ResTypeReference, result.Package.Path() + ".." + result.TypeName.Name() + "." + method.Method.Name()}, page, method.Method.Name())
+			ds.writeMethodType(page, result.Package, method.Method.Method, nil)
+		} else {
+			ds.writeMethodForListing(page, result.Package, method.Method, nil, false, false)
+		}
 		for _, imp := range method.Implementations {
 			page.WriteString("\n\t\t")
 			if result.IsInterface {
@@ -129,7 +132,7 @@ func (ds *docServer) buildImplementationPage(result *MethodImplementationResult)
 	}
 
 	page.WriteString("</code></pre>")
-	return page.Done(ds.currentTranslation)
+	return page.Done(ds.currentTranslation, w)
 }
 
 type MethodImplementationResult struct {
