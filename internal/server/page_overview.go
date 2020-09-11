@@ -90,7 +90,7 @@ func (ds *docServer) overviewPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ds *docServer) buildOverviewPage(w http.ResponseWriter, overview *Overview, sortBy string) []byte {
-	page := NewHtmlPage(ds.goldVersion, ds.currentTranslation.Text_Overview(), ds.currentTheme.Name(), pagePathInfo{ResTypeNone, ""})
+	page := NewHtmlPage(ds.goldVersion, ds.currentTranslation.Text_Overview(), ds.currentTheme.Name(), pagePathInfo{ResTypeNone, ""}, true)
 	fmt.Fprintf(page, `
 <pre><code><span style="font-size:xx-large;">%s</span></code></pre>
 `,
@@ -152,7 +152,6 @@ func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*Package
 	}
 
 	listPackage := func(i int, pkg *PackageForListing) {
-
 		if writeAnchorTarget {
 			fmt.Fprintf(page, `<div class="anchor" id="pkg-%s" data-importedbys="%d" data-dependencylevel="%d">`, pkg.Path, pkg.NumImportedBys, pkg.DepLevel)
 		} else {
@@ -205,19 +204,15 @@ func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*Package
 	}
 
 	if emphasizeWdPackages {
-		var i = 0
-		for _, pkg := range packages {
-			if strings.HasPrefix(pkg.Directory, ds.workingDirectory) {
-				listPackage(i, pkg)
-				i++
+		lastInWorkingDirectory := false
+		for i, pkg := range packages {
+			if lastInWorkingDirectory != pkg.InWorkingDirectory {
+				if lastInWorkingDirectory {
+					page.WriteByte('\n')
+				}
+				lastInWorkingDirectory = pkg.InWorkingDirectory
 			}
-		}
-		page.WriteByte('\n')
-		for _, pkg := range packages {
-			if !strings.HasPrefix(pkg.Directory, ds.workingDirectory) {
-				listPackage(i, pkg)
-				i++
-			}
+			listPackage(i, pkg)
 		}
 	} else {
 		for i, pkg := range packages {
@@ -272,7 +267,7 @@ type PackageForListing struct {
 	DepLevel       int32
 	NumImportedBys int32
 
-	Directory string
+	InWorkingDirectory bool
 }
 
 func (ds *docServer) buildOverviewData(sortBy string) *Overview {
@@ -296,13 +291,16 @@ func (ds *docServer) buildOverviewData(sortBy string) *Overview {
 		pkg.DepLevel = int32(p.DepLevel)
 		pkg.NumImportedBys = int32(len(p.DepedBys))
 
-		pkg.Directory = p.Directory
+		pkg.InWorkingDirectory = strings.HasPrefix(p.Directory, ds.workingDirectory)
 	}
 
 	switch sortBy {
 	case "alphabet":
 		// ToDo: might be problematic sometimes. Should sort token by token.
 		sort.Slice(result, func(a, b int) bool {
+			if result[a].InWorkingDirectory != result[b].InWorkingDirectory {
+				return result[a].InWorkingDirectory
+			}
 			return result[a].Path < result[b].Path
 		})
 		ImprovePackagesForListing(result)

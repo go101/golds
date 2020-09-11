@@ -66,7 +66,7 @@ func (ds *docServer) buildImplementationPage(w http.ResponseWriter, result *Meth
 
 	qualifiedTypeName := result.Package.Path() + "." + result.TypeName.Name()
 	title := ds.currentTranslation.Text_MethodImplementations() + ds.currentTranslation.Text_Colon(true) + qualifiedTypeName
-	page := NewHtmlPage(ds.goldVersion, title, ds.currentTheme.Name(), pagePathInfo{ResTypeImplementation, qualifiedTypeName})
+	page := NewHtmlPage(ds.goldVersion, title, ds.currentTheme.Name(), pagePathInfo{ResTypeImplementation, qualifiedTypeName}, true)
 
 	fmt.Fprintf(page, `<pre><code><span style="font-size:x-large;">type <a href="%s">%s</a>.`,
 		buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, result.Package.Path()}, nil, ""),

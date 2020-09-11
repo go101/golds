@@ -51,7 +51,7 @@ func (ds *docServer) cssFile(w http.ResponseWriter, r *http.Request, themeName s
 	}
 	data, ok := ds.cachedPage(pageKey)
 	if !ok {
-		page := NewHtmlPage(ds.goldVersion, "", ds.currentTheme.Name(), pagePathInfo{ResTypeCSS, themeName})
+		page := NewHtmlPage(ds.goldVersion, "", ds.currentTheme.Name(), pagePathInfo{ResTypeCSS, themeName}, false)
 
 		theme := ds.themeByName(themeName)
 		css := theme.CSS() + commonCSS

@@ -91,7 +91,7 @@ func (ds *docServer) identifierReferencePage(w http.ResponseWriter, r *http.Requ
 func (ds *docServer) buildReferencesPage(w http.ResponseWriter, result *ReferencesResult) []byte {
 	qualifiedIdentifier := result.Package.Path() + "." + result.Identifier
 	title := ds.currentTranslation.Text_ReferenceList() + ds.currentTranslation.Text_Colon(true) + qualifiedIdentifier
-	page := NewHtmlPage(ds.goldVersion, title, ds.currentTheme.Name(), pagePathInfo{ResTypeReference, qualifiedIdentifier})
+	page := NewHtmlPage(ds.goldVersion, title, ds.currentTheme.Name(), pagePathInfo{ResTypeReference, qualifiedIdentifier}, true)
 
 	var prefix, suffix string
 	var writeSelector func()

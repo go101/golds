@@ -9,30 +9,16 @@ import (
 )
 
 func (ds *docServer) svgFile(w http.ResponseWriter, r *http.Request, svgFile string) {
-	var svgData []byte
-
-	defer func() {
-		if svgData == nil {
-			w.Header().Set("Content-Type", "text/html")
-			w.WriteHeader(http.StatusNotFound)
-			fmt.Fprint(w, "svg file ", svgFile, " not found")
-		} else if len(svgData) == 0 {
-			w.Header().Set("Content-Type", "text/html")
-			w.WriteHeader(http.StatusTooEarly)
-			fmt.Fprint(w, "svg file ", svgFile, " is not ready")
-		} else {
-			w.Header().Set("Content-Type", "image/svg+xml")
-			w.Write(svgData)
-		}
-	}()
-
 	ds.mutex.Lock()
 	defer ds.mutex.Unlock()
 
 	if ds.phase < Phase_Analyzed {
-		svgData = []byte{}
+		w.Header().Set("Content-Type", "text/html")
+		w.WriteHeader(http.StatusTooEarly)
+		fmt.Fprint(w, "svg file ", svgFile, " is not ready")
 		return
 	}
+	w.Header().Set("Content-Type", "image/svg+xml")
 
 	pageKey := pageCacheKey{
 		resType: ResTypeSVG,
@@ -42,8 +28,13 @@ func (ds *docServer) svgFile(w http.ResponseWriter, r *http.Request, svgFile str
 	if !ok {
 		data = ds.buildSVG(svgFile)
 		ds.cachePage(pageKey, data)
+
+		// For docs generation.
+		page := NewHtmlPage(ds.goldVersion, "", ds.currentTheme.Name(), pagePathInfo{ResTypeSVG, svgFile}, false)
+		page.Write(data)
+		_ = page.Done(ds.currentTranslation, w)
 	}
-	svgData = data
+	w.Write(data)
 }
 
 func (ds *docServer) buildSVG(svgFile string) (svgData []byte) {

@@ -138,6 +138,13 @@ func printVersion(out io.Writer) {
 	fmt.Fprintf(out, "Gold %s\n", Version)
 }
 
+// Hidden options:
+//	-moregc
+//		Increase garbage collection frequency
+//		to lower peak memroy use. For HTML docs
+//		generation mode only. Enabling it will
+//		slow down the docs generation speed.
+
 func printUsage(out io.Writer) {
 	fmt.Fprintf(out, `Gold - a Go local docs server (%[2]s).
 
@@ -163,16 +170,15 @@ Options:
 		serving diretory. Current directory
 		will be used if no arguments specified.
 		"memory" means not to save (for testing).
-	-moregc
-		Increase garbage collection frequency
-		to lower peak memroy use. For HTML docs
-		generation mode only. Enabling it will
-		slow down the docs generation speed.
 	-nouses
 		Disable the identifier uses feature.
 		For HTML docs generation mode only.
 	-plainsrc
 		Disable the source navigation feature.
+		For HTML docs generation mode only.
+	-emphasize-wdpkgs
+		List the packages under the current
+		directory before other pacakges.
 		For HTML docs generation mode only.
 
 Examples:
