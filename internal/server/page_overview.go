@@ -298,8 +298,10 @@ func (ds *docServer) buildOverviewData(sortBy string) *Overview {
 	case "alphabet":
 		// ToDo: might be problematic sometimes. Should sort token by token.
 		sort.Slice(result, func(a, b int) bool {
-			if result[a].InWorkingDirectory != result[b].InWorkingDirectory {
-				return result[a].InWorkingDirectory
+			if emphasizeWdPackages {
+				if result[a].InWorkingDirectory != result[b].InWorkingDirectory {
+					return result[a].InWorkingDirectory
+				}
 			}
 			return result[a].Path < result[b].Path
 		})
