@@ -26,6 +26,7 @@ type Translation interface {
 	Text_Period(paragraphEnd bool) string
 	Text_EnclosedInOarentheses(text string) string
 	Text_PreferredFontList() string
+	Text_BlankList() string
 
 	// server
 	Text_Server_Started() string

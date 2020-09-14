@@ -191,9 +191,11 @@ func (ds *docServer) buildReferencesPage(w http.ResponseWriter, result *Referenc
 		for i := range stack {
 			endOffset := stack[i].pos.Offset + len(stack[i].id.Name)
 
-			page.Write(fileInfo.Content[start:stack[i].pos.Offset])
+			//page.Write(fileInfo.Content[start:stack[i].pos.Offset])
+			WriteHtmlEscapedBytes(page, fileInfo.Content[start:stack[i].pos.Offset])
 			page.WriteString("<b>")
-			page.Write(fileInfo.Content[stack[i].pos.Offset:endOffset])
+			//page.Write(fileInfo.Content[stack[i].pos.Offset:endOffset])
+			WriteHtmlEscapedBytes(page, fileInfo.Content[stack[i].pos.Offset:endOffset])
 			page.WriteString("</b>")
 
 			start = endOffset

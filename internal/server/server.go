@@ -262,6 +262,7 @@ func (ds *docServer) analyze(args []string, printUsage func(io.Writer)) {
 	if len(args) == 0 {
 		args = []string{"."}
 	} else if len(args) == 1 && args[0] == "std" {
+		os.Setenv("GO111MODULE", "off")
 		os.Setenv("CGO_ENABLED", "0")
 	}
 

@@ -43,6 +43,8 @@ func (*English) Text_EnclosedInOarentheses(text string) string {
 
 func (*English) Text_PreferredFontList() string { return `"Courier New", Courier, monospace` }
 
+func (*English) Text_BlankList() string { return "(none)" }
+
 ///////////////////////////////////////////////////////////////////
 // server
 ///////////////////////////////////////////////////////////////////

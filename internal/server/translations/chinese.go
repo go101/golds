@@ -33,6 +33,10 @@ func (*Chinese) Text_PreferredFontList() string {
 	return `"Courier New", Courier, monospace, "Microsoft YaHei", "宋体"`
 }
 
+func (*Chinese) Text_BlankList() string {
+	return "（无）"
+}
+
 ///////////////////////////////////////////////////////////////////
 // server
 ///////////////////////////////////////////////////////////////////

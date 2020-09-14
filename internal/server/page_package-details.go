@@ -246,6 +246,11 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 		page.WriteByte('\n')
 	}
 
+	if len(pkg.ExportedTypeNames) == 0 {
+		page.WriteString("\n\t")
+		page.WriteString(ds.currentTranslation.Text_BlankList())
+	}
+
 	for _, et := range pkg.ExportedTypeNames {
 		page.WriteString("\n")
 		fmt.Fprintf(page, `<div class="anchor" id="name-%s" data-popularity="%d">`, et.TypeName.Name(), et.Popularity)
@@ -1338,7 +1343,7 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Pac
 		panic("should not")
 	case *code.TypeName:
 		if !writeResNameOnly {
-			if buildIdUsesPages {
+			if buildIdUsesPages && !isBuiltin {
 				page.WriteByte(' ')
 				buildPageHref(page.PathInfo, pagePathInfo{ResTypeReference, res.Package().Path() + ".." + res.Name()}, page, "type")
 				page.WriteByte(' ')
@@ -1396,7 +1401,7 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Pac
 		}
 	case *code.Constant:
 		if !writeResNameOnly {
-			if buildIdUsesPages {
+			if buildIdUsesPages && !isBuiltin {
 				buildPageHref(page.PathInfo, pagePathInfo{ResTypeReference, res.Package().Path() + ".." + res.Name()}, page, "const")
 				page.WriteByte(' ')
 			} else {
@@ -1427,7 +1432,7 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Pac
 		}
 	case *code.Variable:
 		if !writeResNameOnly {
-			if buildIdUsesPages {
+			if buildIdUsesPages && !isBuiltin {
 				page.WriteByte(' ')
 				page.WriteByte(' ')
 				buildPageHref(page.PathInfo, pagePathInfo{ResTypeReference, res.Package().Path() + ".." + res.Name()}, page, "var")
@@ -1457,7 +1462,7 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Pac
 				recv = sig.Recv()
 			}
 
-			if buildIdUsesPages {
+			if buildIdUsesPages && !isBuiltin {
 				page.WriteByte(' ')
 				buildPageHref(page.PathInfo, pagePathInfo{ResTypeReference, res.Package().Path() + ".." + res.Name()}, page, "func")
 				page.WriteByte(' ')
