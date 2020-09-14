@@ -125,7 +125,7 @@ all involved modules/packages are fetched to local machine and verify cgo tools 
 | [vitess](https://github.com/vitessio/vitess) _v6.0.20-20200525_ | 905 | 7.1s | 1.7G | |
 | [nomad](https://github.com/hashicorp/nomad) _v0.12.4_ | 897 | 7.5s | 2.1G | |
 | [istio](https://github.com/istio/istio) _1.6.0_ | 1860 | 10.7s | 2.8G | |
-| [openshoft/origin](https://github.com/openshift/origin) _rev:5022f83_ | 2640 | 16.1s | 4G | |
+| [openshift/origin](https://github.com/openshift/origin) _rev:5022f83_ | 2640 | 16.1s | 4G | |
 | [kubernetes](https://github.com/kubernetes/kubernetes) _v1.18.2_ | 2821 | 16.3s | 4G | |
 
 
