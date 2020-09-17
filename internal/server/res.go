@@ -80,8 +80,8 @@ type Translation interface {
 	Text_AllPackageLevelTypeNames(num int) string
 	Text_TypeNameListShowOption(exportedsOnly bool) string
 
-	Text_Fields(num int) string // ToDo: merge these into one?
-	Text_Methods(num int) string
+	Text_Fields(num int, exportedsOnly bool) string // ToDo: merge these into one?
+	Text_Methods(num int, exportedsOnly bool) string
 	Text_ImplementedBy(num int) string
 	Text_Implements(num int) string
 	Text_AsOutputsOf(num int) string

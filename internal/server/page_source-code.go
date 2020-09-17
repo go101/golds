@@ -1627,6 +1627,14 @@ func (ds *docServer) analyzeSoureCode(pkgPath, bareFilename string) (*SourceFile
 	//log.Println("===================== goFilePath=", srcPath)
 	//log.Println("===================== filePath=", filePath)
 
+	var docStartLine, docEndLine int
+	if fileInfo.AstFile != nil && fileInfo.AstFile.Doc != nil {
+		start := pkg.PPkg.Fset.PositionFor(fileInfo.AstFile.Doc.Pos(), false)
+		end := pkg.PPkg.Fset.PositionFor(fileInfo.AstFile.Doc.End(), false)
+		docStartLine = start.Line
+		docEndLine = end.Line
+	}
+
 	var result *SourceFileAnalyzeResult
 	if !enableSoruceNavigation || fileInfo.AstFile == nil {
 		//log.Println("fileInfo == nil")
@@ -1639,6 +1647,8 @@ func (ds *docServer) analyzeSoureCode(pkgPath, bareFilename string) (*SourceFile
 			OriginalPath:  fileInfo.OriginalFile,
 			GeneratedPath: generatedFilePath,
 			Lines:         make([]string, 0, lineCount),
+			DocStartLine:  docStartLine,
+			DocEndLine:    docEndLine,
 		}
 		var buf bytes.Buffer
 		buf.Grow(1024)
@@ -1677,14 +1687,6 @@ func (ds *docServer) analyzeSoureCode(pkgPath, bareFilename string) (*SourceFile
 		specialAstNodes := list.New()
 		for _, cg := range fileInfo.AstFile.Comments {
 			specialAstNodes.PushBack(cg)
-		}
-
-		var docStartLine, docEndLine int
-		if fileInfo.AstFile.Doc != nil {
-			start := pkg.PPkg.Fset.PositionFor(fileInfo.AstFile.Doc.Pos(), false)
-			end := pkg.PPkg.Fset.PositionFor(fileInfo.AstFile.Doc.End(), false)
-			docStartLine = start.Line
-			docEndLine = end.Line
 		}
 
 		av := &astVisitor{

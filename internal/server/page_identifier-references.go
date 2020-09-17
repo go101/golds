@@ -207,9 +207,11 @@ func (ds *docServer) buildReferencesPage(w http.ResponseWriter, result *Referenc
 
 	for _, refGroup := range result.References {
 		page.WriteString("\n\t")
-		buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, refGroup.Pkg.Path()}, page, refGroup.Pkg.Path())
 		if refGroup.Pkg.Path() == result.Package.Path() {
+			page.WriteString(refGroup.Pkg.Path())
 			page.WriteString(" <i>(current package)</i>")
+		} else {
+			buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, refGroup.Pkg.Path()}, page, refGroup.Pkg.Path())
 		}
 		page.WriteByte('\n')
 

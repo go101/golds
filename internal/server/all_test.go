@@ -221,5 +221,8 @@ func TestDocsForStandardPackages(t *testing.T) {
 }
 
 func TestGenerateDocsOfStandardPackages(t *testing.T) {
-	GenDocs("", []string{"std"}, "en-US", true, "v0.0.0", nil, nil)
+	opts := DocsGenerationOptions{
+		SilentMode: true,
+	}
+	GenDocs("", []string{"std"}, "en-US", opts, "v0.0.0", nil, nil)
 }

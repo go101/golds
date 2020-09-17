@@ -7,16 +7,9 @@
 
 * make overview and package detials pages always contain unexported info, Use JS to sort and show.
 
-* generation mode option:
-  * -moregc: set GCPercent 67%.
-  * -nouses: don't generate id uses pages
-  * -simplecode: simple code pages
+* click an import declation to highlight all its uses in the current file
 
 * rate limit http requests. 1000requests/3600seconds
-
-* When showing unexporteds, some title names need change
-  * "Exported Methods"
-  * "Exported Fields"
 
 * use Page.{Theme, Translation} instead of server.XXXs.
   * Page.Done(translation Translation) []byte => parameter and result are not needed
@@ -91,6 +84,8 @@
   lsif-c++ for cgo etc.
 
 ### More to do
+
+* some "embedding" in names should be "embedded"
 
 * For std pacakges: show which version of Go introduced a particular function/type, etc.
   * or for any modules
@@ -210,7 +205,10 @@
 
 
 ### Done
-
+* (done) generation mode option:
+  * -moregc: set GCPercent 67%.
+  * -nouses: don't generate id uses pages
+  * -simplecode: simple code pages
 * (done) show identifier uses/references (open in new window)
 * (done) cache all source code (not much memory consumed, but will get some convenience)
 * (done) gen mode: no need to cache pages

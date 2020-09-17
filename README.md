@@ -8,16 +8,20 @@ It tries to extract as much information as possible from Go code to help gophers
 
 ### Installation
 
-Run `go get -u go101.org/gold` to install (and update) **Gold**.
-_(The `GO111MODULE` enviroment variable might need to be set as `on` to utilize the `GOPROXY` setting,
+Run `go get -u go101.org/gold` to install (and update) **Gold**. 
+_(The `GO111MODULE` enviroment variable might need to be set as `on` temporarily to utilize the `GOPROXY` setting,
 depending on your Go Toolchain version and the directory in which the installation command runs.)_
 
-We may also clone this project firstly, then use `go install` command to install **Gold**.
+Note, if the tool program name `gold` conflicts with another tool with the same name you are using,
+you can run any of the following commands to install **Gold** as a program with a different name:
+* **Go** **do**cs **ge**nerator  
+  `go get -u go101.org/gold/godoge`
+* **Go** **co**de **re**ader  
+  `go get -u go101.org/gold/gocore`
+* **Go** **l**ocal **d**ocs **s**erver  
+  `go get -u go101.org/gold/golds`
 
-Note, if the tool name `gold` conflicts with another tool with the same name you are using,
-you can install `gold` as `godoge` or `golds` by running one of the following commands:
-* `go get -u go101.org/gold/godoge`
-* `go get -u go101.org/gold/golds`
+If for any reason the `go get` way doesn't work, you may also clone this project firstly, then run the `go install` command in the respective program folders to install **Gold** as `gold`, `godoge`, `gocore`, or `golds`.
 
 ### Features
 
@@ -33,12 +37,13 @@ you can install `gold` as `godoge` or `golds` by running one of the following co
 * Smooth code view experiences (good for studying Go projects without opening IDEs):
   * Click a local identifier to highlight all the occurences of the identifier.
   * Click a use of a non-local identifier to jump to the declaration of the non-local identifier.
-  * Click the name of a field or a method in its declaration to show its uses (only for package-level named struct/interface types now).
-  * Click the name of a method specified in an interface type declaration to show the methods implementing it.
+  * click the `type`/`const`/`var`/`func` keywords in package docs pages to show the uses of corresponding declared types/values.
+  * Click the name of a field or a method in its declaration to show its uses (only for package-level named struct types now).
+  * Click the name of a method specified in an interface type declaration to show the methods implementing it (only for package-level named interface types now)..
 * Shows code statistics ([demo](https://docs.go101.org/std/statistics.html)).
 * Supports generating static HTML docs pages, to avoid rebuilding the docs later.
-  (Standard packages are generated within about 7 seconds, the kubernetes project packages are generated within about one minute.)
   This is good for package developers to host docs of their own packages.
+  (The docs of standard packages are generated within about 7 seconds, and the docs of the kubernetes project packages are generated within about one minute.)
 * All functionalities are implemented locally, no external websites are needed.
 * Just fell free to open any number of pages in new browser windows as needed.
 * JavaScript-off friendly. No tracing, no auto external websites visiting.
@@ -115,6 +120,7 @@ all involved modules/packages are fetched to local machine and verify cgo tools 
 | [pion/webrtc](https://github.com/pion/webrtc) _v2.2.9_ | 189 | 2.1s | 400M | |
 | [goleveldb](https://github.com/syndtr/goleveldb) _v1.0.0_ | 193 | 2.7s | 600M | |
 | standard packages v1.14 | 199 | 2.6s | 400M | |
+| [Pebble](https://github.com/cockroachdb/pebble) _rev:284ba06_ | 200 | 2.2s | 500M | |
 | [ebiten](https://github.com/hajimehoshi/ebiten) _v1.11.1_ | 214 | 2.1s | 472M | |
 | [tailscale](https://github.com/tailscale/tailscale) _v0.98.0_ | 275 | 2.5s | 539M | |
 | [etcd](https://github.com/etcd-io/etcd) _v3.4.7_ | 391 | 3.5s | 700M | _(need run `go mod vendor` before running **Gold**)_ |

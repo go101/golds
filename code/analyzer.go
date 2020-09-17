@@ -117,7 +117,7 @@ type Stats struct {
 	// This records the count of all package-level declared types.
 	// However,
 	// * types without methods should not be counted.
-	// * some lecal declared types with methods should also be counted.
+	// * some local declared types with methods should also be counted.
 	roughTypeNameCount int32
 	// This recoreds the count of all package-level declared exported identifiers,
 	// exported field/method names, and fake identifiers (#HashOrderID) for unnamed types.
@@ -353,6 +353,8 @@ func (d *CodeAnalyzer) RegisterType(t types.Type) *TypeInfo {
 	return d.TryRegisteringType(t, true)
 }
 
+//var numNameds, numNamedInterfaces = 0, 0
+
 func (d *CodeAnalyzer) TryRegisteringType(t types.Type, createOnNonexist bool) *TypeInfo {
 	typeInfo, _ := d.ttype2TypeInfoTable.At(t).(*TypeInfo)
 	if typeInfo == nil && createOnNonexist {
@@ -380,6 +382,11 @@ func (d *CodeAnalyzer) TryRegisteringType(t types.Type, createOnNonexist bool) *
 			underlying := d.RegisterType(t.Underlying())
 			typeInfo.Underlying = underlying
 			//underlying.Underlying = underlying // already done
+
+			//numNameds++
+			//if _, ok := t.Underlying().(*types.Interface); ok {
+			//	numNamedInterfaces++
+			//}
 		default:
 			typeInfo.Underlying = typeInfo
 		}

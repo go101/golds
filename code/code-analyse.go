@@ -110,6 +110,8 @@ func (d *CodeAnalyzer) AnalyzePackages(onSubTaskDone func(int, time.Duration, ..
 	//logProgress("Check collect selectors", nil)
 
 	// log.Println("[analyze packages done]")
+
+	//log.Println(numNamedInterfaces, numNameds)
 }
 
 func sortPackagesByDepLevels(pkgs []*Package) {

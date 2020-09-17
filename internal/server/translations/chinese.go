@@ -273,12 +273,20 @@ func (*Chinese) Text_TypeNameListShowOption(exportedsOnly bool) string {
 // package details page: type details
 ///////////////////////////////////////////////////////////////////
 
-func (*Chinese) Text_Fields(num int) string {
-	return fmt.Sprintf("%d个导出字段", num)
+func (*Chinese) Text_Fields(num int, exportedsOnly bool) string {
+	if exportedsOnly {
+		return fmt.Sprintf("%d个导出字段", num)
+	} else {
+		return fmt.Sprintf("%d个字段", num)
+	}
 }
 
-func (*Chinese) Text_Methods(num int) string {
-	return fmt.Sprintf("%d个导出方法", num)
+func (*Chinese) Text_Methods(num int, exportedsOnly bool) string {
+	if exportedsOnly {
+		return fmt.Sprintf("%d个导出方法", num)
+	} else {
+		return fmt.Sprintf("%d个方法", num)
+	}
 }
 
 func (*Chinese) Text_ImplementedBy(num int) string {

@@ -181,7 +181,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 		}
 	}
 
-	needOneMoreLine := false
+	var showExportedOnly, needOneMoreLine = true, false
 	if len(pkg.ExportedTypeNames) == 0 && !pkg.HasHiddenTypeNames {
 		needOneMoreLine = true
 		goto WriteValues
@@ -207,6 +207,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 			filterLinkText = ds.currentTranslation.Text_TypeNameListShowOption(true)
 			filterQuery = "&show=all"
 			filterQuery2 = "&show=exporteds"
+			showExportedOnly = false
 		}
 
 		var textFilter string
@@ -268,7 +269,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 		if count := len(et.Fields); count > 0 {
 			page.WriteString("\n\t\t")
 			writeNamedStatTitle(page, et.TypeName.Name(), "fields",
-				ds.currentTranslation.Text_Fields(count),
+				ds.currentTranslation.Text_Fields(count, showExportedOnly),
 				func() {
 					fields := ds.sortFieldList(et.Fields)
 					for _, fld := range fields {
@@ -280,7 +281,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 		if count := len(et.Methods); count > 0 {
 			page.WriteString("\n\t\t")
 			writeNamedStatTitle(page, et.TypeName.Name(), "methods",
-				ds.currentTranslation.Text_Methods(count),
+				ds.currentTranslation.Text_Methods(count, showExportedOnly),
 				func() {
 					methods := ds.sortMethodList(et.Methods)
 					for _, mthd := range methods {

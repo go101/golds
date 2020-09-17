@@ -300,18 +300,32 @@ func (*English) Text_TypeNameListShowOption(exportedsOnly bool) string {
 // package details page: type details
 ///////////////////////////////////////////////////////////////////
 
-func (*English) Text_Fields(num int) string {
-	if num == 1 {
-		return "One Exported Field"
+func (*English) Text_Fields(num int, exportedsOnly bool) string {
+	if exportedsOnly {
+		if num == 1 {
+			return "One Exported Field"
+		}
+		return fmt.Sprintf("Exported Fields (%d)", num)
+	} else {
+		if num == 1 {
+			return "One Field"
+		}
+		return fmt.Sprintf("All Fields (%d)", num)
 	}
-	return fmt.Sprintf("Exported Fields (%d)", num)
 }
 
-func (*English) Text_Methods(num int) string {
-	if num == 1 {
-		return "One Exported Method"
+func (*English) Text_Methods(num int, exportedsOnly bool) string {
+	if exportedsOnly {
+		if num == 1 {
+			return "One Exported Method"
+		}
+		return fmt.Sprintf("Exported Methods (%d)", num)
+	} else {
+		if num == 1 {
+			return "One Method"
+		}
+		return fmt.Sprintf("All Methods (%d)", num)
 	}
-	return fmt.Sprintf("Exported Methods (%d)", num)
 }
 
 func (*English) Text_ImplementedBy(num int) string {
@@ -428,7 +442,7 @@ func (*English) Text_ChartTitle(chartName string) string {
 	case "exportedtypenames-by-kinds":
 		return "Numbers of Exported Type Names by Kinds"
 	case "exportedstructtypes-by-embeddingfields":
-		return "Numbers of Exported Struct Types by Embedding Field Counts"
+		return "Numbers of Exported Struct Types by Embedded Field Counts"
 	//case "exportedstructtypes-by-allfields":
 	//	return "Numbers of Exported Struct Types by All Field Counts"
 	case "exportedstructtypes-by-explicitfields":
@@ -507,7 +521,7 @@ func (*English) Text_TypeStatistics(values map[string]interface{}) string {
 
 	<img src="%s"></image>
 
-	In %d exported struct types, %d have embedding fields,
+	In %d exported struct types, %d have embedded fields,
 	and %d have promoted fields.
 
 	<img src="%s"></image>
@@ -618,9 +632,9 @@ func (*English) Text_GeneratedPageFooter(goldVersion, qrCodeLink, goOS, goArch s
 		qrImg = fmt.Sprintf(`<img src="%s">`, qrCodeLink)
 	}
 	return fmt.Sprintf(`<table><tr><td>%s</td>
-<td>Generated with <a href="https://go101.org/article/tool-gold.html"><b>Gold</b></a> <i>%s</i>. (GOOS=%s GOARCH=%s).
-<b>Gold</b> is a <a href="https://go101.org">Go 101</a> project started by <a href="https://tapirgames.com">Tapir Liu</a>.
-PR and bug reports are welcome and can be submitted <a href="https://github.com/go101/gold">here</a>.
+<td>The pages are generated with <a href="https://go101.org/article/tool-gold.html"><b>Gold</b></a> <i>%s</i>. (GOOS=%s GOARCH=%s)
+<b>Gold</b> is a <a href="https://go101.org">Go 101</a> project and developed by <a href="https://tapirgames.com">Tapir Liu</a>.
+PR and bug reports are welcome and can be submitted to <a href="https://github.com/go101/gold">the issue list</a>.
 Please follow <a href="https://twitter.com/go100and1">@Go100and1</a> (reachable from the left QR code) to get the latest news of <b>Gold</b>.</td></tr></table`,
 		qrImg,
 		goldVersion,
