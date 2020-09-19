@@ -1,4 +1,4 @@
-**Gold** is a Go local docs server, Go docs generator, and a Go code reader.
+**Gold** is a Go local docs server, a Go docs generator, and a Go code reader.
 It tries to extract as much information as possible from Go code to help gophers understand, study and use Go packages.
 
 * [Demo of the generated docs for standard packages](https://docs.go101.org/index.html)
@@ -28,16 +28,16 @@ If for any reason the `go get` way doesn't work, you may also clone this project
 * Supports listing exported types not only by alphabet, but also by popularity, which is good to
   understanding some packages exporting many types.
 * Supports listing unexported types, which is good to read some packages.
-* Rich type information collection:
+* Rich package-level type/value information collection:
   * Shows type implemention relations ([demo 1](https://docs.go101.org/std/pkg/go/ast.html#name-Node) and [demo 2](https://docs.go101.org/std/pkg/bytes.html#name-Buffer)).
   * Shows method implementation relations ([demo](https://docs.go101.org/std/imp/io.Reader.html#name-Read)).
   * Shows promoted selectors, even on unexported embedded fields ([demo](https://docs.go101.org/std/pkg/archive/zip.html#name-File)).
   * Shows as-parameters-of and as-results-of function/method list (including interface methods).
-  * Shows uses of package-level declared types/constants/variables/functions.
+  * Shows the package-level value lists of a package-level type.
+  * Shows uses of package-level declared types/constants/variables/functions (by clicking the `type`/`const`/`var`/`func` keywords).
 * Smooth code view experiences (good for studying Go projects without opening IDEs):
   * Click a local identifier to highlight all the occurences of the identifier.
   * Click a use of a non-local identifier to jump to the declaration of the non-local identifier.
-  * click the `type`/`const`/`var`/`func` keywords in package docs pages to show the uses of corresponding declared types/values.
   * Click the name of a field or a method in its declaration to show its uses (only for package-level named struct types now).
   * Click the name of a method specified in an interface type declaration to show the methods implementing it (only for package-level named interface types now)..
 * Shows code statistics ([demo](https://docs.go101.org/std/statistics.html)).

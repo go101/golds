@@ -189,6 +189,7 @@
     * merge method with the same signature
   * as-type: also combine values of []T, chan T, etc. (now only combine values of T and *T)
   * implementBy and implement lists should include exported aliases of unnmaed types.
+    * show show a "==" label if the implementor and the implemented are equal.
   * it is important to find a way to list implemented unexported types, which is good for code reading.
   * list variables of function types in asParams and asResults lists.
   * for function types, also list functions of its underlying type as values
