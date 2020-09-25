@@ -16,6 +16,8 @@
 
 * optimize memory more, about string confactrations, write into page buffer directly.
 
+* stat number of non-std packages, and non-std dependencies for each package, 
+
 * server state:
   * highlight id 0-n
   * searching uses for id goroutine 0-n

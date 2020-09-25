@@ -33,20 +33,33 @@ func Run() {
 	}
 
 	flag.Parse()
-	if *hFlag || *helpFlag {
-		printUsage(os.Stdout)
-		return
-	}
-
-	if *versionFlag {
-		printVersion(os.Stdout)
-		return
-	}
-
 	if *roughBuildTimeFlag {
 		fmt.Print(RoughBuildTime)
 		return
 	}
+
+	var done = false
+	if *hFlag || *helpFlag {
+		printUsage(os.Stdout)
+		return
+	}
+	if *versionFlag {
+		if done {
+			fmt.Fprintln(os.Stdout)
+		}
+		printVersion(os.Stdout)
+		return
+	}
+	//if *uFlag || *updateFlag {
+	//	appPkgPath := "go101.org/gold"
+	//	switch appName := filepath.Base(os.Args[0]); appName {
+	//	case "godoge", "gocore", "golds":
+	//		appPkgPath += "/" + appName
+	//	}
+	//	// ToDo
+	//	return
+	//}
+
 	var getRoughBuildTime = func() time.Time {
 		output, err := util.RunShellCommand(time.Second*5, "", nil, os.Args[0], "-rough-build-time")
 		if err != nil {
@@ -121,6 +134,9 @@ is expected, please run the following command instead:
 
 var hFlag = flag.Bool("h", false, "show help")
 var helpFlag = flag.Bool("help", false, "show help")
+
+//var uFlag = flag.Bool("u", false, "update self")
+//var updateFlag = flag.Bool("update", false, "update self")
 var versionFlag = flag.Bool("version", false, "show version info")
 var genFlag = flag.Bool("gen", false, "HTML generation mode")
 var genIntentFlag = flag.String("gen-intent", "docs", "docs | testdata")
@@ -137,6 +153,9 @@ var emphasizeWorkingDirectoryPackages = flag.Bool("emphasize-wdpkgs", false, "di
 func printVersion(out io.Writer) {
 	fmt.Fprintf(out, "Gold %s\n", Version)
 }
+
+//	-u/-update
+//		Update Gold itself.
 
 // Hidden options:
 //	-moregc
