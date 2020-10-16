@@ -37,16 +37,11 @@ func Run() {
 		fmt.Print(RoughBuildTime)
 		return
 	}
-
-	var done = false
 	if *hFlag || *helpFlag {
 		printUsage(os.Stdout)
 		return
 	}
 	if *versionFlag {
-		if done {
-			fmt.Fprintln(os.Stdout)
-		}
 		printVersion(os.Stdout)
 		return
 	}

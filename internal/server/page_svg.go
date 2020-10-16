@@ -30,9 +30,9 @@ func (ds *docServer) svgFile(w http.ResponseWriter, r *http.Request, svgFile str
 		ds.cachePage(pageKey, data)
 
 		// For docs generation.
-		page := NewHtmlPage(ds.goldVersion, "", ds.currentTheme.Name(), pagePathInfo{ResTypeSVG, svgFile}, false)
+		page := NewHtmlPage(ds.goldVersion, "", nil, ds.currentTranslation, pagePathInfo{ResTypeSVG, svgFile})
 		page.Write(data)
-		_ = page.Done(ds.currentTranslation, w)
+		_ = page.Done(w)
 	}
 	w.Write(data)
 }

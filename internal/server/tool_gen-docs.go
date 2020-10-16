@@ -27,6 +27,7 @@ func init() {
 }
 
 var (
+	testingMode            = false
 	genDocsMode            = false
 	buildIdUsesPages       = true  // might be false in gen mode
 	enableSoruceNavigation = true  // false to disable method implementation pages and some code reading features
@@ -89,20 +90,24 @@ func resHrefID(resType pageResType, resPath string) (int, bool) {
 	return id, !ok
 }
 
-var resType2ExtTable = map[pageResType]string{
-	ResTypeNone:           ".html", // index, ...
+var _resType2ExtTable = map[pageResType]string{
 	ResTypeAPI:            ".json",
-	ResTypePackage:        ".html",
-	ResTypeDependency:     ".html",
-	ResTypeImplementation: ".html",
-	ResTypeSource:         ".html",
-	ResTypeModule:         ".html",
-	ResTypeReference:      ".html",
 	ResTypeCSS:            ".css",
 	ResTypeJS:             ".js",
 	ResTypeSVG:            ".svg",
 	ResTypePNG:            ".png",
 	//ResTypeAPI
+}
+
+func resType2ExtTable(res pageResType) string {
+	ext, ok := _resType2ExtTable[res]
+	if testingMode && isHTMLPage(res) == ok {
+		panic("isHTMLPage not match: " + res)
+	}
+	if !ok {
+		ext = ".html"
+	}
+	return ext
 }
 
 var dotdotslashes = strings.Repeat("../", 256)
@@ -251,15 +256,15 @@ Generate:
 		case ResTypeNone: // top-level pages
 			switch pathInfo.resPath {
 			case "":
-				return "index" + resType2ExtTable[pathInfo.resType]
+				return "index" + resType2ExtTable(pathInfo.resType)
 			default:
-				return pathInfo.resPath + resType2ExtTable[pathInfo.resType]
+				return pathInfo.resPath + resType2ExtTable(pathInfo.resType)
 			}
 		case ResTypeReference:
 			//pathInfo.resPath = strings.ReplaceAll(pathInfo.resPath, "..", "/") // no need to convert
 		}
 
-		return string(pathInfo.resType) + "/" + pathInfo.resPath + resType2ExtTable[pathInfo.resType]
+		return string(pathInfo.resType) + "/" + pathInfo.resPath + resType2ExtTable(pathInfo.resType)
 	}
 
 	var _, needRegisterHref = resHrefID(linkedPageInfo.resType, linkedPageInfo.resPath)

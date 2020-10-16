@@ -51,7 +51,7 @@ func (ds *docServer) cssFile(w http.ResponseWriter, r *http.Request, themeName s
 	}
 	data, ok := ds.cachedPage(pageKey)
 	if !ok {
-		page := NewHtmlPage(ds.goldVersion, "", ds.currentTheme.Name(), pagePathInfo{ResTypeCSS, themeName}, false)
+		page := NewHtmlPage(ds.goldVersion, "", nil, ds.currentTranslation, pagePathInfo{ResTypeCSS, themeName})
 
 		theme := ds.themeByName(themeName)
 		css := theme.CSS() + commonCSS
@@ -65,7 +65,7 @@ func (ds *docServer) cssFile(w http.ResponseWriter, r *http.Request, themeName s
 			panic("execute css template error: " + err.Error())
 		}
 
-		data = page.Done(ds.currentTranslation, w)
+		data = page.Done(w)
 		ds.cachePage(pageKey, data)
 	}
 	w.Write(data)

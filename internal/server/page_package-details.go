@@ -116,7 +116,7 @@ func (ds *docServer) packageDetailsPage(w http.ResponseWriter, r *http.Request, 
 }
 
 func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *PackageDetails, options packagePageOptions) []byte {
-	page := NewHtmlPage(ds.goldVersion, ds.currentTranslation.Text_Package(pkg.ImportPath), ds.currentTheme.Name(), pagePathInfo{ResTypePackage, pkg.ImportPath}, true)
+	page := NewHtmlPage(ds.goldVersion, ds.currentTranslation.Text_Package(pkg.ImportPath), ds.currentTheme, ds.currentTranslation, pagePathInfo{ResTypePackage, pkg.ImportPath})
 
 	fmt.Fprintf(page, `
 <pre><code><span style="font-size:xx-large;">package <b>%s</b></span>
@@ -162,22 +162,22 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 		for _, info := range pkg.Files {
 			page.WriteString("\n\t")
 			if info.MainPosition != nil && info.HasDocs {
-				ds.writeMainFunctionArrow(page, pkg.Package, *info.MainPosition)
-				ds.writeSourceCodeDocLink(page, pkg.Package, info.Filename)
+				writeMainFunctionArrow(page, pkg.Package, *info.MainPosition)
+				writeSourceCodeDocLink(page, pkg.Package, info.Filename)
 			} else if info.MainPosition != nil {
-				ds.writeMainFunctionArrow(page, pkg.Package, *info.MainPosition)
+				writeMainFunctionArrow(page, pkg.Package, *info.MainPosition)
 			} else if info.HasDocs {
 				if numArrows == 2 {
 					page.WriteString("    ")
 				}
-				ds.writeSourceCodeDocLink(page, pkg.Package, info.Filename)
+				writeSourceCodeDocLink(page, pkg.Package, info.Filename)
 			} else {
 				if numArrows == 2 {
 					page.WriteString("    ")
 				}
 				page.WriteString("    ")
 			}
-			ds.writeSrouceCodeFileLink(page, pkg.Package, info.Filename)
+			writeSrouceCodeFileLink(page, pkg.Package, info.Filename)
 		}
 	}
 
@@ -387,7 +387,7 @@ WriteValues:
 
 Done:
 	page.WriteString("</code></pre>")
-	return page.Done(ds.currentTranslation, w)
+	return page.Done(w)
 }
 
 type FileInfo struct {
@@ -940,8 +940,8 @@ func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pk
 				//fmt.Fprintf(page, "(%s) ", typeId.Name)
 			}
 
-			//ds.writeSrouceCodeLineLink(page, v.Package(), pos, v.Name(), "", false)
-			ds.writeSrouceCodeLineLink(page, res.AstPackage(), pos, v.Name(), "", false)
+			//writeSrouceCodeLineLink(page, v.Package(), pos, v.Name(), "")
+			writeSrouceCodeLineLink(page, res.AstPackage(), pos, v.Name(), "")
 
 			//ds.WriteAstType(page, res.AstDecl.Type, res.Pkg, pkg, false, recvParam, forTypeName)
 			ds.WriteAstType(page, res.AstFuncType(), res.AstPackage(), pkg, false, nil, forTypeName)
@@ -1087,7 +1087,7 @@ func (ds *docServer) writeTypeForListing(page *htmlPage, t *TypeForListing, pkg 
 		page.WriteString("</a>")
 	} else {
 		//page.WriteString("?show=all")
-		ds.writeSrouceCodeLineLink(page, t.Pkg, t.Position(), t.Name(), "", false)
+		writeSrouceCodeLineLink(page, t.Pkg, t.Position(), t.Name(), "")
 	}
 }
 
@@ -1190,7 +1190,7 @@ func (ds *docServer) WriteEmbeddingChain(page *htmlPage, embedding *code.Embedde
 
 	pos := embedding.Field.Position()
 	page.WriteString("<i>")
-	ds.writeSrouceCodeLineLink(page, embedding.Field.Pkg, pos, embedding.Field.Name, "", false)
+	writeSrouceCodeLineLink(page, embedding.Field.Pkg, pos, embedding.Field.Name, "")
 	page.WriteString("</i>")
 	page.WriteByte('.')
 }
@@ -1204,13 +1204,13 @@ func (ds *docServer) writeFieldForListing(page *htmlPage, pkg *code.Package, sel
 			class = "path-duplicate"
 		}
 		if token.IsExported(fld.Name) {
-			ds.writeSrouceCodeLineLink(page, fld.Pkg, pos, fld.Name, class, false)
+			writeSrouceCodeLineLink(page, fld.Pkg, pos, fld.Name, class)
 			page.WriteByte('.')
 		} else {
-			//ds.writeSrouceCodeLineLink(page, fld.Pkg, pos, "<strike>"+fld.Name+"</strike>", class, false)
+			//writeSrouceCodeLineLink(page, fld.Pkg, pos, "<strike>"+fld.Name+"</strike>", class)
 			//page.WriteString("<strike>.</strike>")
 			page.WriteString("<i>")
-			ds.writeSrouceCodeLineLink(page, fld.Pkg, pos, fld.Name, class, false)
+			writeSrouceCodeLineLink(page, fld.Pkg, pos, fld.Name, class)
 			page.WriteString(".</i>")
 		}
 	}
@@ -1227,7 +1227,7 @@ func (ds *docServer) writeFieldCodeLink(page *htmlPage, sel *code.Selector) {
 	}
 	pos := sel.Position()
 	//pos.Line += ds.analyzer.SourceFileLineOffset(pos.Filename)
-	ds.writeSrouceCodeLineLink(page, sel.Package(), pos, selField.Name, "", false)
+	writeSrouceCodeLineLink(page, sel.Package(), pos, selField.Name, "")
 }
 
 func (ds *docServer) writeMethodForListing(page *htmlPage, docPkg *code.Package, sel *code.Selector, forTypeName *code.TypeName, writeReceiver, onlyWriteMethodName bool) {
@@ -1255,7 +1255,7 @@ func (ds *docServer) writeMethodForListing(page *htmlPage, docPkg *code.Package,
 	} else {
 		pos := sel.Position()
 		//pos.Line += ds.analyzer.SourceFileLineOffset(pos.Filename)
-		ds.writeSrouceCodeLineLink(page, sel.Package(), pos, method.Name, "", false)
+		writeSrouceCodeLineLink(page, sel.Package(), pos, method.Name, "")
 	}
 
 	if !onlyWriteMethodName {
@@ -1306,7 +1306,7 @@ func writeKindText(page *htmlPage, tt types.Type) {
 
 //func (ds *docServer) writeResourceIndexHTML(page *htmlPage, res code.Resource, fileLineOffsets map[string][]int, writeType, writeReceiver bool) {
 func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Package, res code.Resource, writeResNameOnly bool) {
-	pos := res.Position()
+	//pos := res.Position()
 	//if lineOffsets, ok := fileLineOffsets[pos.Filename]; ok {
 	//	correctPosition(lineOffsets, &pos)
 	//} else {
@@ -1328,15 +1328,33 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Pac
 	isBuiltin := res.Package().Path() == "builtin"
 
 	writeResName := func() {
+		var fPkg = res.Package()
+		var fPosition token.Position
 		if isBuiltin {
-			if currentPkg == res.Package() && page.PathInfo.resType == ResTypePackage {
-				page.WriteString(res.Name())
-			} else {
+			if currentPkg != res.Package() || page.PathInfo.resType != ResTypePackage {
 				buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, "builtin"}, page, res.Name(), "name-", res.Name())
+				return
+			}
+
+			fPkg = ds.analyzer.RuntimePackage()
+			switch res.Name() {
+			default:
+			case "close":
+				fPosition = ds.analyzer.RuntimeFunctionCodePosition("closechan")
+			case "panic":
+				fPosition = ds.analyzer.RuntimeFunctionCodePosition("gopanic")
+			case "recover":
+				fPosition = ds.analyzer.RuntimeFunctionCodePosition("gorecover")
 			}
 		} else {
-			ds.writeSrouceCodeLineLink(page, res.Package(), pos, res.Name(), "", false)
+			fPosition = res.Position()
 		}
+
+		if !fPosition.IsValid() {
+			page.WriteString(res.Name())
+			return
+		}
+		writeSrouceCodeLineLink(page, fPkg, fPosition, res.Name(), "")
 	}
 
 	switch res := res.(type) {
@@ -1529,7 +1547,7 @@ func (ds *docServer) writeTypeName(page *htmlPage, tt *types.Named, docPkg *code
 		}
 		ttPos := p.PPkg.Fset.PositionFor(tt.Obj().Pos(), false)
 		//log.Printf("============ %v, %v, %v", tt, pkg.Path(), ttPos)
-		ds.writeSrouceCodeLineLink(page, p, ttPos, ttName, "", false)
+		writeSrouceCodeLineLink(page, p, ttPos, ttName, "")
 	}
 
 }
@@ -1792,7 +1810,7 @@ func (ds *docServer) WriteAstType(w *htmlPage, typeLit ast.Expr, codePkg, docPkg
 			}
 			ttPos := p.PPkg.Fset.PositionFor(obj.Pos(), false)
 			//log.Printf("============ %v, %v, %v", tt, pkg.Path(), ttPos)
-			ds.writeSrouceCodeLineLink(w, p, ttPos, node.Name, "", false)
+			writeSrouceCodeLineLink(w, p, ttPos, node.Name, "")
 		}
 	case *ast.SelectorExpr:
 		pkgId, ok := node.X.(*ast.Ident)
@@ -1850,7 +1868,7 @@ func (ds *docServer) WriteAstType(w *htmlPage, typeLit ast.Expr, codePkg, docPkg
 			}
 			ttPos := p.PPkg.Fset.PositionFor(obj.Pos(), false)
 			//log.Printf("============ %v, %v, %v", tt, pkg.Path(), ttPos)
-			ds.writeSrouceCodeLineLink(w, p, ttPos, node.Sel.Name, "", false)
+			writeSrouceCodeLineLink(w, p, ttPos, node.Sel.Name, "")
 		}
 	case *ast.StarExpr:
 		w.Write(star)

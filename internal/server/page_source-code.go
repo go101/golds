@@ -81,7 +81,7 @@ func (ds *docServer) sourceCodePage(w http.ResponseWriter, r *http.Request, pkgP
 }
 
 func (ds *docServer) buildSourceCodePage(w http.ResponseWriter, result *SourceFileAnalyzeResult) []byte {
-	page := NewHtmlPage(ds.goldVersion, ds.currentTranslation.Text_SourceCode(result.PkgPath, result.BareFilename), ds.currentTheme.Name(), pagePathInfo{ResTypeSource, result.PkgPath + "/" + result.BareFilename}, true)
+	page := NewHtmlPage(ds.goldVersion, ds.currentTranslation.Text_SourceCode(result.PkgPath, result.BareFilename), ds.currentTheme, ds.currentTranslation, pagePathInfo{ResTypeSource, result.PkgPath + "/" + result.BareFilename})
 
 	realFilePath := result.OriginalPath
 	if result.GeneratedPath != "" {
@@ -170,7 +170,7 @@ func (ds *docServer) buildSourceCodePage(w http.ResponseWriter, result *SourceFi
 	page.WriteString(`
 </pre>`)
 
-	return page.Done(ds.currentTranslation, w)
+	return page.Done(w)
 }
 
 type SourceFileAnalyzeResult struct {
@@ -1245,6 +1245,27 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 	objPPkg := obj.Pkg()
 	if objPPkg == nil {
 		if obj.Parent() == types.Universe {
+			for obj.Name() == "make" {
+				tv, ok := v.info.Types[ident]
+				if !ok {
+					break
+				}
+				sig, ok := tv.Type.Underlying().(*types.Signature)
+				if !ok {
+					break
+				}
+				_, ok = sig.Params().At(0).Type().Underlying().(*types.Chan)
+				if !ok {
+					break
+				}
+				fPosition := v.dataAnalyzer.RuntimeFunctionCodePosition("makechan")
+				if !fPosition.IsValid() {
+					break
+				}
+				v.buildText(start, end, "", buildSrouceCodeLineLink(v.currentPathInfo, v.dataAnalyzer, v.dataAnalyzer.RuntimePackage(), fPosition))
+				return
+			}
+
 			//log.Println(fmt.Sprintf("ppkg for identifier %s (%v) is not found", ident.Name, obj))
 			//v.buildIdentifier(start, end, -1, "/pkg:builtin#name-"+obj.Name())
 			v.buildIdentifier(start, end, -1, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, "builtin"}, nil, "")+"#name-"+obj.Name())
@@ -1502,7 +1523,7 @@ func buildSrouceCodeLineLink(currentPathInfo pagePathInfo, analyzer *code.CodeAn
 	return buildPageHref(currentPathInfo, pagePathInfo{ResTypeSource, pkg.Path() + "/" + sourceFilename}, nil, "") + "#line-" + strconv.Itoa(p.Line)
 }
 
-func (ds *docServer) writeSrouceCodeLineLink(page *htmlPage, pkg *code.Package, p token.Position, text, class string, inGenModeRootPages bool) {
+func writeSrouceCodeLineLink(page *htmlPage, pkg *code.Package, p token.Position, text, class string) {
 	if class != "" {
 		class = fmt.Sprintf(` class="%s"`, class)
 	}
@@ -1529,14 +1550,14 @@ func (ds *docServer) writeSrouceCodeLineLink(page *htmlPage, pkg *code.Package, 
 	fmt.Fprintf(page, `#line-%d"%s>%s</a>`, p.Line, class, text)
 }
 
-func (ds *docServer) writeSrouceCodeFileLink(page *htmlPage, pkg *code.Package, sourceFilename string) {
+func writeSrouceCodeFileLink(page *htmlPage, pkg *code.Package, sourceFilename string) {
 	//originalFile := ds.analyzer.OriginalGoSourceFile(sourceFilename)
 	////fmt.Fprintf(page, `<a href="/src:%[1]s">%[1]s</a>`, originalFile)
 	//buildPageHref(ResTypeSource, originalFile, false, originalFile, page)
 	buildPageHref(page.PathInfo, pagePathInfo{ResTypeSource, pkg.Path() + "/" + sourceFilename}, page, sourceFilename)
 }
 
-func (ds *docServer) writeSourceCodeDocLink(page *htmlPage, pkg *code.Package, sourceFilename string) {
+func writeSourceCodeDocLink(page *htmlPage, pkg *code.Package, sourceFilename string) {
 	//originalFile := ds.analyzer.OriginalGoSourceFile(sourceFilename)
 	////fmt.Fprintf(page, `<a href="/src:%s#doc">d-&gt;</a> `, originalFile)
 	//buildPageHref(ResTypeSource, originalFile, false, "d-&gt;", page, "doc")
@@ -1544,10 +1565,10 @@ func (ds *docServer) writeSourceCodeDocLink(page *htmlPage, pkg *code.Package, s
 	page.WriteByte(' ')
 }
 
-func (ds *docServer) writeMainFunctionArrow(page *htmlPage, pkg *code.Package, mainPos token.Position) {
+func writeMainFunctionArrow(page *htmlPage, pkg *code.Package, mainPos token.Position) {
 	if mainPos.IsValid() {
 		//mainPos.Line += ds.analyzer.SourceFileLineOffset(mainPos.Filename)
-		ds.writeSrouceCodeLineLink(page, pkg, mainPos, "m-&gt;", "", true)
+		writeSrouceCodeLineLink(page, pkg, mainPos, "m-&gt;", "")
 	} else {
 		page.WriteString("m-&gt;")
 	}

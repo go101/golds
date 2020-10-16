@@ -2,21 +2,19 @@
 
 ### Soon to do
 
-* rename gold to gocore ? A Go code reader (also a Go code reader and generator).
+* rename gold to golds ? 
 
-* link append/panic/recover/make/delete/close/cap in built page and other pages to their implementations
+* -target=[html|json]
 
-* Show unexported funcitons/methods of depending packages not shown in the method list of the types
-  when show unexported types.
+* Unexported funcitons/methods of depending packages not shown in the method list of the types
+  when show unexported types now.
 
 * make overview and package detials pages always contain unexported info, Use JS to sort and show.
 
-* click an import declation to highlight all its uses in the current file
+* click an import path to highlight all its uses in the current file
+  ctrl+click to go to package detail page.
 
 * rate limit http requests. 1000requests/3600seconds
-
-* use Page.{Theme, Translation} instead of server.XXXs.
-  * Page.Done(translation Translation) []byte => parameter and result are not needed
 
 * optimize memory more, about string confactrations, write into page buffer directly.
 
@@ -27,8 +25,6 @@
   * searching uses for id goroutine 0-n
 
 * module page. Containing Module: xxxx/xxxx
-
-* -target=[html|json]
 
 * show/run examples/tests/banchmarks
   * run source code, run main package

@@ -12,6 +12,7 @@ import (
 
 func init() {
 	enabledHtmlGenerationMod("0.0.0") // to test buildPageHref
+	testingMode = true
 }
 
 func TestFindPackageCommonPrefixPaths(t *testing.T) {

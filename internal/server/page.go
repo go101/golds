@@ -29,6 +29,23 @@ const (
 	ResTypePNG            pageResType = "png"
 )
 
+func isHTMLPage(res pageResType) bool {
+	switch res {
+	default:
+		panic("unknown resource type: " + res)
+	case ResTypeAPI, ResTypeCSS, ResTypeJS, ResTypeSVG, ResTypePNG:
+		return false
+	case ResTypeNone:
+	case ResTypeModule:
+	case ResTypePackage:
+	case ResTypeDependency:
+	case ResTypeImplementation:
+	case ResTypeSource:
+	case ResTypeReference:
+	}
+	return true
+}
+
 type pageCacheKey struct {
 	resType pageResType
 	res     interface{}
@@ -87,8 +104,8 @@ type htmlPage struct {
 	PathInfo    pagePathInfo
 
 	// ToDo: use the two instead of server.currentXXXs.
-	theme *Theme
-	trans Translation
+	//theme Theme
+	translation Translation
 
 	isHTML bool
 }
@@ -98,11 +115,16 @@ type pagePathInfo struct {
 	resPath string
 }
 
-func NewHtmlPage(goldVersion, title, themeName string, currentPageInfo pagePathInfo, isHTML bool) *htmlPage {
-	page := htmlPage{PathInfo: currentPageInfo, goldVersion: goldVersion, isHTML: isHTML}
+func NewHtmlPage(goldVersion, title string, theme Theme, translation Translation, currentPageInfo pagePathInfo) *htmlPage {
+	page := htmlPage{
+		PathInfo: currentPageInfo,
+		goldVersion: goldVersion,
+		translation: translation,
+		isHTML: isHTMLPage(currentPageInfo.resType),
+	}
 	//page.Grow(4 * 1024 * 1024)
 
-	if isHTML {
+	if page.isHTML {
 		fmt.Fprintf(&page, `<!DOCTYPE html>
 <html>
 <head>
@@ -115,7 +137,7 @@ func NewHtmlPage(goldVersion, title, themeName string, currentPageInfo pagePathI
 <body><div>
 `,
 			title,
-			buildPageHref(currentPageInfo, pagePathInfo{ResTypeCSS, addVersionToFilename(themeName, page.goldVersion)}, nil, ""),
+			buildPageHref(currentPageInfo, pagePathInfo{ResTypeCSS, addVersionToFilename(theme.Name(), page.goldVersion)}, nil, ""),
 			buildPageHref(currentPageInfo, pagePathInfo{ResTypeJS, addVersionToFilename("gold", page.goldVersion)}, nil, ""),
 		)
 	}
@@ -124,10 +146,10 @@ func NewHtmlPage(goldVersion, title, themeName string, currentPageInfo pagePathI
 }
 
 // ToDo: w is not used now. It will be used if the page cache feature is remvoed later.s
-func (page *htmlPage) Done(translation Translation, w io.Writer) []byte {
+func (page *htmlPage) Done(w io.Writer) []byte {
 	if page.isHTML {
 		var qrImgLink string
-		switch translation.(type) {
+		switch page.translation.(type) {
 		case *translations.Chinese:
 			qrImgLink = buildPageHref(page.PathInfo, pagePathInfo{ResTypePNG, "go101-wechat"}, nil, "")
 		case *translations.English:
@@ -137,7 +159,7 @@ func (page *htmlPage) Done(translation Translation, w io.Writer) []byte {
 		fmt.Fprintf(page, `<pre id="footer">
 %s
 </pre>`,
-			translation.Text_GeneratedPageFooter(page.goldVersion, qrImgLink, build.Default.GOOS, build.Default.GOARCH),
+			page.translation.Text_GeneratedPageFooter(page.goldVersion, qrImgLink, build.Default.GOOS, build.Default.GOARCH),
 		)
 
 		page.WriteString(`

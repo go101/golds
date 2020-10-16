@@ -2248,6 +2248,8 @@ func (d *CodeAnalyzer) analyzePackage_CollectSomeRuntimeFunctionPositions() {
 			"chansend",      // c <- v
 			"chanrecv1",     // v = <- c
 			"chanrecv2",     // v, ok = <-c
+			"makechan",
+			"closechan",
 			"gopanic",
 			"gorecover",
 			// gave up other built-in functions

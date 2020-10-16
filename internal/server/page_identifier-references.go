@@ -91,7 +91,7 @@ func (ds *docServer) identifierReferencePage(w http.ResponseWriter, r *http.Requ
 func (ds *docServer) buildReferencesPage(w http.ResponseWriter, result *ReferencesResult) []byte {
 	qualifiedIdentifier := result.Package.Path() + "." + result.Identifier
 	title := ds.currentTranslation.Text_ReferenceList() + ds.currentTranslation.Text_Colon(true) + qualifiedIdentifier
-	page := NewHtmlPage(ds.goldVersion, title, ds.currentTheme.Name(), pagePathInfo{ResTypeReference, qualifiedIdentifier}, true)
+	page := NewHtmlPage(ds.goldVersion, title, ds.currentTheme, ds.currentTranslation, pagePathInfo{ResTypeReference, qualifiedIdentifier})
 
 	var prefix, suffix string
 	var writeSelector func()
@@ -227,7 +227,7 @@ func (ds *docServer) buildReferencesPage(w http.ResponseWriter, result *Referenc
 				lineNumber = 0
 				fileInfo = id.FileInfo
 				//page.WriteString("\t\t")
-				//ds.writeSrouceCodeFileLink(page, refGroup.Pkg, fileInfo.AstBareFileName())
+				//writeSrouceCodeFileLink(page, refGroup.Pkg, fileInfo.AstBareFileName())
 				//page.WriteByte('\n')
 			}
 
@@ -241,12 +241,12 @@ func (ds *docServer) buildReferencesPage(w http.ResponseWriter, result *Referenc
 				page.WriteString("\t\t")
 				if lineNumber > 0 {
 					linkText := fmt.Sprintf("%s", fileInfo.AstBareFileName())
-					ds.writeSrouceCodeLineLink(page, refGroup.Pkg, pos, linkText, "path-duplicate", false)
+					writeSrouceCodeLineLink(page, refGroup.Pkg, pos, linkText, "path-duplicate")
 					linkText = fmt.Sprintf("#L%d", pos.Line)
-					ds.writeSrouceCodeLineLink(page, refGroup.Pkg, pos, linkText, "", false)
+					writeSrouceCodeLineLink(page, refGroup.Pkg, pos, linkText, "")
 				} else {
 					linkText := fmt.Sprintf("%s#L%d", fileInfo.AstBareFileName(), pos.Line)
-					ds.writeSrouceCodeLineLink(page, refGroup.Pkg, pos, linkText, "", false)
+					writeSrouceCodeLineLink(page, refGroup.Pkg, pos, linkText, "")
 				}
 				page.WriteString(": ")
 				lineNumber = pos.Line
@@ -257,7 +257,7 @@ func (ds *docServer) buildReferencesPage(w http.ResponseWriter, result *Referenc
 	}
 
 	page.WriteString("</code></pre>")
-	return page.Done(ds.currentTranslation, w)
+	return page.Done(w)
 }
 
 //func ExcerptNearbyCode(page *htmlPage, fileInfo *code.SourceFileInfo, astIdent *ast.Ident, pos token.Position) {

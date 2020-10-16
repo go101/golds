@@ -66,14 +66,14 @@ func (ds *docServer) buildImplementationPage(w http.ResponseWriter, result *Meth
 
 	qualifiedTypeName := result.Package.Path() + "." + result.TypeName.Name()
 	title := ds.currentTranslation.Text_MethodImplementations() + ds.currentTranslation.Text_Colon(true) + qualifiedTypeName
-	page := NewHtmlPage(ds.goldVersion, title, ds.currentTheme.Name(), pagePathInfo{ResTypeImplementation, qualifiedTypeName}, true)
+	page := NewHtmlPage(ds.goldVersion, title, ds.currentTheme, ds.currentTranslation, pagePathInfo{ResTypeImplementation, qualifiedTypeName})
 
 	fmt.Fprintf(page, `<pre><code><span style="font-size:x-large;">type <a href="%s">%s</a>.`,
 		buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, result.Package.Path()}, nil, ""),
 		result.Package.Path(),
 	)
 	page.WriteString("<b>")
-	//ds.writeSrouceCodeLineLink(page, result.TypeName.Package(), result.TypeName.Position(), result.TypeName.Name(), "", false)
+	//writeSrouceCodeLineLink(page, result.TypeName.Package(), result.TypeName.Position(), result.TypeName.Name(), "")
 	ds.writeResourceIndexHTML(page, result.TypeName.Package(), result.TypeName, true)
 	page.WriteString(`</b></span><span style="font-size:large;">`)
 	writeKindText(page, result.TypeName.Denoting().TT)
@@ -123,7 +123,7 @@ func (ds *docServer) buildImplementationPage(w http.ResponseWriter, result *Meth
 			}
 			page.WriteByte('.')
 			ds.WriteEmbeddingChain(page, imp.Method.EmbeddingChain)
-			//ds.writeSrouceCodeLineLink(page, imp.Method.Package(), imp.Method.Position(), methodName, "b", false)
+			//writeSrouceCodeLineLink(page, imp.Method.Package(), imp.Method.Position(), methodName, "b")
 			page.WriteString("<b>")
 			ds.writeMethodForListing(page, result.Package, imp.Method, nil, false, true)
 			page.WriteString("</b>")
@@ -132,7 +132,7 @@ func (ds *docServer) buildImplementationPage(w http.ResponseWriter, result *Meth
 	}
 
 	page.WriteString("</code></pre>")
-	return page.Done(ds.currentTranslation, w)
+	return page.Done(w)
 }
 
 type MethodImplementationResult struct {

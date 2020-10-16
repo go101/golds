@@ -90,7 +90,7 @@ func (ds *docServer) overviewPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ds *docServer) buildOverviewPage(w http.ResponseWriter, overview *Overview, sortBy string) []byte {
-	page := NewHtmlPage(ds.goldVersion, ds.currentTranslation.Text_Overview(), ds.currentTheme.Name(), pagePathInfo{ResTypeNone, ""}, true)
+	page := NewHtmlPage(ds.goldVersion, ds.currentTranslation.Text_Overview(), ds.currentTheme, ds.currentTranslation, pagePathInfo{ResTypeNone, ""})
 	fmt.Fprintf(page, `
 <pre><code><span style="font-size:xx-large;">%s</span></code></pre>
 `,
@@ -128,14 +128,14 @@ func (ds *docServer) buildOverviewPage(w http.ResponseWriter, overview *Overview
 		)
 	}
 
-	ds.writePackagesForListing(page, overview.Packages, true, true, sortBy)
+	ds.writePackagesForListing(page, overview.Packages, true, sortBy)
 
 	page.WriteString("</pre>")
 
-	return page.Done(ds.currentTranslation, w)
+	return page.Done(w)
 }
 
-func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*PackageForListing, writeAnchorTarget, inGenModeRootPages bool, sortBy string) {
+func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*PackageForListing, writeAnchorTarget bool, sortBy string) {
 	const MainPkgArrowCharCount = 3
 	const MinPrefixSpacesCount = 3
 	var maxDigitCount = 2 // 2 for ". " suffix
@@ -169,7 +169,7 @@ func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*Package
 			} else {
 				mainPos = pkg.Package.PPkg.Fset.PositionFor(mainObj.Pos(), false)
 			}
-			ds.writeMainFunctionArrow(page, pkg.Package, mainPos)
+			writeMainFunctionArrow(page, pkg.Package, mainPos)
 			page.WriteString(SPACES[:maxDigitCount-len(index)])
 			page.WriteString(index)
 		} else {
