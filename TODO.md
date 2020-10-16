@@ -2,6 +2,10 @@
 
 ### Soon to do
 
+* rename gold to gocore ? A Go code reader (also a Go code reader and generator).
+
+* link append/panic/recover/make/delete/close/cap in built page and other pages to their implementations
+
 * Show unexported funcitons/methods of depending packages not shown in the method list of the types
   when show unexported types.
 
@@ -23,6 +27,8 @@
   * searching uses for id goroutine 0-n
 
 * module page. Containing Module: xxxx/xxxx
+
+* -target=[html|json]
 
 * show/run examples/tests/banchmarks
   * run source code, run main package

@@ -23,13 +23,13 @@ you can run any of the following commands to install **Gold** as a program with 
 
 If for any reason the `go get` way doesn't work, you may also clone this project firstly, then run the `go install` command in the respective program folders to install **Gold** as `gold`, `godoge`, `gocore`, or `golds`.
 
-### Features
+### Main Features
 
 * Supports listing exported types not only by alphabet, but also by popularity, which is good to
   understanding some packages exporting many types.
 * Supports listing unexported types, which is good to read some packages.
 * Rich package-level type/value information collection:
-  * Shows type implemention relations ([demo 1](https://docs.go101.org/std/pkg/go/ast.html#name-Node) and [demo 2](https://docs.go101.org/std/pkg/bytes.html#name-Buffer)).
+  * Shows type implementation relations ([demo 1](https://docs.go101.org/std/pkg/go/ast.html#name-Node) and [demo 2](https://docs.go101.org/std/pkg/bytes.html#name-Buffer)).
   * Shows method implementation relations ([demo](https://docs.go101.org/std/imp/io.Reader.html#name-Read)).
   * Shows promoted selectors, even on unexported embedded fields ([demo](https://docs.go101.org/std/pkg/archive/zip.html#name-File)).
   * Shows as-parameters-of and as-results-of function/method list (including interface methods).
@@ -39,7 +39,9 @@ If for any reason the `go get` way doesn't work, you may also clone this project
   * Click a local identifier to highlight all the occurences of the identifier.
   * Click a use of a non-local identifier to jump to the declaration of the non-local identifier.
   * Click the name of a field or a method in its declaration to show its uses (only for package-level named struct types now).
-  * Click the name of a method specified in an interface type declaration to show the methods implementing it (only for package-level named interface types now)..
+    If the name represents a method, in the uses page, click the _(method)_ text to show which interface methods the method implements.
+  * Click the name of a method specified in an interface type declaration to show the methods implementing it (only for package-level named interface types now).
+    In the method-implementation page, click each the name of an interface method to show the uses of the interface method.
 * Shows code statistics ([demo](https://docs.go101.org/std/statistics.html)).
 * Supports generating static HTML docs pages, to avoid rebuilding the docs later.
   This is good for package developers to host docs of their own packages.
@@ -130,7 +132,7 @@ all involved modules/packages are fetched to local machine and verify cgo tools 
 | [consul](https://github.com/hashicorp/consul) _v1.7.3_ | 803 | 7.2s | 1.9G | |
 | [vitess](https://github.com/vitessio/vitess) _v6.0.20-20200525_ | 905 | 7.1s | 1.7G | |
 | [nomad](https://github.com/hashicorp/nomad) _v0.12.4_ | 897 | 7.5s | 2.1G | |
-| [Traefik](https://github.com/traefik/traefik) _v2.3.0_ | 1199 | 8.9s | 2G | _(need [generate bindata](https://doc.traefik.io/traefik/contributing/building-testing/#build-traefik) before running *Gold*)_ |
+| [Traefik](https://github.com/traefik/traefik) _v2.3.0_ | 1199 | 8.9s | 2G | _(need [generate bindata](https://doc.traefik.io/traefik/contributing/building-testing/#build-traefik) before running **Gold**)_ |
 | [istio](https://github.com/istio/istio) _1.6.0_ | 1860 | 10.7s | 2.8G | |
 | [openshift/origin](https://github.com/openshift/origin) _rev:5022f83_ | 2640 | 16.1s | 4G | |
 | [kubernetes](https://github.com/kubernetes/kubernetes) _v1.18.2_ | 2821 | 16.3s | 4G | |
