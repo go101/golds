@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"go101.org/gold/code"
+	"go101.org/golds/code"
 )
 
 type English struct{}
@@ -187,11 +187,11 @@ func (*English) Text_RequireStat(numRequires, numRequiredBys int) string {
 func (*English) Text_UpdateTip(tipName string) string {
 	switch tipName {
 	case "ToUpdate":
-		return `<b>Gold</b> has not been updated for more than one month. You may run <b>go get -u go101.org/gold</b> or <b><a href="/update">click here</a></b> to update it.`
+		return `<b>Golds</b> has not been updated for more than one month. You may run <b>go get -u %s</b> or <b><a href="/update">click here</a></b> to update it.`
 	case "Updating":
-		return `<b>Gold</b> is being updated.`
+		return `<b>Golds</b> is being updated.`
 	case "Updated":
-		return `<b>Gold</b> has been updated. You may restart the server to see the latest effect.`
+		return `<b>Golds</b> has been updated. You may restart the server to see the latest effect.`
 	}
 	return ""
 }
@@ -632,10 +632,10 @@ func (*English) Text_GeneratedPageFooter(goldVersion, qrCodeLink, goOS, goArch s
 		qrImg = fmt.Sprintf(`<img src="%s">`, qrCodeLink)
 	}
 	return fmt.Sprintf(`<table><tr><td>%s</td>
-<td>The pages are generated with <a href="https://go101.org/article/tool-gold.html"><b>Gold</b></a> <i>%s</i>. (GOOS=%s GOARCH=%s)
-<b>Gold</b> is a <a href="https://go101.org">Go 101</a> project and developed by <a href="https://tapirgames.com">Tapir Liu</a>.
-PR and bug reports are welcome and can be submitted to <a href="https://github.com/go101/gold">the issue list</a>.
-Please follow <a href="https://twitter.com/go100and1">@Go100and1</a> (reachable from the left QR code) to get the latest news of <b>Gold</b>.</td></tr></table`,
+<td>The pages are generated with <a href="https://go101.org/article/tool-golds.html"><b>Golds</b></a> <i>%s</i>. (GOOS=%s GOARCH=%s)
+<b>Golds</b> is a <a href="https://go101.org">Go 101</a> project and developed by <a href="https://tapirgames.com">Tapir Liu</a>.
+PR and bug reports are welcome and can be submitted to <a href="https://github.com/go101/golds">the issue list</a>.
+Please follow <a href="https://twitter.com/go100and1">@Go100and1</a> (reachable from the left QR code) to get the latest news of <b>Golds</b>.</td></tr></table`,
 		qrImg,
 		goldVersion,
 		goOS,

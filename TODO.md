@@ -2,7 +2,11 @@
 
 ### Soon to do
 
-* rename gold to golds ? 
+* after some time:
+  remove the old ".gold-update" class in css file.
+
+* in update: notify users the default program name has changed to "golds".
+  update should be self-adptive by program name, in the update tips etc.
 
 * -target=[html|json]
 
@@ -210,6 +214,7 @@
 
 
 ### Done
+* (done) rename gold to golds ? 
 * (done) generation mode option:
   * -moregc: set GCPercent 67%.
   * -nouses: don't generate id uses pages

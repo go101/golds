@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"go101.org/gold/internal/util"
+	"go101.org/golds/internal/util"
 )
 
 func init() {

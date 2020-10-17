@@ -15,7 +15,7 @@ import (
 
 	"golang.org/x/tools/go/packages"
 
-	"go101.org/gold/internal/util"
+	"go101.org/golds/internal/util"
 )
 
 //func avoidCheckFuncBody(fset *token.FileSet, parseFilename string, _ []byte) (*ast.File, error) {
@@ -110,7 +110,7 @@ Start:
 			packages.NeedCompiledGoFiles | packages.NeedTypesSizes |
 			packages.NeedSyntax | packages.NeedTypesInfo,
 		Tests: false, // ToDo: parse tests
-		// It looks, if Tests is set to true, then run "GOOS=windows gold std" will fail with
+		// It looks, if Tests is set to true, then run "GOOS=windows golds std" will fail with
 		//		panic: TypeName for runtime.LFNode not found
 
 		//Logf: func(format string, args ...interface{}) {

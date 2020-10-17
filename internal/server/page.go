@@ -9,7 +9,7 @@ import (
 	"strings"
 	"sync"
 
-	"go101.org/gold/internal/server/translations"
+	"go101.org/golds/internal/server/translations"
 )
 
 type pageResType string
@@ -110,6 +110,10 @@ type htmlPage struct {
 	isHTML bool
 }
 
+func (page *htmlPage) Translation() Translation {
+	return page.translation
+}
+
 type pagePathInfo struct {
 	resType pageResType
 	resPath string
@@ -138,7 +142,7 @@ func NewHtmlPage(goldVersion, title string, theme Theme, translation Translation
 `,
 			title,
 			buildPageHref(currentPageInfo, pagePathInfo{ResTypeCSS, addVersionToFilename(theme.Name(), page.goldVersion)}, nil, ""),
-			buildPageHref(currentPageInfo, pagePathInfo{ResTypeJS, addVersionToFilename("gold", page.goldVersion)}, nil, ""),
+			buildPageHref(currentPageInfo, pagePathInfo{ResTypeJS, addVersionToFilename("golds", page.goldVersion)}, nil, ""),
 		)
 	}
 

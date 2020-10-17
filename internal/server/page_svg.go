@@ -26,18 +26,20 @@ func (ds *docServer) svgFile(w http.ResponseWriter, r *http.Request, svgFile str
 	}
 	data, ok := ds.cachedPage(pageKey)
 	if !ok {
-		data = ds.buildSVG(svgFile)
-		ds.cachePage(pageKey, data)
 
 		// For docs generation.
 		page := NewHtmlPage(ds.goldVersion, "", nil, ds.currentTranslation, pagePathInfo{ResTypeSVG, svgFile})
+		
+		data = ds.buildSVG(svgFile, page)
+		ds.cachePage(pageKey, data)
+		
 		page.Write(data)
 		_ = page.Done(w)
 	}
 	w.Write(data)
 }
 
-func (ds *docServer) buildSVG(svgFile string) (svgData []byte) {
+func (ds *docServer) buildSVG(svgFile string, page *htmlPage) (svgData []byte) {
 	xName := func(max int) func(int) string {
 		return func(i int) string {
 			if i == max {
@@ -74,7 +76,7 @@ func (ds *docServer) buildSVG(svgFile string) (svgData []byte) {
 	}
 
 	stats := ds.analyzer.Statistics()
-	chartTitle := ds.currentTranslation.Text_ChartTitle(svgFile)
+	chartTitle := page.Translation().Text_ChartTitle(svgFile)
 	switch svgFile {
 	case "gosourcefiles-by-imports":
 		svgData = createSourcefileImportsSVG(chartTitle, stats.FilesByImportCount[:], xName(len(stats.FilesByImportCount)-1))

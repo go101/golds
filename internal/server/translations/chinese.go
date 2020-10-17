@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"go101.org/gold/code"
+	"go101.org/golds/code"
 )
 
 type Chinese struct{}
@@ -170,11 +170,11 @@ func (*Chinese) Text_RequireStat(numRequires, numRequiredBys int) string {
 func (*Chinese) Text_UpdateTip(tipName string) string {
 	switch tipName {
 	case "ToUpdate":
-		return `<b>Gold</b>已经有一个多月没有更新了，运行<b>go get -u go101.org/gold</b>或者<b><a href="/update">点击</a></b>来更新它。`
+		return `<b>Golds</b>已经有一个多月没有更新了，运行<b>go get -u %s</b>或者<b><a href="/update">点击</a></b>来更新它。`
 	case "Updating":
-		return `<b>Gold</b>正在被更新中.....`
+		return `<b>Golds</b>正在被更新中.....`
 	case "Updated":
-		return `<b>Gold</b>已经被更新了，重启此gold服务进程可以看到最新的效果。`
+		return `<b>Golds</b>已经被更新了，重启此Golds进程可以看到最新的效果。`
 	}
 	return ""
 }
@@ -583,10 +583,10 @@ func (*Chinese) Text_GeneratedPageFooter(goldVersion, qrCodeLink, goOS, goArch s
 		qrImg = fmt.Sprintf(`<img src="%s">`, qrCodeLink)
 	}
 	return fmt.Sprintf(`<table><tr><td>%s</td>
-<td>本页面由 <a href="https://go101.org/article/tool-gold.html"><b>Gold</b></a> <i>%s</i> 生成。（GOOS=%s GOARCH=%s）。
-<b>Gold</b> 是由<a href="https://gfw.tapirgames.com">老貘</a>创建的一个 <a href="https://go101.org">Go 101</a>项目。
-欢迎在 <a href="https://github.com/go101/gold">Gold 项目</a>中提交 PR 和 bug 报告。
-请关注 “Go 101” 微信公众号（扫描左边的二维码）以获取 <b>Gold</b> 的最新消息以及各种 Go 细节和事实。</td></tr></table>`,
+<td>本页面由 <a href="https://go101.org/article/tool-golds.html"><b>Golds</b></a> <i>%s</i> 生成。（GOOS=%s GOARCH=%s）。
+<b>Golds</b> 是由<a href="https://gfw.tapirgames.com">老貘</a>创建的一个 <a href="https://go101.org">Go 101</a>项目。
+欢迎在 <a href="https://github.com/go101/golds">Golds 项目</a>中提交 PR 和 bug 报告。
+请关注 “Go 101” 微信公众号（扫描左边的二维码）以获取 <b>Golds</b> 的最新消息以及各种 Go 细节和事实。</td></tr></table>`,
 		qrImg,
 		goldVersion,
 		goOS,

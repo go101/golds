@@ -11,7 +11,7 @@ import (
 	"sort"
 	"strings"
 
-	"go101.org/gold/code"
+	"go101.org/golds/code"
 )
 
 //type usePageKey struct {
@@ -108,7 +108,7 @@ func (ds *docServer) buildReferencesPage(w http.ResponseWriter, result *Referenc
 		}
 	} else {
 		if result.Selector.Field != nil {
-			suffix = ds.currentTranslation.Text_ObjectKind("field")
+			suffix = page.Translation().Text_ObjectKind("field")
 
 			writeSelector = func() {
 				ds.writeFieldCodeLink(page, result.Selector)
@@ -133,12 +133,12 @@ func (ds *docServer) buildReferencesPage(w http.ResponseWriter, result *Referenc
 			}
 
 			if link == "" {
-				suffix = ds.currentTranslation.Text_ObjectKind("method")
+				suffix = page.Translation().Text_ObjectKind("method")
 			} else {
 				suffix = fmt.Sprintf(
 					`<a href="%s">%s</a>`,
 					link,
-					ds.currentTranslation.Text_ObjectKind("method"),
+					page.Translation().Text_ObjectKind("method"),
 				)
 			}
 
@@ -146,7 +146,7 @@ func (ds *docServer) buildReferencesPage(w http.ResponseWriter, result *Referenc
 				ds.writeMethodForListing(page, result.Package, result.Selector, nil, false, true)
 			}
 		}
-		suffix = ds.currentTranslation.Text_EnclosedInOarentheses(suffix)
+		suffix = page.Translation().Text_EnclosedInOarentheses(suffix)
 		suffix = `<span style="font-size: large;"><i>` + suffix + `</i></span>`
 	}
 
@@ -163,7 +163,7 @@ func (ds *docServer) buildReferencesPage(w http.ResponseWriter, result *Referenc
 	}
 	fmt.Fprintf(page, `</b></span>%s`, suffix)
 
-	fmt.Fprintf(page, "\n\n%s:\n", ds.currentTranslation.Text_ObjectUses(result.UsesCount))
+	fmt.Fprintf(page, "\n\n%s:\n", page.Translation().Text_ObjectUses(result.UsesCount))
 
 	type idpos struct {
 		id  *ast.Ident

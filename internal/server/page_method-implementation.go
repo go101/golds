@@ -7,7 +7,7 @@ import (
 	"go/types"
 	"net/http"
 
-	"go101.org/gold/code"
+	"go101.org/golds/code"
 )
 
 //type implPageKey struct {
@@ -81,13 +81,13 @@ func (ds *docServer) buildImplementationPage(w http.ResponseWriter, result *Meth
 
 	nonImplementingMethodCountText := ""
 	if !result.IsInterface {
-		nonImplementingMethodCountText = ds.currentTranslation.Text_NumMethodsImplementingNothing(int(result.NonImplementingMethodCount))
+		nonImplementingMethodCountText = page.Translation().Text_NumMethodsImplementingNothing(int(result.NonImplementingMethodCount))
 	}
 
 	fmt.Fprintf(page, `
 <code><span class="title">%s%s</span>
 `,
-		ds.currentTranslation.Text_MethodImplementations(),
+		page.Translation().Text_MethodImplementations(),
 		nonImplementingMethodCountText,
 	)
 

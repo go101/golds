@@ -13,7 +13,7 @@ import (
 
 	"golang.org/x/tools/go/types/typeutil"
 
-	"go101.org/gold/internal/util"
+	"go101.org/golds/internal/util"
 )
 
 func (d *CodeAnalyzer) AnalyzePackages(onSubTaskDone func(int, time.Duration, ...int32)) {
@@ -1577,7 +1577,7 @@ func (d *CodeAnalyzer) confirmPackageModules() {
 	//	modernc.org/xc v1.0.0 => modernc.org/xc v1.0.0
 	//	...
 	// go list -f '{{.ImportPath}} {{.Module}}' all
-	//	go101.org/gold/tests/n go101.org/gold
+	//	go101.org/golds/tests/n go101.org/golds
 	//	golang.org/x/mod/internal/lazyregexp golang.org/x/mod v0.1.1-0.20191105210325-c90efee705ee
 	//	unsafe <nil>
 	//	vendor/golang.org/x/crypto/chacha20 <nil>
@@ -2372,7 +2372,7 @@ func (d *CodeAnalyzer) analyzePackage_FindTypeSources(pkg *Package) {
 						// ToDo: don't use the std go/types and go/pacakges packages.
 						//       Now, uint8 and byte are treat as two types by go/types.
 						//       Write a custom one tailored for docs and code analyzing.
-						//       Run "go mod tidy" before running gold using the custom packages
+						//       Run "go mod tidy" before running golds using the custom packages
 						//       to ensure all modules are cached locally.
 
 						tv := pkg.PPkg.TypesInfo.Types[srcNode]

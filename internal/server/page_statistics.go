@@ -41,13 +41,13 @@ func (ds *docServer) buildStatisticsPage(w http.ResponseWriter) []byte {
 	fmt.Fprintf(page, `
 <pre><code><span style="font-size:xx-large;">%s</span></code></pre>
 `,
-		ds.currentTranslation.Text_Statistics(),
+		page.Translation().Text_Statistics(),
 	)
 
 	stats := ds.analyzer.Statistics()
 
-	fmt.Fprintf(page, `<pre><code><span class="title">%s</span></code>`, ds.currentTranslation.Text_StatisticsTitle("packages"))
-	page.WriteString(ds.currentTranslation.Text_PackageStatistics(map[string]interface{}{
+	fmt.Fprintf(page, `<pre><code><span class="title">%s</span></code>`, page.Translation().Text_StatisticsTitle("packages"))
+	page.WriteString(page.Translation().Text_PackageStatistics(map[string]interface{}{
 		"overviewPageURL":                  buildPageHref(page.PathInfo, pagePathInfo{ResTypeNone, ""}, nil, ""),
 		"packageCount":                     stats.Packages,
 		"standardPackageCount":             stats.StdPackages,
@@ -61,8 +61,8 @@ func (ds *docServer) buildStatisticsPage(w http.ResponseWriter) []byte {
 		"packagesByDependenciesChartURL": buildPageHref(page.PathInfo, pagePathInfo{ResTypeSVG, "packages-by-dependencies"}, nil, ""),
 	}))
 
-	fmt.Fprintf(page, `<pre><code><span class="title">%s</span></code>`, ds.currentTranslation.Text_StatisticsTitle("types"))
-	page.WriteString(ds.currentTranslation.Text_TypeStatistics(map[string]interface{}{
+	fmt.Fprintf(page, `<pre><code><span class="title">%s</span></code>`, page.Translation().Text_StatisticsTitle("types"))
+	page.WriteString(page.Translation().Text_TypeStatistics(map[string]interface{}{
 		"exportedTypeNameCount":      stats.ExportedTypeNames,
 		"exportedTypeAliases":        stats.ExportedTypeAliases,
 		"exportedCompositeTypeNames": stats.ExportedCompositeTypeNames,
@@ -95,8 +95,8 @@ func (ds *docServer) buildStatisticsPage(w http.ResponseWriter) []byte {
 		"exportedinterfacetypesByExportedmethodsChartURL":    buildPageHref(page.PathInfo, pagePathInfo{ResTypeSVG, "exportedinterfacetypes-by-exportedmethods"}, nil, ""),
 	}))
 
-	fmt.Fprintf(page, `<pre><code><span class="title">%s</span></code>`, ds.currentTranslation.Text_StatisticsTitle("values"))
-	page.WriteString(ds.currentTranslation.Text_ValueStatistics(map[string]interface{}{
+	fmt.Fprintf(page, `<pre><code><span class="title">%s</span></code>`, page.Translation().Text_StatisticsTitle("values"))
+	page.WriteString(page.Translation().Text_ValueStatistics(map[string]interface{}{
 		"exportedVariables": stats.ExportedVariables,
 		"exportedConstants": stats.ExportedConstants,
 
@@ -114,8 +114,8 @@ func (ds *docServer) buildStatisticsPage(w http.ResponseWriter) []byte {
 		"exportedfunctionsByResultsChartURL":    buildPageHref(page.PathInfo, pagePathInfo{ResTypeSVG, "exportedfunctions-by-results"}, nil, ""),
 	}))
 
-	fmt.Fprintf(page, `<pre><code><span class="title">%s</span></code>`, ds.currentTranslation.Text_StatisticsTitle("others"))
-	page.WriteString(ds.currentTranslation.Text_Othertatistics(map[string]interface{}{
+	fmt.Fprintf(page, `<pre><code><span class="title">%s</span></code>`, page.Translation().Text_StatisticsTitle("others"))
+	page.WriteString(page.Translation().Text_Othertatistics(map[string]interface{}{
 		"averageIdentiferLength": float64(stats.ExportedIdentifersSumLength) / float64(stats.ExportedIdentifers),
 
 		"exportedidentifiersByLengthsChartURL": buildPageHref(page.PathInfo, pagePathInfo{ResTypeSVG, "exportedidentifiers-by-lengths"}, nil, ""),

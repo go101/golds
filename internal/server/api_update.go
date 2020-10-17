@@ -4,11 +4,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"os"
-	"path/filepath"
 	"time"
 
-	"go101.org/gold/internal/util"
+	"go101.org/golds/internal/util"
 )
 
 const DurationToUpdate = time.Hour * 24 * 64
@@ -108,17 +106,8 @@ func (ds *docServer) updateGold() {
 			return err
 		}
 
-		appPkgPath := "go101.org/gold"
-		switch appName := filepath.Base(os.Args[0]); appName {
-		case "godoge", "gocore", "golds":
-			appPkgPath += "/" + appName
-		case "gold":
-		default:
-			// ToDo: should update, then move the name
-		}
-
-		ds.updateLogger.Printf("Run: go get -u %s", appPkgPath)
-		output, err := util.RunShellCommand(time.Minute*2, dir, []string{"GO111MODULE=on"}, "go", "get", "-u", appPkgPath)
+		ds.updateLogger.Printf("Run: go get -u %s", ds.appPkgPath)
+		output, err := util.RunShellCommand(time.Minute*2, dir, []string{"GO111MODULE=on"}, "go", "get", "-u", ds.appPkgPath)
 		if len(output) > 0 {
 			ds.updateLogger.Printf("\n%s\n", output)
 		}
@@ -129,9 +118,9 @@ func (ds *docServer) updateGold() {
 		return nil
 	}(); err != nil {
 		ds.onUpdateDone(false)
-		ds.updateLogger.Println("Update Gold error:", err)
+		ds.updateLogger.Println("Update Golds error:", err)
 	} else {
 		ds.onUpdateDone(true)
-		ds.updateLogger.Println("Update Gold succeeded.")
+		ds.updateLogger.Println("Update Golds succeeded.")
 	}
 }

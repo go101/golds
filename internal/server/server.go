@@ -16,8 +16,8 @@ import (
 
 	"golang.org/x/text/language"
 
-	"go101.org/gold/code"
-	"go101.org/gold/internal/util"
+	"go101.org/golds/code"
+	"go101.org/golds/internal/util"
 )
 
 func init() {
@@ -32,6 +32,7 @@ const (
 type docServer struct {
 	mutex sync.Mutex
 
+	appPkgPath  string
 	goldVersion string
 
 	workingDirectory string
@@ -76,8 +77,9 @@ type docServer struct {
 	visited       int32
 }
 
-func Run(recommendedPort, lang string, args []string, silentMode bool, goldVersion string, printUsage func(io.Writer), roughBuildTime func() time.Time) {
+func Run(recommendedPort, lang string, args []string, silentMode bool, appPkgPath, goldVersion string, printUsage func(io.Writer), roughBuildTime func() time.Time) {
 	ds := &docServer{
+		appPkgPath:  appPkgPath,
 		goldVersion: goldVersion,
 
 		phase:           Phase_Unprepared,

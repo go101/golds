@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"time"
 
-	"go101.org/gold/code"
+	"go101.org/golds/code"
 )
 
 // loading page

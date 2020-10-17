@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strings"
 
-	"go101.org/gold/internal/server/images"
+	"go101.org/golds/internal/server/images"
 )
 
 func (ds *docServer) pngFile(w http.ResponseWriter, r *http.Request, pngFilename string) {

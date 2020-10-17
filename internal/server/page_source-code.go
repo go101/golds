@@ -13,7 +13,7 @@ import (
 	"net/http"
 	"strconv"
 
-	"go101.org/gold/code"
+	"go101.org/golds/code"
 )
 
 //type sourcePageKey struct {
@@ -92,14 +92,14 @@ func (ds *docServer) buildSourceCodePage(w http.ResponseWriter, result *SourceFi
 		fmt.Fprintf(page, `
 <pre id="header"><code><span class="title">%s</span>
 	%s`,
-			ds.currentTranslation.Text_SourceFilePath(),
+		page.Translation().Text_SourceFilePath(),
 			result.BareFilename,
 		)
 	} else {
 		fmt.Fprintf(page, `
 <pre id="header"><code><span class="title">%s</span>
 	%s`,
-			ds.currentTranslation.Text_SourceFilePath(),
+		page.Translation().Text_SourceFilePath(),
 			realFilePath,
 		)
 
@@ -108,7 +108,7 @@ func (ds *docServer) buildSourceCodePage(w http.ResponseWriter, result *SourceFi
 
 <span class="title">%s</span>
 	%s`,
-				ds.currentTranslation.Text_GeneratedFrom(),
+				page.Translation().Text_GeneratedFrom(),
 				result.OriginalPath,
 			)
 		}
@@ -120,7 +120,7 @@ func (ds *docServer) buildSourceCodePage(w http.ResponseWriter, result *SourceFi
 	<a href="%s">%s</a>
 </code></pre>
 `,
-		ds.currentTranslation.Text_BelongingPackage(),
+		page.Translation().Text_BelongingPackage(),
 		buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, result.PkgPath}, nil, ""),
 		result.PkgPath,
 	)

@@ -582,12 +582,6 @@ func (d *CodeAnalyzer) lookForAndRegisterUnnamedInterfaceAndStructTypes(typeLite
 		typeInfo := d.RegisterType(tv.Type)
 		d.registerExplicitlySpecifiedMethods(typeInfo, node, pkg)
 	}
-
-	// ToDo: don't use the std go/types and go/pacakges packages.
-	//       Now, uint8 and byte are treated as two types by go/types.
-	//       Write a custom one tailored for docs and code analyzing.
-	//       Run "go mod tidy" before running gold using the custom packages
-	//       to ensure all modules are cached locally.
 }
 
 func (d *CodeAnalyzer) registerDirectFields(typeInfo *TypeInfo, astStructNode *ast.StructType, pkg *Package) {

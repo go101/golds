@@ -16,7 +16,7 @@ import (
 	"sort"
 	"strings"
 
-	"go101.org/gold/code"
+	"go101.org/golds/code"
 )
 
 var _ = log.Print
@@ -127,11 +127,11 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 	fmt.Fprintf(page, `
 <span class="title">%s</span>
 	<a href="%s#pkg-%s">%s</a>%s`,
-		ds.currentTranslation.Text_ImportPath(),
+		page.Translation().Text_ImportPath(),
 		buildPageHref(page.PathInfo, pagePathInfo{ResTypeNone, ""}, nil, ""),
 		pkg.ImportPath,
 		pkg.ImportPath,
-		ds.currentTranslation.Text_PackageDocsLinksOnOtherWebsites(pkg.ImportPath, pkg.IsStandard),
+		page.Translation().Text_PackageDocsLinksOnOtherWebsites(pkg.ImportPath, pkg.IsStandard),
 	)
 
 	isBuiltin := pkg.ImportPath == "builtin"
@@ -140,14 +140,14 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 
 <span class="title">%s</span>
 	%s`,
-			ds.currentTranslation.Text_DependencyRelations(""),
-			//ds.currentTranslation.Text_ImportStat(int(pkg.NumDeps), int(pkg.NumDepedBys), "/dep:"+pkg.ImportPath),
-			ds.currentTranslation.Text_ImportStat(int(pkg.NumDeps), int(pkg.NumDepedBys), buildPageHref(page.PathInfo, pagePathInfo{ResTypeDependency, pkg.ImportPath}, nil, "")),
+			page.Translation().Text_DependencyRelations(""),
+			//page.Translation().Text_ImportStat(int(pkg.NumDeps), int(pkg.NumDepedBys), "/dep:"+pkg.ImportPath),
+			page.Translation().Text_ImportStat(int(pkg.NumDeps), int(pkg.NumDepedBys), buildPageHref(page.PathInfo, pagePathInfo{ResTypeDependency, pkg.ImportPath}, nil, "")),
 		)
 	}
 
 	if len(pkg.Files) > 0 {
-		fmt.Fprint(page, "\n\n", `<span class="title">`, ds.currentTranslation.Text_InvolvedFiles(len(pkg.Files)), `</span>`)
+		fmt.Fprint(page, "\n\n", `<span class="title">`, page.Translation().Text_InvolvedFiles(len(pkg.Files)), `</span>`)
 
 		numArrows := 0
 		for _, info := range pkg.Files {
@@ -192,19 +192,19 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 	//       It is best to do it with JavaScript + cookie (to remember sortby value)
 	if genDocsMode {
 		page.WriteString("\n\n")
-		fmt.Fprintf(page, `<span class="title">%s</span>`, ds.currentTranslation.Text_ExportedTypeNames(len(pkg.ExportedTypeNames)))
+		fmt.Fprintf(page, `<span class="title">%s</span>`, page.Translation().Text_ExportedTypeNames(len(pkg.ExportedTypeNames)))
 		page.WriteByte('\n')
 	} else {
 		var textTypeNames, filterLinkText, filterQuery, filterQuery2 string
 		switch options.filter {
 		case "exporteds":
-			textTypeNames = ds.currentTranslation.Text_ExportedTypeNames(len(pkg.ExportedTypeNames))
-			filterLinkText = ds.currentTranslation.Text_TypeNameListShowOption(false)
+			textTypeNames = page.Translation().Text_ExportedTypeNames(len(pkg.ExportedTypeNames))
+			filterLinkText = page.Translation().Text_TypeNameListShowOption(false)
 			filterQuery = "&show=exporteds"
 			filterQuery2 = "&show=all"
 		case "all":
-			textTypeNames = ds.currentTranslation.Text_AllPackageLevelTypeNames(len(pkg.ExportedTypeNames))
-			filterLinkText = ds.currentTranslation.Text_TypeNameListShowOption(true)
+			textTypeNames = page.Translation().Text_AllPackageLevelTypeNames(len(pkg.ExportedTypeNames))
+			filterLinkText = page.Translation().Text_TypeNameListShowOption(true)
 			filterQuery = "&show=all"
 			filterQuery2 = "&show=exporteds"
 			showExportedOnly = false
@@ -228,18 +228,18 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 			var textSortByPopularity, textSortByAlphabet string
 			switch options.sortBy {
 			case "alphabet":
-				textSortByPopularity = fmt.Sprintf(`<a href="%s%s">%s</a>`, "?sortby=popularity", filterQuery, ds.currentTranslation.Text_SortByItem("popularity"))
-				textSortByAlphabet = ds.currentTranslation.Text_SortByItem("alphabet")
+				textSortByPopularity = fmt.Sprintf(`<a href="%s%s">%s</a>`, "?sortby=popularity", filterQuery, page.Translation().Text_SortByItem("popularity"))
+				textSortByAlphabet = page.Translation().Text_SortByItem("alphabet")
 			case "popularity":
-				textSortByPopularity = ds.currentTranslation.Text_SortByItem("popularity")
-				textSortByAlphabet = fmt.Sprintf(`<a href="%s%s">%s</a>`, "?sortby=alphabet", filterQuery, ds.currentTranslation.Text_SortByItem("alphabet"))
+				textSortByPopularity = page.Translation().Text_SortByItem("popularity")
+				textSortByAlphabet = fmt.Sprintf(`<a href="%s%s">%s</a>`, "?sortby=alphabet", filterQuery, page.Translation().Text_SortByItem("alphabet"))
 			}
 
 			fmt.Fprintf(page, `<span class="title">%s (%s%s%s%s | %s)</span>`,
 				textTypeNames,
 				textFilter,
-				ds.currentTranslation.Text_Comma(),
-				ds.currentTranslation.Text_SortBy(),
+				page.Translation().Text_Comma(),
+				page.Translation().Text_SortBy(),
 				textSortByAlphabet,
 				textSortByPopularity,
 			)
@@ -249,7 +249,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 
 	if len(pkg.ExportedTypeNames) == 0 {
 		page.WriteString("\n\t")
-		page.WriteString(ds.currentTranslation.Text_BlankList())
+		page.WriteString(page.Translation().Text_BlankList())
 	}
 
 	for _, et := range pkg.ExportedTypeNames {
@@ -269,7 +269,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 		if count := len(et.Fields); count > 0 {
 			page.WriteString("\n\t\t")
 			writeNamedStatTitle(page, et.TypeName.Name(), "fields",
-				ds.currentTranslation.Text_Fields(count, showExportedOnly),
+				page.Translation().Text_Fields(count, showExportedOnly),
 				func() {
 					fields := ds.sortFieldList(et.Fields)
 					for _, fld := range fields {
@@ -281,7 +281,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 		if count := len(et.Methods); count > 0 {
 			page.WriteString("\n\t\t")
 			writeNamedStatTitle(page, et.TypeName.Name(), "methods",
-				ds.currentTranslation.Text_Methods(count, showExportedOnly),
+				page.Translation().Text_Methods(count, showExportedOnly),
 				func() {
 					methods := ds.sortMethodList(et.Methods)
 					for _, mthd := range methods {
@@ -293,7 +293,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 		if count := len(et.ImplementedBys); count > 0 {
 			page.WriteString("\n\t\t")
 			writeNamedStatTitle(page, et.TypeName.Name(), "impledby",
-				ds.currentTranslation.Text_ImplementedBy(count),
+				page.Translation().Text_ImplementedBy(count),
 				func() {
 					// ToDo: why not "pkg.ImportPath" instead of "et.TypeName"
 					impledLys := ds.sortTypeList(et.ImplementedBys, pkg.Package)
@@ -309,7 +309,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 		if count := len(et.Implements); count > 0 {
 			page.WriteString("\n\t\t")
 			writeNamedStatTitle(page, et.TypeName.Name(), "impls",
-				ds.currentTranslation.Text_Implements(count),
+				page.Translation().Text_Implements(count),
 				func() {
 					// ToDo: why not "pkg.ImportPath" instead of "et.TypeName"
 					impls := ds.sortTypeList(et.Implements, pkg.Package)
@@ -322,7 +322,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 		if count := len(et.AsOutputsOf); count > 0 {
 			page.WriteString("\n\t\t")
 			writeNamedStatTitle(page, et.TypeName.Name(), "results",
-				ds.currentTranslation.Text_AsOutputsOf(count),
+				page.Translation().Text_AsOutputsOf(count),
 				func() {
 					values := ds.sortValueList(et.AsOutputsOf, pkg.Package)
 					for _, v := range values {
@@ -334,7 +334,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 		if count := len(et.AsInputsOf); count > 0 {
 			page.WriteString("\n\t\t")
 			writeNamedStatTitle(page, et.TypeName.Name(), "params",
-				ds.currentTranslation.Text_AsInputsOf(count),
+				page.Translation().Text_AsInputsOf(count),
 				func() {
 					values := ds.sortValueList(et.AsInputsOf, pkg.Package)
 					for _, v := range values {
@@ -346,7 +346,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 		if count := len(et.Values); count > 0 {
 			page.WriteString("\n\t\t")
 			writeNamedStatTitle(page, et.TypeName.Name(), "values",
-				ds.currentTranslation.Text_AsTypesOf(count),
+				page.Translation().Text_AsTypesOf(count),
 				func() {
 					values := ds.sortValueList(et.Values, pkg.Package)
 					for _, v := range values {
@@ -368,7 +368,7 @@ WriteValues:
 		page.WriteByte('\n')
 	}
 
-	fmt.Fprint(page, "\n", `<span class="title">`, ds.currentTranslation.Text_ExportedValues(len(pkg.ValueResources)), `</span>`)
+	fmt.Fprint(page, "\n", `<span class="title">`, page.Translation().Text_ExportedValues(len(pkg.ValueResources)), `</span>`)
 	page.WriteByte('\n')
 	//fmt.Fprint(page, ` <input type="checkbox" id="consts" name="consts" value="constants"><label for="constants">const</label>`)
 	//fmt.Fprint(page, `<input type="checkbox" id="vars" name="vars" value="variables"><label for="vars">var</label>`)

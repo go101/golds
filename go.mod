@@ -1,4 +1,4 @@
-module go101.org/gold
+module go101.org/golds
 
 go 1.13
 

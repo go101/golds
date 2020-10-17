@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"go101.org/gold/code"
+	"go101.org/golds/code"
 )
 
 type overviewPageOptions struct {
@@ -94,7 +94,7 @@ func (ds *docServer) buildOverviewPage(w http.ResponseWriter, overview *Overview
 	fmt.Fprintf(page, `
 <pre><code><span style="font-size:xx-large;">%s</span></code></pre>
 `,
-		ds.currentTranslation.Text_Overview(),
+		page.Translation().Text_Overview(),
 	)
 
 	if !genDocsMode {
@@ -107,11 +107,11 @@ func (ds *docServer) buildOverviewPage(w http.ResponseWriter, overview *Overview
 
 	if genDocsMode {
 		fmt.Fprintf(page, `<code><span class="title">%s</span></code>`,
-			ds.currentTranslation.Text_PackageList(),
+			page.Translation().Text_PackageList(),
 		)
 	} else {
-		var textSortByAlphabet = ds.currentTranslation.Text_SortByItem("alphabet")
-		var textSortByImportedBys = ds.currentTranslation.Text_SortByItem("importedbys")
+		var textSortByAlphabet = page.Translation().Text_SortByItem("alphabet")
+		var textSortByImportedBys = page.Translation().Text_SortByItem("importedbys")
 
 		switch sortBy {
 		case "alphabet":
@@ -121,8 +121,8 @@ func (ds *docServer) buildOverviewPage(w http.ResponseWriter, overview *Overview
 		}
 
 		fmt.Fprintf(page, `<code><span class="title">%s (%s%s | %s)</span></code>`,
-			ds.currentTranslation.Text_PackageList(),
-			ds.currentTranslation.Text_SortBy(),
+			page.Translation().Text_PackageList(),
+			page.Translation().Text_SortBy(),
 			textSortByAlphabet,
 			textSortByImportedBys,
 		)
@@ -225,25 +225,25 @@ var divVisibility = map[bool]string{false: " hidden", true: ""}
 
 func (ds *docServer) writeUpdateGoldBlock(page *htmlPage) {
 	fmt.Fprintf(page, `
-<pre id="%s" class="gold-update%s">%s</pre>
-<pre id="%s" class="gold-update hidden">%s</pre>
-<pre id="%s" class="gold-update%s">%s</pre>
+<pre id="%s" class="golds-update%s">%s</pre>
+<pre id="%s" class="golds-update hidden">%s</pre>
+<pre id="%s" class="golds-update%s">%s</pre>
 `,
-		UpdateTip2DivID[UpdateTip_ToUpdate], divVisibility[ds.updateTip == UpdateTip_ToUpdate], ds.currentTranslation.Text_UpdateTip("ToUpdate"),
-		UpdateTip2DivID[UpdateTip_Updating], ds.currentTranslation.Text_UpdateTip("Updating"),
-		UpdateTip2DivID[UpdateTip_Updated], divVisibility[ds.updateTip == UpdateTip_Updated], ds.currentTranslation.Text_UpdateTip("Updated"),
+		UpdateTip2DivID[UpdateTip_ToUpdate], divVisibility[ds.updateTip == UpdateTip_ToUpdate], fmt.Sprintf(page.Translation().Text_UpdateTip("ToUpdate"), ds.appPkgPath),
+		UpdateTip2DivID[UpdateTip_Updating], page.Translation().Text_UpdateTip("Updating"),
+		UpdateTip2DivID[UpdateTip_Updated], divVisibility[ds.updateTip == UpdateTip_Updated], page.Translation().Text_UpdateTip("Updated"),
 	)
 }
 
 func (ds *docServer) writeSimpleStatsBlock(page *htmlPage, stats *code.Stats) {
-	text := ds.currentTranslation.Text_SimpleStats(stats)
+	text := page.Translation().Text_SimpleStats(stats)
 	text = strings.Replace(text, "\n", "\n\t", -1)
 	moreLink := buildPageHref(page.PathInfo, pagePathInfo{ResTypeNone, "statistics"}, nil, "")
 	fmt.Fprintf(page, `
 <pre><code><span class="title">%s</span></code>
 	%s
 </pre>`,
-		ds.currentTranslation.Text_StatisticsWithMoreLink(moreLink),
+		page.Translation().Text_StatisticsWithMoreLink(moreLink),
 		text,
 	)
 }

@@ -5,9 +5,9 @@ import (
 
 	"golang.org/x/text/language"
 
-	"go101.org/gold/code"
-	theme "go101.org/gold/internal/server/themes"
-	translation "go101.org/gold/internal/server/translations"
+	"go101.org/golds/code"
+	theme "go101.org/golds/internal/server/themes"
+	translation "go101.org/golds/internal/server/translations"
 )
 
 type Theme interface {

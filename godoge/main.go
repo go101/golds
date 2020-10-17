@@ -1,7 +1,7 @@
 package main
 
 import (
-	"go101.org/gold/internal/app"
+	"go101.org/golds/internal/app"
 )
 
 func main() {

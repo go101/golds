@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"go101.org/gold/internal/server"
-	"go101.org/gold/internal/util"
+	"go101.org/golds/internal/server"
+	"go101.org/golds/internal/util"
 )
 
 func init() {
@@ -25,7 +25,7 @@ func init() {
 }
 
 func Run() {
-	// This is used for updating Gold. It is invisible to users.
+	// This is used for updating Golds. It is invisible to users.
 	var roughBuildTimeFlag = flag.Bool("rough-build-time", false, "show rough build time")
 
 	flag.CommandLine.Usage = func() {
@@ -45,15 +45,6 @@ func Run() {
 		printVersion(os.Stdout)
 		return
 	}
-	//if *uFlag || *updateFlag {
-	//	appPkgPath := "go101.org/gold"
-	//	switch appName := filepath.Base(os.Args[0]); appName {
-	//	case "godoge", "gocore", "golds":
-	//		appPkgPath += "/" + appName
-	//	}
-	//	// ToDo
-	//	return
-	//}
 
 	var getRoughBuildTime = func() time.Time {
 		output, err := util.RunShellCommand(time.Second*5, "", nil, os.Args[0], "-rough-build-time")
@@ -124,7 +115,15 @@ is expected, please run the following command instead:
 		return
 	}
 
-	server.Run(*portFlag, *langFlag, flag.Args(), silentMode, Version, printUsage, getRoughBuildTime)
+	//appPkgPath := "go101.org/gold" // changed to "golds" now.
+	appPkgPath := "go101.org/golds"
+	switch appName := filepath.Base(os.Args[0]); appName {
+	case "godoge", "gocore":
+		appPkgPath += "/" + appName
+	case "gold", "golds":
+	}
+
+	server.Run(*portFlag, *langFlag, flag.Args(), silentMode, appPkgPath, Version, printUsage, getRoughBuildTime)
 }
 
 var hFlag = flag.Bool("h", false, "show help")
@@ -146,11 +145,11 @@ var plainsrc = flag.Bool("plainsrc", false, "disable the source navigation featu
 var emphasizeWorkingDirectoryPackages = flag.Bool("emphasize-wdpkgs", false, "disable the source navigation feature")
 
 func printVersion(out io.Writer) {
-	fmt.Fprintf(out, "Gold %s\n", Version)
+	fmt.Fprintf(out, "Golds %s\n", Version)
 }
 
 //	-u/-update
-//		Update Gold itself.
+//		Update Golds itself.
 
 // Hidden options:
 //	-moregc
@@ -160,7 +159,7 @@ func printVersion(out io.Writer) {
 //		slow down the docs generation speed.
 
 func printUsage(out io.Writer) {
-	fmt.Fprintf(out, `Gold - a Go local docs server (%[2]s).
+	fmt.Fprintf(out, `Golds - a Go local docs server (%[2]s).
 
 Usage:
 	%[1]v [options] [arguments]

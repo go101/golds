@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"go101.org/gold/code"
+	"go101.org/golds/code"
 )
 
 type TestData_Package struct {
