@@ -19,7 +19,7 @@ you can run any of the following commands to install **Golds** as a program with
   `go get -u go101.org/golds/godoge`
 * **Go** **co**de **re**ader  
   `go get -u go101.org/golds/gocore`
-* **Go** **l**ocal **d**ocs (`gold` was old default program name of **Golds**)  
+* **Go** **l**ocal **d**ocs (mainly for legacy. `gold` was [the old default program name](https://github.com/go101/gold) of **Golds**)  
   `go get -u go101.org/golds/gold`
 
 If for any reason the `go get` way doesn't work, you may also clone this project firstly, then run the `go install` command in the respective program folders to install **Golds** as `golds`, `godoge`, or `gocore`.
