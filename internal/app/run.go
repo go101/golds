@@ -118,9 +118,9 @@ is expected, please run the following command instead:
 	//appPkgPath := "go101.org/gold" // changed to "golds" now.
 	appPkgPath := "go101.org/golds"
 	switch appName := filepath.Base(os.Args[0]); appName {
-	case "godoge", "gocore":
+	case "gold", "godoge", "gocore":
 		appPkgPath += "/" + appName
-	case "gold", "golds":
+	case "golds":
 	}
 
 	server.Run(*portFlag, *langFlag, flag.Args(), silentMode, appPkgPath, Version, printUsage, getRoughBuildTime)

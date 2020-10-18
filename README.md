@@ -1,10 +1,11 @@
-**Golds** is a Go local docs server, a Go docs generator, and a Go code reader.
+**Golds** is a **Go** **l**ocal **d**ocs **s**erver, a Go docs generator, and a Go code reader.
 It tries to extract as much information as possible from Go code to help gophers understand, study and use Go packages.
 
 * [Demo of the generated docs for standard packages](https://docs.go101.org/index.html)
   (please note that the demo site lacks of several features in the local server version).
 * [FAQ](https://go101.org/article/tool-golds.html#faq).
-* Please follow [@Go100and1](https://twitter.com/go100and1) to get the latest news of **Golds**.
+* Please follow [@Go100and1](https://twitter.com/go100and1) to get the latest news of **Golds**
+  (and Go details/facts/tips/etc.).
 
 ### Installation
 
@@ -18,6 +19,8 @@ you can run any of the following commands to install **Golds** as a program with
   `go get -u go101.org/golds/godoge`
 * **Go** **co**de **re**ader  
   `go get -u go101.org/golds/gocore`
+* **Go** **l**ocal **d**ocs (`gold` was old default program name of **Golds**)  
+  `go get -u go101.org/golds/gold`
 
 If for any reason the `go get` way doesn't work, you may also clone this project firstly, then run the `go install` command in the respective program folders to install **Golds** as `golds`, `godoge`, or `gocore`.
 

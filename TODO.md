@@ -58,7 +58,7 @@
 
 * enhance tests
   * test by ast comments
-* add more comments
+* add more comments, and clear some
 
 * gen mode: merge docs for several (GOOS, GOARCH) compositions. At least for std.
 
@@ -170,15 +170,13 @@
 * imports
   * add links for import declarations
 * docs for unepxorted types/vars
-  * unnamed type: find all occurences
+  * unnamed type: find all occurences (use fake type ids)
   * (done) the promoted methods and fields of unexported fields
   * the exported methods and fields of exported variables of unexported types.
   * the exported methods and fields of results of unexported types of exported functions (or of fields of visible structs).
   visible structs mean the ones returned by exported functions or exported struct types.
   * the exported methods and fields of the exported alias of unexported types
 * for a type
-  * click "type" keyword to unhide the source type definition.
-    And show underlying type in a further click.
   * show the types with the same underlying type.
   * as field types of, and embedded in n types
   * show comparable/embeddable or not. Fill TypeInfo.attributes.
@@ -201,24 +199,25 @@
   * it is important to find a way to list implemented unexported types, which is good for code reading.
   * list variables of function types in asParams and asResults lists.
   * for function types, also list functions of its underlying type as values
-* for a value
-  * if its type is unexported, but its type has exported methods, list the methods under the value.
-* for a method
-  * if it is an interface method, show all concrete implementations, need JS
-  * if it is a concrete methods, show all its implemented interface methods (to view docs), need JS
-  * an interface method might also has multiple docs, for interface embed overlapping interfaces
-* for builtin function
-  * link panic/recover/... to their implementation positions.
-* all references of an identifier: in frame pages
-  * for types, show unexported methods/fields/...
+* an interface method might also has multiple docs, for interface embed overlapping interfaces
 
 
 ### Done
+* (cancelled) click "type" keyword to unhide the source type definition.
+  And show underlying type in a further click.
+* (done) all references of an identifier
+* (done) for builtin function
+  * link panic/recover/... to their implementation positions.
+* (canceleed, not needed any more) for a value
+  * if its type is unexported, but its type has exported methods, list the methods under the value.
 * (done) rename gold to golds ? 
 * (done) generation mode option:
   * -moregc: set GCPercent 67%.
   * -nouses: don't generate id uses pages
   * -simplecode: simple code pages
+* (done) for a method
+  * if it is an interface method, show all concrete implementations, 
+  * if it is a concrete methods show all its implemented interface methods (to view docs)
 * (done) show identifier uses/references (open in new window)
 * (done) cache all source code (not much memory consumed, but will get some convenience)
 * (done) gen mode: no need to cache pages
