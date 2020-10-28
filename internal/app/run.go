@@ -84,6 +84,10 @@ func Run() {
 		viewDocsCommand := func(docsDir string) string {
 			return os.Args[0] + " -dir=" + docsDir
 		}
+		if *compact {
+			*nouses = true
+			*plainsrc = true
+		}
 		options := server.DocsGenerationOptions{
 			NoIdentifierUsesPages: *nouses,
 			PlainSourceCodePages:  *plainsrc,
@@ -140,9 +144,10 @@ var portFlag = flag.String("port", "", "preferred server port [1024, 65536]. Def
 var sFlag = flag.Bool("s", false, "not open a browser automatically")
 var silentFlag = flag.Bool("silent", false, "not open a browser automatically")
 var moregcFlag = flag.Bool("moregc", false, "increase garbage collection frequency")
+var emphasizeWorkingDirectoryPackages = flag.Bool("emphasize-wdpkgs", false, "disable the source navigation feature")
 var nouses = flag.Bool("nouses", false, "disable the identifier uses feature")
 var plainsrc = flag.Bool("plainsrc", false, "disable the source navigation feature")
-var emphasizeWorkingDirectoryPackages = flag.Bool("emphasize-wdpkgs", false, "disable the source navigation feature")
+var compact = flag.Bool("compact", false, "disable the source navigation feature")
 
 func printVersion(out io.Writer) {
 	fmt.Fprintf(out, "Golds %s\n", Version)
@@ -189,6 +194,10 @@ Options:
 	-plainsrc
 		Disable the source navigation feature.
 		For HTML docs generation mode only.
+	-compact
+		This is a shortcut of the combination
+		of several other options, including
+		-nouses and -plainsrc now.
 	-emphasize-wdpkgs
 		List the packages under the current
 		directory before other pacakges.

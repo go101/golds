@@ -121,10 +121,10 @@ type pagePathInfo struct {
 
 func NewHtmlPage(goldVersion, title string, theme Theme, translation Translation, currentPageInfo pagePathInfo) *htmlPage {
 	page := htmlPage{
-		PathInfo: currentPageInfo,
+		PathInfo:    currentPageInfo,
 		goldVersion: goldVersion,
 		translation: translation,
-		isHTML: isHTMLPage(currentPageInfo.resType),
+		isHTML:      isHTMLPage(currentPageInfo.resType),
 	}
 	//page.Grow(4 * 1024 * 1024)
 

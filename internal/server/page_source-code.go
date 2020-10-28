@@ -92,14 +92,14 @@ func (ds *docServer) buildSourceCodePage(w http.ResponseWriter, result *SourceFi
 		fmt.Fprintf(page, `
 <pre id="header"><code><span class="title">%s</span>
 	%s`,
-		page.Translation().Text_SourceFilePath(),
+			page.Translation().Text_SourceFilePath(),
 			result.BareFilename,
 		)
 	} else {
 		fmt.Fprintf(page, `
 <pre id="header"><code><span class="title">%s</span>
 	%s`,
-		page.Translation().Text_SourceFilePath(),
+			page.Translation().Text_SourceFilePath(),
 			realFilePath,
 		)
 
