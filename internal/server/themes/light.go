@@ -83,7 +83,6 @@ code .comment {color: green; font-style: italic;}
 }
 
 .golds-update {text-align: center; font-size: smaller; background: #eee; padding: 3px;}
-.gold-update {text-align: center; font-size: smaller; background: #eee; padding: 3px;}
 .hidden {display: none;}
 
 `

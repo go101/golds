@@ -2,15 +2,18 @@
 
 ### Soon to do
 
-* after some time:
-  remove the old ".gold-update" class in css file.
+* show/run examples/tests/banchmarks
+  * run source code, run main package
+  * Open a new page to avoid using JavaScript?
+  * "go/doc": doc.Examples(...)
+  * websocket: monitor page leave and shutdown unfinished Go processes.
 
 * in update: notify users the default program name has changed to "golds".
   update should be self-adptive by program name, in the update tips etc.
 
 * -target=[html|json]
 
-* Unexported funcitons/methods of depending packages not shown in the method list of the types
+* Unexported functions/methods of depending packages not shown in the method list of the types
   when show unexported types now.
 
 * make overview and package detials pages always contain unexported info, Use JS to sort and show.
@@ -20,7 +23,7 @@
 
 * rate limit http requests. 1000requests/3600seconds
 
-* optimize memory more, about string confactrations, write into page buffer directly.
+* optimize memory more, avoid string concatrations, write into page buffer directly.
 
 * stat number of non-std packages, and non-std dependencies for each package, 
 
@@ -29,12 +32,6 @@
   * searching uses for id goroutine 0-n
 
 * module page. Containing Module: xxxx/xxxx
-
-* show/run examples/tests/banchmarks
-  * run source code, run main package
-  * Open a new page to avoid using JavaScript?
-  * "go/doc": doc.Examples(...)
-  * websocket: monitor page leave and shutdown unfinished Go processes.
 
 * reference list: also count some implicit uses, such as
   * unkeyed struct literanls
@@ -203,6 +200,7 @@
 
 
 ### Done
+* (done) after some time: remove the old ".gold-update" class in css file.
 * (cancelled) click "type" keyword to unhide the source type definition.
   And show underlying type in a further click.
 * (done) all references of an identifier
