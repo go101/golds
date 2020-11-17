@@ -26,12 +26,13 @@ func init() {
 	//enabledHtmlGenerationMod() // debug
 }
 
+// ToDo: un-global this variables in struct DocGenerator{}
 var (
 	testingMode            = false
 	genDocsMode            = false
 	buildIdUsesPages       = true  // might be false in gen mode
 	enableSoruceNavigation = true  // false to disable method implementation pages and some code reading features
-	emphasizeWdPackages    = false // list packages in the current directory before other packages
+	emphasizeWDPackages    = false // list packages in the current directory before other packages
 
 	goldVersion    string
 	pageHrefList   *list.List // elements are *string
@@ -328,7 +329,7 @@ func GenDocs(outputDir string, args []string, lang string, options DocsGeneratio
 
 	buildIdUsesPages = !options.NoIdentifierUsesPages || forTesting
 	enableSoruceNavigation = !options.PlainSourceCodePages || forTesting
-	emphasizeWdPackages = options.EmphasizeWdPkgs || forTesting
+	emphasizeWDPackages = options.EmphasizeWDPkgs || forTesting
 
 	// ...
 	ds := &docServer{

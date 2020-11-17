@@ -79,6 +79,7 @@ func Run() {
 	}
 
 	silentMode := *silentFlag || *sFlag
+	emphasizeWDPkgs := *emphasizeWorkingDirectoryPackages
 
 	if gen := *genFlag; gen {
 		viewDocsCommand := func(docsDir string) string {
@@ -93,7 +94,7 @@ func Run() {
 			PlainSourceCodePages:  *plainsrc,
 			SilentMode:            silentMode,
 			IncreaseGCFrequency:   *moregcFlag,
-			EmphasizeWdPkgs:       *emphasizeWorkingDirectoryPackages,
+			EmphasizeWDPkgs:       emphasizeWDPkgs,
 		}
 		server.Gen(*genIntentFlag, validateDiir(*dirFlag), *langFlag, flag.Args(), options, Version, printUsage, viewDocsCommand)
 		return
@@ -127,7 +128,7 @@ is expected, please run the following command instead:
 	case "golds":
 	}
 
-	server.Run(*portFlag, *langFlag, flag.Args(), silentMode, appPkgPath, Version, printUsage, getRoughBuildTime)
+	server.Run(*portFlag, *langFlag, flag.Args(), silentMode, emphasizeWDPkgs, appPkgPath, Version, printUsage, getRoughBuildTime)
 }
 
 var hFlag = flag.Bool("h", false, "show help")

@@ -11,7 +11,7 @@ type DocsGenerationOptions struct {
 	PlainSourceCodePages  bool
 	SilentMode            bool
 	IncreaseGCFrequency   bool
-	EmphasizeWdPkgs       bool
+	EmphasizeWDPkgs       bool
 }
 
 func Gen(intent, outputDir, lang string, args []string, options DocsGenerationOptions, goldVersion string, printUsage func(io.Writer), viewDocsCommand func(string) string) {

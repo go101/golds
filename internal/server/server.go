@@ -36,6 +36,7 @@ type docServer struct {
 	goldVersion string
 
 	workingDirectory string
+	emphasizeWDPkgs  bool
 
 	//
 	allThemes                  []Theme
@@ -77,10 +78,12 @@ type docServer struct {
 	visited       int32
 }
 
-func Run(recommendedPort, lang string, args []string, silentMode bool, appPkgPath, goldVersion string, printUsage func(io.Writer), roughBuildTime func() time.Time) {
+func Run(recommendedPort, lang string, args []string, silentMode, emphasizeWDPkgs bool, appPkgPath, goldVersion string, printUsage func(io.Writer), roughBuildTime func() time.Time) {
 	ds := &docServer{
 		appPkgPath:  appPkgPath,
 		goldVersion: goldVersion,
+
+		emphasizeWDPkgs: emphasizeWDPkgs,
 
 		phase:           Phase_Unprepared,
 		analyzer:        &code.CodeAnalyzer{},

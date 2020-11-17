@@ -203,7 +203,9 @@ func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*Package
 		}
 	}
 
-	if emphasizeWdPackages {
+	promoteWDPkgs := emphasizeWDPackages || ds.emphasizeWDPkgs
+
+	if promoteWDPkgs {
 		lastInWorkingDirectory := false
 		for i, pkg := range packages {
 			if lastInWorkingDirectory != pkg.InWorkingDirectory {
@@ -298,7 +300,8 @@ func (ds *docServer) buildOverviewData(sortBy string) *Overview {
 	case "alphabet":
 		// ToDo: might be problematic sometimes. Should sort token by token.
 		sort.Slice(result, func(a, b int) bool {
-			if emphasizeWdPackages {
+			promoteWDPkgs := emphasizeWDPackages || ds.emphasizeWDPkgs
+			if promoteWDPkgs {
 				if result[a].InWorkingDirectory != result[b].InWorkingDirectory {
 					return result[a].InWorkingDirectory
 				}

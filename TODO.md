@@ -8,6 +8,8 @@
   * "go/doc": doc.Examples(...)
   * websocket: monitor page leave and shutdown unfinished Go processes.
 
+* show package reference list (for example, find all unsafe uses)
+
 * in update: notify users the default program name has changed to "golds".
   update should be self-adptive by program name, in the update tips etc.
 
@@ -51,7 +53,8 @@
 * show values by file/position order (only for javascript on)
 * put unexported function in asParams/asResult lists
 
-* search
+* search (non-semantic search, pure word searching)
+  * ref: https://github.com/g-harel/gothrough
 
 * enhance tests
   * test by ast comments
@@ -198,6 +201,9 @@
   * for function types, also list functions of its underlying type as values
 * an interface method might also has multiple docs, for interface embed overlapping interfaces
 
+* custom type checker? refs:
+  * go/*
+  * https://go.googlesource.com/go/+/refs/heads/dev.typeparams/src/cmd/compile/internal/types2/
 
 ### Done
 * (done) after some time: remove the old ".gold-update" class in css file.
