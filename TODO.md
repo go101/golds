@@ -2,6 +2,8 @@
 
 ### Soon to do
 
+* show method docs in package details pages
+
 * show/run examples/tests/banchmarks
   * run source code, run main package
   * Open a new page to avoid using JavaScript?
