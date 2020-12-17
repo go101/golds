@@ -152,7 +152,7 @@ Start:
 	if num := atomic.AddInt32(&numParsedPackages, 1); num == 1 || num&(num-1) != 0 {
 		logProgress(true, SubTask_ParsePackagesDone, num)
 	} else {
-		logProgress(true, SubTask_ParsePackagesDone, -1)
+		//logProgress(true, SubTask_ParsePackagesDone, -1) //why?
 	}
 
 	stdPkgs, err := collectStdPackages()

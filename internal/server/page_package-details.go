@@ -159,23 +159,30 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 			}
 		}
 
+		println(numArrows)
+
 		for _, info := range pkg.Files {
 			page.WriteString("\n\t")
 			if info.MainPosition != nil && info.HasDocs {
 				writeMainFunctionArrow(page, pkg.Package, *info.MainPosition)
 				writeSourceCodeDocLink(page, pkg.Package, info.Filename)
 			} else if info.MainPosition != nil {
+				if numArrows >= 2 {
+					page.WriteString("    ")
+				}
 				writeMainFunctionArrow(page, pkg.Package, *info.MainPosition)
 			} else if info.HasDocs {
-				if numArrows == 2 {
+				if numArrows >= 2 {
 					page.WriteString("    ")
 				}
 				writeSourceCodeDocLink(page, pkg.Package, info.Filename)
 			} else {
-				if numArrows == 2 {
+				if numArrows >= 1 {
 					page.WriteString("    ")
 				}
-				page.WriteString("    ")
+				if numArrows >= 2 {
+					page.WriteString("    ")
+				}
 			}
 			writeSrouceCodeFileLink(page, pkg.Package, info.Filename)
 		}
@@ -270,11 +277,33 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 			page.WriteString("\n\t\t")
 			writeNamedStatTitle(page, et.TypeName.Name(), "fields",
 				page.Translation().Text_Fields(count, showExportedOnly),
+				nil,
 				func() {
 					fields := ds.sortFieldList(et.Fields)
 					for _, fld := range fields {
 						page.WriteString("\n\t\t\t")
-						ds.writeFieldForListing(page, pkg.Package, fld, et.TypeName)
+						if fldDoc, fldComment := fld.Field.Documentation(), fld.Field.Comment(); fldDoc == "" && fldComment == "" {
+							page.WriteString(`<span class="nodocs">`)
+							ds.writeFieldForListing(page, pkg.Package, fld, et.TypeName)
+							page.WriteString(`</span>`)
+						} else {
+							writeNamedStatTitle(page, et.TypeName.Name(), "field-"+fld.Name(),
+								"",
+								func() {
+									ds.writeFieldForListing(page, pkg.Package, fld, et.TypeName)
+								},
+								func() {
+									if fldDoc != "" {
+										page.WriteString("\n")
+										writePageText(page, "\t\t\t\t", fldDoc, true)
+									}
+									if fldComment != "" {
+										page.WriteString("\n")
+										writePageText(page, "\t\t\t\t// ", fldComment, true)
+									}
+									page.WriteString("\n")
+								}, false)
+						}
 					}
 				}, false)
 		}
@@ -282,11 +311,33 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 			page.WriteString("\n\t\t")
 			writeNamedStatTitle(page, et.TypeName.Name(), "methods",
 				page.Translation().Text_Methods(count, showExportedOnly),
+				nil,
 				func() {
 					methods := ds.sortMethodList(et.Methods)
 					for _, mthd := range methods {
 						page.WriteString("\n\t\t\t")
-						ds.writeMethodForListing(page, pkg.Package, mthd, et.TypeName, true, false)
+						if mthdDoc, mthdComment := mthd.Method.Documentation(), mthd.Method.Comment(); mthdDoc == "" && mthdComment == "" {
+							page.WriteString(`<span class="nodocs">`)
+							ds.writeMethodForListing(page, pkg.Package, mthd, et.TypeName, true, false)
+							page.WriteString(`</span>`)
+						} else {
+							writeNamedStatTitle(page, et.TypeName.Name(), "method-"+mthd.Name(),
+								"",
+								func() {
+									ds.writeMethodForListing(page, pkg.Package, mthd, et.TypeName, true, false)
+								},
+								func() {
+									if mthdDoc != "" {
+										page.WriteString("\n")
+										writePageText(page, "\t\t\t\t", mthdDoc, true)
+									}
+									if mthdComment != "" {
+										page.WriteString("\n")
+										writePageText(page, "\t\t\t\t// ", mthdComment, true)
+									}
+									page.WriteString("\n")
+								}, false)
+						}
 					}
 				}, isBuiltin)
 		}
@@ -294,6 +345,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 			page.WriteString("\n\t\t")
 			writeNamedStatTitle(page, et.TypeName.Name(), "impledby",
 				page.Translation().Text_ImplementedBy(count),
+				nil,
 				func() {
 					// ToDo: why not "pkg.ImportPath" instead of "et.TypeName"
 					impledLys := ds.sortTypeList(et.ImplementedBys, pkg.Package)
@@ -310,6 +362,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 			page.WriteString("\n\t\t")
 			writeNamedStatTitle(page, et.TypeName.Name(), "impls",
 				page.Translation().Text_Implements(count),
+				nil,
 				func() {
 					// ToDo: why not "pkg.ImportPath" instead of "et.TypeName"
 					impls := ds.sortTypeList(et.Implements, pkg.Package)
@@ -323,6 +376,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 			page.WriteString("\n\t\t")
 			writeNamedStatTitle(page, et.TypeName.Name(), "results",
 				page.Translation().Text_AsOutputsOf(count),
+				nil,
 				func() {
 					values := ds.sortValueList(et.AsOutputsOf, pkg.Package)
 					for _, v := range values {
@@ -335,6 +389,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 			page.WriteString("\n\t\t")
 			writeNamedStatTitle(page, et.TypeName.Name(), "params",
 				page.Translation().Text_AsInputsOf(count),
+				nil,
 				func() {
 					values := ds.sortValueList(et.AsInputsOf, pkg.Package)
 					for _, v := range values {
@@ -347,6 +402,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 			page.WriteString("\n\t\t")
 			writeNamedStatTitle(page, et.TypeName.Name(), "values",
 				page.Translation().Text_AsTypesOf(count),
+				nil,
 				func() {
 					values := ds.sortValueList(et.Values, pkg.Package)
 					for _, v := range values {
@@ -1240,7 +1296,7 @@ func (ds *docServer) writeMethodForListing(page *htmlPage, docPkg *code.Package,
 		if sel.PointerReceiverOnly() {
 			page.WriteString("(*T) ")
 		} else {
-			page.WriteString(" (T) ")
+			page.WriteString("( T) ")
 		}
 	}
 
@@ -1363,11 +1419,12 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Pac
 	case *code.TypeName:
 		if !writeResNameOnly {
 			if buildIdUsesPages && !isBuiltin {
-				page.WriteByte(' ')
+				// page.WriteByte(' ')  // types and var/const/func are listed in different sections
 				buildPageHref(page.PathInfo, pagePathInfo{ResTypeReference, res.Package().Path() + ".." + res.Name()}, page, "type")
 				page.WriteByte(' ')
 			} else {
-				page.WriteString(" type ")
+				//page.WriteString(" type ")
+				page.WriteString("type ") // types and var/const/func are listed in different sections
 			}
 		}
 
@@ -2051,14 +2108,22 @@ func (ds *docServer) WriteAstFieldList(w *htmlPage, fieldList *ast.FieldList, is
 //	fmt.Fprintf(page, ` type <a href="#name-%[1]s">%[1]s</a>`, tn.Name())
 //}
 
-// onclickCode should use single quotes in it.
-func writeNamedStatTitle(page *htmlPage, resName, statName, statTitle string, listStatContent func(), expandInitially bool) {
+// writeTitleContent and statTitle mutual exclusive, one and only one is non-zero.
+func writeNamedStatTitle(page *htmlPage, resName, statName, statTitle string, writeTitleContent, listStatContent func(), expandInitially bool) {
 	checked := ""
 	if expandInitially {
 		checked = " checked"
 	}
-	fmt.Fprintf(page, `<input type='checkbox'%[4]s class="stat" id="%[1]s-stat-%[2]s"><label for="%[1]s-stat-%[2]s">%[3]s</label><span id='%[1]s-stat-%[2]s-content' class="stat-content">`,
-		resName, statName, statTitle, checked)
+	if writeTitleContent == nil {
+		fmt.Fprintf(page, `<input type='checkbox'%[4]s class="stat" id="%[1]s-stat-%[2]s"><label for="%[1]s-stat-%[2]s">%[3]s</label><span id='%[1]s-stat-%[2]s-content' class="stat-content">`,
+			resName, statName, statTitle, checked)
+	} else {
+		fmt.Fprintf(page, `<input type='checkbox'%[4]s class="stat" id="%[1]s-stat-%[2]s"><label for="%[1]s-stat-%[2]s">`,
+			resName, statName, statTitle, checked)
+		writeTitleContent()
+		fmt.Fprintf(page, `</label><span id='%[1]s-stat-%[2]s-content' class="stat-content">`,
+			resName, statName, statTitle, checked)
+	}
 	listStatContent()
 	page.WriteString("</span>")
 }

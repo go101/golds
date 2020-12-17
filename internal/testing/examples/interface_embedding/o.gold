@@ -1,0 +1,22 @@
+package interface_embedding
+
+type Reader1 interface {
+	// Comment foo
+	Read([]byte) (int, error)
+}
+
+type Reader2 interface {
+	// Comment bar
+	Read([]byte) (int, error)
+}
+
+type Reader3 interface {
+	Reader1
+	Reader2
+}
+
+type Double struct {
+	Reader1
+	Reader2
+	Reader3
+}

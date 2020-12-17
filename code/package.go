@@ -828,9 +828,9 @@ const (
 )
 
 type Field struct {
-	astStruct    *ast.StructType
-	AstField     *ast.Field
-	AstInterface *ast.InterfaceType // for embedding interface in interface (the owner interface)
+	astStruct *ast.StructType
+	AstField  *ast.Field
+	//AstInterface *ast.InterfaceType // for embedding interface in interface (the owner interface)
 
 	Pkg  *Package // (nil for exported. ??? Seems not true.)
 	Name string
@@ -844,10 +844,24 @@ func (fld *Field) Position() token.Position {
 	return fld.Pkg.PPkg.Fset.PositionFor(fld.AstField.Pos(), false)
 }
 
+func (fld *Field) Documentation() string {
+	if doc := fld.AstField.Doc; doc != nil {
+		return doc.Text()
+	}
+	return ""
+}
+
+func (fld *Field) Comment() string {
+	if comment := fld.AstField.Comment; comment != nil {
+		return comment.Text()
+	}
+	return ""
+}
+
 type Method struct {
-	AstFunc      *ast.FuncDecl      // for concrete methods
-	AstInterface *ast.InterfaceType // for interface methods (the owner interface)
-	AstField     *ast.Field         // for interface methods
+	AstFunc *ast.FuncDecl // for concrete methods
+	//AstInterface *ast.InterfaceType // for interface methods (the owner interface)
+	AstField *ast.Field // for interface methods
 
 	Pkg  *Package // (nil for exported. ??? Seems not true.)
 	Name string
@@ -860,7 +874,35 @@ type Method struct {
 }
 
 func (mthd *Method) Position() token.Position {
-	return mthd.Pkg.PPkg.Fset.PositionFor(mthd.AstFunc.Pos(), false)
+	if mthd.AstFunc != nil { // method declaration
+		return mthd.Pkg.PPkg.Fset.PositionFor(mthd.AstFunc.Pos(), false)
+	} else { // if mthd.AstField != nil //initerface method specification
+		return mthd.Pkg.PPkg.Fset.PositionFor(mthd.AstField.Pos(), false)
+	}
+}
+
+func (mthd *Method) Documentation() string {
+	if mthd.AstFunc != nil { // method declaration
+		if doc := mthd.AstFunc.Doc; doc != nil {
+			return doc.Text()
+		}
+	} else { // if mthd.AstField != nil //initerface method specification
+		if doc := mthd.AstField.Doc; doc != nil {
+			return doc.Text()
+		}
+	}
+
+	return ""
+}
+
+func (mthd *Method) Comment() string {
+	if mthd.AstField != nil { // if mthd.AstField != nil //initerface method specification
+		if comment := mthd.AstField.Comment; comment != nil {
+			return comment.Text()
+		}
+	}
+
+	return ""
 }
 
 type EmbeddedField struct {
@@ -919,11 +961,9 @@ func (s *Selector) Object() types.Object {
 
 func (s *Selector) Position() token.Position {
 	if s.Field != nil {
-		return s.Field.Pkg.PPkg.Fset.PositionFor(s.Field.AstField.Pos(), false)
-	} else if s.Method.AstFunc != nil { // method declaration
-		return s.Method.Pkg.PPkg.Fset.PositionFor(s.Method.AstFunc.Pos(), false)
-	} else { // if s.Method.AstField != nil //initerface method specification
-		return s.Method.Pkg.PPkg.Fset.PositionFor(s.Method.AstField.Pos(), false)
+		return s.Field.Position()
+	} else {
+		return s.Method.Position()
 	}
 }
 

@@ -3,6 +3,8 @@
 ### Soon to do
 
 * show method docs in package details pages
+  * how to handle duplicated methods caused by interface embedding interfaces.
+    Their docs might be different.
 
 * show/run examples/tests/banchmarks
   * run source code, run main package
@@ -28,6 +30,7 @@
 * rate limit http requests. 1000requests/3600seconds
 
 * optimize memory more, avoid string concatrations, write into page buffer directly.
+  * use sync.Pool
 
 * stat number of non-std packages, and non-std dependencies for each package, 
 
@@ -116,6 +119,7 @@
     * https://godoc.org/github.com/cznic/cc#example-Statement
       https://pkg.go.dev/github.com/cznic/cc/v2?tab=doc
     * https://github.com/xlab/c-for-go
+    * tinycc
 * use css fixate the top file path bar.
 
 * special handling for the buitlin page, 

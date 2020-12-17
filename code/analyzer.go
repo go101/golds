@@ -879,8 +879,8 @@ func (d *CodeAnalyzer) registerExplicitlySpecifiedMethods(typeInfo *TypeInfo, as
 				Type: fieldTypeInfo,
 				Mode: embedMode,
 
-				AstInterface: astInterfaceNode,
-				AstField:     method,
+				//AstInterface: astInterfaceNode,
+				AstField: method,
 			})
 
 		} else {
@@ -909,8 +909,8 @@ func (d *CodeAnalyzer) registerExplicitlySpecifiedMethods(typeInfo *TypeInfo, as
 
 				PointerRecv: false,
 
-				AstInterface: astInterfaceNode,
-				AstField:     method,
+				//AstInterface: astInterfaceNode,
+				AstField: method,
 			})
 
 			astFunc, ok := method.Type.(*ast.FuncType)

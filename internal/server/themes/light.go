@@ -17,6 +17,8 @@ h3 {background: #ddd;}
 .b {font-weight: bold;}
 
 /* type stat list */
+span.nodocs {padding-left: 1px; padding-right: 1px;}
+span.nodocs:before {content: ". ";}
 label {cursor: pointer; padding-left: 1px; padding-right: 1px;}
 input.stat {display: none;}
 input + label + .stat-content {display: none;}

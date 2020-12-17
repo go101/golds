@@ -13,11 +13,13 @@ func OpenBrowser(url string) error {
 	switch runtime.GOOS {
 	case "windows":
 		cmd = "cmd"
-		args = []string{"/c", "start"}
+		args = []string{"/c", "start", url}
 	case "darwin":
 		cmd = "open"
+		args = []string{url}
 	default: // "linux", "freebsd", "openbsd", "netbsd"
 		cmd = "xdg-open"
+		args = []string{url}
 	}
-	return exec.Command(cmd, append(args, url)...).Start()
+	return exec.Command(cmd, args...).Start()
 }

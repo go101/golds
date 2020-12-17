@@ -9,22 +9,23 @@ It tries to extract as much information as possible from Go code to help gophers
 
 ### Installation
 
-Run `go get -u go101.org/golds` to install (and update) **Golds**. 
-_(The `GO111MODULE` enviroment variable might need to be set as `on` temporarily to utilize the `GOPROXY` setting,
-depending on your Go Toolchain version and the directory in which the installation command runs.)_
+Run `go get -u go101.org/golds` (before Go Toolchain 1.16, the `GO111MODULE` enviroment variable needs to be set as `on` to utilize the `GOPROXY` setting) or `go install go101.org/golds@latest` (since Go Toolchain 1.16) to install (and update) **Golds**. 
 
 Note, if the tool program name `golds` conflicts with another tool with the same name you are using,
 you can run any of the following commands to install **Golds** as a program with a different name:
 * **Go** **do**cs **ge**nerator  
-  `go get -u go101.org/golds/godoge`
+  `go get -u go101.org/golds/godoge` (before Go Toolchain 1.16)  
+  `go install go101.org/golds/godoge@latest` (since Go Toolchain 1.16)
 * **Go** **co**de **re**ader  
-  `go get -u go101.org/golds/gocore`
+  `go get -u go101.org/golds/gocore` (before Go Toolchain 1.16)  
+  `go install go101.org/golds/gocore@latest` (since Go Toolchain 1.16)
 * **Go** **l**ocal **d**ocs (mainly for legacy. `gold` was [the old default program name](https://github.com/go101/gold) of **Golds**)  
-  `go get -u go101.org/golds/gold`
+  `go get -u go101.org/golds/gold` (before Go Toolchain 1.16)  
+  `go install go101.org/golds/gold@latest` (since Go Toolchain 1.16)
 
-If for any reason the `go get` way doesn't work, you may also clone this project firstly, then run the `go install` command in the respective program folders to install **Golds** as `golds`, `godoge`, or `gocore`.
+You may also clone this project firstly, then run the `go install` command in the respective program folders to install **Golds** as `golds`, `godoge`, or `gocore`.
 
-_(NOTE: Go commands will install output binaries into the Go binary installation path, which is defaulted to the path of the `bin` subfolder under the first path specified in the `GOPATH` environment variable, which is defaulted to the path of the `go` subfolder under the `HOME` environment variable. Please specify Go binary installation path in the `PATH` environment variable to run **Golds** commands successfully.)_
+_(NOTE: Go commands will install output binaries into the path (**Go binary installation path**) specified by the `GOBIN` environment variable, which defaults to the path of the `bin` subfolder under the first path specified in the `GOPATH` environment variable, which defaults to the path of the `go` subfolder under the path specified by the `HOME` environment variable. Please specify **the Go binary installation path** in the `PATH` environment variable to run **Golds** commands successfully.)_
 
 ### Main Features
 
