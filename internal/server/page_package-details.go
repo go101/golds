@@ -159,8 +159,6 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 			}
 		}
 
-		println(numArrows)
-
 		for _, info := range pkg.Files {
 			page.WriteString("\n\t")
 			if info.MainPosition != nil && info.HasDocs {
@@ -257,6 +255,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 	if len(pkg.ExportedTypeNames) == 0 {
 		page.WriteString("\n\t")
 		page.WriteString(page.Translation().Text_BlankList())
+		page.WriteString("\n")
 	}
 
 	for _, et := range pkg.ExportedTypeNames {
