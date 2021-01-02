@@ -2,7 +2,14 @@
 
 ### Soon to do
 
-* show method docs in package details pages
+* about https://github.com/go101/golds/issues/9
+  * need to implement the module aware features firstly.
+  * std packages are in a std module
+  * note: the dependencies of modules can be bidirectional
+  * within a module: allow mutual references  
+    for two packages not in the same module, only deping can reference deped.
+
+* show method docs in package details pages 
   * how to handle duplicated methods caused by interface embedding interfaces.
     Their docs might be different.
 
