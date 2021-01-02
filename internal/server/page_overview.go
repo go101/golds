@@ -38,7 +38,7 @@ func (ds *docServer) overviewPage(w http.ResponseWriter, r *http.Request) {
 
 			// clear possible cached pages
 			pageKey := pageCacheKey{
-				resType: ResTypePackage,
+				resType: ResTypeNone,
 				res:     "",
 			}
 			pageKey.options = overviewPageOptions{sortBy: "alphabet"}
@@ -231,7 +231,7 @@ func (ds *docServer) writeUpdateGoldBlock(page *htmlPage) {
 <pre id="%s" class="golds-update hidden">%s</pre>
 <pre id="%s" class="golds-update%s">%s</pre>
 `,
-		UpdateTip2DivID[UpdateTip_ToUpdate], divVisibility[ds.updateTip == UpdateTip_ToUpdate], fmt.Sprintf(page.Translation().Text_UpdateTip("ToUpdate"), ds.appPkgPath),
+		UpdateTip2DivID[UpdateTip_ToUpdate], divVisibility[ds.updateTip == UpdateTip_ToUpdate], fmt.Sprintf(page.Translation().Text_UpdateTip("ToUpdate"), GoldsUpdateGoSubCommand(ds.appPkgPath)),
 		UpdateTip2DivID[UpdateTip_Updating], page.Translation().Text_UpdateTip("Updating"),
 		UpdateTip2DivID[UpdateTip_Updated], divVisibility[ds.updateTip == UpdateTip_Updated], page.Translation().Text_UpdateTip("Updated"),
 	)

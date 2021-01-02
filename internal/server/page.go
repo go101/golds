@@ -58,7 +58,10 @@ type pageCacheValue struct {
 }
 
 func (ds *docServer) cachePage(key pageCacheKey, data []byte) {
-	if !genDocsMode {
+	if genDocsMode {
+	} else if data == nil {
+		delete(ds.cachedPages, key)
+	} else {
 		ds.cachedPages[key] = data
 	}
 }

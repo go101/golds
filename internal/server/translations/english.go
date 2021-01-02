@@ -187,7 +187,7 @@ func (*English) Text_RequireStat(numRequires, numRequiredBys int) string {
 func (*English) Text_UpdateTip(tipName string) string {
 	switch tipName {
 	case "ToUpdate":
-		return `<b>Golds</b> has not been updated for more than one month. You may run <b>go get -u %s</b> or <b><a href="/update">click here</a></b> to update it.`
+		return `<b>Golds</b> has not been updated for more than one month. You may run <b>go %s</b> or <b><a href="/update">click here</a></b> to update it.`
 	case "Updating":
 		return `<b>Golds</b> is being updated.`
 	case "Updated":

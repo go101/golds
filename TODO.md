@@ -2,7 +2,7 @@
 
 ### Soon to do
 
-* about https://github.com/go101/golds/issues/9
+* about https://github.com/go101/golds/issues/9 and to avoid depings affecting depeds' docs:
   * need to implement the module aware features firstly.
   * std packages are in a std module
   * note: the dependencies of modules can be bidirectional

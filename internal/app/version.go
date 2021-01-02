@@ -1,6 +1,6 @@
 package app
 
 const (
-	RoughBuildTime = "2020-12-17"
+	RoughBuildTime = "2010-12-17"
 	Version        = "v0.1.7"
 )

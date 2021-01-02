@@ -1,9 +1,14 @@
 package server
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"regexp"
+	"strconv"
+	"strings"
 	"time"
 
 	"go101.org/golds/internal/util"
@@ -99,6 +104,41 @@ func (ds *docServer) onUpdateDone(succeeded bool) {
 	ds.updateTip = UpdateTip_Nothing
 }
 
+var versionRegexp = regexp.MustCompile(`go[0-9]+\.?[0-9]*`)
+
+func ParseGoVersion(versionStr []byte) (major, minor int64, err error) {
+	version := versionRegexp.Find(versionStr)
+	if version == nil {
+		err = fmt.Errorf("no version info in %s", versionStr)
+		return
+	}
+
+	version = version[2:]
+	idx := bytes.IndexByte(version, '.')
+	if idx < 0 {
+		idx = len(version)
+	} else {
+		minor, _ = strconv.ParseInt(string(version[idx+1:]), 10, 32)
+	}
+	major, _ = strconv.ParseInt(string(version[:idx]), 10, 32)
+	return
+}
+
+func GoldsUpdateGoSubCommand(pkgPath string) string {
+	output, err := util.RunShellCommand(time.Second*5, "", nil, "go", "version")
+	if err != nil {
+		return ""
+	}
+
+	major, minor, err := ParseGoVersion(output)
+	isGo1_16plus := err == nil && major >= 1 && minor >= 16
+	if isGo1_16plus {
+		return fmt.Sprintf("install %s@latest", pkgPath)
+	} else {
+		return fmt.Sprintf("get -u %s", pkgPath)
+	}
+}
+
 func (ds *docServer) updateGold() {
 	if err := func() error {
 		dir, err := ioutil.TempDir("", "*")
@@ -106,8 +146,12 @@ func (ds *docServer) updateGold() {
 			return err
 		}
 
-		ds.updateLogger.Printf("Run: go get -u %s", ds.appPkgPath)
-		output, err := util.RunShellCommand(time.Minute*2, dir, []string{"GO111MODULE=on"}, "go", "get", "-u", ds.appPkgPath)
+		subCommand := GoldsUpdateGoSubCommand(ds.appPkgPath)
+		if subCommand == "" {
+			return errors.New("don't how to update Golds")
+		}
+		ds.updateLogger.Printf("Run: go %s", subCommand)
+		output, err := util.RunShellCommand(time.Minute*2, dir, []string{"GO111MODULE=on"}, "go", strings.SplitN(subCommand, " ", -1)...)
 		if len(output) > 0 {
 			ds.updateLogger.Printf("\n%s\n", output)
 		}
