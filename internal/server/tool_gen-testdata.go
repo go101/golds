@@ -30,6 +30,7 @@ type TestData_Type struct {
 	ValueCount         int
 	AsInputCount       int
 	AsOutputCount      int
+	IsAlias            bool // ignore aliases in checking
 }
 
 func isInformalPackage(pkgPath string) bool {
@@ -111,6 +112,7 @@ func buildTestData_Package(details *PackageDetails) TestData_Package {
 			ValueCount:         valueCount,         // len(t.Values),
 			AsInputCount:       asInputCount,       // len(t.AsInputsOf),
 			AsOutputCount:      asOutputCount,      // len(t.AsOutputsOf),
+			IsAlias:            t.TypeName.Alias != nil,
 		}
 	}
 
@@ -157,7 +159,7 @@ func buildTestData(args []string, silent bool, printUsage func(io.Writer)) map[s
 	return pkgTestDatas
 }
 
-func GenTestData(outputDir string, args []string, silent bool, goldVersion string, printUsage func(io.Writer)) {
+func GenTestData(args []string, outputDir string, silent bool, printUsage func(io.Writer)) {
 	pkgTestDatas := buildTestData(args, silent, printUsage)
 
 	if outputDir == "" {
@@ -198,7 +200,7 @@ func mapStringKeys(m map[string]TestData_Type) []string {
 // Assume no duplication in each of the two slices.
 func assureSubsetStringSlice(a, b []string) error {
 	if len(a) > len(b) {
-		return fmt.Errorf("slice with more elemetns can't be a subset: %d vs. %d", len(a), len(b))
+		return fmt.Errorf("slice with more elements can't be a subset: %d vs. %d", len(a), len(b))
 	}
 	less := func(z []string) func(int, int) bool {
 		return func(x, y int) bool {

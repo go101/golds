@@ -116,7 +116,7 @@ func (ds *docServer) packageDetailsPage(w http.ResponseWriter, r *http.Request, 
 }
 
 func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *PackageDetails, options packagePageOptions) []byte {
-	page := NewHtmlPage(ds.goldVersion, ds.currentTranslation.Text_Package(pkg.ImportPath), ds.currentTheme, ds.currentTranslation, pagePathInfo{ResTypePackage, pkg.ImportPath})
+	page := NewHtmlPage(ds.goldsVersion, ds.currentTranslation.Text_Package(pkg.ImportPath), ds.currentTheme, ds.currentTranslation, pagePathInfo{ResTypePackage, pkg.ImportPath})
 
 	fmt.Fprintf(page, `
 <pre><code><span style="font-size:xx-large;">package <b>%s</b></span>
@@ -274,7 +274,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 		page.WriteString("\n")
 		if count := len(et.Fields); count > 0 {
 			page.WriteString("\n\t\t")
-			writeNamedStatTitle(page, et.TypeName.Name(), "fields",
+			writeFoldingBlock(page, et.TypeName.Name(), "fields",
 				page.Translation().Text_Fields(count, showExportedOnly),
 				nil,
 				func() {
@@ -286,7 +286,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 							ds.writeFieldForListing(page, pkg.Package, fld, et.TypeName)
 							page.WriteString(`</span>`)
 						} else {
-							writeNamedStatTitle(page, et.TypeName.Name(), "field-"+fld.Name(),
+							writeFoldingBlock(page, et.TypeName.Name(), "field-"+fld.Name(),
 								"",
 								func() {
 									ds.writeFieldForListing(page, pkg.Package, fld, et.TypeName)
@@ -301,14 +301,18 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 										writePageText(page, "\t\t\t\t// ", fldComment, true)
 									}
 									page.WriteString("\n")
-								}, false)
+								},
+								"docs",
+								false)
 						}
 					}
-				}, false)
+				},
+				"items",
+				false)
 		}
 		if count := len(et.Methods); count > 0 {
 			page.WriteString("\n\t\t")
-			writeNamedStatTitle(page, et.TypeName.Name(), "methods",
+			writeFoldingBlock(page, et.TypeName.Name(), "methods",
 				page.Translation().Text_Methods(count, showExportedOnly),
 				nil,
 				func() {
@@ -320,7 +324,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 							ds.writeMethodForListing(page, pkg.Package, mthd, et.TypeName, true, false)
 							page.WriteString(`</span>`)
 						} else {
-							writeNamedStatTitle(page, et.TypeName.Name(), "method-"+mthd.Name(),
+							writeFoldingBlock(page, et.TypeName.Name(), "method-"+mthd.Name(),
 								"",
 								func() {
 									ds.writeMethodForListing(page, pkg.Package, mthd, et.TypeName, true, false)
@@ -335,14 +339,18 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 										writePageText(page, "\t\t\t\t// ", mthdComment, true)
 									}
 									page.WriteString("\n")
-								}, false)
+								},
+								"docs",
+								false)
 						}
 					}
-				}, isBuiltin)
+				},
+				"items",
+				isBuiltin)
 		}
 		if count := len(et.ImplementedBys); count > 0 {
 			page.WriteString("\n\t\t")
-			writeNamedStatTitle(page, et.TypeName.Name(), "impledby",
+			writeFoldingBlock(page, et.TypeName.Name(), "impledby",
 				page.Translation().Text_ImplementedBy(count),
 				nil,
 				func() {
@@ -355,11 +363,13 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 							page.WriteString(" <i>(interface)</i>")
 						}
 					}
-				}, false)
+				},
+				"items",
+				false)
 		}
 		if count := len(et.Implements); count > 0 {
 			page.WriteString("\n\t\t")
-			writeNamedStatTitle(page, et.TypeName.Name(), "impls",
+			writeFoldingBlock(page, et.TypeName.Name(), "impls",
 				page.Translation().Text_Implements(count),
 				nil,
 				func() {
@@ -369,11 +379,13 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 						page.WriteString("\n\t\t\t")
 						ds.writeTypeForListing(page, impl, pkg.Package, et.TypeName.Name(), DotMStyle_NotShow)
 					}
-				}, false)
+				},
+				"items",
+				false)
 		}
 		if count := len(et.AsOutputsOf); count > 0 {
 			page.WriteString("\n\t\t")
-			writeNamedStatTitle(page, et.TypeName.Name(), "results",
+			writeFoldingBlock(page, et.TypeName.Name(), "results",
 				page.Translation().Text_AsOutputsOf(count),
 				nil,
 				func() {
@@ -382,11 +394,13 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 						page.WriteString("\n\t\t\t")
 						ds.writeValueForListing(page, v, pkg.Package, et.TypeName)
 					}
-				}, false)
+				},
+				"items",
+				false)
 		}
 		if count := len(et.AsInputsOf); count > 0 {
 			page.WriteString("\n\t\t")
-			writeNamedStatTitle(page, et.TypeName.Name(), "params",
+			writeFoldingBlock(page, et.TypeName.Name(), "params",
 				page.Translation().Text_AsInputsOf(count),
 				nil,
 				func() {
@@ -395,11 +409,13 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 						page.WriteString("\n\t\t\t")
 						ds.writeValueForListing(page, v, pkg.Package, et.TypeName)
 					}
-				}, false)
+				},
+				"items",
+				false)
 		}
 		if count := len(et.Values); count > 0 {
 			page.WriteString("\n\t\t")
-			writeNamedStatTitle(page, et.TypeName.Name(), "values",
+			writeFoldingBlock(page, et.TypeName.Name(), "values",
 				page.Translation().Text_AsTypesOf(count),
 				nil,
 				func() {
@@ -408,7 +424,9 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 						page.WriteString("\n\t\t\t")
 						ds.writeValueForListing(page, v, pkg.Package, et.TypeName)
 					}
-				}, false)
+				},
+				"items",
+				false)
 		}
 
 		page.WriteString("</div>")
@@ -862,9 +880,9 @@ func (ds *docServer) sortValueList(valueList []ValueForListing, pkg *code.Packag
 
 		if oka && okb {
 			if p, q := fa.IsMethod(), fb.IsMethod(); p && q {
-				_, ida, _ := fa.ReceiverTypeName()
-				_, idb, _ := fb.ReceiverTypeName()
-				if r := strings.Compare(strings.ToLower(ida.Name), strings.ToLower(idb.Name)); r != 0 {
+				_, tna, _ := fa.ReceiverTypeName()
+				_, tnb, _ := fb.ReceiverTypeName()
+				if r := strings.Compare(strings.ToLower(tna.Name()), strings.ToLower(tnb.Name())); r != 0 {
 					return r < 0
 				}
 			} else if p != q {
@@ -973,26 +991,36 @@ func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pk
 
 		if res.IsMethod() {
 			// note: recvParam might be nil for interface method.
-			recvParam, typeId, isStar := res.ReceiverTypeName()
+			recvParam, tn, isStar := res.ReceiverTypeName()
 			if isStar {
 				if v.Package() != pkg {
-					//fmt.Fprintf(page, `(*<a href="/pkg:%[1]s#name-%[2]s">%[2]s</a>).`, v.Package().Path(), typeId.Name)
+					//fmt.Fprintf(page, `(*<a href="/pkg:%[1]s#name-%[2]s">%[2]s</a>).`, v.Package().Path(), tn.Name())
 					page.WriteString("(*")
-					buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, v.Package().Path()}, page, typeId.Name, "name-", typeId.Name)
+					buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, v.Package().Path()}, page, tn.Name(), "name-", tn.Name())
 					page.WriteString(").")
 				} else {
-					fmt.Fprintf(page, `(*<a href="#name-%[1]s">%[1]s</a>).`, typeId.Name)
+					// ToDo: faster way: ds.analyzer.TryRegisteringType(tn.Type(). false) == forTypeName.Denoting()?
+					if forTypeName != nil && types.Identical(tn.Type(), forTypeName.Denoting().TT) {
+						fmt.Fprintf(page, `(*%[1]s).`, tn.Name())
+					} else {
+						fmt.Fprintf(page, `(*<a href="#name-%[1]s">%[1]s</a>).`, tn.Name())
+					}
 				}
-				//fmt.Fprintf(page, "(*%s) ", typeId.Name)
+				//fmt.Fprintf(page, "(*%s) ", tn.Name())
 			} else {
 				if v.Package() != pkg {
-					//fmt.Fprintf(page, `<a href="/pkg:%[1]s#name-%[2]s">%[2]s</a>.`, v.Package().Path(), typeId.Name)
-					buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, v.Package().Path()}, page, typeId.Name, "name-", typeId.Name)
+					//fmt.Fprintf(page, `<a href="/pkg:%[1]s#name-%[2]s">%[2]s</a>.`, v.Package().Path(), tn.Name())
+					buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, v.Package().Path()}, page, tn.Name(), "name-", tn.Name())
 					page.WriteString(".")
 				} else {
-					fmt.Fprintf(page, `<a href="#name-%[1]s">%[1]s</a>.`, typeId.Name)
+					// ToDo: faster way: ds.analyzer.TryRegisteringType(tn.Type(). false) == forTypeName.Denoting()?
+					if forTypeName != nil && types.Identical(tn.Type(), forTypeName.Denoting().TT) {
+						fmt.Fprintf(page, `%[1]s.`, tn.Name())
+					} else {
+						fmt.Fprintf(page, `<a href="#name-%[1]s">%[1]s</a>.`, tn.Name())
+					}
 				}
-				//fmt.Fprintf(page, "(%s) ", typeId.Name)
+				//fmt.Fprintf(page, "(%s) ", tn.Name())
 			}
 
 			//writeSrouceCodeLineLink(page, v.Package(), pos, v.Name(), "")
@@ -1121,7 +1149,12 @@ func (ds *docServer) writeTypeForListing(page *htmlPage, t *TypeForListing, pkg 
 		}
 	} else {
 		if implerName == "" && t.IsPointer {
-			page.WriteString("*")
+			if dotMStyle == DotMStyle_NotShow {
+				page.WriteString("*")
+			} else { // for method implementation listing
+				page.WriteString("(*")
+				defer page.WriteByte(')')
+			}
 		}
 	}
 
@@ -1844,6 +1877,7 @@ func (ds *docServer) WriteAstType(w *htmlPage, typeLit ast.Expr, codePkg, docPkg
 			w.Write(period)
 		}
 
+		// ToDo: faster way: ds.analyzer.TryRegisteringType(tn.Type(). false) == forTypeName.Denoting()?
 		if forTypeName != nil && types.Identical(tn.Type(), forTypeName.Denoting().TT) {
 			w.Write(BoldTagStart)
 			defer w.Write(BoldTagEnd)
@@ -2108,20 +2142,20 @@ func (ds *docServer) WriteAstFieldList(w *htmlPage, fieldList *ast.FieldList, is
 //}
 
 // writeTitleContent and statTitle mutual exclusive, one and only one is non-zero.
-func writeNamedStatTitle(page *htmlPage, resName, statName, statTitle string, writeTitleContent, listStatContent func(), expandInitially bool) {
+func writeFoldingBlock(page *htmlPage, resName, statName, statTitle string, writeTitleContent, listStatContent func(), contentKind string, expandInitially bool) {
 	checked := ""
 	if expandInitially {
 		checked = " checked"
 	}
 	if writeTitleContent == nil {
-		fmt.Fprintf(page, `<input type='checkbox'%[4]s class="stat" id="%[1]s-stat-%[2]s"><label for="%[1]s-stat-%[2]s">%[3]s</label><span id='%[1]s-stat-%[2]s-content' class="stat-content">`,
-			resName, statName, statTitle, checked)
+		fmt.Fprintf(page, `<input type='checkbox'%[5]s class="fold" id="%[1]s-fold-%[2]s"><label for="%[1]s-fold-%[2]s">%[3]s</label><span id='%[1]s-fold-%[2]s-%[4]s' class="fold-%[4]s">`,
+			resName, statName, statTitle, contentKind, checked)
 	} else {
-		fmt.Fprintf(page, `<input type='checkbox'%[4]s class="stat" id="%[1]s-stat-%[2]s"><label for="%[1]s-stat-%[2]s">`,
-			resName, statName, statTitle, checked)
+		fmt.Fprintf(page, `<input type='checkbox'%[5]s class="fold" id="%[1]s-fold-%[2]s"><label for="%[1]s-fold-%[2]s">`,
+			resName, statName, statTitle, contentKind, checked)
 		writeTitleContent()
-		fmt.Fprintf(page, `</label><span id='%[1]s-stat-%[2]s-content' class="stat-content">`,
-			resName, statName, statTitle, checked)
+		fmt.Fprintf(page, `</label><span id='%[1]s-fold-%[2]s-%[4]s' class="fold-%[4]s">`,
+			resName, statName, statTitle, contentKind, checked)
 	}
 	listStatContent()
 	page.WriteString("</span>")

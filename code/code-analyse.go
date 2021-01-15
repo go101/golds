@@ -46,10 +46,10 @@ func (d *CodeAnalyzer) AnalyzePackages(onSubTaskDone func(int, time.Duration, ..
 	//log.Println("[analyze packages 2...]")
 
 	for _, pkg := range d.packageList {
-		d.analyzePackage_FindTypeSources(pkg)
+		d.analyzePackage_ConfirmTypeSources(pkg)
 	}
 
-	logProgress(SubTask_FindTypeSources)
+	logProgress(SubTask_ConfirmTypeSources)
 
 	//log.Println("[analyze packages 4...]")
 
@@ -2003,10 +2003,14 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 			d.registerExplicitlyDeclaredMethod(f)
 		}
 
-		if f.IsMethod() && f.AstDecl.Recv != nil {
+		if f.IsMethod() {
+			if f.AstDecl.Recv == nil {
+				panic("should not")
+			}
 			if len(f.AstDecl.Recv.List) != 1 {
 				panic("should not")
 			}
+
 			field := f.AstDecl.Recv.List[0]
 			var id *ast.Ident
 			switch expr := field.Type.(type) {
@@ -2020,8 +2024,13 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 					panic("should not")
 				}
 				id = tid
+				f.attributes |= StarReceiver
 			}
-			if !token.IsExported(id.Name) {
+			f.receiverTypeName = d.allTypeNameTable[d.Id2b(pkg, id.Name)]
+			if f.receiverTypeName == nil {
+				panic("should not")
+			}
+			if !token.IsExported(id.Name) { // exclude this method from asTypeOfValues list?
 				// ToDo: If it is proved that some values of this type are
 				//       exposed to other packages, then should not continue here.
 				continue
@@ -2266,7 +2275,7 @@ func (d *CodeAnalyzer) analyzePackage_CollectSomeRuntimeFunctionPositions() {
 	}
 }
 
-func (d *CodeAnalyzer) analyzePackage_FindTypeSources(pkg *Package) {
+func (d *CodeAnalyzer) analyzePackage_ConfirmTypeSources(pkg *Package) {
 	var isBuiltin = pkg.Path() == "builtin"
 
 	//log.Println("[analyzing]", pkg.Path(), pkg.PPkg.Name)

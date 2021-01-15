@@ -26,23 +26,14 @@ func init() {
 	//enabledHtmlGenerationMod() // debug
 }
 
-// ToDo: un-global this variables in struct DocGenerator{}
 var (
-	testingMode            = false
-	genDocsMode            = false
-	buildIdUsesPages       = true  // might be false in gen mode
-	enableSoruceNavigation = true  // false to disable method implementation pages and some code reading features
-	emphasizeWDPackages    = false // list packages in the current directory before other packages
-
-	goldVersion    string
 	pageHrefList   *list.List // elements are *string
 	resHrefs       map[pageResType]map[string]int
 	pageHrefsMutex sync.Mutex // in fact, for the current implementation, the lock is not essential
 )
 
-func enabledHtmlGenerationMod(goldVer string) {
+func enabledHtmlGenerationMod() {
 	genDocsMode = true
-	goldVersion = goldVer
 	pageHrefList = list.New()
 	resHrefs = make(map[pageResType]map[string]int, 8)
 }
@@ -297,8 +288,8 @@ Generate:
 		if ext := filepath.Ext(generatedHref); ext != ".html" {
 			//dir, file := filepath.Split(generatedHref)
 			dir, file := path.Split(generatedHref)
-			if i := strings.LastIndex(file, goldVersion); i >= 0 {
-				version := goldVersion
+			if i := strings.LastIndex(file, goldsVersion); i >= 0 {
+				version := goldsVersion
 				for range [5]struct{}{} {
 					version = PreviousVersion(version)
 					if version == "" {
@@ -307,7 +298,7 @@ Generate:
 
 					registerPageHref(genPageInfo{
 						HrefPath: hrefNotForGenerating,
-						FilePath: dir + file[:i] + version + file[i+len(goldVersion):] + ext,
+						FilePath: dir + file[:i] + version + file[i+len(goldsVersion):] + ext,
 					})
 				}
 			}
@@ -317,27 +308,24 @@ Generate:
 	return
 }
 
-// nouses, plainsrc, silent, moregc bool
-func GenDocs(outputDir string, args []string, lang string, options DocsGenerationOptions, goldVersion string, printUsage func(io.Writer), viewDocsCommand func(string) string) {
-	enabledHtmlGenerationMod(goldVersion)
+func GenDocs(options PageOutputOptions, args []string, outputDir string, silentMode bool, printUsage func(io.Writer), increaseGCFrequency bool, viewDocsCommand func(string) string) {
+	enabledHtmlGenerationMod()
 
 	forTesting := outputDir == ""
-	silent := options.SilentMode || forTesting
-	if options.IncreaseGCFrequency {
+	silent := silentMode || forTesting
+	if increaseGCFrequency {
 		debug.SetGCPercent(75)
 	}
 
-	buildIdUsesPages = !options.NoIdentifierUsesPages || forTesting
-	enableSoruceNavigation = !options.PlainSourceCodePages || forTesting
-	emphasizeWDPackages = options.EmphasizeWDPkgs || forTesting
+	setPageOutputOptions(options, forTesting)
 
 	// ...
 	ds := &docServer{
-		goldVersion: goldVersion,
-		phase:       Phase_Unprepared,
-		analyzer:    &code.CodeAnalyzer{},
+		goldsVersion: options.GoldsVersion,
+		phase:        Phase_Unprepared,
+		analyzer:     &code.CodeAnalyzer{},
 	}
-	ds.initSettings(lang)
+	ds.initSettings(options.PreferredLang)
 	ds.analyze(args, printUsage)
 
 	// ...

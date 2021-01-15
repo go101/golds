@@ -28,7 +28,7 @@ func (ds *docServer) svgFile(w http.ResponseWriter, r *http.Request, svgFile str
 	if !ok {
 
 		// For docs generation.
-		page := NewHtmlPage(ds.goldVersion, "", nil, ds.currentTranslation, pagePathInfo{ResTypeSVG, svgFile})
+		page := NewHtmlPage(ds.goldsVersion, "", nil, ds.currentTranslation, pagePathInfo{ResTypeSVG, svgFile})
 
 		data = ds.buildSVG(svgFile, page)
 		ds.cachePage(pageKey, data)

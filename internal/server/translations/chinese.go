@@ -87,8 +87,8 @@ func (*Chinese) Text_Analyzing_CollectRuntimeFunctionPositions(d time.Duration) 
 	return fmt.Sprintf("搜集一些runtime包中的函数的代码位置：%s", d)
 }
 
-func (*Chinese) Text_Analyzing_FindTypeSources(d time.Duration) string {
-	return fmt.Sprintf("寻找类型声明的源类型：%s", d)
+func (*Chinese) Text_Analyzing_ConfirmTypeSources(d time.Duration) string {
+	return fmt.Sprintf("确定类型声明的源类型：%s", d)
 }
 
 func (*Chinese) Text_Analyzing_CollectSelectors(d time.Duration) string {
@@ -577,7 +577,7 @@ func (*Chinese) Text_Othertatistics(values map[string]interface{}) string {
 // footer
 ///////////////////////////////////////////////////////////////////
 
-func (*Chinese) Text_GeneratedPageFooter(goldVersion, qrCodeLink, goOS, goArch string) string {
+func (*Chinese) Text_GeneratedPageFooter(goldsVersion, qrCodeLink, goOS, goArch string) string {
 	var qrImg string
 	if qrCodeLink != "" {
 		qrImg = fmt.Sprintf(`<img src="%s">`, qrCodeLink)
@@ -588,7 +588,7 @@ func (*Chinese) Text_GeneratedPageFooter(goldVersion, qrCodeLink, goOS, goArch s
 欢迎在 <a href="https://github.com/go101/golds">Golds 项目</a>中提交 PR 和 bug 报告。
 请关注 “Go 101” 微信公众号（扫描左边的二维码）以获取 <b>Golds</b> 的最新消息以及各种 Go 细节和事实。</td></tr></table>`,
 		qrImg,
-		goldVersion,
+		goldsVersion,
 		goOS,
 		goArch,
 	)

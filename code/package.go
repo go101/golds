@@ -118,7 +118,8 @@ type ValueResource interface {
 type FunctionResource interface {
 	ValueResource
 	IsMethod() bool
-	ReceiverTypeName() (paramField *ast.Field, typeIdent *ast.Ident, isStar bool)
+	//ReceiverTypeName() (paramField *ast.Field, typeIdent *ast.Ident, isStar bool)
+	ReceiverTypeName() (paramField *ast.Field, typename *TypeName, isStar bool)
 	AstFuncType() *ast.FuncType
 
 	// For *Function, the result is the same as ValueResource.Package().
@@ -177,6 +178,9 @@ const (
 
 	// For funcitons.
 	Variadic Attribute = 1 << 8
+
+	// For methods.
+	StarReceiver Attribute = 1 << 9
 )
 
 type TypeSource struct {
@@ -619,8 +623,11 @@ type Function struct {
 	*types.Func
 	*types.Builtin // for builtin functions
 
-	// Builtin, Variadic.
+	// isStarReceiver, ... ToDo: Builtin, Variadic.
 	attributes Attribute
+
+	// Non-nil for method functions.
+	receiverTypeName *TypeName
 
 	// ToDo: maintain parameter and result TypeInfos, for performance.
 
@@ -701,7 +708,8 @@ func (f *Function) String() string {
 //}
 
 // Please make sure the Funciton is a method when calling this method.
-func (f *Function) ReceiverTypeName() (paramField *ast.Field, typeIdent *ast.Ident, isStar bool) {
+//func (f *Function) ReceiverTypeName() (paramField *ast.Field, typeIdent *ast.Ident, isStar bool) {
+func (f *Function) ReceiverTypeName() (paramField *ast.Field, typename *TypeName, isStar bool) {
 	if f.AstDecl.Recv == nil {
 		panic("should not")
 	}
@@ -710,22 +718,25 @@ func (f *Function) ReceiverTypeName() (paramField *ast.Field, typeIdent *ast.Ide
 	}
 
 	paramField = f.AstDecl.Recv.List[0]
-	switch expr := paramField.Type.(type) {
-	default:
-		panic("should not")
-	case *ast.Ident:
-		typeIdent = expr
-		isStar = false
-		return
-	case *ast.StarExpr:
-		tid, ok := expr.X.(*ast.Ident)
-		if !ok {
-			panic("should not")
-		}
-		typeIdent = tid
-		isStar = true
-		return
-	}
+
+	//switch expr := paramField.Type.(type) {
+	//default:
+	//	panic("should not")
+	//case *ast.Ident:
+	//	typeIdent = expr
+	//	isStar = false
+	//case *ast.StarExpr:
+	//	tid, ok := expr.X.(*ast.Ident)
+	//	if !ok {
+	//		panic("should not")
+	//	}
+	//	typeIdent = tid
+	//	isStar = true
+	//}
+
+	typename = f.receiverTypeName
+	isStar = f.attributes&StarReceiver != 0
+	return
 }
 
 func (f *Function) AstFuncType() *ast.FuncType {
@@ -795,8 +806,10 @@ func (im *InterfaceMethod) String() string {
 //}
 
 // Please make sure the Funciton is a method when calling this method.
-func (im *InterfaceMethod) ReceiverTypeName() (paramField *ast.Field, typeIdent *ast.Ident, isStar bool) {
-	return nil, im.InterfaceTypeName.AstSpec.Name, false
+//func (im *InterfaceMethod) ReceiverTypeName() (paramField *ast.Field, typeIdent *ast.Ident, isStar bool) {
+func (im *InterfaceMethod) ReceiverTypeName() (paramField *ast.Field, typename *TypeName, isStar bool) {
+	//return nil, im.InterfaceTypeName.AstSpec.Name, false
+	return nil, im.InterfaceTypeName, false
 }
 
 func (im *InterfaceMethod) AstFuncType() *ast.FuncType {

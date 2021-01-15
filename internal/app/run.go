@@ -65,7 +65,7 @@ func Run() {
 	// ...
 	log.SetFlags(log.Lshortfile)
 
-	var validateDiir = func(dir string) string {
+	var validateDir = func(dir string) string {
 		if dir == "" {
 			dir = "."
 		} else if dir == "memory" {
@@ -79,34 +79,14 @@ func Run() {
 	}
 
 	silentMode := *silentFlag || *sFlag
-	emphasizeWDPkgs := *emphasizeWorkingDirectoryPackages
 
-	if gen := *genFlag; gen {
-		viewDocsCommand := func(docsDir string) string {
-			return os.Args[0] + " -dir=" + docsDir
-		}
-		if *compact {
-			*nouses = true
-			*plainsrc = true
-		}
-		options := server.DocsGenerationOptions{
-			NoIdentifierUsesPages: *nouses,
-			PlainSourceCodePages:  *plainsrc,
-			SilentMode:            silentMode,
-			IncreaseGCFrequency:   *moregcFlag,
-			EmphasizeWDPkgs:       emphasizeWDPkgs,
-		}
-		server.Gen(*genIntentFlag, validateDiir(*dirFlag), *langFlag, flag.Args(), options, Version, printUsage, viewDocsCommand)
-		return
-	}
-
+	// files serving mode
 	if flag.NArg() == 0 {
 		log.SetFlags(0)
 
 		if *dirFlag == "" {
-			log.Printf(`Running in directory serving mode. If docs serving mode
-is expected, please run the following command instead:
-	%s .
+			log.Printf(`Running in directory serving mode. If docs serving mode is intended, please run the following command instead:
+   %s .
 
 `,
 				strings.Join(os.Args, " ")[len(os.Args[0])-len(filepath.Base(os.Args[0])):],
@@ -116,19 +96,56 @@ is expected, please run the following command instead:
 			*portFlag = "9999" // to be consistent with the one used in the old golf program.
 		}
 
-		util.ServeFiles(validateDiir(*dirFlag), *portFlag, silentMode, Version)
+		util.ServeFiles(validateDir(*dirFlag), *portFlag, silentMode, Version)
 		return
 	}
 
+	emphasizeWDPkgs := *emphasizeWorkingDirectoryPackages
+	if *compact {
+		*nouses = true
+		*plainsrc = true
+		// ToDo: exit on conflicts
+	}
+	options := server.PageOutputOptions{
+		GoldsVersion:          Version,
+		PreferredLang:         *langFlag,
+		NoIdentifierUsesPages: *nouses,
+		PlainSourceCodePages:  *plainsrc,
+		EmphasizeWDPkgs:       emphasizeWDPkgs,
+	}
+
+	// docs generating mode
+	if gen := *genFlag; gen {
+		outputDir := validateDir(*dirFlag)
+		switch intent := *genIntentFlag; intent {
+		default:
+			log.Println("Unknown gen intent:", intent)
+			printUsage(os.Stdout)
+		case "testdata":
+			server.GenTestData(flag.Args(), outputDir, silentMode, printUsage)
+		case "docs":
+			viewDocsCommand := func(docsDir string) string {
+				return os.Args[0] + " -dir=" + docsDir
+			}
+			// ToDo: also support json format output
+			server.GenDocs(options, flag.Args(), outputDir, silentMode, printUsage, *moregcFlag, viewDocsCommand)
+		}
+
+		return
+	}
+
+	// docs serving mode
+
 	//appPkgPath := "go101.org/gold" // changed to "golds" now.
-	appPkgPath := "go101.org/golds"
+	appPkgPath := "go101.org/golds" // for updating Golds
 	switch appName := filepath.Base(os.Args[0]); appName {
 	case "gold", "godoge", "gocore":
 		appPkgPath += "/" + appName
+	default:
 	case "golds":
 	}
 
-	server.Run(*portFlag, *langFlag, flag.Args(), silentMode, emphasizeWDPkgs, appPkgPath, Version, printUsage, getRoughBuildTime)
+	server.Run(options, flag.Args(), *portFlag, silentMode, printUsage, appPkgPath, getRoughBuildTime)
 }
 
 var hFlag = flag.Bool("h", false, "show help")
@@ -141,19 +158,20 @@ var genFlag = flag.Bool("gen", false, "HTML generation mode")
 var genIntentFlag = flag.String("gen-intent", "docs", "docs | testdata")
 var langFlag = flag.String("lang", "", "docs generation language tag")
 var dirFlag = flag.String("dir", "", "directory for file serving or HTML generation")
-var portFlag = flag.String("port", "", "preferred server port [1024, 65536]. Default: 56789")
+var portFlag = flag.String("port", "", "preferred server port [1024, 65536]. Default: 56789 or 9999")
 var sFlag = flag.Bool("s", false, "not open a browser automatically")
 var silentFlag = flag.Bool("silent", false, "not open a browser automatically")
 var moregcFlag = flag.Bool("moregc", false, "increase garbage collection frequency")
 var emphasizeWorkingDirectoryPackages = flag.Bool("emphasize-wdpkgs", false, "disable the source navigation feature")
 var nouses = flag.Bool("nouses", false, "disable the identifier uses feature")
 var plainsrc = flag.Bool("plainsrc", false, "disable the source navigation feature")
-var compact = flag.Bool("compact", false, "disable the source navigation feature")
+var compact = flag.Bool("compact", false, "sacrifice some disk-consuming features in generation")
 
 func printVersion(out io.Writer) {
 	fmt.Fprintf(out, "Golds %s\n", Version)
 }
 
+// Cancelled options:
 //	-u/-update
 //		Update Golds itself.
 
@@ -163,6 +181,10 @@ func printVersion(out io.Writer) {
 //		to lower peak memroy use. For HTML docs
 //		generation mode only. Enabling it will
 //		slow down the docs generation speed.
+
+// Planning options:
+//	-generated-packages=wd|all
+//		Determine which packages the docs will be generated for.
 
 func printUsage(out io.Writer) {
 	fmt.Fprintf(out, `Golds - a Go local docs server (%[2]s).
@@ -174,17 +196,20 @@ Options:
 	-h/-help
 		Show help information. When the flags
 		present, others will be ignored.
-	-port=ServicePort
-		Service port, default to 56789. If
-		the specified or default port is not
-		availabe, a random port will be used.
+	-port=<ServicePort>
+		Service port, defaults to 56789 in docs
+		mode and 9999 in files serving mode.
+		If the specified or default port is not
+		availabe, another availabe port will be
+		selected automatically.
 	-s/-silent
 		Don't open a browser automatically
 		or don't show HTML file generation
 		logs in docs generation mode.
 	-gen
 		Static HTML docs generation mode.
-	-dir=ContentDirectory
+		"memory" means not to save (for testing).
+	-dir=<ContentDirectory>|memory
 		Specifiy the docs generation or file
 		serving diretory. Current directory
 		will be used if no arguments specified.

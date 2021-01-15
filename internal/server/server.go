@@ -32,8 +32,8 @@ const (
 type docServer struct {
 	mutex sync.Mutex
 
-	appPkgPath  string
-	goldVersion string
+	appPkgPath   string
+	goldsVersion string
 
 	workingDirectory string
 	emphasizeWDPkgs  bool
@@ -78,12 +78,14 @@ type docServer struct {
 	visited       int32
 }
 
-func Run(recommendedPort, lang string, args []string, silentMode, emphasizeWDPkgs bool, appPkgPath, goldVersion string, printUsage func(io.Writer), roughBuildTime func() time.Time) {
-	ds := &docServer{
-		appPkgPath:  appPkgPath,
-		goldVersion: goldVersion,
+func Run(options PageOutputOptions, args []string, recommendedPort string, silentMode bool, printUsage func(io.Writer), appPkgPath string, roughBuildTime func() time.Time) {
+	setPageOutputOptions(options, false)
 
-		emphasizeWDPkgs: emphasizeWDPkgs,
+	ds := &docServer{
+		appPkgPath:   appPkgPath,
+		goldsVersion: options.GoldsVersion,
+
+		emphasizeWDPkgs: options.EmphasizeWDPkgs,
 
 		phase:           Phase_Unprepared,
 		analyzer:        &code.CodeAnalyzer{},
@@ -94,11 +96,12 @@ func Run(recommendedPort, lang string, args []string, silentMode, emphasizeWDPkg
 		roughBuildTime: roughBuildTime,
 	}
 
-	ds.initSettings(os.Getenv("LANG"))
-
-	if lang != "" {
+	if options.PreferredLang != "" {
 		ds.visited = 1
-		ds.changeTranslationByAcceptLanguage(lang)
+		//ds.changeTranslationByAcceptLanguage(options.PreferredLang)
+		ds.initSettings(options.PreferredLang)
+	} else {
+		ds.initSettings(os.Getenv("LANG"))
 	}
 
 	port, delta := recommendedPort, -1
@@ -203,9 +206,9 @@ func (ds *docServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			ds.loadAPI(w, r)
 		}
 	case ResTypeCSS: // "css"
-		ds.cssFile(w, r, removeVersionFromFilename(resPath, ds.goldVersion))
+		ds.cssFile(w, r, removeVersionFromFilename(resPath, ds.goldsVersion))
 	case ResTypeJS: // "jvs"
-		ds.javascriptFile(w, r, removeVersionFromFilename(resPath, ds.goldVersion))
+		ds.javascriptFile(w, r, removeVersionFromFilename(resPath, ds.goldsVersion))
 	case ResTypeSVG: // "svg"
 		ds.svgFile(w, r, resPath)
 	case ResTypePNG: // "png"

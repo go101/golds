@@ -24,7 +24,7 @@ func (ds *docServer) pngFile(w http.ResponseWriter, r *http.Request, pngFilename
 		ds.cachePage(pageKey, data)
 
 		// For docs generation.
-		page := NewHtmlPage(ds.goldVersion, "", nil, ds.currentTranslation, pagePathInfo{ResTypePNG, pngFilename})
+		page := NewHtmlPage(ds.goldsVersion, "", nil, ds.currentTranslation, pagePathInfo{ResTypePNG, pngFilename})
 		page.Write(data)
 		_ = page.Done(w)
 	}

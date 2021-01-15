@@ -16,16 +16,18 @@ h3 {background: #ddd;}
 
 .b {font-weight: bold;}
 
-/* type stat list */
+/* content folding */
 span.nodocs {padding-left: 1px; padding-right: 1px;}
 span.nodocs:before {content: ". ";}
 label {cursor: pointer; padding-left: 1px; padding-right: 1px;}
-input.stat {display: none;}
-input + label + .stat-content {display: none;}
-input:checked + label + .stat-content {display: inline;}
+input.fold {display: none;}
+input + label + .fold-items {display: none;}
+input + label + .fold-docs {display: none;}
+input:checked + label + .fold-items {display: inline;}
+input:checked + label + .fold-docs {display: inline;}
 input + label:before {content: "+ ";}
 input:checked + label:before {content: "- ";}
-input:checked + label:after {content: "{{ .Colon }}";}
+input:checked + label.fold-items:after {content: "{{ .Colon }}";}
 
 .title:after {content: "{{ .Colon }}";}
 

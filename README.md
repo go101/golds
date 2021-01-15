@@ -25,13 +25,13 @@ you can run any of the following commands to install **Golds** as a program with
 
 You may also clone this project firstly, then run the `go install` command in the respective program folders to install **Golds** as `golds`, `godoge`, or `gocore`.
 
-_(NOTE: Go commands will install output binaries into the path (**Go binary installation path**) specified by the `GOBIN` environment variable, which defaults to the path of the `bin` subfolder under the first path specified in the `GOPATH` environment variable, which defaults to the path of the `go` subfolder under the path specified by the `HOME` environment variable. Please specify **the Go binary installation path** in the `PATH` environment variable to run **Golds** commands successfully.)_
+_(NOTE: Go commands will install output binaries into the **Go binary installation path** specified by the `GOBIN` environment variable, which defaults to the path of the `bin` subfolder under the first path specified in the `GOPATH` environment variable, which defaults to the path of the `go` subfolder under the path specified by the `HOME` environment variable. Please specify the **Go binary installation path** in the `PATH` environment variable to run **Golds** commands successfully.)_
 
 ### Main Features
 
 * Supports listing exported types not only by alphabet, but also by popularity, which is good to
   understanding some packages exporting many types.
-* Supports listing unexported types, which is good to read some packages.
+* Supports listing unexported types, which is helpful to understand some packages.
 * Rich package-level type/value information collection:
   * Shows type implementation relations ([demo 1](https://docs.go101.org/std/pkg/go/ast.html#name-Node) and [demo 2](https://docs.go101.org/std/pkg/bytes.html#name-Buffer)).
   * Shows method implementation relations ([demo](https://docs.go101.org/std/imp/io.Reader.html#name-Read)).

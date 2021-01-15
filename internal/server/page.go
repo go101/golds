@@ -12,6 +12,41 @@ import (
 	"go101.org/golds/internal/server/translations"
 )
 
+type PageOutputOptions struct {
+	GoldsVersion string
+
+	PreferredLang string
+
+	NoIdentifierUsesPages bool
+	PlainSourceCodePages  bool
+	EmphasizeWDPkgs       bool
+
+	// ToDo:
+	ListUnexportedRes   bool
+	WorkingDirectory    string
+	WdPkgsListingManner string
+}
+
+var (
+	testingMode = false
+	genDocsMode = false
+
+	buildIdUsesPages       = true  // might be false in gen mode
+	enableSoruceNavigation = true  // false to disable method implementation pages and some code reading features
+	emphasizeWDPackages    = false // list packages in the current directory before other packages
+	goldsVersion           string
+
+	// ToDo: use this one to replace the above ones.
+	pageOutputOptions PageOutputOptions
+)
+
+func setPageOutputOptions(options PageOutputOptions, forTesting bool) {
+	buildIdUsesPages = !options.NoIdentifierUsesPages || forTesting
+	enableSoruceNavigation = !options.PlainSourceCodePages || forTesting
+	emphasizeWDPackages = options.EmphasizeWDPkgs || forTesting
+	goldsVersion = options.GoldsVersion
+}
+
 type pageResType string
 
 const (
@@ -103,8 +138,8 @@ type htmlPage struct {
 	//bytes.Buffer
 	content Content
 
-	goldVersion string
-	PathInfo    pagePathInfo
+	goldsVersion string
+	PathInfo     pagePathInfo
 
 	// ToDo: use the two instead of server.currentXXXs.
 	//theme Theme
@@ -122,12 +157,12 @@ type pagePathInfo struct {
 	resPath string
 }
 
-func NewHtmlPage(goldVersion, title string, theme Theme, translation Translation, currentPageInfo pagePathInfo) *htmlPage {
+func NewHtmlPage(goldsVersion, title string, theme Theme, translation Translation, currentPageInfo pagePathInfo) *htmlPage {
 	page := htmlPage{
-		PathInfo:    currentPageInfo,
-		goldVersion: goldVersion,
-		translation: translation,
-		isHTML:      isHTMLPage(currentPageInfo.resType),
+		PathInfo:     currentPageInfo,
+		goldsVersion: goldsVersion,
+		translation:  translation,
+		isHTML:       isHTMLPage(currentPageInfo.resType),
 	}
 	//page.Grow(4 * 1024 * 1024)
 
@@ -144,8 +179,8 @@ func NewHtmlPage(goldVersion, title string, theme Theme, translation Translation
 <body><div>
 `,
 			title,
-			buildPageHref(currentPageInfo, pagePathInfo{ResTypeCSS, addVersionToFilename(theme.Name(), page.goldVersion)}, nil, ""),
-			buildPageHref(currentPageInfo, pagePathInfo{ResTypeJS, addVersionToFilename("golds", page.goldVersion)}, nil, ""),
+			buildPageHref(currentPageInfo, pagePathInfo{ResTypeCSS, addVersionToFilename(theme.Name(), page.goldsVersion)}, nil, ""),
+			buildPageHref(currentPageInfo, pagePathInfo{ResTypeJS, addVersionToFilename("golds", page.goldsVersion)}, nil, ""),
 		)
 	}
 
@@ -166,7 +201,7 @@ func (page *htmlPage) Done(w io.Writer) []byte {
 		fmt.Fprintf(page, `<pre id="footer">
 %s
 </pre>`,
-			page.translation.Text_GeneratedPageFooter(page.goldVersion, qrImgLink, build.Default.GOOS, build.Default.GOARCH),
+			page.translation.Text_GeneratedPageFooter(page.goldsVersion, qrImgLink, build.Default.GOOS, build.Default.GOARCH),
 		)
 
 		page.WriteString(`

@@ -44,7 +44,7 @@ type Translation interface {
 	Text_Analyzing_SortPackagesByDependencies(d time.Duration) string
 	Text_Analyzing_CollectDeclarations(d time.Duration) string
 	Text_Analyzing_CollectRuntimeFunctionPositions(d time.Duration) string
-	Text_Analyzing_FindTypeSources(d time.Duration) string
+	Text_Analyzing_ConfirmTypeSources(d time.Duration) string
 	Text_Analyzing_CollectSelectors(d time.Duration) string
 	Text_Analyzing_FindImplementations(d time.Duration) string
 	Text_Analyzing_RegisterInterfaceMethodsForTypes(d time.Duration) string
@@ -118,7 +118,7 @@ type Translation interface {
 	Text_Othertatistics(values map[string]interface{}) string
 
 	// Footer
-	Text_GeneratedPageFooter(goldVersion, qrCodeLink, goOS, goArch string) string
+	Text_GeneratedPageFooter(goldsVersion, qrCodeLink, goOS, goArch string) string
 }
 
 func (ds *docServer) currentSettings() (Theme, Translation) {

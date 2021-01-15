@@ -105,6 +105,13 @@
 
 ### More to do
 
+* graphics
+  * show dep relations
+    * filter: within a module or project
+
+* module support
+  * show mobule dependencies: "go mod graph" 
+
 * some "embedding" in names should be "embedded"
 
 * For std pacakges: show which version of Go introduced a particular function/type, etc.

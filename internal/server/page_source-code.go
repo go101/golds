@@ -81,7 +81,7 @@ func (ds *docServer) sourceCodePage(w http.ResponseWriter, r *http.Request, pkgP
 }
 
 func (ds *docServer) buildSourceCodePage(w http.ResponseWriter, result *SourceFileAnalyzeResult) []byte {
-	page := NewHtmlPage(ds.goldVersion, ds.currentTranslation.Text_SourceCode(result.PkgPath, result.BareFilename), ds.currentTheme, ds.currentTranslation, pagePathInfo{ResTypeSource, result.PkgPath + "/" + result.BareFilename})
+	page := NewHtmlPage(ds.goldsVersion, ds.currentTranslation.Text_SourceCode(result.PkgPath, result.BareFilename), ds.currentTheme, ds.currentTranslation, pagePathInfo{ResTypeSource, result.PkgPath + "/" + result.BareFilename})
 
 	realFilePath := result.OriginalPath
 	if result.GeneratedPath != "" {

@@ -87,53 +87,53 @@ func (*English) Text_Analyzing_ParsePackagesDone(numFiles int, d time.Duration) 
 
 func (*English) Text_Analyzing_CollectPackages(numPkgs int, d time.Duration) string {
 	if numPkgs == 1 {
-		return fmt.Sprintf("Collect one package: %s", d)
+		return fmt.Sprintf("Collected one package: %s", d)
 	}
-	return fmt.Sprintf("Collect %d packages: %s", numPkgs, d)
+	return fmt.Sprintf("Collected %d packages: %s", numPkgs, d)
 }
 
 func (*English) Text_Analyzing_SortPackagesByDependencies(d time.Duration) string {
-	return fmt.Sprintf("Sort packages by dependency relations: %s", d)
+	return fmt.Sprintf("Sorted packages by dependency relations: %s", d)
 }
 
 func (*English) Text_Analyzing_CollectDeclarations(d time.Duration) string {
-	return fmt.Sprintf("Collect declarations: %s", d)
+	return fmt.Sprintf("Collected declarations: %s", d)
 }
 
 func (*English) Text_Analyzing_CollectRuntimeFunctionPositions(d time.Duration) string {
-	return fmt.Sprintf("Collect some runtime function positions: %s", d)
+	return fmt.Sprintf("Collected some runtime function positions: %s", d)
 }
 
-func (*English) Text_Analyzing_FindTypeSources(d time.Duration) string {
-	return fmt.Sprintf("Find type sources: %s", d)
+func (*English) Text_Analyzing_ConfirmTypeSources(d time.Duration) string {
+	return fmt.Sprintf("Confirmed type sources: %s", d)
 }
 
 func (*English) Text_Analyzing_CollectSelectors(d time.Duration) string {
-	return fmt.Sprintf("Collect selectors: %s", d)
+	return fmt.Sprintf("Collected selectors: %s", d)
 }
 
 func (*English) Text_Analyzing_FindImplementations(d time.Duration) string {
-	return fmt.Sprintf("Find implementations: %s", d)
+	return fmt.Sprintf("Found implementations: %s", d)
 }
 
 func (*English) Text_Analyzing_RegisterInterfaceMethodsForTypes(d time.Duration) string {
-	return fmt.Sprintf("Register interface methods: %s", d)
+	return fmt.Sprintf("Registered interface methods: %s", d)
 }
 
 func (*English) Text_Analyzing_MakeStatistics(d time.Duration) string {
-	return fmt.Sprintf("Make statistics: %s", d)
+	return fmt.Sprintf("Made statistics: %s", d)
 }
 
 func (*English) Text_Analyzing_CollectSourceFiles(d time.Duration) string {
-	return fmt.Sprintf("Collect Source Files: %s", d)
+	return fmt.Sprintf("Collected Source Files: %s", d)
 }
 
 func (*English) Text_Analyzing_CollectObjectReferences(d time.Duration) string {
-	return fmt.Sprintf("Collect Object References: %s", d)
+	return fmt.Sprintf("Collected Object References: %s", d)
 }
 
 func (*English) Text_Analyzing_CacheSourceFiles(d time.Duration) string {
-	return fmt.Sprintf("Cache Source Files: %s", d)
+	return fmt.Sprintf("Cached Source Files: %s", d)
 }
 
 func (*English) Text_Analyzing_Done(d time.Duration, memoryUse string) string {
@@ -626,18 +626,18 @@ func (*English) Text_Othertatistics(values map[string]interface{}) string {
 // footer
 ///////////////////////////////////////////////////////////////////
 
-func (*English) Text_GeneratedPageFooter(goldVersion, qrCodeLink, goOS, goArch string) string {
+func (*English) Text_GeneratedPageFooter(goldsVersion, qrCodeLink, goOS, goArch string) string {
 	var qrImg string
 	if qrCodeLink != "" {
 		qrImg = fmt.Sprintf(`<img src="%s">`, qrCodeLink)
 	}
 	return fmt.Sprintf(`<table><tr><td>%s</td>
 <td>The pages are generated with <a href="https://go101.org/article/tool-golds.html"><b>Golds</b></a> <i>%s</i>. (GOOS=%s GOARCH=%s)
-<b>Golds</b> is a <a href="https://go101.org">Go 101</a> project and developed by <a href="https://tapirgames.com">Tapir Liu</a>.
+<b>Golds</b> is a <a href="https://go101.org">Go 101</a> project developed by <a href="https://tapirgames.com">Tapir Liu</a>.
 PR and bug reports are welcome and can be submitted to <a href="https://github.com/go101/golds">the issue list</a>.
-Please follow <a href="https://twitter.com/go100and1">@Go100and1</a> (reachable from the left QR code) to get the latest news of <b>Golds</b>.</td></tr></table`,
+Please follow <a href="https://twitter.com/go100and1">@Go100and1</a> (reachable from the left QR code) to get the latest news of <b>Golds</b>.</td></tr></table>`,
 		qrImg,
-		goldVersion,
+		goldsVersion,
 		goOS,
 		goArch,
 	)

@@ -20,7 +20,7 @@ const (
 	SubTask_SortPackagesByDependencies
 	SubTask_CollectDeclarations
 	SubTask_CollectRuntimeFunctionPositions
-	SubTask_FindTypeSources
+	SubTask_ConfirmTypeSources
 	SubTask_CollectSelectors
 	SubTask_CheckCollectedSelectors
 	SubTask_FindImplementations
