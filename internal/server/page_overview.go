@@ -90,7 +90,7 @@ func (ds *docServer) overviewPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ds *docServer) buildOverviewPage(w http.ResponseWriter, overview *Overview, sortBy string) []byte {
-	page := NewHtmlPage(ds.goldsVersion, ds.currentTranslation.Text_Overview(), ds.currentTheme, ds.currentTranslation, pagePathInfo{ResTypeNone, ""})
+	page := NewHtmlPage(goldsVersion, ds.currentTranslation.Text_Overview(), ds.currentTheme, ds.currentTranslation, pagePathInfo{ResTypeNone, ""})
 	fmt.Fprintf(page, `
 <pre><code><span style="font-size:xx-large;">%s</span></code></pre>
 `,
@@ -203,9 +203,8 @@ func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*Package
 		}
 	}
 
-	promoteWDPkgs := emphasizeWDPackages || ds.emphasizeWDPkgs
-
-	if promoteWDPkgs {
+	switch wdPkgsListingManner {
+	case WdPkgsListingManner_promoted:
 		lastInWorkingDirectory := false
 		for i, pkg := range packages {
 			if lastInWorkingDirectory != pkg.InWorkingDirectory {
@@ -216,7 +215,15 @@ func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*Package
 			}
 			listPackage(i, pkg)
 		}
-	} else {
+	case WdPkgsListingManner_solo:
+		i := 0
+		for _, pkg := range packages {
+			if pkg.InWorkingDirectory {
+				listPackage(i, pkg)
+				i++
+			}
+		}
+	case WdPkgsListingManner_general:
 		for i, pkg := range packages {
 			listPackage(i, pkg)
 		}
@@ -300,7 +307,7 @@ func (ds *docServer) buildOverviewData(sortBy string) *Overview {
 	case "alphabet":
 		// ToDo: might be problematic sometimes. Should sort token by token.
 		sort.Slice(result, func(a, b int) bool {
-			promoteWDPkgs := emphasizeWDPackages || ds.emphasizeWDPkgs
+			promoteWDPkgs := wdPkgsListingManner == WdPkgsListingManner_promoted // emphasizeWDPackages // || ds.emphasizeWDPkgs
 			if promoteWDPkgs {
 				if result[a].InWorkingDirectory != result[b].InWorkingDirectory {
 					return result[a].InWorkingDirectory

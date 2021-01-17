@@ -32,11 +32,11 @@ const (
 type docServer struct {
 	mutex sync.Mutex
 
-	appPkgPath   string
-	goldsVersion string
+	appPkgPath string
+	//goldsVersion string
 
 	workingDirectory string
-	emphasizeWDPkgs  bool
+	//emphasizeWDPkgs  bool
 
 	//
 	allThemes                  []Theme
@@ -82,10 +82,10 @@ func Run(options PageOutputOptions, args []string, recommendedPort string, silen
 	setPageOutputOptions(options, false)
 
 	ds := &docServer{
-		appPkgPath:   appPkgPath,
-		goldsVersion: options.GoldsVersion,
+		appPkgPath: appPkgPath,
+		//goldsVersion: options.GoldsVersion,
 
-		emphasizeWDPkgs: options.EmphasizeWDPkgs,
+		//emphasizeWDPkgs: options.EmphasizeWDPkgs,
 
 		phase:           Phase_Unprepared,
 		analyzer:        &code.CodeAnalyzer{},
@@ -206,9 +206,9 @@ func (ds *docServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			ds.loadAPI(w, r)
 		}
 	case ResTypeCSS: // "css"
-		ds.cssFile(w, r, removeVersionFromFilename(resPath, ds.goldsVersion))
+		ds.cssFile(w, r, removeVersionFromFilename(resPath, goldsVersion))
 	case ResTypeJS: // "jvs"
-		ds.javascriptFile(w, r, removeVersionFromFilename(resPath, ds.goldsVersion))
+		ds.javascriptFile(w, r, removeVersionFromFilename(resPath, goldsVersion))
 	case ResTypeSVG: // "svg"
 		ds.svgFile(w, r, resPath)
 	case ResTypePNG: // "png"

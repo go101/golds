@@ -19,33 +19,51 @@ type PageOutputOptions struct {
 
 	NoIdentifierUsesPages bool
 	PlainSourceCodePages  bool
-	EmphasizeWDPkgs       bool
+	//EmphasizeWDPkgs       bool
+	WdPkgsListingManner string
+	FooterShowingManner string
 
 	// ToDo:
-	ListUnexportedRes   bool
-	WorkingDirectory    string
-	WdPkgsListingManner string
+	//ListUnexportedRes   bool
 }
 
 var (
 	testingMode = false
-	genDocsMode = false
+	genDocsMode = false // static docs generation mode
+	footerHTML  string  // for static docs generation mode only
 
-	buildIdUsesPages       = true  // might be false in gen mode
-	enableSoruceNavigation = true  // false to disable method implementation pages and some code reading features
-	emphasizeWDPackages    = false // list packages in the current directory before other packages
-	goldsVersion           string
+	goldsVersion string
+
+	buildIdUsesPages       = true // might be false in gen mode
+	enableSoruceNavigation = true // false to disable method implementation pages and some code reading features
+	//emphasizeWDPackages    = false // list packages in the current directory before other packages
+	wdPkgsListingManner = WdPkgsListingManner_general
+	footerShowingManner = FooterShowingManner_none
 
 	// ToDo: use this one to replace the above ones.
 	pageOutputOptions PageOutputOptions
 )
 
+// This function should be called at prgram startup phase once.
 func setPageOutputOptions(options PageOutputOptions, forTesting bool) {
+	goldsVersion = options.GoldsVersion
 	buildIdUsesPages = !options.NoIdentifierUsesPages || forTesting
 	enableSoruceNavigation = !options.PlainSourceCodePages || forTesting
-	emphasizeWDPackages = options.EmphasizeWDPkgs || forTesting
-	goldsVersion = options.GoldsVersion
+	//emphasizeWDPackages = options.EmphasizeWDPkgs || forTesting
+	wdPkgsListingManner = options.WdPkgsListingManner
+	footerShowingManner = options.FooterShowingManner
 }
+
+const (
+	WdPkgsListingManner_general  = "general"
+	WdPkgsListingManner_promoted = "promoted"
+	WdPkgsListingManner_solo     = "solo"
+
+	FooterShowingManner_none               = "none"
+	FooterShowingManner_simple             = "simple"
+	FooterShowingManner_verbose            = "verbose"
+	FooterShowingManner_verbose_and_qrcode = "verbose+qrcode"
+)
 
 type pageResType string
 
@@ -138,8 +156,8 @@ type htmlPage struct {
 	//bytes.Buffer
 	content Content
 
-	goldsVersion string
-	PathInfo     pagePathInfo
+	//goldsVersion string
+	PathInfo pagePathInfo
 
 	// ToDo: use the two instead of server.currentXXXs.
 	//theme Theme
@@ -159,10 +177,10 @@ type pagePathInfo struct {
 
 func NewHtmlPage(goldsVersion, title string, theme Theme, translation Translation, currentPageInfo pagePathInfo) *htmlPage {
 	page := htmlPage{
-		PathInfo:     currentPageInfo,
-		goldsVersion: goldsVersion,
-		translation:  translation,
-		isHTML:       isHTMLPage(currentPageInfo.resType),
+		PathInfo: currentPageInfo,
+		//goldsVersion: goldsVersion,
+		translation: translation,
+		isHTML:      isHTMLPage(currentPageInfo.resType),
 	}
 	//page.Grow(4 * 1024 * 1024)
 
@@ -179,8 +197,8 @@ func NewHtmlPage(goldsVersion, title string, theme Theme, translation Translatio
 <body><div>
 `,
 			title,
-			buildPageHref(currentPageInfo, pagePathInfo{ResTypeCSS, addVersionToFilename(theme.Name(), page.goldsVersion)}, nil, ""),
-			buildPageHref(currentPageInfo, pagePathInfo{ResTypeJS, addVersionToFilename("golds", page.goldsVersion)}, nil, ""),
+			buildPageHref(currentPageInfo, pagePathInfo{ResTypeCSS, addVersionToFilename(theme.Name(), goldsVersion)}, nil, ""),
+			buildPageHref(currentPageInfo, pagePathInfo{ResTypeJS, addVersionToFilename("golds", goldsVersion)}, nil, ""),
 		)
 	}
 
@@ -190,23 +208,34 @@ func NewHtmlPage(goldsVersion, title string, theme Theme, translation Translatio
 // ToDo: w is not used now. It will be used if the page cache feature is remvoed later.s
 func (page *htmlPage) Done(w io.Writer) []byte {
 	if page.isHTML {
-		var qrImgLink string
-		switch page.translation.(type) {
-		case *translations.Chinese:
-			qrImgLink = buildPageHref(page.PathInfo, pagePathInfo{ResTypePNG, "go101-wechat"}, nil, "")
-		case *translations.English:
-			qrImgLink = buildPageHref(page.PathInfo, pagePathInfo{ResTypePNG, "go101-twitter"}, nil, "")
+		if footerShowingManner == FooterShowingManner_none {
+		} else if genDocsMode && footerHTML != "" {
+			page.WriteString(footerHTML)
+		} else {
+			var footer string
+			page.WriteString(`<pre id="footer">`)
+			page.WriteByte('\n')
+			if footerShowingManner == FooterShowingManner_simple {
+				footer = page.translation.Text_GeneratedPageFooterSimple(goldsVersion, build.Default.GOOS, build.Default.GOARCH)
+			} else { // FooterShowingManner_verbose, FooterShowingManner_verbose_and_qrcode
+				var qrImgLink string
+				if footerShowingManner == FooterShowingManner_verbose_and_qrcode {
+					switch page.translation.(type) {
+					case *translations.Chinese:
+						qrImgLink = buildPageHref(page.PathInfo, pagePathInfo{ResTypePNG, "go101-wechat"}, nil, "")
+					case *translations.English:
+						qrImgLink = buildPageHref(page.PathInfo, pagePathInfo{ResTypePNG, "go101-twitter"}, nil, "")
+					}
+				}
+				footer = page.translation.Text_GeneratedPageFooter(goldsVersion, qrImgLink, build.Default.GOOS, build.Default.GOARCH)
+			}
+			page.WriteString(footer)
+			page.WriteString(`</pre>`)
+
+			if genDocsMode {
+				footerHTML = footer
+			}
 		}
-
-		fmt.Fprintf(page, `<pre id="footer">
-%s
-</pre>`,
-			page.translation.Text_GeneratedPageFooter(page.goldsVersion, qrImgLink, build.Default.GOOS, build.Default.GOARCH),
-		)
-
-		page.WriteString(`
-</div></body></html>`,
-		)
 	}
 
 	//return append([]byte(nil), page.Bytes()...)

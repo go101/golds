@@ -321,9 +321,9 @@ func GenDocs(options PageOutputOptions, args []string, outputDir string, silentM
 
 	// ...
 	ds := &docServer{
-		goldsVersion: options.GoldsVersion,
-		phase:        Phase_Unprepared,
-		analyzer:     &code.CodeAnalyzer{},
+		//goldsVersion: options.GoldsVersion,
+		phase:    Phase_Unprepared,
+		analyzer: &code.CodeAnalyzer{},
 	}
 	ds.initSettings(options.PreferredLang)
 	ds.analyze(args, printUsage)

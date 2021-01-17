@@ -593,3 +593,12 @@ func (*Chinese) Text_GeneratedPageFooter(goldsVersion, qrCodeLink, goOS, goArch 
 		goArch,
 	)
 }
+
+func (*Chinese) Text_GeneratedPageFooterSimple(goldsVersion, goOS, goArch string) string {
+	return fmt.Sprintf(`<table><tr><td>%s</td>
+<td>本页面由 <a href="https://go101.org/article/tool-golds.html"><b>Golds</b></a> <i>%s</i> 生成。（GOOS=%s GOARCH=%s）`,
+		goldsVersion,
+		goOS,
+		goArch,
+	)
+}

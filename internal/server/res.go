@@ -119,6 +119,7 @@ type Translation interface {
 
 	// Footer
 	Text_GeneratedPageFooter(goldsVersion, qrCodeLink, goOS, goArch string) string
+	Text_GeneratedPageFooterSimple(goldsVersion, goOS, goArch string) string
 }
 
 func (ds *docServer) currentSettings() (Theme, Translation) {

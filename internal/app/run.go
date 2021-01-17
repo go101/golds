@@ -100,27 +100,63 @@ func Run() {
 		return
 	}
 
-	emphasizeWDPkgs := *emphasizeWorkingDirectoryPackages
+	// docs generating
+
+	wdPkgsListingManner := *wdPkgsListingMannerFlag
+	switch wdPkgsListingManner {
+	default:
+		log.Println("Unknown wdpkgs-listing option:", wdPkgsListingManner)
+		return
+	case "":
+		wdPkgsListingManner = server.WdPkgsListingManner_general
+	case server.WdPkgsListingManner_general:
+	case server.WdPkgsListingManner_promoted:
+	case server.WdPkgsListingManner_solo:
+	}
+	if *emphasizeWdPackagesFlag {
+		if wdPkgsListingManner != server.WdPkgsListingManner_promoted {
+			log.Println("emphasize-wdpkgs and wdpkgs-listing options conflict")
+			return
+		}
+		log.Println("The -emphasize-wdpkgs option has been depreciated by -wdpkgs-listing=promoted")
+		log.Println()
+	}
+
+	footerShowingManner := *footerShowingMannerFlag
+	switch footerShowingManner {
+	default:
+		log.Println("Unknown footer-showing option:", footerShowingManner)
+		return
+	case "":
+		footerShowingManner = server.FooterShowingManner_verbose_and_qrcode
+	case server.FooterShowingManner_none:
+	case server.FooterShowingManner_simple:
+	case server.FooterShowingManner_verbose:
+	case server.FooterShowingManner_verbose_and_qrcode:
+	}
+
 	if *compact {
 		*nouses = true
 		*plainsrc = true
-		// ToDo: exit on conflicts
 	}
+
 	options := server.PageOutputOptions{
 		GoldsVersion:          Version,
 		PreferredLang:         *langFlag,
 		NoIdentifierUsesPages: *nouses,
 		PlainSourceCodePages:  *plainsrc,
-		EmphasizeWDPkgs:       emphasizeWDPkgs,
+		//EmphasizeWDPkgs:       emphasizeWDPkgs,
+		WdPkgsListingManner: wdPkgsListingManner,
+		FooterShowingManner: footerShowingManner,
 	}
 
-	// docs generating mode
+	// static docs generating mode
 	if gen := *genFlag; gen {
 		outputDir := validateDir(*dirFlag)
 		switch intent := *genIntentFlag; intent {
 		default:
 			log.Println("Unknown gen intent:", intent)
-			printUsage(os.Stdout)
+			//printUsage(os.Stdout)
 		case "testdata":
 			server.GenTestData(flag.Args(), outputDir, silentMode, printUsage)
 		case "docs":
@@ -134,7 +170,7 @@ func Run() {
 		return
 	}
 
-	// docs serving mode
+	// dynamic docs serving mode
 
 	//appPkgPath := "go101.org/gold" // changed to "golds" now.
 	appPkgPath := "go101.org/golds" // for updating Golds
@@ -162,10 +198,15 @@ var portFlag = flag.String("port", "", "preferred server port [1024, 65536]. Def
 var sFlag = flag.Bool("s", false, "not open a browser automatically")
 var silentFlag = flag.Bool("silent", false, "not open a browser automatically")
 var moregcFlag = flag.Bool("moregc", false, "increase garbage collection frequency")
-var emphasizeWorkingDirectoryPackages = flag.Bool("emphasize-wdpkgs", false, "disable the source navigation feature")
+var footerFlag = flag.String("footer", "verbose", "verbose | simple | none")
 var nouses = flag.Bool("nouses", false, "disable the identifier uses feature")
 var plainsrc = flag.Bool("plainsrc", false, "disable the source navigation feature")
 var compact = flag.Bool("compact", false, "sacrifice some disk-consuming features in generation")
+
+// depreciated by "-wdpkgs-listing=promoted" since v0.1.8
+var emphasizeWdPackagesFlag = flag.Bool("emphasize-wdpkgs", false, "promote working directory packages")
+var wdPkgsListingMannerFlag = flag.String("wdpkgs-listing", "", "specify how to list working directory packages")
+var footerShowingMannerFlag = flag.String("footer-showing", "", "specify how page footers should be shown")
 
 func printVersion(out io.Writer) {
 	fmt.Fprintf(out, "Golds %s\n", Version)
@@ -228,6 +269,22 @@ Options:
 		List the packages under the current
 		directory before other pacakges.
 		For HTML docs generation mode only.
+	-wdpkgs-listing=promoted|solo|general
+		Specify how to list the packages in the
+		working directory (default is general):
+		* promoted: list them before others.
+		* solo: list them without others.
+		* general: list them with others by
+		  alphabetical order.
+	-footer-showing=verbose+qrcode|verbose|simple|none
+		Specify how page footers should be shown.
+		Avaliable values (default is verbose+qrcode):
+		* none: show nothing.
+		* simple: show Golds version only.
+		* verbose: also show Golds author
+		  promotion info.
+		* verbose+qrcode: include verbose content
+		  and a qr-code.
 
 Examples:
 	%[1]v std

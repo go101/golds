@@ -642,3 +642,11 @@ Please follow <a href="https://twitter.com/go100and1">@Go100and1</a> (reachable 
 		goArch,
 	)
 }
+
+func (*English) Text_GeneratedPageFooterSimple(goldsVersion, goOS, goArch string) string {
+	return fmt.Sprintf(`The pages are generated with <a href="https://go101.org/article/tool-golds.html"><b>Golds</b></a> <i>%s</i>. (GOOS=%s GOARCH=%s)`,
+		goldsVersion,
+		goOS,
+		goArch,
+	)
+}

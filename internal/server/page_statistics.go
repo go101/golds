@@ -37,7 +37,7 @@ func (ds *docServer) statisticsPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ds *docServer) buildStatisticsPage(w http.ResponseWriter) []byte {
-	page := NewHtmlPage(ds.goldsVersion, ds.currentTranslation.Text_Statistics(), ds.currentTheme, ds.currentTranslation, pagePathInfo{ResTypeNone, "statistics"})
+	page := NewHtmlPage(goldsVersion, ds.currentTranslation.Text_Statistics(), ds.currentTheme, ds.currentTranslation, pagePathInfo{ResTypeNone, "statistics"})
 	fmt.Fprintf(page, `
 <pre><code><span style="font-size:xx-large;">%s</span></code></pre>
 `,
