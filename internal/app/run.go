@@ -265,7 +265,7 @@ Options:
 		This is a shortcut of the combination
 		of several other options, including
 		-nouses and -plainsrc now.
-	-emphasize-wdpkgs
+	-emphasize-wdpkgs (depreciated)
 		List the packages under the current
 		directory before other pacakges.
 		For HTML docs generation mode only.
