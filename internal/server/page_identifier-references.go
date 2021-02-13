@@ -320,7 +320,7 @@ func (ds *docServer) buildReferencesData(pkgPath, identifier string) (*Reference
 			}
 		}
 		for _, f := range pkg.AllFunctions {
-			if f.Name() == tokens[0] {
+			if !f.IsMethod() && f.Name() == tokens[0] {
 				res = f
 				if f.Func != nil {
 					obj = f.Func
@@ -365,6 +365,7 @@ func (ds *docServer) buildReferencesData(pkgPath, identifier string) (*Reference
 					}
 				}
 				return nil, fmt.Errorf("selector %s is not found for type %s in package %s", tokens[1], tokens[0], pkgPath)
+
 			SelFound:
 
 				res, obj = tn, sel.Object()
@@ -373,6 +374,7 @@ func (ds *docServer) buildReferencesData(pkgPath, identifier string) (*Reference
 		}
 		return nil, fmt.Errorf("type %s is not found in package %s", tokens[0], pkgPath)
 	}
+
 ResFound:
 
 	var refs []*ObjectReferences
