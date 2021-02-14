@@ -2,12 +2,14 @@ package server
 
 import (
 	"fmt"
+	"go/build"
 	"io"
 	"log"
 	"math/rand"
 	"net"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -135,6 +137,11 @@ NextTry:
 		log.Fatal(err)
 	}
 
+	args, err = ds.validateArguments(args)
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	go func() {
 		ds.analyze(args, printUsage)
 		ds.analyzingLogger.SetPrefix("")
@@ -155,6 +162,8 @@ NextTry:
 		ReadTimeout:  5 * time.Second,
 	}).Serve(l)
 }
+
+var sem = make(chan struct{}, 10)
 
 func (ds *docServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// To avoid too hight peak memory use cause by DDOS attack.
@@ -252,7 +261,36 @@ func (ds *docServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-var sem = make(chan struct{}, 10)
+func (ds *docServer) validateArguments(args []string) ([]string, error) {
+	if len(args) == 0 {
+		//args = []string{"."}
+		panic("should not")
+	} else if len(args) == 1 && args[0] == "std" {
+		os.Setenv("GO111MODULE", "off")
+		os.Setenv("CGO_ENABLED", "0")
+	} else {
+		hasToolchain, dotPath := false, ""
+		for i, p := range args {
+			if p == "toolchain" {
+				hasToolchain = true
+				args[i] = "./..."
+			} else if dotPath != "" {
+				continue
+			}
+			if p == "." || strings.HasPrefix(p, "./") || strings.HasPrefix(p, ".\\") {
+				dotPath = p
+			}
+		}
+		if hasToolchain {
+			if dotPath != "" {
+				return nil, fmt.Errorf("toolchain argument conflicts with %s\n", dotPath)
+			}
+			os.Chdir(filepath.Join(build.Default.GOROOT, "src", "cmd"))
+		}
+	}
+
+	return args, nil
+}
 
 func (ds *docServer) analyze(args []string, printUsage func(io.Writer)) {
 	ds.workingDirectory, _ = os.Getwd()
@@ -267,21 +305,14 @@ func (ds *docServer) analyze(args []string, printUsage func(io.Writer)) {
 		ds.registerAnalyzingLogMessage(func() string { return "" })
 	}()
 
-	if len(args) == 0 {
-		args = []string{"."}
-	} else if len(args) == 1 && args[0] == "std" {
-		os.Setenv("GO111MODULE", "off")
-		os.Setenv("CGO_ENABLED", "0")
-	}
-
 	ds.registerAnalyzingLogMessage(func() string {
 		return ds.currentTranslationSafely().Text_Analyzing_Start()
 	})
 
 	if !ds.analyzer.ParsePackages(ds.onAnalyzingSubTaskDone, args...) {
-		if printUsage != nil {
-			printUsage(os.Stdout)
-		}
+		//if printUsage != nil {
+		printUsage(os.Stdout)
+		//}
 		os.Exit(1)
 	}
 

@@ -2,16 +2,13 @@
 
 ### Soon to do
 
-* about https://github.com/go101/golds/issues/9 and to avoid depings affecting depeds' docs:
-  * need to implement the module aware features firstly.
-  * std packages are in a std module
-  * note: the dependencies of modules can be bidirectional
-  * within a module: allow mutual references  
-    for two packages not in the same module, only deping can reference deped.
+* Unexported functions/methods of depending packages not shown in the method list of the types
+  when show unexported types now.
+  * show=all also for functions.
 
-* show method docs in package details pages 
-  * how to handle duplicated methods caused by interface embedding interfaces.
-    Their docs might be different.
+* add an index section
+
+* -format=[html|json|txt|md]
 
 * show/run examples/tests/banchmarks
   * run source code, run main package
@@ -19,15 +16,27 @@
   * "go/doc": doc.Examples(...)
   * websocket: monitor page leave and shutdown unfinished Go processes.
 
+* about https://github.com/go101/golds/issues/9 and to avoid depings affecting depeds' docs:
+  * need to implement the module aware features firstly.
+    https://github.com/rogpeppe/go-internal
+  * std packages are in a std module
+  * note: the dependencies of modules can be bidirectional
+  * within a module: allow mutual references  
+    for two packages not in the same module, only deping can reference deped.
+
+* modify the cache system to only cache most visited and recent ones
+
+* css style
+  * https://github.com/go101/golds/issues/13
+
+* show method docs in package details pages 
+  * how to handle duplicated methods caused by interface embedding interfaces.
+    Their docs might be different.
+
 * show package reference list (for example, find all unsafe uses)
 
 * in update: notify users the default program name has changed to "golds".
   update should be self-adptive by program name, in the update tips etc.
-
-* -target=[html|json]
-
-* Unexported functions/methods of depending packages not shown in the method list of the types
-  when show unexported types now.
 
 * make overview and package detials pages always contain unexported info, Use JS to sort and show.
 
@@ -74,7 +83,6 @@
 
 * gen mode: merge docs for several (GOOS, GOARCH) compositions. At least for std.
 
-* css style
 * js:
   * shortcuts:
     * -: collapse value/type docs
@@ -116,6 +124,7 @@
 
 * For std pacakges: show which version of Go introduced a particular function/type, etc.
   * or for any modules
+  * note: https://github.com/golang/go/issues/44081
 
 * go-callvis like, call relations
 

@@ -118,10 +118,12 @@ Start:
 		//},
 
 		ParseFile: func(fset *token.FileSet, filename string, src []byte) (*ast.File, error) {
-			if num := atomic.AddInt32(&numParsedPackages, 1); num == 1 {
-				logProgress(true, SubTask_PreparationDone)
-			} else if num&(num-1) == 0 {
-				logProgress(false, SubTask_NFilesParsed, num)
+			if num := atomic.AddInt32(&numParsedPackages, 1); num&(num-1) == 0 {
+				if num == 1 {
+					logProgress(true, SubTask_PreparationDone)
+				} else {
+					logProgress(false, SubTask_NFilesParsed, num)
+				}
 			}
 
 			//defer log.Println("parsed", filename)
@@ -149,21 +151,6 @@ Start:
 		return false
 	}
 
-	if num := atomic.AddInt32(&numParsedPackages, 1); num == 1 || num&(num-1) != 0 {
-		logProgress(true, SubTask_ParsePackagesDone, num)
-	} else {
-		//logProgress(true, SubTask_ParsePackagesDone, -1) //why?
-	}
-
-	stdPkgs, err := collectStdPackages()
-	if err != nil {
-		log.Fatal("failed to collect std packages: ", err)
-	}
-
-	defer func() {
-		logProgress(true, SubTask_CollectPackages, int32(len(d.packageList)))
-	}()
-
 	var hasErrors bool
 	for _, ppkg := range ppkgs {
 		switch ppkg.PkgPath {
@@ -180,6 +167,19 @@ Start:
 	}
 	if hasErrors {
 		log.Fatal("exit for above errors")
+	}
+
+	if num := numParsedPackages; num&(num-1) != 0 {
+		logProgress(true, SubTask_ParsePackagesDone, num)
+	}
+
+	defer func() {
+		logProgress(true, SubTask_CollectPackages, int32(len(d.packageList)))
+	}()
+
+	stdPkgs, err := collectStdPackages()
+	if err != nil {
+		log.Fatal("failed to collect std packages: ", err)
 	}
 
 	var allPPkgs = collectPPackages(ppkgs)
