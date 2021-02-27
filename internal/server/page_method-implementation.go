@@ -199,7 +199,7 @@ func (ds *docServer) buildImplementationData(analyzer *code.CodeAnalyzer, pkgPat
 	var nonImplementingMethodCount int32
 
 	methodImplementations := make([]MethodImplementations, 0, len(typeInfo.AllMethods))
-	methodSelectors := buildTypeMethodsList(typeInfo, true)
+	methodSelectors, _ := buildTypeMethodsList(typeInfo, true)
 	if isInterface {
 		if len(typeInfo.ImplementedBys) == 0 {
 			return nil, fmt.Errorf("no types implement %s.%s", pkgPath, typeName)
@@ -207,7 +207,7 @@ func (ds *docServer) buildImplementationData(analyzer *code.CodeAnalyzer, pkgPat
 
 		for _, sel := range methodSelectors {
 			impls := make([]MethodInfo, 0, len(typeInfo.ImplementedBys))
-			impBys := ds.sortTypeList(buildTypeImplementedByList(analyzer, typeInfo, true, typeNameRes), pkg)
+			impBys, _ := buildTypeImplementedByList(analyzer, pkg, typeInfo, true, typeNameRes)
 			selNameIsUnexported := !token.IsExported(sel.Name())
 			for _, impBy := range impBys {
 				impByDenoting := impBy.TypeName.Denoting()
@@ -241,7 +241,7 @@ func (ds *docServer) buildImplementationData(analyzer *code.CodeAnalyzer, pkgPat
 
 		for _, sel := range methodSelectors {
 			impls := make([]MethodInfo, 0, len(typeInfo.Implements))
-			imps := ds.sortTypeList(buildTypeImplementsList(analyzer, typeInfo, true), pkg)
+			imps, _ := buildTypeImplementsList(analyzer, pkg, typeInfo, true)
 			selNameIsUnexported := !token.IsExported(sel.Name())
 			for _, imp := range imps {
 				impDenoting := imp.TypeName.Denoting()

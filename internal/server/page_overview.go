@@ -136,7 +136,7 @@ func (ds *docServer) buildOverviewPage(w http.ResponseWriter, overview *Overview
 }
 
 func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*PackageForListing, writeAnchorTarget bool, sortBy string) {
-	const MainPkgArrowCharCount = 3
+	const MainPkgArrowCharCount = 2
 	const MinPrefixSpacesCount = 3
 	var maxDigitCount = 2 // 2 for ". " suffix
 	for n := len(packages); n > 0; n /= 10 {

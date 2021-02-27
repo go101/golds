@@ -37,13 +37,19 @@ func (*English) Text_Period(paragraphEnd bool) string {
 	}
 }
 
+func (*English) Text_Parenthesis(close bool) string {
+	if close {
+		return ")"
+	} else {
+		return " ("
+	}
+}
+
 func (*English) Text_EnclosedInOarentheses(text string) string {
 	return " (" + text + ")"
 }
 
 func (*English) Text_PreferredFontList() string { return `"Courier New", Courier, monospace` }
-
-func (*English) Text_BlankList() string { return "(none)" }
 
 ///////////////////////////////////////////////////////////////////
 // server
@@ -276,29 +282,64 @@ func (*English) Text_ImportStat(numImports, numImportedBys int, depPageURL strin
 
 func (*English) Text_InvolvedFiles(num int) string { return "Involved Source Files" }
 
-func (*English) Text_ExportedValues(num int) string {
-	return "Exported Values"
-}
-
-func (*English) Text_ExportedTypeNames(num int) string {
-	return "Exported Type Names"
-}
-
-func (*English) Text_AllPackageLevelTypeNames(num int) string {
+func (*English) Text_PackageLevelTypeNames() string {
 	return "Package-Level Type Names"
 }
 
-func (*English) Text_TypeNameListShowOption(exportedsOnly bool) string {
-	if exportedsOnly {
-		return "only show exported types"
+//func (*English) Text_AllPackageLevelValues(num int) string {
+//	return "Package-Level Values"
+//}
+
+func (*English) Text_PackageLevelFunctions() string {
+	return "Package-Level Functions"
+}
+func (*English) Text_PackageLevelVariables() string {
+	return "Package-Level Variables"
+}
+func (*English) Text_PackageLevelConstants() string {
+	return "Package-Level Constants"
+}
+
+func (*English) Text_PackageLevelResourceSimpleStat(num, numExporteds int) string {
+	if numExporteds == 0 {
+		if num == 1 {
+			return "only one, it is unexported"
+		}
+		return fmt.Sprintf("total %d, all are unexported", num)
+	}
+	if numExporteds == num {
+		if num == 1 {
+			return "only one, it is exported"
+		}
+		return fmt.Sprintf("total %d, all are exported", num)
+	}
+	if numExporteds == 1 {
+		return fmt.Sprintf("total %d, one is exported", num)
+	}
+	return fmt.Sprintf("total %d, in which %d are exported", num, numExporteds)
+}
+
+func (*English) Text_UnexportedResourcesHeader(show bool, numUnexporteds int) string {
+	if show {
+		if numUnexporteds == 1 {
+			return "/* --- one unexported ... --- */"
+		}
+		return fmt.Sprintf("/* %d unexporteds ... */", numUnexporteds)
 	} else {
-		return "also show unexported types"
+		if numUnexporteds == 1 {
+			return "/* one unexported: */"
+		}
+		return fmt.Sprintf("/* %d unexporteds: */", numUnexporteds)
 	}
 }
 
 ///////////////////////////////////////////////////////////////////
 // package details page: type details
 ///////////////////////////////////////////////////////////////////
+
+func (*English) Text_BasicType() string {
+	return "basic type"
+}
 
 func (*English) Text_Fields(num int, exportedsOnly bool) string {
 	if exportedsOnly {
@@ -393,6 +434,10 @@ func (*English) Text_NumMethodsImplementingNothing(count int) string {
 
 func (*English) Text_ReferenceList() string {
 	return "References"
+}
+
+func (*English) Text_CurrentPackage() string {
+	return " (current package)"
 }
 
 func (*English) Text_ObjectKind(kind string) string {

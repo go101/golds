@@ -989,7 +989,8 @@ func (d *CodeAnalyzer) registerExplicitlyDeclaredMethod(f *Function) {
 func (d *CodeAnalyzer) registerFunctionForInvolvedTypeNames(f FunctionResource) (ins, outs int, lastResultIsError bool) {
 	// ToDo: unepxorted function should also reged,
 	//       but then they should be filtered out when in listing.
-	notToReg := !f.Exported()
+	//notToReg := !f.Exported()
+
 	//fType := f.AstDecl.Type
 	fType := f.AstFuncType()
 
@@ -1002,9 +1003,9 @@ func (d *CodeAnalyzer) registerFunctionForInvolvedTypeNames(f FunctionResource) 
 			} else {
 				ins += n
 			}
-			if notToReg {
-				continue
-			}
+			//if notToReg {
+			//	continue
+			//}
 			//d.iterateTypenames(fld.Type, f.Package(), func(t *TypeInfo) {
 			d.iterateTypenames(fld.Type, f.AstPackage(), func(t *TypeInfo) {
 				if t.TypeName == nil {
@@ -1033,9 +1034,9 @@ func (d *CodeAnalyzer) registerFunctionForInvolvedTypeNames(f FunctionResource) 
 			} else {
 				outs += n
 			}
-			if notToReg {
-				continue
-			}
+			//if notToReg {
+			//	continue
+			//}
 			//d.iterateTypenames(fld.Type, f.Package(), func(t *TypeInfo) {
 			d.iterateTypenames(fld.Type, f.AstPackage(), func(t *TypeInfo) {
 				if t.TypeName == nil {

@@ -2093,8 +2093,8 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 		return
 	}
 	for _, v := range pkg.PackageAnalyzeResult.AllVariables {
+		d.registerValueForItsTypeName(v)
 		if v.Exported() {
-			d.registerValueForItsTypeName(v)
 			d.stats.ExportedVariables++
 			incSliceStat(d.stats.ExportedIdentifiersByLength[:], len(v.Name()))
 			d.stats.ExportedIdentifersSumLength += int32(len(v.Name()))
@@ -2108,8 +2108,8 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 		}
 	}
 	for _, c := range pkg.PackageAnalyzeResult.AllConstants {
+		d.registerValueForItsTypeName(c)
 		if c.Exported() {
-			d.registerValueForItsTypeName(c)
 			d.stats.ExportedConstants++
 			incSliceStat(d.stats.ExportedIdentifiersByLength[:], len(c.Name()))
 			d.stats.ExportedIdentifersSumLength += int32(len(c.Name()))

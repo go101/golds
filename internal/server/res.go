@@ -24,9 +24,9 @@ type Translation interface {
 	Text_Comma() string
 	Text_Colon(tailSpace bool) string
 	Text_Period(paragraphEnd bool) string
+	Text_Parenthesis(close bool) string
 	Text_EnclosedInOarentheses(text string) string
 	Text_PreferredFontList() string
-	Text_BlankList() string
 
 	// server
 	Text_Server_Started() string
@@ -75,11 +75,15 @@ type Translation interface {
 	Text_ImportPath() string
 	Text_ImportStat(numImports, numImportedBys int, depPageURL string) string
 	Text_InvolvedFiles(num int) string
-	Text_ExportedValues(num int) string
-	Text_ExportedTypeNames(num int) string
-	Text_AllPackageLevelTypeNames(num int) string
-	Text_TypeNameListShowOption(exportedsOnly bool) string
+	Text_PackageLevelTypeNames() string
+	//Text_AllPackageLevelValues(num int) string
+	Text_PackageLevelFunctions() string
+	Text_PackageLevelVariables() string
+	Text_PackageLevelConstants() string
+	Text_PackageLevelResourceSimpleStat(num, numExporteds int) string
+	Text_UnexportedResourcesHeader(show bool, numUnexporteds int) string
 
+	Text_BasicType() string
 	Text_Fields(num int, exportedsOnly bool) string // ToDo: merge these into one?
 	Text_Methods(num int, exportedsOnly bool) string
 	Text_ImplementedBy(num int) string
@@ -100,6 +104,7 @@ type Translation interface {
 
 	// object references(uses) page
 	Text_ReferenceList() string
+	Text_CurrentPackage() string
 	Text_ObjectKind(kind string) string
 	Text_ObjectUses(num int) string // also used in other pages
 

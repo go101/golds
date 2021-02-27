@@ -16,20 +16,50 @@ h3 {background: #ddd;}
 
 .b {font-weight: bold;}
 
+.title:after {content: "{{ .Colon }}";}
+
+.type-res, .value-res {padding-top: 2px; padding-bottom: 2px;}
+
 /* content folding */
+div:target {display: block;}
 span.nodocs {padding-left: 1px; padding-right: 1px;}
 span.nodocs:before {content: ". ";}
 label {cursor: pointer; padding-left: 1px; padding-right: 1px;}
 input.fold {display: none;}
-input + label + .fold-items {display: none;}
-input + label + .fold-docs {display: none;}
-input:checked + label + .fold-items {display: inline;}
-input:checked + label + .fold-docs {display: inline;}
-input + label:before {content: "+ ";}
-input:checked + label:before {content: "- ";}
-input:checked + label.fold-items:after {content: "{{ .Colon }}";}
+/*input.fold + label +*/ .fold-items {display: none;}
+/*input.fold + label +*/ .fold-docs {display: none;}
+input.fold + label:before {content: "+ ";}
+input.fold:checked + label + .fold-items {display: inline;}
+input.fold:checked + label + .fold-docs {display: inline;}
+input.fold:checked + label:before {content: "- ";}
+input.fold:checked + label.fold-items:after {content: "{{ .Colon }}";}
 
-.title:after {content: "{{ .Colon }}";}
+.hidden {display: none;}
+.show-inline {display: inline;}
+.hide-inline {display: none;}
+input.showhide {display: none;}
+input.showhide:checked + i .show-inline {display: none;}
+input.showhide:checked + i .hide-inline {display: inline;}
+input.showhide:checked ~ span.hidden {display: inline;}
+input.showhide:checked ~ div.hidden {display: block;}
+
+/*
+#pkg-doc {
+	position: fixed;
+	top: 0;
+	height: 100%;
+	width: 80%;
+	background: #fcc;
+}
+#pkg-doc:not(:target) {
+	right: -100%;
+	transition: right .5s;
+}
+#pkg-doc:target {
+	right: 0;
+	transition: right 1s;
+}
+*/
 
 /* code page */
 pre.line-numbers {
@@ -87,7 +117,6 @@ code .comment {color: green; font-style: italic;}
 }
 
 .golds-update {text-align: center; font-size: smaller; background: #eee; padding: 3px;}
-.hidden {display: none;}
 
 `
 }

@@ -142,6 +142,7 @@ func Run() {
 	if *compact {
 		*nouses = true
 		*plainsrc = true
+		*nounexporteds = true
 	}
 
 	options := server.PageOutputOptions{
@@ -149,6 +150,7 @@ func Run() {
 		PreferredLang:         *langFlag,
 		NoIdentifierUsesPages: *nouses,
 		PlainSourceCodePages:  *plainsrc,
+		NotCollectUnexporteds: *nounexporteds,
 		//EmphasizeWDPkgs:       emphasizeWDPkgs,
 		WdPkgsListingManner: wdPkgsListingManner,
 		FooterShowingManner: footerShowingManner,
@@ -205,6 +207,7 @@ var moregcFlag = flag.Bool("moregc", false, "increase garbage collection frequen
 var footerFlag = flag.String("footer", "verbose", "verbose | simple | none")
 var nouses = flag.Bool("nouses", false, "disable the identifier uses feature")
 var plainsrc = flag.Bool("plainsrc", false, "disable the source navigation feature")
+var nounexporteds = flag.Bool("nounexporteds", false, "don't collect unexported package-level resources")
 var compact = flag.Bool("compact", false, "sacrifice some disk-consuming features in generation")
 
 // depreciated by "-wdpkgs-listing=promoted" since v0.1.8

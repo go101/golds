@@ -25,16 +25,20 @@ func (*Chinese) Text_Colon(tailSpace bool) string { return "：" }
 
 func (*Chinese) Text_Period(paragraphEnd bool) string { return "。" }
 
+func (*Chinese) Text_Parenthesis(close bool) string {
+	if close {
+		return "）"
+	} else {
+		return "（"
+	}
+}
+
 func (*Chinese) Text_EnclosedInOarentheses(text string) string {
 	return "（" + text + "）"
 }
 
 func (*Chinese) Text_PreferredFontList() string {
 	return `"Courier New", Courier, monospace, "Microsoft YaHei", "宋体"`
-}
-
-func (*Chinese) Text_BlankList() string {
-	return "（无）"
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -249,29 +253,55 @@ func (*Chinese) Text_ImportStat(numImports, numImportedBys int, depPageURL strin
 
 func (*Chinese) Text_InvolvedFiles(num int) string { return "相关源文件" }
 
-func (*Chinese) Text_ExportedValues(num int) string {
-	return "导出值"
-}
-
-func (*Chinese) Text_ExportedTypeNames(num int) string {
-	return "导出类型名"
-}
-
-func (*Chinese) Text_AllPackageLevelTypeNames(num int) string {
+func (*Chinese) Text_PackageLevelTypeNames() string {
 	return "包级类型名"
 }
 
-func (*Chinese) Text_TypeNameListShowOption(exportedsOnly bool) string {
-	if exportedsOnly {
-		return "只展示导出类型"
+//func (*Chinese) Text_AllPackageLevelValues(num int) string {
+//	return "包级值"
+//}
+
+func (*Chinese) Text_PackageLevelFunctions() string {
+	return "包级函数"
+}
+func (*Chinese) Text_PackageLevelVariables() string {
+	return "包级变量"
+}
+func (*Chinese) Text_PackageLevelConstants() string {
+	return "包级常量"
+}
+
+func (*Chinese) Text_PackageLevelResourceSimpleStat(num, numExporteds int) string {
+	if numExporteds == 0 {
+		if num == 1 {
+			return "只有一个，其未导出"
+		}
+		return fmt.Sprintf("共%d个，均未导出", num)
+	}
+	if numExporteds == num {
+		if num == 1 {
+			return "只有一个，其被导出"
+		}
+		return fmt.Sprintf("共%d个，均导出", num)
+	}
+	return fmt.Sprintf("共%d个，导出%d个", num, numExporteds)
+}
+
+func (*Chinese) Text_UnexportedResourcesHeader(show bool, numUnexporteds int) string {
+	if show {
+		return fmt.Sprintf("/* %d个未导出的…… */", numUnexporteds)
 	} else {
-		return "亦展示非导出类型"
+		return fmt.Sprintf("/* %d个未导出的： */", numUnexporteds)
 	}
 }
 
 ///////////////////////////////////////////////////////////////////
 // package details page: type details
 ///////////////////////////////////////////////////////////////////
+
+func (*Chinese) Text_BasicType() string {
+	return "基本类型"
+}
 
 func (*Chinese) Text_Fields(num int, exportedsOnly bool) string {
 	if exportedsOnly {
@@ -350,6 +380,10 @@ func (*Chinese) Text_NumMethodsImplementingNothing(count int) string {
 
 func (*Chinese) Text_ReferenceList() string {
 	return "引用列表"
+}
+
+func (*Chinese) Text_CurrentPackage() string {
+	return "（当前库包）"
 }
 
 func (*Chinese) Text_ObjectKind(kind string) string {
@@ -585,7 +619,7 @@ func (*Chinese) Text_GeneratedPageFooter(goldsVersion, qrCodeLink, goOS, goArch 
 	}
 	return fmt.Sprintf(`<table><tr><td>%s</td>
 <td>本页面由 <a href="https://go101.org/article/tool-golds.html"><b>Golds</b></a> <i>%s</i> 生成。（GOOS=%s GOARCH=%s）。
-<b>Golds</b> 是由<a href="https://gfw.tapirgames.com">老貘</a>创建的一个 <a href="https://go101.org">Go 101</a>项目。
+<b>Golds</b> 是由<a href="https://gfw.tapirgames.com">老貘</a>创建的一个 <a href="https://gfw.go101.org">Go 101</a> 项目。
 欢迎在 <a href="https://github.com/go101/golds">Golds 项目</a>中提交 PR 和 bug 报告。
 请关注 “Go 101” 微信公众号%s以获取 <b>Golds</b> 的最新消息以及各种 Go 细节和事实。</td></tr></table>`,
 		qrImg,

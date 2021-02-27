@@ -19,6 +19,7 @@ type PageOutputOptions struct {
 
 	NoIdentifierUsesPages bool
 	PlainSourceCodePages  bool
+	NotCollectUnexporteds bool
 	//EmphasizeWDPkgs       bool
 	WdPkgsListingManner string
 	FooterShowingManner string
@@ -36,6 +37,7 @@ var (
 
 	buildIdUsesPages       = true // might be false in gen mode
 	enableSoruceNavigation = true // false to disable method implementation pages and some code reading features
+	collectUnexporteds     = true // false to not collect package-level resources
 	//emphasizeWDPackages    = false // list packages in the current directory before other packages
 	wdPkgsListingManner = WdPkgsListingManner_general
 	footerShowingManner = FooterShowingManner_none
@@ -49,6 +51,7 @@ func setPageOutputOptions(options PageOutputOptions, forTesting bool) {
 	goldsVersion = options.GoldsVersion
 	buildIdUsesPages = !options.NoIdentifierUsesPages || forTesting
 	enableSoruceNavigation = !options.PlainSourceCodePages || forTesting
+	collectUnexporteds = !options.NotCollectUnexporteds || forTesting
 	//emphasizeWDPackages = options.EmphasizeWDPkgs || forTesting
 	wdPkgsListingManner = options.WdPkgsListingManner
 	footerShowingManner = options.FooterShowingManner

@@ -29,9 +29,12 @@ _(NOTE: Go commands will install output binaries into the **Go binary installati
 
 ### Main Features
 
-* Supports listing exported types not only by alphabet, but also by popularity, which is good to
-  understanding some packages exporting many types.
-* Supports listing unexported types, which is helpful to understand some packages.
+* JavaScript-off friendly, though the experience is a little richer if JavaScript is on.
+  No tracing, no auto external websites visiting.
+* Lists types not only by alphabet, but also by popularity (only avaliable when JavaScript is on),
+  which is good to understanding some packages with many types declared.
+* Supports listing unexported types and values, which is helpful to understand some packages.
+* Treats `main` packages as the same as library packages.
 * Rich package-level type/value information collection:
   * Shows type implementation relations ([demo 1](https://docs.go101.org/std/pkg/go/ast.html#name-Node) and [demo 2](https://docs.go101.org/std/pkg/bytes.html#name-Buffer)).
   * Shows method implementation relations ([demo](https://docs.go101.org/std/imp/io.Reader.html#name-Read)).
@@ -52,7 +55,6 @@ _(NOTE: Go commands will install output binaries into the **Go binary installati
   (The docs of standard packages are generated within about 7 seconds, and the docs of the kubernetes project packages are generated within about one minute.)
 * All functionalities are implemented locally, no external websites are needed.
 * Just fell free to open any number of pages in new browser windows as needed.
-* JavaScript-off friendly. No tracing, no auto external websites visiting.
 
 _(NOTE: This tool is still in its early experimental phase. More new features will be added from time to time in future versions.)_
 

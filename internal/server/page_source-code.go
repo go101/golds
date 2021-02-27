@@ -1346,14 +1346,18 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 						link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeImplementation, v.pkg.Path() + "." + v.topLevelFuncInfo.RecvTypeName}, nil, "") + "#name-" + anchorName
 					}
 				}
-			} else if token.IsExported(funcName) {
-				link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, v.pkg.Path()}, nil, "") + "#name-" + funcName
 			} else {
-				//if !genDocsMode {
-				//	link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, v.pkg.Path()}, nil, "") + "?show=all#name-" + funcName
-				//}
-				goto GoOn // see below "case scp.Parent() == types.Universe:"
+				link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, v.pkg.Path()}, nil, "") + "#name-" + funcName
 			}
+			// now all unexporteds are listed in package details pages (?show=all is depreciated).
+			//} else if token.IsExported(funcName) {
+			//	link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, v.pkg.Path()}, nil, "") + "#name-" + funcName
+			//} else {
+			//	//if !genDocsMode {
+			//	//	link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, v.pkg.Path()}, nil, "") + "?show=all#name-" + funcName
+			//	//}
+			//	goto GoOn // see below "case scp.Parent() == types.Universe:"
+			//}
 		}
 
 		//v.buildIdentifier(start, end, sameFileObjOrderId, "#line-"+strconv.Itoa(objPos.Line), "")
@@ -1361,7 +1365,7 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 		return
 	}
 
-GoOn:
+	//GoOn:
 
 	//fmt.Println("========= obj=", obj)
 	//fmt.Println("========= objPos=", objPos)
@@ -1456,33 +1460,38 @@ GoOn:
 			}
 
 		case scp.Parent() == types.Universe: // package-level elements
-			if obj.Exported() {
-				//v.buildIdentifier(start, end, -1, "/pkg:"+objPkgPath+"#name-"+obj.Name())
-				v.buildIdentifier(start, end, -1, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, objPkgPath}, nil, "")+"#name-"+obj.Name())
-				return
-			} else {
-				switch obj.(type) {
-				case *types.TypeName:
-					if !genDocsMode {
-						v.buildIdentifier(start, end, -1, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, objPkgPath}, nil, "")+"?show=all#name-"+obj.Name())
-						return
-					} else if buildIdUsesPages {
-						v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeReference, objPkgPath + ".." + obj.Name()}, nil, ""))
-						return
-					}
-				case *types.Func, *types.Var, *types.Const:
-					if buildIdUsesPages {
-						v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeReference, objPkgPath + ".." + obj.Name()}, nil, ""))
-						return
-					}
-				}
-
-				// ToDo: open reference list page
-			}
 			// ToDo:
-			// * Click to show reference list.
-			// * CTRL + click to pkg doc page.
+			// * CTRL to pkg details page.
+			// * Click + click to show reference list.
 
+			v.buildIdentifier(start, end, -1, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, objPkgPath}, nil, "")+"#name-"+obj.Name())
+			return
+			// now all unexporteds are listed in package details pages (?show=all is depreciated).
+			// All id-ref pages are entered from package details pages now.
+
+			//if obj.Exported() {
+			//	//v.buildIdentifier(start, end, -1, "/pkg:"+objPkgPath+"#name-"+obj.Name())
+			//	v.buildIdentifier(start, end, -1, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, objPkgPath}, nil, "")+"#name-"+obj.Name())
+			//	return
+			//} else {
+			//	switch obj.(type) {
+			//	case *types.TypeName:
+			//		if !genDocsMode {
+			//			v.buildIdentifier(start, end, -1, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, objPkgPath}, nil, "")+"?show=all#name-"+obj.Name())
+			//			return
+			//		} else if buildIdUsesPages {
+			//			v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeReference, objPkgPath + ".." + obj.Name()}, nil, ""))
+			//			return
+			//		}
+			//	case *types.Func, *types.Var, *types.Const:
+			//		if buildIdUsesPages {
+			//			v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeReference, objPkgPath + ".." + obj.Name()}, nil, ""))
+			//			return
+			//		}
+			//	}
+			//
+			//	// ToDo: open reference list page
+			//}
 		}
 
 		return
@@ -1561,16 +1570,19 @@ func writeSourceCodeDocLink(page *htmlPage, pkg *code.Package, sourceFilename st
 	//originalFile := ds.analyzer.OriginalGoSourceFile(sourceFilename)
 	////fmt.Fprintf(page, `<a href="/src:%s#doc">d-&gt;</a> `, originalFile)
 	//buildPageHref(ResTypeSource, originalFile, false, "d-&gt;", page, "doc")
-	buildPageHref(page.PathInfo, pagePathInfo{ResTypeSource, pkg.Path() + "/" + sourceFilename}, page, "d-&gt;", "doc")
+	//buildPageHref(page.PathInfo, pagePathInfo{ResTypeSource, pkg.Path() + "/" + sourceFilename}, page, "d-&gt;", "doc")
+	buildPageHref(page.PathInfo, pagePathInfo{ResTypeSource, pkg.Path() + "/" + sourceFilename}, page, "d➜", "doc")
 	page.WriteByte(' ')
 }
 
 func writeMainFunctionArrow(page *htmlPage, pkg *code.Package, mainPos token.Position) {
 	if mainPos.IsValid() {
 		//mainPos.Line += ds.analyzer.SourceFileLineOffset(mainPos.Filename)
-		writeSrouceCodeLineLink(page, pkg, mainPos, "m-&gt;", "")
+		//writeSrouceCodeLineLink(page, pkg, mainPos, "m-&gt;", "")
+		writeSrouceCodeLineLink(page, pkg, mainPos, "m➜", "")
 	} else {
-		page.WriteString("m-&gt;")
+		//page.WriteString("m-&gt;")
+		page.WriteString("m➜")
 	}
 	page.WriteByte(' ')
 }

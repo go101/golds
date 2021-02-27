@@ -209,7 +209,7 @@ func (ds *docServer) buildReferencesPage(w http.ResponseWriter, result *Referenc
 		page.WriteString("\n\t")
 		if refGroup.Pkg.Path() == result.Package.Path() {
 			page.WriteString(refGroup.Pkg.Path())
-			page.WriteString(" <i>(current package)</i>")
+			page.WriteString(page.Translation().Text_CurrentPackage())
 		} else {
 			buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, refGroup.Pkg.Path()}, page, refGroup.Pkg.Path())
 		}

@@ -2,18 +2,60 @@
 
 ### Soon to do
 
-* Unexported functions/methods of depending packages not shown in the method list of the types
-  when show unexported types now.
-  * show=all also for functions.
+* merge types and values
+  * sort by popularity: Type > Function > Variable > Constant > type > function > variable > constant
 
-* add an index section
+* for main package, show unexporteds intially.
+
+* list contained resources under each source file (folding initally)
+
+* supports "golds a.go", need change "builtin" parse handling. remove: args = append(args, "builtin")
+
+* add "d➜" in overview page.
+  * hover on a package: show its brief intro.
+
+* provide two variables for JS: showSortByForExportedsTypes, showSortByForAllTypes
+
+* show statistics floating on the right of the overview page.
+
+* add an option: list-unexporteds, when false
+  * link unexported functions/types from code to code
+
+* move most readme content to go101.org.
+  * keep case table, simple install, simple feature overview, simple usage (golds std, golds ./...)
+
+* when collecting package details, add an option: collectUnexported, false for producing test data.
+  * remove show=all
+
+* collapse all as index mode.
+
+* use js for sort on overview and pacakge details page
+  * use js to fold functions in code pages
+  * use cookie to remember options: show-unexporteds, sort-by
+
+* List unexported resources, but hidden initially.
+  * italic unexporteds
+
+* top list: most parameters, most results
+
+* field list: align them as which in code. But need to consider embedding chain...
+
+* calculate value importance:
+  Functions > Variables > Constants > functions > variables > constants
+  * result/param type popularity matter
+  * maybe, "sort by importance" is not a good idea.
+
+* shortcuts:
+  * e: toggle expand all (types and values)
+  * t: toggle expand types
+  * v: toggle expand values
 
 * -format=[html|json|txt|md]
 
 * show/run examples/tests/banchmarks
   * run source code, run main package
   * Open a new page to avoid using JavaScript?
-  * "go/doc": doc.Examples(...)
+  * "go/doc": doc.Examples(...)importance
   * websocket: monitor page leave and shutdown unfinished Go processes.
 
 * about https://github.com/go101/golds/issues/9 and to avoid depings affecting depeds' docs:
@@ -107,9 +149,7 @@
   * global.method2typesTable map[methodProtoId][]*type. All the []*type share a common big []*type slice.
     The length of the big slice is sum(type[i].methodCount)
 
-* is LSIF helpful?
-  https://lsif.dev/
-  lsif-c++ for cgo etc.
+
 
 ### More to do
 
@@ -142,7 +182,14 @@
     * https://godoc.org/github.com/cznic/cc#example-Statement
       https://pkg.go.dev/github.com/cznic/cc/v2?tab=doc
     * https://github.com/xlab/c-for-go
-    * tinycc
+    * port tinycc
+    * https://github.com/DQNEO/8cc.go
+    * is LSIF helpful?
+	  https://lsif.dev/
+	  lsif-c++ for cgo etc.
+
+* list .md files and render markdown files
+
 * use css fixate the top file path bar.
 
 * special handling for the buitlin page, 
@@ -235,6 +282,8 @@
   * https://go.googlesource.com/go/+/refs/heads/dev.typeparams/src/cmd/compile/internal/types2/
 
 ### Done
+
+* (cancelled) add an index section
 * (done) after some time: remove the old ".gold-update" class in css file.
 * (cancelled) click "type" keyword to unhide the source type definition.
   And show underlying type in a further click.

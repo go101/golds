@@ -47,12 +47,15 @@ func isInformalPackage(pkgPath string) bool {
 }
 
 func buildTestData_Package(details *PackageDetails) TestData_Package {
-	ts := make(map[string]TestData_Type, len(details.ExportedTypeNames))
-	varNames := make([]string, 0, len(details.ValueResources))
-	constNames := make([]string, 0, len(details.ValueResources))
-	funcNames := make([]string, 0, len(details.ValueResources))
+	ts := make(map[string]TestData_Type, len(details.TypeNames))
+	//varNames := make([]string, 0, len(details.ValueResources))
+	//constNames := make([]string, 0, len(details.ValueResources))
+	//funcNames := make([]string, 0, len(details.ValueResources))
+	varNames := make([]string, 0, len(details.Variables))
+	constNames := make([]string, 0, len(details.Constants))
+	funcNames := make([]string, 0, len(details.Functions))
 
-	for _, t := range details.ExportedTypeNames {
+	for _, t := range details.TypeNames {
 		fieldNames := make([]string, 0, len(t.Fields))
 		for _, f := range t.Fields {
 			fieldNames = append(fieldNames, f.Name())
@@ -116,16 +119,28 @@ func buildTestData_Package(details *PackageDetails) TestData_Package {
 		}
 	}
 
-	for _, v := range details.ValueResources {
-		switch v := v.(type) {
-		case *code.Variable:
-			varNames = append(varNames, v.Name())
-		case *code.Constant:
-			constNames = append(constNames, v.Name())
-		//case *code.Function:
-		case code.FunctionResource:
-			funcNames = append(funcNames, v.Name())
-		}
+	//for _, v := range details.ValueResources {
+	//	switch v := v.(type) {
+	//	case *code.Variable:
+	//		varNames = append(varNames, v.Name())
+	//	case *code.Constant:
+	//		constNames = append(constNames, v.Name())
+	//	//case *code.Function:
+	//	case code.FunctionResource:
+	//		funcNames = append(funcNames, v.Name())
+	//	}
+	//}
+
+	for _, v := range details.Variables {
+		varNames = append(varNames, v.Name())
+	}
+
+	for _, v := range details.Constants {
+		constNames = append(constNames, v.Name())
+	}
+
+	for _, v := range details.Functions {
+		funcNames = append(funcNames, v.Name())
 	}
 
 	return TestData_Package{
@@ -149,7 +164,7 @@ func buildTestData(args []string, silent bool, printUsage func(io.Writer)) map[s
 			continue
 		}
 
-		details := buildPackageDetailsData(&analyzer, pkg.Path(), packagePageOptions{sortBy: "alphabet", filter: "exported"})
+		details := buildPackageDetailsData(&analyzer, pkg.Path(), false)
 		pkgTestDatas[pkg.Path()] = buildTestData_Package(details)
 
 		if !silent {
