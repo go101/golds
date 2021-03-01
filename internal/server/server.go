@@ -61,8 +61,8 @@ type docServer struct {
 	//identifierReferencesPages map[usePageKey][]byte
 	//sourcePages               map[sourcePageKey][]byte
 	//dependencyPages           map[string][]byte
-	cachedPages        map[pageCacheKey][]byte
-	cachedPagesOptions map[pageCacheKey]interface{} // key.options must be nil in this map
+	cachedPages map[pageCacheKey][]byte
+	//cachedPagesOptions map[pageCacheKey]interface{} // key.options must be nil in this map
 
 	//
 	currentTheme       Theme
@@ -339,7 +339,7 @@ func (ds *docServer) analyze(args []string, printUsage func(io.Writer)) {
 			int(ds.analyzer.RoughTypeNameCount()) +
 			int(ds.analyzer.RoughExportedIdentifierCount())
 		ds.cachedPages = make(map[pageCacheKey][]byte, int(n))
-		ds.cachedPagesOptions = make(map[pageCacheKey]interface{}, ds.analyzer.NumPackages())
+		//ds.cachedPagesOptions = make(map[pageCacheKey]interface{}, ds.analyzer.NumPackages())
 		ds.mutex.Unlock()
 	}
 }

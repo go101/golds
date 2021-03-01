@@ -21,10 +21,11 @@ type Package struct {
 	Index int
 	PPkg  *packages.Package // ToDo: renamed to PP to be consistent with TypeInfo.TT?
 
-	Mod      *Module
-	Deps     []*Package
-	DepLevel int // 0 means the level is not determined yet
-	DepedBys []*Package
+	Mod       *Module
+	Deps      []*Package
+	DepedBys  []*Package
+	DepHeight int32 // 0 means the height is not determined yet
+	DepDepth  int32 // 0 means the depth is not determined yet
 
 	// This field might be shared with PackageForDisplay
 	// for concurrent reads.

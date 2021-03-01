@@ -31,7 +31,8 @@ func (d *CodeAnalyzer) AnalyzePackages(onSubTaskDone func(int, time.Duration, ..
 
 	stopWatch.Duration(true)
 
-	d.sortPackagesByDependencies()
+	d.sortPackagesDepHeight()
+	d.sortPackagesDepDepth()
 
 	logProgress(SubTask_SortPackagesByDependencies)
 
@@ -112,36 +113,6 @@ func (d *CodeAnalyzer) AnalyzePackages(onSubTaskDone func(int, time.Duration, ..
 	// log.Println("[analyze packages done]")
 
 	//log.Println(numNamedInterfaces, numNameds)
-}
-
-func sortPackagesByDepLevels(pkgs []*Package) {
-	var seen = make(map[string]struct{}, len(pkgs))
-	var calculatePackageDepLevel func(pkg *Package)
-	calculatePackageDepLevel = func(pkg *Package) {
-		if _, ok := seen[pkg.Path()]; ok {
-			return
-		}
-		seen[pkg.Path()] = struct{}{}
-
-		var max = 0
-		for _, dep := range pkg.Deps {
-			calculatePackageDepLevel(dep)
-			if dep.DepLevel > max {
-				max = dep.DepLevel
-			} else if dep.DepLevel == 0 {
-				log.Println("sortPackagesByDepLevels, calculatePackageDepLevel, the dep.DepLevel is not calculated yet!")
-			}
-		}
-		pkg.DepLevel = max + 1
-	}
-
-	for _, pkg := range pkgs {
-		calculatePackageDepLevel(pkg)
-	}
-
-	sort.Slice(pkgs, func(i, j int) bool {
-		return pkgs[i].DepLevel < pkgs[j].DepLevel
-	})
 }
 
 func (d *CodeAnalyzer) analyzePackages_FindImplementations() { // (resultMethodCache *typeutil.MethodSetCache) {
@@ -1642,33 +1613,34 @@ func (d *CodeAnalyzer) confirmPackageModules() {
 }
 
 // Important for registerFunctionForInvolvedTypeNames and registerValueForItsTypeName.
-func (d *CodeAnalyzer) sortPackagesByDependencies() {
+func (d *CodeAnalyzer) sortPackagesDepHeight() {
 	var seen = make(map[string]struct{}, len(d.packageList))
-	var calculatePackageDepLevel func(pkg *Package)
-	calculatePackageDepLevel = func(pkg *Package) {
+	var calculatePackageDepHeight func(pkg *Package)
+	calculatePackageDepHeight = func(pkg *Package) {
 		if _, ok := seen[pkg.Path()]; ok {
 			return
 		}
 		seen[pkg.Path()] = struct{}{}
 
-		var max = 0
+		var max = int32(0)
 		for _, dep := range pkg.Deps {
-			calculatePackageDepLevel(dep)
-			if dep.DepLevel > max {
-				max = dep.DepLevel
-			} else if dep.DepLevel == 0 {
-				log.Println("sortPackagesByDependencies: the dep.DepLevel is not calculated yet!")
+			calculatePackageDepHeight(dep)
+			if dep.DepHeight > max {
+				max = dep.DepHeight
+			} else if dep.DepHeight == 0 {
+				log.Println("sortPackagesDepHeight: the dep.DepHeight is not calculated yet!")
 			}
 		}
-		pkg.DepLevel = max + 1
+		pkg.DepHeight = max + 1
 	}
 
 	for _, pkg := range d.packageList {
-		calculatePackageDepLevel(pkg)
+		calculatePackageDepHeight(pkg)
 	}
 
+	// The analyse order:
 	sort.Slice(d.packageList, func(i, j int) bool {
-		return d.packageList[i].DepLevel < d.packageList[j].DepLevel
+		return d.packageList[i].DepHeight < d.packageList[j].DepHeight
 	})
 
 	for i, pkg := range d.packageList {
@@ -1676,7 +1648,57 @@ func (d *CodeAnalyzer) sortPackagesByDependencies() {
 	}
 
 	//for _, pkg := range d.packageList {
-	//	log.Println(">>>>>>>>>>>>>>>>", pkg.DepLevel, pkg.Path())
+	//	log.Println(">>>>>>>>>>>>>>>>", pkg.DepHeight, pkg.Path())
+	//}
+}
+func (d *CodeAnalyzer) sortPackagesDepDepth() {
+	var seen = make(map[string]struct{}, len(d.packageList))
+	var calculatePackageDepDepth func(pkg *Package)
+	calculatePackageDepDepth = func(pkg *Package) {
+		if _, ok := seen[pkg.Path()]; ok {
+			return
+		}
+		seen[pkg.Path()] = struct{}{}
+
+		const MaxDepth int32 = 0x7fffffff
+		var min = MaxDepth
+		for _, dep := range pkg.DepedBys {
+			calculatePackageDepDepth(dep)
+			if dep.DepDepth < min {
+				min = dep.DepDepth
+			} else if dep.DepDepth == 0 {
+				log.Println("sortPackagesDepDepth: the dep.DepDepth is not calculated yet!")
+			}
+		}
+		if min == MaxDepth {
+			pkg.DepDepth = 1
+		} else {
+			pkg.DepDepth = min + 1
+		}
+	}
+
+	for _, pkg := range d.packageList {
+		calculatePackageDepDepth(pkg)
+	}
+
+	for _, pkg := range d.packageList {
+		pkg.DepDepth--
+	}
+
+	//pkgs := append(d.packageList[:0:0], d.packageList...)
+	//sort.Slice(pkgs, func(i, j int) bool {
+	//	if di, dj := pkgs[i].DepDepth, pkgs[j].DepDepth; di == dj {
+	//		if x, y := d.IsStandardPackage(pkgs[i]), d.IsStandardPackage(pkgs[j]); x == y {
+	//			return pkgs[i].Path() < pkgs[j].Path()
+	//		} else {
+	//			return y
+	//		}
+	//	} else {
+	//		return di < dj
+	//	}
+	//})
+	//for _, pkg := range pkgs {
+	//	log.Println(">>>>>>>>>>>>>>>>", pkg.Index, pkg.DepDepth, pkg.Path())
 	//}
 }
 

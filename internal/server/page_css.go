@@ -21,7 +21,7 @@ func (ds *docServer) cssFile(w http.ResponseWriter, r *http.Request, themeName s
 		Colon string
 		Fonts string
 	}{
-		Colon: ds.currentTranslation.Text_Colon(false),
+		Colon: ds.currentTranslation.Text_Colon(true),
 		Fonts: ds.currentTranslation.Text_PreferredFontList(),
 	}
 

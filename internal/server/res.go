@@ -22,7 +22,7 @@ type Translation interface {
 	// common
 	Text_Space() string
 	Text_Comma() string
-	Text_Colon(tailSpace bool) string
+	Text_Colon(atLineEnd bool) string
 	Text_Period(paragraphEnd bool) string
 	Text_Parenthesis(close bool) string
 	Text_EnclosedInOarentheses(text string) string
@@ -63,10 +63,8 @@ type Translation interface {
 	Text_RequireStat(numRequires, numRequiredBys int) string // to use
 	Text_UpdateTip(tipName string) string                    // tip names: "ToUpdate", "Updating", "Updated"
 
-	Text_SortBy() string                // also used in other pages
-	Text_Filter() string                // also used in other pages
-	Text_SortByItem(by string) string   // also used in other pages
-	Text_FilterItem(fltr string) string // also used in other pages
+	Text_SortBy(whatToSort string) string // also used in other pages
+	Text_SortByItem(by string) string     // also used in other pages
 
 	// package details page
 	Text_Package(pkgPath string) string
@@ -80,18 +78,17 @@ type Translation interface {
 	Text_PackageLevelFunctions() string
 	Text_PackageLevelVariables() string
 	Text_PackageLevelConstants() string
-	Text_PackageLevelResourceSimpleStat(num, numExporteds int) string
-	Text_UnexportedResourcesHeader(show bool, numUnexporteds int) string
+	Text_PackageLevelResourceSimpleStat(statsAreExact bool, num, numExporteds int, mentionExporteds bool) string
+	Text_UnexportedResourcesHeader(show bool, numUnexporteds int, exact bool) string
 
 	Text_BasicType() string
-	Text_Fields(num int, exportedsOnly bool) string // ToDo: merge these into one?
-	Text_Methods(num int, exportedsOnly bool) string
-	Text_ImplementedBy(num int) string
-	Text_Implements(num int) string
-	Text_AsOutputsOf(num int) string
-	Text_AsInputsOf(num int) string
-	Text_AsTypesOf(num int) string
-	Text_References(num int) string
+	Text_Fields() string // ToDo: merge these into one?
+	Text_Methods() string
+	Text_ImplementedBy() string
+	Text_Implements() string
+	Text_AsOutputsOf() string
+	Text_AsInputsOf() string
+	Text_AsTypesOf() string
 
 	// package dependencies page
 	Text_DependencyRelations(pkgPath string) string // also used in package details page with a blank argument.
@@ -101,6 +98,7 @@ type Translation interface {
 	// method implementation page
 	Text_MethodImplementations() string
 	Text_NumMethodsImplementingNothing(count int) string
+	Text_ViewMethodImplementations() string
 
 	// object references(uses) page
 	Text_ReferenceList() string

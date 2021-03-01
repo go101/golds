@@ -135,7 +135,7 @@ func (ds *docServer) buildSourceCodePage(w http.ResponseWriter, result *SourceFi
 			}
 			page.WriteByte('\n')
 		}
-		page.WriteString("{ background: #226; color: #ff8; padding-left: 1px;}\n</style>")
+		page.WriteString("{ background: #226; color: #ff8;}\n</style>")
 
 		for i := int32(0); i < result.NumRatios; i++ {
 			fmt.Fprintf(page, `<input id="r%d" type="radio" name="g"/>`, i)
@@ -1335,7 +1335,6 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 				} else {
 					var methodPkgPath string
 					if !token.IsExported(funcName) {
-						// This might be not essential, see registerTypeMethodContributingToTypeImplementations
 						methodPkgPath = v.pkg.Path()
 					}
 					if enableSoruceNavigation && v.dataAnalyzer.CheckTypeMethodContributingToTypeImplementations(v.pkg.Path(), v.topLevelFuncInfo.RecvTypeName, methodPkgPath, funcName) {
@@ -1346,18 +1345,14 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 						link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeImplementation, v.pkg.Path() + "." + v.topLevelFuncInfo.RecvTypeName}, nil, "") + "#name-" + anchorName
 					}
 				}
-			} else {
+			} else if collectUnexporteds || token.IsExported(funcName) {
 				link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, v.pkg.Path()}, nil, "") + "#name-" + funcName
+			} else {
+				//if !genDocsMode {
+				//	link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, v.pkg.Path()}, nil, "") + "?show=all#name-" + funcName
+				//}
+				goto GoOn // see below "case scp.Parent() == types.Universe:"
 			}
-			// now all unexporteds are listed in package details pages (?show=all is depreciated).
-			//} else if token.IsExported(funcName) {
-			//	link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, v.pkg.Path()}, nil, "") + "#name-" + funcName
-			//} else {
-			//	//if !genDocsMode {
-			//	//	link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, v.pkg.Path()}, nil, "") + "?show=all#name-" + funcName
-			//	//}
-			//	goto GoOn // see below "case scp.Parent() == types.Universe:"
-			//}
 		}
 
 		//v.buildIdentifier(start, end, sameFileObjOrderId, "#line-"+strconv.Itoa(objPos.Line), "")
@@ -1365,7 +1360,7 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 		return
 	}
 
-	//GoOn:
+GoOn:
 
 	//fmt.Println("========= obj=", obj)
 	//fmt.Println("========= objPos=", objPos)
@@ -1420,7 +1415,8 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 		//}
 
 		switch scp := obj.Parent(); {
-		case scp == nil: // fields
+		case scp == nil: // fields or interface methods
+
 			// For embedded ones, click to type declarations.
 			// For non-embedded ones, click to show reference list.
 
@@ -1429,6 +1425,7 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 
 			switch o := obj.(type) {
 			case *types.Func: // interface method
+
 				//log.Printf("   parent: %v\n", o.Parent())
 				//log.Printf("   scope : %v\n", o.Scope())
 				//ot := o.Type().(*types.Signature)
@@ -1459,39 +1456,42 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 				}
 			}
 
+			goto End
+
 		case scp.Parent() == types.Universe: // package-level elements
 			// ToDo:
 			// * CTRL to pkg details page.
 			// * Click + click to show reference list.
 
-			v.buildIdentifier(start, end, -1, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, objPkgPath}, nil, "")+"#name-"+obj.Name())
-			return
+			//v.buildIdentifier(start, end, -1, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, objPkgPath}, nil, "")+"#name-"+obj.Name())
 			// now all unexporteds are listed in package details pages (?show=all is depreciated).
 			// All id-ref pages are entered from package details pages now.
+			//return
 
-			//if obj.Exported() {
-			//	//v.buildIdentifier(start, end, -1, "/pkg:"+objPkgPath+"#name-"+obj.Name())
-			//	v.buildIdentifier(start, end, -1, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, objPkgPath}, nil, "")+"#name-"+obj.Name())
-			//	return
-			//} else {
-			//	switch obj.(type) {
-			//	case *types.TypeName:
-			//		if !genDocsMode {
-			//			v.buildIdentifier(start, end, -1, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, objPkgPath}, nil, "")+"?show=all#name-"+obj.Name())
-			//			return
-			//		} else if buildIdUsesPages {
-			//			v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeReference, objPkgPath + ".." + obj.Name()}, nil, ""))
-			//			return
-			//		}
-			//	case *types.Func, *types.Var, *types.Const:
-			//		if buildIdUsesPages {
-			//			v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeReference, objPkgPath + ".." + obj.Name()}, nil, ""))
-			//			return
-			//		}
-			//	}
-			//
-			//	// ToDo: open reference list page
-			//}
+			if collectUnexporteds || obj.Exported() {
+				//v.buildIdentifier(start, end, -1, "/pkg:"+objPkgPath+"#name-"+obj.Name())
+				v.buildIdentifier(start, end, -1, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, objPkgPath}, nil, "")+"#name-"+obj.Name())
+				return
+			} else {
+				switch obj.(type) {
+				case *types.TypeName:
+					if collectUnexporteds {
+						//v.buildIdentifier(start, end, -1, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, objPkgPath}, nil, "")+"?show=all#name-"+obj.Name())
+						v.buildIdentifier(start, end, -1, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, objPkgPath}, nil, "")+"#name-"+obj.Name())
+						return
+					} else if buildIdUsesPages {
+						v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeReference, objPkgPath + ".." + obj.Name()}, nil, ""))
+						return
+					}
+				case *types.Func, *types.Var, *types.Const:
+					if buildIdUsesPages {
+						v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeReference, objPkgPath + ".." + obj.Name()}, nil, ""))
+						return
+					}
+				}
+
+				// ToDo: open reference list page
+			}
 		}
 
 		return
@@ -1499,9 +1499,12 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 
 	v.buildIdentifier(start, end, -1, buildSrouceCodeLineLink(v.currentPathInfo, v.dataAnalyzer, objPkg, objPos))
 
+End:
 	// Handle interface embedding interface cases.
 	if v.topLevelInterfaceTypeInfo != nil && len(v.topLevelInterfaceTypeInfo.Methods) > 0 {
-		if ident.Pos() == v.topLevelInterfaceTypeInfo.Methods[0].Pos() {
+		// == for {Writer; MyMethod()}
+		// >  for {io.Writer, MyMethod()}
+		if ident.Pos() >= v.topLevelInterfaceTypeInfo.Methods[0].Pos() {
 			v.topLevelInterfaceTypeInfo.Methods = v.topLevelInterfaceTypeInfo.Methods[1:]
 		}
 	}

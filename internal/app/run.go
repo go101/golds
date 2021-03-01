@@ -207,7 +207,7 @@ var moregcFlag = flag.Bool("moregc", false, "increase garbage collection frequen
 var footerFlag = flag.String("footer", "verbose", "verbose | simple | none")
 var nouses = flag.Bool("nouses", false, "disable the identifier uses feature")
 var plainsrc = flag.Bool("plainsrc", false, "disable the source navigation feature")
-var nounexporteds = flag.Bool("nounexporteds", false, "don't collect unexported package-level resources")
+var nounexporteds = flag.Bool("only-list-exporteds", false, "don't collect unexported package-level resources")
 var compact = flag.Bool("compact", false, "sacrifice some disk-consuming features in generation")
 
 // depreciated by "-wdpkgs-listing=promoted" since v0.1.8
@@ -268,6 +268,9 @@ Options:
 	-plainsrc
 		Disable the source navigation feature.
 		For HTML docs generation mode only.
+	-only-list-exporteds
+		Not to list unexported resources
+		in package-details pages.
 	-compact
 		This is a shortcut of the combination
 		of several other options, including

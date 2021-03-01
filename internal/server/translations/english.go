@@ -21,11 +21,11 @@ func (*English) Text_Space() string { return " " }
 
 func (*English) Text_Comma() string { return ", " }
 
-func (*English) Text_Colon(spaceTail bool) string {
-	if spaceTail {
-		return ": "
-	} else {
+func (*English) Text_Colon(atLineEnd bool) string {
+	if atLineEnd {
 		return ":"
+	} else {
+		return ": "
 	}
 }
 
@@ -202,12 +202,15 @@ func (*English) Text_UpdateTip(tipName string) string {
 	return ""
 }
 
-func (*English) Text_SortBy() string {
-	return "sort by "
-}
-
-func (*English) Text_Filter() string {
-	return "show "
+func (*English) Text_SortBy(whatToSort string) string {
+	switch whatToSort {
+	case "packages":
+		return "sort packages by"
+	case "exporteds-types":
+		return "sort exporteds by"
+	default:
+		panic("unknown what-to-sort: " + whatToSort)
+	}
 }
 
 func (*English) Text_SortByItem(by string) string {
@@ -218,21 +221,10 @@ func (*English) Text_SortByItem(by string) string {
 		return "popularity"
 	case "importedbys":
 		return "imported-by count"
+	case "depdepth":
+		return "dependency distance"
 	default:
 		panic("unknown sort-by: " + by)
-	}
-}
-
-func (*English) Text_FilterItem(fltr string) string {
-	switch fltr {
-	case "all":
-		return "all"
-	case "mainpackages":
-		return "main"
-	case "testingpackages":
-		return "testing"
-	default:
-		panic("unknown filter item: " + fltr)
 	}
 }
 
@@ -300,36 +292,65 @@ func (*English) Text_PackageLevelConstants() string {
 	return "Package-Level Constants"
 }
 
-func (*English) Text_PackageLevelResourceSimpleStat(num, numExporteds int) string {
-	if numExporteds == 0 {
-		if num == 1 {
-			return "only one, it is unexported"
+func (e *English) Text_PackageLevelResourceSimpleStat(statsAreExact bool, num, numExporteds int, mentionExporteds bool) string {
+	if num == 1 {
+		if statsAreExact {
+			if numExporteds == 0 {
+				return "only one unexported"
+			} else {
+				return "only one exported"
+			}
+		} else {
+			if numExporteds == 0 {
+				return "at least one unexported"
+			} else {
+				return "at least one exported"
+			}
 		}
-		return fmt.Sprintf("total %d, all are unexported", num)
-	}
-	if numExporteds == num {
-		if num == 1 {
-			return "only one, it is exported"
+	} else if statsAreExact {
+		if numExporteds == 0 {
+			return fmt.Sprintf("total %d, none are unexported", num)
+		} else if numExporteds != num {
+			return fmt.Sprintf("total %d, in which %d are exported", num, numExporteds)
+		} else if num == 2 {
+			return fmt.Sprintf("total %d, both are exported", num)
+		} else {
+			return fmt.Sprintf("total %d, all are exported", num)
 		}
-		return fmt.Sprintf("total %d, all are exported", num)
+	} else {
+		if numExporteds == 0 {
+			return fmt.Sprintf("at least %d, none are unexported", num)
+		} else if numExporteds != num {
+			return fmt.Sprintf("at least %d, in which %d are exported", num, numExporteds)
+		} else {
+			return fmt.Sprintf("at least %d exporteds", num)
+		}
 	}
-	if numExporteds == 1 {
-		return fmt.Sprintf("total %d, one is exported", num)
-	}
-	return fmt.Sprintf("total %d, in which %d are exported", num, numExporteds)
 }
 
-func (*English) Text_UnexportedResourcesHeader(show bool, numUnexporteds int) string {
+func (*English) Text_UnexportedResourcesHeader(show bool, numUnexporteds int, exact bool) string {
 	if show {
 		if numUnexporteds == 1 {
-			return "/* --- one unexported ... --- */"
+			if exact {
+				return "/* one unexported ... */"
+			}
+			return "/* at least one unexported ... */"
 		}
-		return fmt.Sprintf("/* %d unexporteds ... */", numUnexporteds)
+		if exact {
+			return fmt.Sprintf("/* %d unexporteds ... */", numUnexporteds)
+		}
+		return fmt.Sprintf("/* %d+ unexporteds ... */", numUnexporteds)
 	} else {
 		if numUnexporteds == 1 {
-			return "/* one unexported: */"
+			if exact {
+				return "/* one unexported: */"
+			}
+			return "/* at least one unexported: */"
 		}
-		return fmt.Sprintf("/* %d unexporteds: */", numUnexporteds)
+		if exact {
+			return fmt.Sprintf("/* %d unexporteds: */", numUnexporteds)
+		}
+		return fmt.Sprintf("/* %d+ unexporteds: */", numUnexporteds)
 	}
 }
 
@@ -341,56 +362,32 @@ func (*English) Text_BasicType() string {
 	return "basic type"
 }
 
-func (*English) Text_Fields(num int, exportedsOnly bool) string {
-	if exportedsOnly {
-		if num == 1 {
-			return "One Exported Field"
-		}
-		return fmt.Sprintf("Exported Fields (%d)", num)
-	} else {
-		if num == 1 {
-			return "One Field"
-		}
-		return fmt.Sprintf("All Fields (%d)", num)
-	}
+func (*English) Text_Fields() string {
+	return "Fields"
 }
 
-func (*English) Text_Methods(num int, exportedsOnly bool) string {
-	if exportedsOnly {
-		if num == 1 {
-			return "One Exported Method"
-		}
-		return fmt.Sprintf("Exported Methods (%d)", num)
-	} else {
-		if num == 1 {
-			return "One Method"
-		}
-		return fmt.Sprintf("All Methods (%d)", num)
-	}
+func (*English) Text_Methods() string {
+	return "Methods"
 }
 
-func (*English) Text_ImplementedBy(num int) string {
-	return fmt.Sprintf("Implemented By (%d+)", num)
+func (*English) Text_ImplementedBy() string {
+	return "Implemented By"
 }
 
-func (*English) Text_Implements(num int) string {
-	return fmt.Sprintf("Implements (%d+)", num)
+func (*English) Text_Implements() string {
+	return "Implements"
 }
 
-func (*English) Text_AsOutputsOf(num int) string {
-	return fmt.Sprintf("As Outputs Of (%d+)", num)
+func (*English) Text_AsOutputsOf() string {
+	return "As Outputs Of"
 }
 
-func (*English) Text_AsInputsOf(num int) string {
-	return fmt.Sprintf("As Inputs Of (%d+)", num)
+func (*English) Text_AsInputsOf() string {
+	return "As Inputs Of"
 }
 
-func (*English) Text_AsTypesOf(num int) string {
-	return fmt.Sprintf("As Types Of (%d+)", num)
-}
-
-func (*English) Text_References(num int) string {
-	return fmt.Sprintf("References (%d+)", num)
+func (*English) Text_AsTypesOf() string {
+	return "As Types Of"
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -426,6 +423,10 @@ func (*English) Text_NumMethodsImplementingNothing(count int) string {
 		s1, s2 = s2, s1
 	}
 	return fmt.Sprintf(" (%d other method%s implement%s nothing)", count, s1, s2)
+}
+
+func (*English) Text_ViewMethodImplementations() string {
+	return "view implemented interface methods"
 }
 
 ///////////////////////////////////////////////////////////////////

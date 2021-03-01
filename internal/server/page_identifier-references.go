@@ -90,11 +90,10 @@ func (ds *docServer) identifierReferencePage(w http.ResponseWriter, r *http.Requ
 
 func (ds *docServer) buildReferencesPage(w http.ResponseWriter, result *ReferencesResult) []byte {
 	qualifiedIdentifier := result.Package.Path() + "." + result.Identifier
-	title := ds.currentTranslation.Text_ReferenceList() + ds.currentTranslation.Text_Colon(true) + qualifiedIdentifier
+	title := ds.currentTranslation.Text_ReferenceList() + ds.currentTranslation.Text_Colon(false) + qualifiedIdentifier
 	page := NewHtmlPage(goldsVersion, title, ds.currentTheme, ds.currentTranslation, pagePathInfo{ResTypeReference, qualifiedIdentifier})
 
-	var prefix, suffix string
-	var writeSelector func()
+	var prefix string
 	if result.Selector == nil {
 		switch result.Resource.(type) {
 		case *code.Variable:
@@ -106,23 +105,43 @@ func (ds *docServer) buildReferencesPage(w http.ResponseWriter, result *Referenc
 		case *code.TypeName:
 			prefix = "type "
 		}
-	} else {
-		if result.Selector.Field != nil {
-			suffix = page.Translation().Text_ObjectKind("field")
+	}
+	fmt.Fprintf(page, `
+<pre><code><span style="font-size:x-large;">%s<b><a href="%s">%s</a>.`,
+		prefix,
+		buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, result.Package.Path()}, nil, ""),
+		result.Package.Path(),
+	)
 
-			writeSelector = func() {
-				ds.writeFieldCodeLink(page, result.Selector)
-			}
+	ds.writeResourceIndexHTML(page, result.Package, result.Resource, true)
+
+	if result.Selector != nil {
+		page.WriteByte('.')
+		if result.Selector.Field != nil {
+			ds.writeFieldCodeLink(page, result.Selector)
 		} else {
+			ds.writeMethodForListing(page, result.Package, result.Selector, nil, false, true)
+		}
+	}
+	page.WriteString(`</b></span>`)
+
+	if result.Selector != nil {
+		page.WriteString(`<span style="font-size: large;"><i>`)
+		page.WriteString(page.Translation().Text_Parenthesis(false))
+		if result.Selector.Field != nil {
+			page.WriteString(page.Translation().Text_ObjectKind("field"))
+		} else {
+			page.WriteString(page.Translation().Text_ObjectKind("method"))
+
 			methodName := result.Selector.Method.Name
 			var methodPkgPath string
 			if !token.IsExported(methodName) {
-				// This might be not essential, see registerTypeMethodContributingToTypeImplementations
-				// ? what, forget what to mean.
 				methodPkgPath = result.Selector.Method.Pkg.Path()
 			}
 			var link string
 			if ds.analyzer.CheckTypeMethodContributingToTypeImplementations(result.Package.Path(), result.Resource.Name(), methodPkgPath, methodName) {
+				// entering here meaning this must be a non-interface method.
+
 				anchorName := methodName
 				if !token.IsExported(methodName) {
 					anchorName = methodPkgPath + "." + anchorName
@@ -132,38 +151,20 @@ func (ds *docServer) buildReferencesPage(w http.ResponseWriter, result *Referenc
 				}
 			}
 
-			if link == "" {
-				suffix = page.Translation().Text_ObjectKind("method")
-			} else {
-				suffix = fmt.Sprintf(
-					`<a href="%s">%s</a>`,
-					link,
-					page.Translation().Text_ObjectKind("method"),
-				)
-			}
-
-			writeSelector = func() {
-				ds.writeMethodForListing(page, result.Package, result.Selector, nil, false, true)
+			if link != "" {
+				page.WriteString(page.Translation().Text_Comma())
+				fmt.Fprintf(page, `<a href="%s">%s</a>`, link, page.Translation().Text_ViewMethodImplementations())
 			}
 		}
-		suffix = page.Translation().Text_EnclosedInOarentheses(suffix)
-		suffix = `<span style="font-size: large;"><i>` + suffix + `</i></span>`
+		page.WriteString(page.Translation().Text_Parenthesis(true))
+		page.WriteString(`</i></span>`)
 	}
 
-	fmt.Fprintf(page, `
-<pre><code><span style="font-size:x-large;">%s<b><a href="%s">%s</a>.`,
-		prefix,
-		buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, result.Package.Path()}, nil, ""),
-		result.Package.Path(),
-	)
-	ds.writeResourceIndexHTML(page, result.Package, result.Resource, true)
-	if writeSelector != nil {
-		page.WriteByte('.')
-		writeSelector()
-	}
-	fmt.Fprintf(page, `</b></span>%s`, suffix)
-
-	fmt.Fprintf(page, "\n\n%s:\n", page.Translation().Text_ObjectUses(result.UsesCount))
+	page.WriteString("\n\n")
+	page.WriteString(`<span class="title">`)
+	page.WriteString(page.Translation().Text_ObjectUses(result.UsesCount))
+	page.WriteString(`</span>`)
+	page.WriteString("\n")
 
 	type idpos struct {
 		id  *ast.Ident

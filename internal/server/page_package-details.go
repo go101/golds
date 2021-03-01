@@ -21,20 +21,6 @@ import (
 
 var _ = log.Print
 
-//type packagePage struct {
-//	content []byte
-//
-//	options packagePageOptions
-//}
-
-type packagePageOptions struct {
-	sortBy string // "alphabet", "popularity"
-
-	// For generating test data, use "exported".
-	// Otherwise, use "all".
-	filter string // "all", "exported"
-}
-
 func (ds *docServer) packageDetailsPage(w http.ResponseWriter, r *http.Request, pkgPath string) {
 	w.Header().Set("Content-Type", "text/html")
 
@@ -53,86 +39,28 @@ func (ds *docServer) packageDetailsPage(w http.ResponseWriter, r *http.Request, 
 		resType: ResTypePackage,
 		res:     pkgPath,
 	}
-	oldOptions, ok := ds.cachedPageOptions(pageKey).(packagePageOptions)
 
-	var sortBy = r.FormValue("sortby")
-	switch sortBy {
-	case "alphabet", "popularity":
-	default:
-		if ok {
-			sortBy = oldOptions.sortBy
-		} else {
-			sortBy = "alphabet"
-		}
-	}
-
-	//var filter = r.FormValue("show")
-	//switch filter {
-	//case "all", "exporteds":
-	//default:
-	//	if ok {
-	//		filter = oldOptions.filter
-	//	} else {
-	//		filter = "exporteds"
-	//	}
-	//}
-
-	newOptions := packagePageOptions{
-		sortBy: sortBy,
-		//filter: filter,
-		filter: "all",
-	}
-	if newOptions != oldOptions {
-		ds.cachePageOptions(pageKey, newOptions)
-	}
-
-	//if !ok || page.options != options {
-	//	//details := ds.buildPackageDetailsData(pkgPath)
-	//	details := buildPackageDetailsData(ds.analyzer, pkgPath, options)
-	//	if details == nil {
-	//		w.WriteHeader(http.StatusNotFound)
-	//		fmt.Fprintf(w, "Package (%s) not found", pkgPath)
-	//		return
-	//	}
-	//
-	//	ds.packagePages[pkgPath] = packagePage{
-	//		content: ds.buildPackageDetailsPage(details, options),
-	//		options: options,
-	//	}
-	//}
-	//w.Write(ds.packagePages[pkgPath].content)
-
-	pageKey.options = newOptions
 	data, ok := ds.cachedPage(pageKey)
 	if !ok {
 		//details := ds.buildPackageDetailsData(pkgPath)
-		details := buildPackageDetailsData(ds.analyzer, pkgPath, true)
+		details := buildPackageDetailsData(ds.analyzer, pkgPath, collectUnexporteds)
 		if details == nil {
 			w.WriteHeader(http.StatusNotFound)
 			fmt.Fprintf(w, "Package (%s) not found", pkgPath)
 			return
 		}
 
-		//>>ToDo: use java script instead
-		// already sorted by "alphabet"
-		if sortBy == "popularity" {
-			sort.Slice(details.TypeNames, func(i, j int) bool {
-				return details.TypeNames[i].Popularity > details.TypeNames[j].Popularity
-			})
-		}
-		//<<
-
-		data = ds.buildPackageDetailsPage(w, details, newOptions)
+		data = ds.buildPackageDetailsPage(w, details)
 		ds.cachePage(pageKey, data)
 	}
 	w.Write(data)
 }
 
-func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *PackageDetails, options packagePageOptions) []byte {
+func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *PackageDetails) []byte {
 	page := NewHtmlPage(goldsVersion, ds.currentTranslation.Text_Package(pkg.ImportPath), ds.currentTheme, ds.currentTranslation, pagePathInfo{ResTypePackage, pkg.ImportPath})
 
 	fmt.Fprintf(page, `
-<pre><code><span style="font-size:xx-large;">package <b>%s</b></span>
+<pre id="package-details"><code><span style="font-size:xx-large;">package <b>%s</b></span>
 `,
 		pkg.Name,
 	)
@@ -206,27 +134,19 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 			page.WriteString("<div>")
 			defer page.WriteString("</div>")
 
-			//if needOneMoreLine {
-			//	page.WriteByte('\n')
-			//}
-
 			func() {
-				page.WriteString(`<span class="title value-res">`)
+				page.WriteString(`<span class="title value-res title-stat">`)
 				defer page.WriteString(`</span>`)
 				page.WriteString(title)
+				page.WriteString(`<span class="title-stat">`)
+				defer page.WriteString(`</span>`)
 				page.WriteString(page.Translation().Text_Parenthesis(false))
 				defer page.WriteString(page.Translation().Text_Parenthesis(true))
-				page.WriteString(page.Translation().Text_PackageLevelResourceSimpleStat(len(values), numExporteds))
+				page.WriteString(page.Translation().Text_PackageLevelResourceSimpleStat(true, len(values), numExporteds, collectUnexporteds))
 			}()
 
-			//page.WriteString(`<input type='checkbox' id="values-filter">`)
-			//const showHideUnexporteds = `<label for="values-filter" class="exported-inline">show unexporteds</label><label for="values-filter" class="unexported-inline">hide unexporteds</label>`
-
-			//fmt.Fprintf(page, `<span class="title value-res">%s (%s)</span>`, page.Translation().Text_AllPackageLevelValues(len(pkg.ValueResources)), showHideUnexporteds)
 			page.WriteString("\n\n")
-			//fmt.Fprint(page, ` <input type="checkbox" id="consts" name="consts" value="constants"><label for="constants">const</label>`)
-			//fmt.Fprint(page, `<input type="checkbox" id="vars" name="vars" value="variables"><label for="vars">var</label>`)
-			//fmt.Fprint(page, `<input type="checkbox" id="funcs" name="funcs" value="functions"><label for="funcs">func</label>`)
+
 			for i, v := range values {
 				if i == numExporteds {
 					page.WriteString("\t")
@@ -294,9 +214,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 		return
 	}
 
-	//var needOneMoreLine = false
 	if len(pkg.TypeNames) == 0 {
-		//needOneMoreLine = true
 		goto WriteFunctions
 	}
 
@@ -306,60 +224,33 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 		page.WriteString(`<span class="title type-res">`)
 		defer page.WriteString(`</span>`)
 		page.WriteString(page.Translation().Text_PackageLevelTypeNames())
+		page.WriteString(`<span class="title-stat">`)
+		defer page.WriteString(`</span>`)
 		page.WriteString(page.Translation().Text_Parenthesis(false))
 		defer page.WriteString(page.Translation().Text_Parenthesis(true))
-		page.WriteString(page.Translation().Text_PackageLevelResourceSimpleStat(len(pkg.TypeNames), int(pkg.NumExportedTypeNames)))
-
-		//var textTypeNames = page.Translation().Text_AllPackageLevelTypeNames(len(pkg.TypeNames))
-		//const showHideUnexporteds = `<label for="types-filter" class="exported-inline">show unexporteds</label><label for="types-filter" class="unexported-inline">hide unexporteds</label>`
-		//
-		//// ToDo: should provide two variables for JS: showSortByForExportedsTypes, showSortByForAllTypes
-		//showSortBy := len(pkg.TypeNames) > 1
-		//if !showSortBy {
-		//	fmt.Fprintf(page, `<span class="title type-res">%s (%s)</span>`,
-		//		textTypeNames,
-		//		showHideUnexporteds,
-		//	)
-		//} else {
-		//	var textSortByPopularity, textSortByAlphabet string
-		//	switch options.sortBy {
-		//	case "alphabet":
-		//		textSortByPopularity = fmt.Sprintf(`<a href="%s">%s</a>`, "?sortby=popularity", page.Translation().Text_SortByItem("popularity"))
-		//		textSortByAlphabet = page.Translation().Text_SortByItem("alphabet")
-		//	case "popularity":
-		//		textSortByPopularity = page.Translation().Text_SortByItem("popularity")
-		//		textSortByAlphabet = fmt.Sprintf(`<a href="%s">%s</a>`, "?sortby=alphabet", page.Translation().Text_SortByItem("alphabet"))
-		//	}
-		//
-		//	fmt.Fprintf(page, `<span class="title type-res">%s (%s<span class="jsenabled">%s%s%s | %s</span>)</span>`,
-		//		textTypeNames,
-		//		showHideUnexporteds,
-		//		page.Translation().Text_Comma(),
-		//		page.Translation().Text_SortBy(),
-		//		textSortByAlphabet,
-		//		textSortByPopularity,
-		//	)
-		//}
-		//page.WriteString("\n")
+		page.WriteString(page.Translation().Text_PackageLevelResourceSimpleStat(true, len(pkg.TypeNames), int(pkg.NumExportedTypeNames), collectUnexporteds))
 	}()
 
 	page.WriteString("\n\n")
 
-	//{
-	//	// ToDo: should provide two variables for JS: showSortByForExportedsTypes, showSortByForAllTypes
-	//	showSortBy := len(pkg.TypeNames) > 1
-	//	if showSortBy {
-	//		page.WriteString(page.Translation().Text_Comma())
-	//		page.WriteString(page.Translation().Text_SortBy())
-	//		page.WriteString(page.Translation().Text_SortByItem("alphabet"))
-	//		page.WriteString(" | ")
-	//		page.WriteString(page.Translation().Text_SortByItem("popularity"))
-	//	}
-	//}
-	page.WriteString("<div>")
+	page.WriteString(`<div id="exported-types-buttons" class="js-on">`)
+	page.WriteString("\t/* ")
+	page.WriteString(page.Translation().Text_SortBy("exporteds-types"))
+	page.WriteString(page.Translation().Text_Colon(false))
+	page.WriteString(`<label id="sort-types-by-alphabet" class="button">`)
+	page.WriteString(page.Translation().Text_SortByItem("alphabet"))
+	page.WriteString(`</label>`)
+	page.WriteString(" | ")
+	page.WriteString(`<label id="sort-types-by-popularity" class="button">`)
+	page.WriteString(page.Translation().Text_SortByItem("popularity"))
+	page.WriteString(`</label>`)
+	page.WriteString(" */</div>")
+
+	page.WriteString(`<div id="exported-types">`)
 
 	for i, td := range pkg.TypeNames {
 		if i == int(pkg.NumExportedTypeNames) {
+			page.WriteString("</div><div>")
 			page.WriteString("\t")
 			writeUnexportedResourcesHeader(page,
 				"typenames", !isMainPackage, len(pkg.TypeNames)-int(pkg.NumExportedTypeNames))
@@ -391,11 +282,15 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 					//       (might be not a good idea. 1. such cases are rare. 2. if they happen, it does need to list ...)
 
 					page.WriteString("\n")
-					if count := len(td.Fields); count > 0 {
+					if count, numExporteds := len(td.Fields), int(td.NumExportedFields); count > 0 {
 						page.WriteString("\n\t\t")
 						writeFoldingBlock(page, td.TypeName.Name(), "fields", "items", false,
 							func() {
-								page.WriteString(page.Translation().Text_Fields(count, false)) // showExportedOnly),
+								page.WriteString(page.Translation().Text_Fields())
+
+								page.WriteString(page.Translation().Text_Parenthesis(false))
+								page.WriteString(page.Translation().Text_PackageLevelResourceSimpleStat(true, count, numExporteds, collectUnexporteds))
+								page.WriteString(page.Translation().Text_Parenthesis(true))
 							},
 							func() {
 								exported := true
@@ -432,21 +327,24 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 								}
 
 								if exported {
-									if numUnexporteds := len(td.Fields) - int(td.NumExportedFields); numUnexporteds > 0 {
+									if numUnexporteds := count - numExporteds; numUnexporteds > 0 {
 										page.WriteString("\n\t\t\t")
-										writeHiddenItemsHeader(page,
-											td.TypeName.Name(), "fields", typeIsExported, numUnexporteds)
+										writeHiddenItemsHeader(page, td.TypeName.Name(), "fields", typeIsExported, numUnexporteds, true)
 										exported = false
 										goto ListFields
 									}
 								}
 							})
 					}
-					if count := len(td.Methods); count > 0 {
+					if count, numExporteds := len(td.Methods), int(td.NumExportedMethods); count > 0 {
 						page.WriteString("\n\t\t")
 						writeFoldingBlock(page, td.TypeName.Name(), "methods", "items", isBuiltin,
 							func() {
-								page.WriteString(page.Translation().Text_Methods(count, false)) //showExportedOnly),
+								page.WriteString(page.Translation().Text_Methods())
+
+								page.WriteString(page.Translation().Text_Parenthesis(false))
+								page.WriteString(page.Translation().Text_PackageLevelResourceSimpleStat(true, count, numExporteds, collectUnexporteds))
+								page.WriteString(page.Translation().Text_Parenthesis(true))
 							},
 							func() {
 								exported := true
@@ -483,21 +381,24 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 								}
 
 								if exported {
-									if numUnexporteds := len(td.Methods) - int(td.NumExportedMethods); numUnexporteds > 0 {
+									if numUnexporteds := len(td.Methods) - numExporteds; numUnexporteds > 0 {
 										page.WriteString("\n\t\t\t")
-										writeHiddenItemsHeader(page,
-											td.TypeName.Name(), "methods", typeIsExported, numUnexporteds)
+										writeHiddenItemsHeader(page, td.TypeName.Name(), "methods", typeIsExported, numUnexporteds, true)
 										exported = false
 										goto ListMethods
 									}
 								}
 							})
 					}
-					if count := len(td.ImplementedBys); count > 0 {
+					if count, numExporteds := len(td.ImplementedBys), int(td.NumExportedImpedBys); count > 0 {
 						page.WriteString("\n\t\t")
 						writeFoldingBlock(page, td.TypeName.Name(), "impledby", "items", false,
 							func() {
-								page.WriteString(page.Translation().Text_ImplementedBy(count))
+								page.WriteString(page.Translation().Text_ImplementedBy())
+
+								page.WriteString(page.Translation().Text_Parenthesis(false))
+								page.WriteString(page.Translation().Text_PackageLevelResourceSimpleStat(false, count, numExporteds, collectUnexporteds))
+								page.WriteString(page.Translation().Text_Parenthesis(true))
 							},
 							func() {
 								exported := true
@@ -517,21 +418,24 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 								}
 
 								if exported {
-									if numUnexporteds := len(td.ImplementedBys) - int(td.NumExportedImpedBys); numUnexporteds > 0 {
+									if numUnexporteds := len(td.ImplementedBys) - numExporteds; numUnexporteds > 0 {
 										page.WriteString("\n\t\t\t")
-										writeHiddenItemsHeader(page,
-											td.TypeName.Name(), "impedBys", typeIsExported, numUnexporteds)
+										writeHiddenItemsHeader(page, td.TypeName.Name(), "impedBys", typeIsExported, numUnexporteds, false)
 										exported = false
 										goto ListImpedBys
 									}
 								}
 							})
 					}
-					if count := len(td.Implements); count > 0 {
+					if count, numExporteds := len(td.Implements), int(td.NumExportedImpls); count > 0 {
 						page.WriteString("\n\t\t")
 						writeFoldingBlock(page, td.TypeName.Name(), "impls", "items", false,
 							func() {
-								page.WriteString(page.Translation().Text_Implements(count))
+								page.WriteString(page.Translation().Text_Implements())
+
+								page.WriteString(page.Translation().Text_Parenthesis(false))
+								page.WriteString(page.Translation().Text_PackageLevelResourceSimpleStat(false, count, numExporteds, collectUnexporteds))
+								page.WriteString(page.Translation().Text_Parenthesis(true))
 							},
 							func() {
 								exported := true
@@ -548,21 +452,24 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 								}
 
 								if exported {
-									if numUnexporteds := len(td.Implements) - int(td.NumExportedImpls); numUnexporteds > 0 {
+									if numUnexporteds := len(td.Implements) - numExporteds; numUnexporteds > 0 {
 										page.WriteString("\n\t\t\t")
-										writeHiddenItemsHeader(page,
-											td.TypeName.Name(), "impls", typeIsExported, numUnexporteds)
+										writeHiddenItemsHeader(page, td.TypeName.Name(), "impls", typeIsExported, numUnexporteds, false)
 										exported = false
 										goto ListImpls
 									}
 								}
 							})
 					}
-					if count := len(td.AsOutputsOf); count > 0 {
+					if count, numExporteds := len(td.AsOutputsOf), int(td.NumExportedAsOutputsOfs); count > 0 {
 						page.WriteString("\n\t\t")
 						writeFoldingBlock(page, td.TypeName.Name(), "results", "items", false,
 							func() {
-								page.WriteString(page.Translation().Text_AsOutputsOf(count))
+								page.WriteString(page.Translation().Text_AsOutputsOf())
+
+								page.WriteString(page.Translation().Text_Parenthesis(false))
+								page.WriteString(page.Translation().Text_PackageLevelResourceSimpleStat(false, count, numExporteds, collectUnexporteds))
+								page.WriteString(page.Translation().Text_Parenthesis(true))
 							},
 							func() {
 								exported := true
@@ -579,21 +486,24 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 								}
 
 								if exported {
-									if numUnexporteds := len(td.AsOutputsOf) - int(td.NumExportedAsOutputsOfs); numUnexporteds > 0 {
+									if numUnexporteds := len(td.AsOutputsOf) - numExporteds; numUnexporteds > 0 {
 										page.WriteString("\n\t\t\t")
-										writeHiddenItemsHeader(page,
-											td.TypeName.Name(), "inputofs", typeIsExported, numUnexporteds)
+										writeHiddenItemsHeader(page, td.TypeName.Name(), "inputofs", typeIsExported, numUnexporteds, false)
 										exported = false
 										goto ListAsOutputsOf
 									}
 								}
 							})
 					}
-					if count := len(td.AsInputsOf); count > 0 {
+					if count, numExporteds := len(td.AsInputsOf), int(td.NumExportedAsInputsOfs); count > 0 {
 						page.WriteString("\n\t\t")
 						writeFoldingBlock(page, td.TypeName.Name(), "params", "items", false,
 							func() {
-								page.WriteString(page.Translation().Text_AsInputsOf(count))
+								page.WriteString(page.Translation().Text_AsInputsOf())
+
+								page.WriteString(page.Translation().Text_Parenthesis(false))
+								page.WriteString(page.Translation().Text_PackageLevelResourceSimpleStat(false, count, numExporteds, collectUnexporteds))
+								page.WriteString(page.Translation().Text_Parenthesis(true))
 							},
 							func() {
 								exported := true
@@ -610,21 +520,24 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 								}
 
 								if exported {
-									if numUnexporteds := len(td.AsInputsOf) - int(td.NumExportedAsInputsOfs); numUnexporteds > 0 {
+									if numUnexporteds := len(td.AsInputsOf) - numExporteds; numUnexporteds > 0 {
 										page.WriteString("\n\t\t\t")
-										writeHiddenItemsHeader(page,
-											td.TypeName.Name(), "outputofs", typeIsExported, numUnexporteds)
+										writeHiddenItemsHeader(page, td.TypeName.Name(), "outputofs", typeIsExported, numUnexporteds, false)
 										exported = false
 										goto ListAsInputsOf
 									}
 								}
 							})
 					}
-					if count := len(td.Values); count > 0 {
+					if count, numExporteds := len(td.Values), int(td.NumExportedValues); count > 0 {
 						page.WriteString("\n\t\t")
 						writeFoldingBlock(page, td.TypeName.Name(), "values", "items", false,
 							func() {
-								page.WriteString(page.Translation().Text_AsTypesOf(count))
+								page.WriteString(page.Translation().Text_AsTypesOf())
+
+								page.WriteString(page.Translation().Text_Parenthesis(false))
+								page.WriteString(page.Translation().Text_PackageLevelResourceSimpleStat(true, count, numExporteds, collectUnexporteds))
+								page.WriteString(page.Translation().Text_Parenthesis(true))
 							},
 							func() {
 								exported := true
@@ -641,10 +554,9 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 								}
 
 								if exported {
-									if numUnexporteds := len(td.Values) - int(td.NumExportedValues); numUnexporteds > 0 {
+									if numUnexporteds := len(td.Values) - numExporteds; numUnexporteds > 0 {
 										page.WriteString("\n\t\t\t")
-										writeHiddenItemsHeader(page,
-											td.TypeName.Name(), "values", typeIsExported, numUnexporteds)
+										writeHiddenItemsHeader(page, td.TypeName.Name(), "values", typeIsExported, numUnexporteds, true)
 										exported = false
 										goto ListAsTypesOf
 									}
@@ -1524,14 +1436,14 @@ func (ds *docServer) writeFieldForListing(page *htmlPage, pkg *code.Package, sel
 		}
 		if token.IsExported(fld.Name) {
 			writeSrouceCodeLineLink(page, fld.Pkg, pos, fld.Name, class)
-			page.WriteByte('.')
 		} else {
 			//writeSrouceCodeLineLink(page, fld.Pkg, pos, "<strike>"+fld.Name+"</strike>", class)
 			//page.WriteString("<strike>.</strike>")
-			page.WriteString("<i>")
+			//page.WriteString("<i>")
 			writeSrouceCodeLineLink(page, fld.Pkg, pos, fld.Name, class)
-			page.WriteString(".</i>")
+			//page.WriteString(".</i>")
 		}
+		page.WriteString(".")
 	}
 	ds.writeFieldCodeLink(page, sel.Selector)
 	page.WriteString(" <i>")
@@ -1859,7 +1771,7 @@ func (ds *docServer) writeTypeName(page *htmlPage, tt *types.Named, docPkg *code
 		ttName = tt.Obj().Name()
 	}
 	//page.WriteString(tt.Obj().Name())
-	if isBuiltin || tt.Obj().Exported() {
+	if isBuiltin || collectUnexporteds || tt.Obj().Exported() {
 		buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, objpkg.Path()}, page, ttName, "name-", tt.Obj().Name())
 	} else {
 		p := ds.analyzer.PackageByPath(objpkg.Path())
@@ -2123,7 +2035,7 @@ func (ds *docServer) WriteAstType(w *htmlPage, typeLit ast.Expr, codePkg, docPkg
 			} else { // like int
 				buildPageHref(w.PathInfo, pagePathInfo{ResTypePackage, objpkg.Path()}, w, node.Name, "name-", node.Name)
 			}
-		} else if isBuiltin || obj.Exported() {
+		} else if isBuiltin || collectUnexporteds || obj.Exported() {
 			buildPageHref(w.PathInfo, pagePathInfo{ResTypePackage, objpkg.Path()}, w, node.Name, "name-", node.Name)
 		} else {
 			p := ds.analyzer.PackageByPath(objpkg.Path())
@@ -2180,7 +2092,7 @@ func (ds *docServer) WriteAstType(w *htmlPage, typeLit ast.Expr, codePkg, docPkg
 
 		if pkgpkg == docPkg.PPkg.Types && forTypeName != nil && node.Sel.Name == forTypeName.Name() {
 			w.WriteString(node.Sel.Name)
-		} else if obj.Exported() { // || isBuiltin { // must not be builtin
+		} else if collectUnexporteds || obj.Exported() { // || isBuiltin { // must not be builtin
 			buildPageHref(w.PathInfo, pagePathInfo{ResTypePackage, pkgpkg.Path()}, w, node.Sel.Name, "name-", node.Sel.Name)
 		} else {
 			//w.WriteString(node.Sel.Name)
@@ -2379,21 +2291,21 @@ func writeUnexportedResourcesHeader(page *htmlPage, resName string, hideInitiall
 		checked = ""
 	}
 
-	showLabel := page.Translation().Text_UnexportedResourcesHeader(true, numUnexporteds)
-	hideLabel := page.Translation().Text_UnexportedResourcesHeader(false, numUnexporteds)
+	showLabel := page.Translation().Text_UnexportedResourcesHeader(true, numUnexporteds, true)
+	hideLabel := page.Translation().Text_UnexportedResourcesHeader(false, numUnexporteds, true)
 
 	fmt.Fprintf(page, `<input type='checkbox'%[2]s class="showhide" id="unexported-%[1]s-showhide"><i><label for="unexported-%[1]s-showhide" class="show-inline">%[3]s</label><label for="unexported-%[1]s-showhide" class="hide-inline">%[4]s</label></i>`,
 		resName, checked, showLabel, hideLabel)
 }
 
-func writeHiddenItemsHeader(page *htmlPage, resName, itemsCategory string, hideInitially bool, numUnexporteds int) {
+func writeHiddenItemsHeader(page *htmlPage, resName, itemsCategory string, hideInitially bool, numUnexporteds int, exact bool) {
 	checked := " checked"
 	if hideInitially {
 		checked = ""
 	}
 
-	showLabel := page.Translation().Text_UnexportedResourcesHeader(true, numUnexporteds)
-	hideLabel := page.Translation().Text_UnexportedResourcesHeader(false, numUnexporteds)
+	showLabel := page.Translation().Text_UnexportedResourcesHeader(true, numUnexporteds, exact)
+	hideLabel := page.Translation().Text_UnexportedResourcesHeader(false, numUnexporteds, exact)
 
 	fmt.Fprintf(page, `<input type='checkbox'%[3]s class="showhide" id="%[1]s-showhide-%[2]s"><i><label for="%[1]s-showhide-%[2]s" class="show-inline">%[4]s</label><label for="%[1]s-showhide-%[2]s" class="hide-inline">%[5]s</label></i>`,
 		resName, itemsCategory, checked, showLabel, hideLabel)

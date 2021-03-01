@@ -65,7 +65,7 @@ func (ds *docServer) buildImplementationPage(w http.ResponseWriter, result *Meth
 	// Use the same design for local id: click such methods to highlight all same-origin ones.
 
 	qualifiedTypeName := result.Package.Path() + "." + result.TypeName.Name()
-	title := ds.currentTranslation.Text_MethodImplementations() + ds.currentTranslation.Text_Colon(true) + qualifiedTypeName
+	title := ds.currentTranslation.Text_MethodImplementations() + ds.currentTranslation.Text_Colon(false) + qualifiedTypeName
 	page := NewHtmlPage(goldsVersion, title, ds.currentTheme, ds.currentTranslation, pagePathInfo{ResTypeImplementation, qualifiedTypeName})
 
 	fmt.Fprintf(page, `<pre><code><span style="font-size:x-large;">type <a href="%s">%s</a>.`,
@@ -85,7 +85,7 @@ func (ds *docServer) buildImplementationPage(w http.ResponseWriter, result *Meth
 	}
 
 	fmt.Fprintf(page, `
-<code><span class="title">%s%s</span>
+<code><span class="title">%s<span class="title-stat">%s</span></span>
 `,
 		page.Translation().Text_MethodImplementations(),
 		nonImplementingMethodCountText,

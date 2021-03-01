@@ -2,61 +2,68 @@
 
 ### Soon to do
 
-* merge types and values
-  * sort by popularity: Type > Function > Variable > Constant > type > function > variable > constant
-
-* for main package, show unexporteds intially.
-
-* list contained resources under each source file (folding initally)
+* sort packages: ab-cd should after ab/xy
 
 * supports "golds a.go", need change "builtin" parse handling. remove: args = append(args, "builtin")
-
-* add "d➜" in overview page.
-  * hover on a package: show its brief intro.
-
-* provide two variables for JS: showSortByForExportedsTypes, showSortByForAllTypes
-
-* show statistics floating on the right of the overview page.
-
-* add an option: list-unexporteds, when false
-  * link unexported functions/types from code to code
 
 * move most readme content to go101.org.
   * keep case table, simple install, simple feature overview, simple usage (golds std, golds ./...)
 
-* when collecting package details, add an option: collectUnexported, false for producing test data.
-  * remove show=all
-
-* collapse all as index mode.
-
-* use js for sort on overview and pacakge details page
-  * use js to fold functions in code pages
-  * use cookie to remember options: show-unexporteds, sort-by
-
-* List unexported resources, but hidden initially.
-  * italic unexporteds
-
 * top list: most parameters, most results
-
-* field list: align them as which in code. But need to consider embedding chain...
-
-* calculate value importance:
-  Functions > Variables > Constants > functions > variables > constants
-  * result/param type popularity matter
-  * maybe, "sort by importance" is not a good idea.
-
-* shortcuts:
-  * e: toggle expand all (types and values)
-  * t: toggle expand types
-  * v: toggle expand values
-
-* -format=[html|json|txt|md]
 
 * show/run examples/tests/banchmarks
   * run source code, run main package
   * Open a new page to avoid using JavaScript?
   * "go/doc": doc.Examples(...)importance
   * websocket: monitor page leave and shutdown unfinished Go processes.
+
+* list contained resources under each source file (folding initally)
+
+* method list: add an option: show promoted path (default hidden, pure css)
+  field list: two options: show promoteds, show promoted path (default shown, pure css)
+
+* add "d➜" in overview page: hover on a package: show its brief intro.
+* more hovers: 
+
+* show statistics floating on the right of the overview page.
+
+* -format=[html|json|txt|md]
+
+* hotkey
+  * t/f/v/c to expend/collapse resources
+  * HOME: to overview page.
+    * add a settings page on overview page: switch theme/language etc.
+  * P: from code page to package detail page
+
+* uses pages: show package reference list (for example, find all unsafe uses)
+* id uses need consider whether or not the id is promoted.
+  For promoted selectors, the receiver arg's type must be checked
+  Need an option on page: check the owner type of selectors or not.
+* uses pages: also count some implicit uses, such as unkeyed struct literals
+* show identifier uses: use fake ids for some cases
+  * unnamed types
+  * string literals
+  * fields of package-level unnamed structs (current no ways to represent as TypeName.field, need a fake typename)
+    * even for named types, its files obtained by embedding have not definitions, so now uses are not collected for them
+  * methods of unnamed stricts (obtained by embedding, now uses are not collected for them)
+
+* code page: add links in import sections
+* code page: each funciton enclosed in a span so that local id hightlighting needs less time.
+* in code, show tooltip as the full selector path for shortened selectors.
+* click an import path to highlight all its uses in the current file
+  ctrl+click to go to package detail page.
+  
+  
+* use js to fold functions in code pages
+  * use js to fold interface method implementations
+* use js to check input in :target in onload, expend it if applicable
+* use cookie to remember options: show-unexporteds, sort-by
+
+* field list: align them as which in code. But need to consider embedding chain...
+
+* calculate value importance:
+  * result/param type popularity matter
+  * number of uses matter
 
 * about https://github.com/go101/golds/issues/9 and to avoid depings affecting depeds' docs:
   * need to implement the module aware features firstly.
@@ -65,56 +72,32 @@
   * note: the dependencies of modules can be bidirectional
   * within a module: allow mutual references  
     for two packages not in the same module, only deping can reference deped.
+  * assume v1.x.y doesn;t break v1.m.n (where x.y > m.n)
 
 * modify the cache system to only cache most visited and recent ones
 
 * css style
   * https://github.com/go101/golds/issues/13
 
-* show method docs in package details pages 
+* method docs 
   * how to handle duplicated methods caused by interface embedding interfaces.
     Their docs might be different.
 
-* show package reference list (for example, find all unsafe uses)
-
-* in update: notify users the default program name has changed to "golds".
-  update should be self-adptive by program name, in the update tips etc.
-
-* make overview and package detials pages always contain unexported info, Use JS to sort and show.
-
-* click an import path to highlight all its uses in the current file
-  ctrl+click to go to package detail page.
-
 * rate limit http requests. 1000requests/3600seconds
-
-* optimize memory more, avoid string concatrations, write into page buffer directly.
-  * use sync.Pool
-
-* stat number of non-std packages, and non-std dependencies for each package, 
 
 * server state:
   * highlight id 0-n
   * searching uses for id goroutine 0-n
+  (forget what these means)
 
 * module page. Containing Module: xxxx/xxxx
+  * sort by requiredBys
 
-* reference list: also count some implicit uses, such as
-  * unkeyed struct literanls
-* show identifier uses: use fake ids for some cases
-  * unnamed types
-  * string literals
-  * fields of package-level unnamed structs (current no ways to represent as TypeName.field, need a fake typename)
-    * even for named types, its files obtained by embedding have not definitions, so now uses are not collected for them
-  * methods of unnamed stricts (obtained by embedding, now uses are not collected for them)
-* from dep pages, to list what identifiers are used by the importing package.
-* for an identifier, stat how many packages use it.
 
-* sort packages: ab-cd should after ab/xy
-* add links in import sections
-* in code, show tooltip as the full selector path for shortened selectors.
+* pkg details page: show values by file/position order (only for javascript on)
 
-* show values by file/position order (only for javascript on)
-* put unexported function in asParams/asResult lists
+* overview page: show std pkgages only
+  * need maintain a seperated depHeight/depDepth for std module internally.
 
 * search (non-semantic search, pure word searching)
   * ref: https://github.com/g-harel/gothrough
@@ -125,20 +108,7 @@
 
 * gen mode: merge docs for several (GOOS, GOARCH) compositions. At least for std.
 
-* js:
-  * shortcuts:
-    * -: collapse value/type docs
-    * +: expand value/type docs
-    * ~, Backspace: back
-    * HOME: to overview page
-    * P: from code page to package detail page
-  * filter values (var | const | func)
-    filter types (interfaces)
-    fitler packages (main | std)
-    sort packages by importedBys
-    fitler packages (all | main | std)
-  * search on pkg details pages, and filter packages on overview page
-  * click "package"/overview to switch theme/language
+* search ids on pkg details/overview pages
 
 * Rewrite some implemenrations
   * global.pacakgeList, each pkg has a unique id (int32)
@@ -169,8 +139,6 @@
 * go-callvis like, call relations
 
 * change theme and language
-
-* not cache pages in gen mode
 
 * FindPackageCommonPrefixPaths(pa, pb string) string
 	ToDo: ToLower both?
@@ -228,7 +196,7 @@
   * ...
 
 * packakge list
-  * show by alpha order / by importedBys / by dependency level
+  * show by alpha order / by importedBys / by dependency height
   * if last token in import path and package name are different, mention it
   * list packages by one module, one background color
   * exclude dependency packages
@@ -241,6 +209,8 @@
   * top N used identifers
   * function stats also consider vars of function types.
   * all stats also consider unexported global and local resources
+  * stat number of non-std packages, and non-std dependencies for each package, 
+  * for an identifier, stat how many packages use it.
 * package details
   * add parent and children packages
 * imports
@@ -255,6 +225,7 @@
 * for a type
   * show the types with the same underlying type.
   * as field types of, and embedded in n types
+  * show filed tags in docs
   * show comparable/embeddable or not. Fill TypeInfo.attributes.
   * all alias list
   * values which can be converted to (some functions can be used as (implicitly converted to) http.HandleFunc values, alike)    
@@ -283,6 +254,8 @@
 
 ### Done
 
+* (done) put unexported function in asParams/asResult lists
+* (done) make overview and package detials pages always contain unexported info, Use JS to sort and show.
 * (cancelled) add an index section
 * (done) after some time: remove the old ".gold-update" class in css file.
 * (cancelled) click "type" keyword to unhide the source type definition.

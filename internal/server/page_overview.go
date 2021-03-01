@@ -6,14 +6,11 @@ import (
 	"log"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 
 	"go101.org/golds/code"
 )
-
-type overviewPageOptions struct {
-	sortBy string // "alphabet", "importedbys"
-}
 
 func (ds *docServer) overviewPage(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
@@ -41,9 +38,6 @@ func (ds *docServer) overviewPage(w http.ResponseWriter, r *http.Request) {
 				resType: ResTypeNone,
 				res:     "",
 			}
-			pageKey.options = overviewPageOptions{sortBy: "alphabet"}
-			ds.cachePage(pageKey, nil)
-			pageKey.options = overviewPageOptions{sortBy: "importedbys"}
 			ds.cachePage(pageKey, nil)
 		}
 	}
@@ -52,47 +46,20 @@ func (ds *docServer) overviewPage(w http.ResponseWriter, r *http.Request) {
 		resType: ResTypeNone,
 		res:     "",
 	}
-	oldOptions, ok := ds.cachedPageOptions(pageKey).(overviewPageOptions)
 
-	var sortBy = r.FormValue("sortby")
-	switch sortBy {
-	case "alphabet", "importedbys":
-	default:
-		if ok {
-			sortBy = oldOptions.sortBy
-		} else {
-			sortBy = "alphabet"
-		}
-	}
-
-	newOptions := overviewPageOptions{sortBy: sortBy}
-	if newOptions != oldOptions {
-		ds.cachePageOptions(pageKey, newOptions)
-	}
-
-	//if ds.theOverviewPage == nil || sortBy != ds.theOverviewPage.sortBy {
-	//	overview := ds.buildOverviewData(sortBy)
-	//	ds.theOverviewPage = &overviewPage{
-	//		content: ds.buildOverviewPage(overview, sortBy),
-	//		sortBy:  sortBy,
-	//	}
-	//}
-	//w.Write(ds.theOverviewPage.content)
-
-	pageKey.options = newOptions
 	data, ok := ds.cachedPage(pageKey)
 	if !ok {
-		overview := ds.buildOverviewData(newOptions.sortBy)
-		data = ds.buildOverviewPage(w, overview, newOptions.sortBy)
+		overview := ds.buildOverviewData()
+		data = ds.buildOverviewPage(w, overview)
 		ds.cachePage(pageKey, data)
 	}
 	w.Write(data)
 }
 
-func (ds *docServer) buildOverviewPage(w http.ResponseWriter, overview *Overview, sortBy string) []byte {
+func (ds *docServer) buildOverviewPage(w http.ResponseWriter, overview *Overview) []byte {
 	page := NewHtmlPage(goldsVersion, ds.currentTranslation.Text_Overview(), ds.currentTheme, ds.currentTranslation, pagePathInfo{ResTypeNone, ""})
 	fmt.Fprintf(page, `
-<pre><code><span style="font-size:xx-large;">%s</span></code></pre>
+<pre id="overview"><code><span style="font-size:xx-large;">%s</span></code></pre>
 `,
 		page.Translation().Text_Overview(),
 	)
@@ -103,64 +70,86 @@ func (ds *docServer) buildOverviewPage(w http.ResponseWriter, overview *Overview
 
 	ds.writeSimpleStatsBlock(page, &overview.Stats)
 
-	page.WriteString("<pre>")
+	page.WriteString("<pre><code>")
 
-	if genDocsMode {
-		fmt.Fprintf(page, `<code><span class="title">%s</span></code>`,
-			page.Translation().Text_PackageList(),
-		)
-	} else {
-		var textSortByAlphabet = page.Translation().Text_SortByItem("alphabet")
-		var textSortByImportedBys = page.Translation().Text_SortByItem("importedbys")
+	page.WriteString(`<span class="title">`)
+	page.WriteString(page.Translation().Text_PackageList())
+	page.WriteString(`<span id="buttons1" class="js-on title-stat">`)
+	page.WriteString(page.Translation().Text_Parenthesis(false))
+	page.WriteString(`<span class="buttons-content">`)
+	page.WriteString(page.Translation().Text_SortBy("packages"))
+	page.WriteString(page.Translation().Text_Colon(false))
+	page.WriteString(`<label id="btn-alphabet" class="button">`)
+	page.WriteString(page.Translation().Text_SortByItem("alphabet"))
+	page.WriteString(`</label>`)
+	page.WriteString(`<span id="importedbys"> | `)
+	page.WriteString(`<label id="btn-importedbys" class="button">`)
+	page.WriteString(page.Translation().Text_SortByItem("importedbys"))
+	page.WriteString(`</label></span>`)
+	page.WriteString(`<span id="depdepth"> | `)
+	page.WriteString(`<label id="btn-depdepth" class="button">`)
+	page.WriteString(page.Translation().Text_SortByItem("depdepth"))
+	page.WriteString(`</label></span>`)
+	page.WriteString(`</span>`)
+	page.WriteString(page.Translation().Text_Parenthesis(true))
+	page.WriteString("</span>")
+	page.WriteString(`</span>`)
 
-		switch sortBy {
-		case "alphabet":
-			textSortByImportedBys = fmt.Sprintf(`<a href="%s">%s</a>`, "?sortby=importedbys", textSortByImportedBys)
-		case "importedbys":
-			textSortByAlphabet = fmt.Sprintf(`<a href="%s">%s</a>`, "?sortby=alphabet", textSortByAlphabet)
-		}
+	ds.writePackagesForListing(page, overview.Packages, true)
 
-		fmt.Fprintf(page, `<code><span class="title">%s (%s%s | %s)</span></code>`,
-			page.Translation().Text_PackageList(),
-			page.Translation().Text_SortBy(),
-			textSortByAlphabet,
-			textSortByImportedBys,
-		)
-	}
-
-	ds.writePackagesForListing(page, overview.Packages, true, sortBy)
-
-	page.WriteString("</pre>")
+	page.WriteString("</code></pre>")
 
 	return page.Done(w)
 }
 
-func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*PackageForListing, writeAnchorTarget bool, sortBy string) {
+func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*PackageForListing, writeAnchorTarget bool) {
+	if len(packages) == 0 {
+		return
+	}
+
 	const MainPkgArrowCharCount = 2
 	const MinPrefixSpacesCount = 3
-	var maxDigitCount = 2 // 2 for ". " suffix
+	var maxDigitCount = 0 // 2 // 2 for ". " suffix
 	for n := len(packages); n > 0; n /= 10 {
 		maxDigitCount++
 	}
 	var SPACES = strings.Repeat(" ", maxDigitCount+MainPkgArrowCharCount+MinPrefixSpacesCount+1) // +1 for space after MainPkgArrow
 
-	var maxDepLevel int32
-	for _, pkg := range packages {
-		if pkg.DepLevel > maxDepLevel {
-			maxDepLevel = pkg.DepLevel
-		}
-	}
+	//var maxDepHeight int32
+	//for _, pkg := range packages {
+	//	if pkg.DepHeight > maxDepHeight {
+	//		maxDepHeight = pkg.DepHeight
+	//	}
+	//}
 
-	listPackage := func(i int, pkg *PackageForListing) {
+	listPackage := func(i int, pkg *PackageForListing, hidden, writeDataAttrs bool) {
 		if writeAnchorTarget {
-			fmt.Fprintf(page, `<div class="anchor" id="pkg-%s" data-importedbys="%d" data-dependencylevel="%d">`, pkg.Path, pkg.NumImportedBys, pkg.DepLevel)
+			extraClass := ""
+			if hidden {
+				extraClass = " hidden"
+			}
+			std := ""
+			if pkg.IsStandard {
+				std = ` data-std="1"`
+			}
+			// ToDo: could pkg path contains invalid id chars?
+			//       if so, use pkg id instead.
+			if writeDataAttrs {
+				fmt.Fprintf(page, `<i id="max-digit-count" class="hidden">%d</i>`, maxDigitCount)
+			}
+			fmt.Fprintf(page, `<div class="anchor pkg%s" id="pkg-%s"`, extraClass, pkg.Path)
+			if writeDataAttrs {
+				fmt.Fprintf(page, ` data-importedbys="%d" data-depheight="%d" data-depdepth="%d"%s`, pkg.NumImportedBys, pkg.DepHeight, pkg.DepDepth, std)
+			}
+			page.WriteString(`>`)
+			defer page.WriteString(`</div>`)
 		} else {
 			page.WriteByte('\n')
 		}
 
 		page.WriteString(`<code>`)
+		defer page.WriteString(`</code>`)
 		page.WriteString(SPACES[:MinPrefixSpacesCount])
-		var index = fmt.Sprintf("%d. ", i+1)
 		if pkg.Name == "main" {
 			mainObj := pkg.Package.PPkg.Types.Scope().Lookup("main")
 			var mainPos token.Position
@@ -170,13 +159,11 @@ func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*Package
 				mainPos = pkg.Package.PPkg.Fset.PositionFor(mainObj.Pos(), false)
 			}
 			writeMainFunctionArrow(page, pkg.Package, mainPos)
-			page.WriteString(SPACES[:maxDigitCount-len(index)])
-			page.WriteString(index)
 		} else {
 			page.WriteString(SPACES[:MainPkgArrowCharCount+1])
-			page.WriteString(SPACES[:maxDigitCount-len(index)])
-			page.WriteString(index)
 		}
+		var index = strconv.Itoa(i + 1)
+		fmt.Fprintf(page, `<span class="order">%s%d</span>. `, SPACES[:maxDigitCount-len(index)], i+1)
 
 		if pkg.Prefix != "" {
 			fmt.Fprintf(page,
@@ -194,39 +181,50 @@ func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*Package
 			)
 
 		}
-		if sortBy == "importedbys" {
-			fmt.Fprintf(page, ` <i>(%d)</i>`, pkg.NumImportedBys)
-		}
-		page.WriteString(`</code>`)
-		if writeAnchorTarget {
-			page.WriteString(`</div>`)
-		}
+		fmt.Fprintf(page, `<i class="importedbys"> (%d)</i>`, pkg.NumImportedBys)
+		fmt.Fprintf(page, `<i class="depheight"> (%d)</i>`, pkg.DepHeight)
+		fmt.Fprintf(page, `<i class="depdepth"> (%d)</i>`, pkg.DepDepth)
 	}
 
 	switch wdPkgsListingManner {
-	case WdPkgsListingManner_promoted:
-		lastInWorkingDirectory := false
-		for i, pkg := range packages {
-			if lastInWorkingDirectory != pkg.InWorkingDirectory {
-				if lastInWorkingDirectory {
-					page.WriteByte('\n')
-				}
-				lastInWorkingDirectory = pkg.InWorkingDirectory
-			}
-			listPackage(i, pkg)
-		}
-	case WdPkgsListingManner_solo:
+	case WdPkgsListingManner_promoted, WdPkgsListingManner_solo:
+		showOthers := wdPkgsListingManner != WdPkgsListingManner_solo
+
+		page.WriteString(`<div id="wd-packages" class="alphabet">`)
 		i := 0
 		for _, pkg := range packages {
 			if pkg.InWorkingDirectory {
-				listPackage(i, pkg)
+				listPackage(i, pkg, false, showOthers)
 				i++
 			}
 		}
-	case WdPkgsListingManner_general:
-		for i, pkg := range packages {
-			listPackage(i, pkg)
+		page.WriteString(`</div>`)
+
+		if showOthers {
+			page.WriteByte('\n')
+			page.WriteString(`<span id="buttons2" class="js-on">`)
+			page.WriteString("\n")
+			page.WriteString(SPACES[:len(SPACES)-maxDigitCount])
+			page.WriteString("/* ")
+			page.WriteString(`<span class="buttons-content">`)
+			page.WriteString(`</span>`)
+			page.WriteString(` */</span>`)
 		}
+
+		page.WriteString(`<div id="packages" class="alphabet">`)
+		for _, pkg := range packages {
+			if !pkg.InWorkingDirectory {
+				listPackage(i, pkg, !showOthers, showOthers)
+				i++
+			}
+		}
+		page.WriteString(`</div>`)
+	case WdPkgsListingManner_general:
+		page.WriteString(`<div id="packages">`)
+		for i, pkg := range packages {
+			listPackage(i, pkg, false, true)
+		}
+		page.WriteString(`</div>`)
 	}
 }
 
@@ -273,13 +271,15 @@ type PackageForListing struct {
 	Prefix    string // the part shared with the last one in list
 	Remaining string // the part different from the last one in list
 
-	DepLevel       int32
+	DepHeight      int32
+	DepDepth       int32
 	NumImportedBys int32
 
+	IsStandard         bool
 	InWorkingDirectory bool
 }
 
-func (ds *docServer) buildOverviewData(sortBy string) *Overview {
+func (ds *docServer) buildOverviewData() *Overview {
 	numPkgs := ds.analyzer.NumPackages()
 	var pkgs = make([]PackageForListing, numPkgs)
 	var result = make([]*PackageForListing, numPkgs)
@@ -297,45 +297,25 @@ func (ds *docServer) buildOverviewData(sortBy string) *Overview {
 		pkg.Name = p.PPkg.Name
 		pkg.Index = p.Index
 
-		pkg.DepLevel = int32(p.DepLevel)
+		pkg.DepHeight = p.DepHeight
+		pkg.DepDepth = p.DepDepth
 		pkg.NumImportedBys = int32(len(p.DepedBys))
 
+		pkg.IsStandard = ds.analyzer.IsStandardPackage(p)
 		pkg.InWorkingDirectory = strings.HasPrefix(p.Directory, ds.workingDirectory)
 	}
 
-	switch sortBy {
-	case "alphabet":
-		// ToDo: might be problematic sometimes. Should sort token by token.
-		sort.Slice(result, func(a, b int) bool {
-			promoteWDPkgs := wdPkgsListingManner == WdPkgsListingManner_promoted // emphasizeWDPackages // || ds.emphasizeWDPkgs
-			if promoteWDPkgs {
-				if result[a].InWorkingDirectory != result[b].InWorkingDirectory {
-					return result[a].InWorkingDirectory
-				}
-			}
-			return result[a].Path < result[b].Path
-		})
-		ImprovePackagesForListing(result)
-	case "importedbys":
-		var pkgs = result
-		for i, pkg := range pkgs {
-			if pkg.Path == "builtin" {
-				pkg.NumImportedBys = int32(len(pkgs) - 1)
-				pkgs[0], pkgs[i] = pkg, pkgs[0]
-				pkgs = pkgs[1:]
-				break
+	// ToDo: might be problematic sometimes. Should sort token by token.
+	promoteWDPkgs := wdPkgsListingManner == WdPkgsListingManner_promoted || wdPkgsListingManner == WdPkgsListingManner_solo
+	sort.Slice(result, func(a, b int) bool {
+		if promoteWDPkgs {
+			if result[a].InWorkingDirectory != result[b].InWorkingDirectory {
+				return result[a].InWorkingDirectory
 			}
 		}
-		sort.Slice(pkgs, func(a, b int) bool {
-			switch n := pkgs[a].NumImportedBys - pkgs[b].NumImportedBys; {
-			case n > 0:
-				return true
-			case n < 0:
-				return false
-			}
-			return pkgs[a].Path < pkgs[b].Path
-		})
-	}
+		return result[a].Path < result[b].Path
+	})
+	ImprovePackagesForListing(result)
 
 	return &Overview{
 		Packages: result,

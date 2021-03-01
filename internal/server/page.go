@@ -130,22 +130,22 @@ func (ds *docServer) cachedPage(key pageCacheKey) (data []byte, ok bool) {
 	return
 }
 
-func (ds *docServer) cachePageOptions(key pageCacheKey, options interface{}) {
-	if genDocsMode {
-	} else {
-		key.options = nil
-		ds.cachedPagesOptions[key] = options
-	}
-}
+//func (ds *docServer) cachePageOptions(key pageCacheKey, options interface{}) {
+//	if genDocsMode {
+//	} else {
+//		key.options = nil
+//		ds.cachedPagesOptions[key] = options
+//	}
+//}
 
-func (ds *docServer) cachedPageOptions(key pageCacheKey) (options interface{}) {
-	if genDocsMode {
-	} else {
-		key.options = nil
-		options = ds.cachedPagesOptions[key]
-	}
-	return
-}
+//func (ds *docServer) cachedPageOptions(key pageCacheKey) (options interface{}) {
+//	if genDocsMode {
+//	} else {
+//		key.options = nil
+//		options = ds.cachedPagesOptions[key]
+//	}
+//	return
+//}
 
 func addVersionToFilename(filename string, version string) string {
 	return filename + "-" + version
@@ -197,7 +197,7 @@ func NewHtmlPage(goldsVersion, title string, theme Theme, translation Translatio
 <title>%s</title>
 <link href="%s" rel="stylesheet">
 <script src="%s"></script>
-<body><div>
+<body onload="onPageLoad()"><div>
 `,
 			title,
 			buildPageHref(currentPageInfo, pagePathInfo{ResTypeCSS, addVersionToFilename(theme.Name(), goldsVersion)}, nil, ""),

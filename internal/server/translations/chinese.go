@@ -21,7 +21,7 @@ func (*Chinese) Text_Space() string { return "" }
 
 func (*Chinese) Text_Comma() string { return "，" }
 
-func (*Chinese) Text_Colon(tailSpace bool) string { return "：" }
+func (*Chinese) Text_Colon(atLineEnd bool) string { return "：" }
 
 func (*Chinese) Text_Period(paragraphEnd bool) string { return "。" }
 
@@ -183,12 +183,15 @@ func (*Chinese) Text_UpdateTip(tipName string) string {
 	return ""
 }
 
-func (*Chinese) Text_SortBy() string {
-	return "排序依据："
-}
-
-func (*Chinese) Text_Filter() string {
-	return "列出："
+func (*Chinese) Text_SortBy(whatToSort string) string {
+	switch whatToSort {
+	case "packages":
+		return "库包排序依据"
+	case "exporteds-types":
+		return "导出类型排序依据"
+	default:
+		panic("unknown what-to-sort: " + whatToSort)
+	}
 }
 
 func (*Chinese) Text_SortByItem(by string) string {
@@ -199,21 +202,10 @@ func (*Chinese) Text_SortByItem(by string) string {
 		return "按流行度排序"
 	case "importedbys":
 		return "按被引入量排序"
+	case "depdepth":
+		return "按依赖距离排序"
 	default:
 		panic("unknown sort-by: " + by)
-	}
-}
-
-func (*Chinese) Text_FilterItem(fltr string) string {
-	switch fltr {
-	case "all":
-		return "所有"
-	case "mainpackages":
-		return "main包"
-	case "testingpackages":
-		return "测试包"
-	default:
-		panic("unknown filter item: " + fltr)
 	}
 }
 
@@ -271,27 +263,57 @@ func (*Chinese) Text_PackageLevelConstants() string {
 	return "包级常量"
 }
 
-func (*Chinese) Text_PackageLevelResourceSimpleStat(num, numExporteds int) string {
-	if numExporteds == 0 {
-		if num == 1 {
-			return "只有一个，其未导出"
+func (c *Chinese) Text_PackageLevelResourceSimpleStat(statsAreExact bool, num, numExporteds int, mentionExporteds bool) string {
+	var total, exporteds string
+	if num == 1 {
+		if statsAreExact {
+			total = "只有一个"
+		} else {
+			total = "至少一个"
 		}
-		return fmt.Sprintf("共%d个，均未导出", num)
-	}
-	if numExporteds == num {
-		if num == 1 {
-			return "只有一个，其被导出"
+
+		if mentionExporteds {
+			if numExporteds == 0 {
+				exporteds = "其未导出"
+			} else {
+				exporteds = "为导出的"
+			}
 		}
-		return fmt.Sprintf("共%d个，均导出", num)
+	} else {
+		if statsAreExact {
+			total = fmt.Sprintf("共%d个", num)
+		} else {
+			total = fmt.Sprintf("至少%d个", num)
+		}
+
+		if mentionExporteds {
+			if numExporteds == 0 {
+				exporteds = "均未导出"
+			} else if numExporteds == num {
+				exporteds = "均为导出的"
+			} else if statsAreExact {
+				exporteds = fmt.Sprintf("其中导出%d个", numExporteds)
+			} else {
+				exporteds = fmt.Sprintf("其中至少%d个为导出的", numExporteds)
+			}
+		}
 	}
-	return fmt.Sprintf("共%d个，导出%d个", num, numExporteds)
+
+	if exporteds == "" {
+		return total
+	}
+	return total + c.Text_Comma() + exporteds
 }
 
-func (*Chinese) Text_UnexportedResourcesHeader(show bool, numUnexporteds int) string {
+func (*Chinese) Text_UnexportedResourcesHeader(show bool, numUnexporteds int, exact bool) string {
+	plus := "+"
+	if exact {
+		plus = ""
+	}
 	if show {
-		return fmt.Sprintf("/* %d个未导出的…… */", numUnexporteds)
+		return fmt.Sprintf("/* %d%s个未导出的…… */", numUnexporteds, plus)
 	} else {
-		return fmt.Sprintf("/* %d个未导出的： */", numUnexporteds)
+		return fmt.Sprintf("/* %d%s个未导出的： */", numUnexporteds, plus)
 	}
 }
 
@@ -303,44 +325,32 @@ func (*Chinese) Text_BasicType() string {
 	return "基本类型"
 }
 
-func (*Chinese) Text_Fields(num int, exportedsOnly bool) string {
-	if exportedsOnly {
-		return fmt.Sprintf("%d个导出字段", num)
-	} else {
-		return fmt.Sprintf("%d个字段", num)
-	}
+func (*Chinese) Text_Fields() string {
+	return "字段列表"
 }
 
-func (*Chinese) Text_Methods(num int, exportedsOnly bool) string {
-	if exportedsOnly {
-		return fmt.Sprintf("%d个导出方法", num)
-	} else {
-		return fmt.Sprintf("%d个方法", num)
-	}
+func (*Chinese) Text_Methods() string {
+	return "方法列表"
 }
 
-func (*Chinese) Text_ImplementedBy(num int) string {
-	return fmt.Sprintf("被%d+类型实现", num)
+func (*Chinese) Text_ImplementedBy() string {
+	return "被实现列表"
 }
 
-func (*Chinese) Text_Implements(num int) string {
-	return fmt.Sprintf("实现了%d+接口", num)
+func (*Chinese) Text_Implements() string {
+	return "接口实现列表"
 }
 
-func (*Chinese) Text_AsOutputsOf(num int) string {
-	return fmt.Sprintf("使用此类型做为结果的函数（%d+）", num)
+func (*Chinese) Text_AsOutputsOf() string {
+	return "使用此类型做为输出结果的函数"
 }
 
-func (*Chinese) Text_AsInputsOf(num int) string {
-	return fmt.Sprintf("使用此类型做为参数的函数（%d+）", num)
+func (*Chinese) Text_AsInputsOf() string {
+	return "使用此类型做为输入参数的函数"
 }
 
-func (*Chinese) Text_AsTypesOf(num int) string {
-	return fmt.Sprintf("和此类型相关的值（%d+）", num)
-}
-
-func (*Chinese) Text_References(num int) string {
-	return fmt.Sprintf("引用（%d+）", num)
+func (*Chinese) Text_AsTypesOf() string {
+	return "和此类型相关的包级值"
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -372,6 +382,10 @@ func (*Chinese) Text_NumMethodsImplementingNothing(count int) string {
 		return ""
 	}
 	return fmt.Sprintf("（%d个其它方法什么也没实现）", count)
+}
+
+func (*Chinese) Text_ViewMethodImplementations() string {
+	return "查看实现了哪些接口方法"
 }
 
 ///////////////////////////////////////////////////////////////////
