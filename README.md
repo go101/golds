@@ -2,14 +2,14 @@
 It tries to extract as much information as possible from Go code to help gophers understand, study and use Go packages.
 
 * [Demo of the generated docs for standard packages](https://docs.go101.org/index.html)
-  (please note that the demo site is genenated with some features being turned off deliberately to reduce the docs size).
+  (generated with `golds -gen -nouses -only-list-exporteds std`).
 * Please follow [@Go100and1](https://twitter.com/go100and1) to get the latest news of **Golds**
   (and Go details/facts/tips/etc.).
 
-### Installation & Usage
+### Installation & Usages
 
 The module name of this project is `go101.org/golds` and the default Go program name is `golds`.
-About more information about installation and usages,
+For more information about installation and usages,
 please visit [this page on Go101.org](https://go101.org/article/tool-golds.html).
 
 ### Main Features

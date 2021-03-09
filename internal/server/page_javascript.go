@@ -6,24 +6,34 @@ import (
 
 func (ds *docServer) javascriptFile(w http.ResponseWriter, r *http.Request, themeName string) {
 	w.Header().Set("Content-Type", "application/javascript")
-	w.Write(jsFile)
+	if !genDocsMode {
+		w.Write(jsFile)
+		return
+	}
+
+	ds.mutex.Lock()
+	defer ds.mutex.Unlock()
+
+	page := NewHtmlPage(goldsVersion, "", nil, ds.currentTranslation, pagePathInfo{ResTypeJS, "golds"})
+	page.Write(jsFile)
+	_ = page.Done(w)
 }
 
 var jsFile = []byte(`
 function onPageLoad () {
 	if (document.getElementById("overview") != null) {
-		initOverviewPage()
+		initOverviewPage();
 	}
 
 	if (document.getElementById("package-details") != null) {
-		initPackageDetailsPage()
+		initPackageDetailsPage();
 	}
 }
 
 function initOverviewPage() {
 	var buttons1 = document.getElementById("buttons1");
 	if (buttons1 == null) {
-		return
+		return;
 	}
 
 	var pkgContainer = document.getElementById("packages");
@@ -67,8 +77,8 @@ function initOverviewPage() {
 		return 1;
 	});
 
-	var showSortByImportBysButton = true
-	var showSortByDepDepthButton = true
+	var showSortByImportBysButton = true;
+	var showSortByDepDepthButton = true;
 	for (var i = 0; i < nodesPkg.length; i++) {
 		if (pkgsByAlphabet[i].node.id != pkgsByImportedby[i].node.id) {
 			showSortByImportBysButton = true;
@@ -143,7 +153,7 @@ function initOverviewPage() {
 			return;
 		}
 
-		pkgContainer.innerHTML = ""
+		pkgContainer.innerHTML = "";
 		pkgsByImportedby.forEach(function (x, i) {
 			pkgContainer.appendChild(x.node);
 			var o = (i+pkgStartOrderId).toString();
@@ -163,7 +173,7 @@ function initOverviewPage() {
 			return;
 		}
 
-		pkgContainer.innerHTML = ""
+		pkgContainer.innerHTML = "";
 		pkgsByDepDepth.forEach(function (x, i) {
 			pkgContainer.appendChild(x.node);
 			var o = (i+pkgStartOrderId).toString();

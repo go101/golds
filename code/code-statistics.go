@@ -219,9 +219,9 @@ func (d *CodeAnalyzer) stat_OnNewExportedStructTypeName(hasEmbeddeds bool, numAl
 	d.stats.ExportedNamedStructsExplicitFieldCountTopList.Push(numExpliciteds, tn)
 	d.stats.ExportedNamedStructsExportedFieldCountTopList.TryToInit(32)
 	d.stats.ExportedNamedStructsExportedFieldCountTopList.Push(numExporteds, tn)
-	d.stats.ExportedNamedStructsExportedExplicitFieldCount.TryToInit(32)
+	d.stats.ExportedNamedStructsExportedExplicitFieldCount.TryToInit(30)
 	d.stats.ExportedNamedStructsExportedExplicitFieldCount.Push(numExportedExpliciteds, tn)
-	d.stats.ExportedNamedStructsExportedPromotedFieldCount.TryToInit(32)
+	d.stats.ExportedNamedStructsExportedPromotedFieldCount.TryToInit(16)
 	d.stats.ExportedNamedStructsExportedPromotedFieldCount.Push(numExportedPromoteds, tn)
 }
 

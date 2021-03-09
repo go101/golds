@@ -209,7 +209,7 @@ func (*English) Text_SortBy(whatToSort string) string {
 	case "exporteds-types":
 		return "sort exporteds by"
 	default:
-		panic("unknown what-to-sort: " + whatToSort)
+		return "sort by"
 	}
 }
 
@@ -293,42 +293,57 @@ func (*English) Text_PackageLevelConstants() string {
 }
 
 func (e *English) Text_PackageLevelResourceSimpleStat(statsAreExact bool, num, numExporteds int, mentionExporteds bool) string {
+	var total, exporteds string
 	if num == 1 {
 		if statsAreExact {
-			if numExporteds == 0 {
-				return "only one unexported"
-			} else {
-				return "only one exported"
-			}
+			total = "only one"
 		} else {
+			total = "at least one"
 			if numExporteds == 0 {
 				return "at least one unexported"
 			} else {
 				return "at least one exported"
 			}
 		}
-	} else if statsAreExact {
-		if numExporteds == 0 {
-			return fmt.Sprintf("total %d, none are unexported", num)
-		} else if numExporteds != num {
-			return fmt.Sprintf("total %d, in which %d are exported", num, numExporteds)
-		} else if num == 2 {
-			return fmt.Sprintf("total %d, both are exported", num)
-		} else {
-			return fmt.Sprintf("total %d, all are exported", num)
+		if mentionExporteds {
+			if numExporteds == 0 {
+				exporteds = "which is unexported"
+			} else {
+				exporteds = "which is exported"
+			}
 		}
 	} else {
-		if numExporteds == 0 {
-			return fmt.Sprintf("at least %d, none are unexported", num)
-		} else if numExporteds != num {
-			if numExporteds == 1 {
-				return fmt.Sprintf("at least %d, in which %d is exported", num, numExporteds)
-			}
-			return fmt.Sprintf("at least %d, in which %d are exported", num, numExporteds)
+		if statsAreExact {
+			total = fmt.Sprintf("total %d", num)
 		} else {
-			return fmt.Sprintf("at least %d exporteds", num)
+			total = fmt.Sprintf("at least %d", num)
+		}
+
+		if mentionExporteds {
+			if numExporteds == 0 {
+				if num == 2 {
+					exporteds = "neither is exported"
+				} else {
+					exporteds = "none are exported"
+				}
+			} else if numExporteds == num {
+				if num == 2 {
+					exporteds = "both are exported"
+				} else {
+					exporteds = "all are exported"
+				}
+				//} else if statsAreExact {
+				//	exporteds = fmt.Sprintf("in which %d are exported", numExporteds)
+			} else {
+				exporteds = fmt.Sprintf("in which %d are exported", numExporteds)
+			}
 		}
 	}
+
+	if exporteds == "" {
+		return total
+	}
+	return total + e.Text_Comma() + exporteds
 }
 
 func (*English) Text_UnexportedResourcesHeader(show bool, numUnexporteds int, exact bool) string {

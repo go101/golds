@@ -31,7 +31,7 @@ type PageOutputOptions struct {
 var (
 	testingMode = false
 	genDocsMode = false // static docs generation mode
-	footerHTML  string  // for static docs generation mode only
+	//footerHTML  string  // for static docs generation mode only (bad idea, for image relation urls are different on different pages)
 
 	goldsVersion string
 
@@ -212,8 +212,8 @@ func NewHtmlPage(goldsVersion, title string, theme Theme, translation Translatio
 func (page *htmlPage) Done(w io.Writer) []byte {
 	if page.isHTML {
 		if footerShowingManner == FooterShowingManner_none {
-		} else if genDocsMode && footerHTML != "" {
-			page.WriteString(footerHTML)
+			//} else if genDocsMode && footerHTML != "" {
+			//	page.WriteString(footerHTML)
 		} else {
 			var footer string
 			page.WriteString(`<pre id="footer">`)
@@ -235,9 +235,9 @@ func (page *htmlPage) Done(w io.Writer) []byte {
 			page.WriteString(footer)
 			page.WriteString(`</pre>`)
 
-			if genDocsMode {
-				footerHTML = footer
-			}
+			//	if genDocsMode {
+			//		footerHTML = `<pre id="footer">` + "\n" + footer + `</pre>`
+			//	}
 		}
 	}
 

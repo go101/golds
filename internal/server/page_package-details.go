@@ -323,7 +323,11 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 
 	page.WriteString(`<div id="exported-types-buttons" class="js-on">`)
 	page.WriteString("\t/* ")
-	page.WriteString(page.Translation().Text_SortBy("exporteds-types"))
+	if collectUnexporteds {
+		page.WriteString(page.Translation().Text_SortBy("exporteds-types"))
+	} else {
+		page.WriteString(page.Translation().Text_SortBy(""))
+	}
 	page.WriteString(page.Translation().Text_Colon(false))
 	page.WriteString(`<label id="sort-types-by-alphabet" class="button">`)
 	page.WriteString(page.Translation().Text_SortByItem("alphabet"))

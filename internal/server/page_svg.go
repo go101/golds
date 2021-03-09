@@ -248,7 +248,7 @@ func createSourcefileImportsSVG(title string, stat []int32, xNamer func(int) fun
 
 			if v != 0 {
 				extraComment := ""
-				if topList != nil && i == len(stat)-1 && topList.Criteria > i {
+				if topList != nil && i == len(stat)-1 && len(topList.Items) > 0 && topList.Criteria > i {
 					extraComment = fmt.Sprintf(", %d: %d", topList.Criteria, len(topList.Items))
 				}
 

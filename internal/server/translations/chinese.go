@@ -190,7 +190,7 @@ func (*Chinese) Text_SortBy(whatToSort string) string {
 	case "exporteds-types":
 		return "导出类型排序依据"
 	default:
-		panic("unknown what-to-sort: " + whatToSort)
+		return "排序依据"
 	}
 }
 
