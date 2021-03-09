@@ -6,7 +6,7 @@ func (*Light) Name() string { return "light" }
 
 func (*Light) CSS() string {
 	return `
-body {color: #333; font-family: {{ .Fonts }};}
+body {background: #fff; color: #333; font-family: {{ .Fonts }};}
 .grey {color: #ccc;}
 a {color: #079;}
 .module-version {color: #555; font-style: italic; font-size: smaller; text-decoration: none;}
@@ -45,10 +45,13 @@ a.path-duplicate {color: #9cd;}
 div.alphabet .importedbys {display: none;}
 div.alphabet .depdepth {display: none;}
 div.alphabet .depheight {display: none;}
+div.importedbys .importedbys {display: inline;}
 div.importedbys .depdepth {display: none;}
 div.importedbys .depheight {display: none;}
+div.depdepth .depdepth {display: inline;}
 div.depdepth .importedbys {display: none;}
 div.depdepth .depheight {display: none;}
+div.depheight .depheight {display: inline;}
 div.depheight .importedbys {display: none;}
 div.depheight .depdepth {display: none;}
 
@@ -66,10 +69,12 @@ input.fold {display: none;}
 /*input.fold + label +*/ .fold-items {display: none;}
 /*input.fold + label +*/ .fold-docs {display: none;}
 input.fold + label:before {content: "▶ ";}
-input.fold:checked + label + .fold-items {display: inline;}
-input.fold:checked + label + .fold-docs {display: inline;}
 input.fold:checked + label:before {content: "▼ ";}
 input.fold:checked + label.fold-items:after {content: "{{ .Colon }}";}
+input.fold:checked + label + .fold-items {display: inline;}
+input.fold:checked + label + .fold-docs {display: inline;}
+input.fold + label.stats:before {content: "";}
+input.fold:checked + label.stats:before {content: "";}
 
 .hidden {display: none;}
 .show-inline {display: inline;}
@@ -79,6 +84,7 @@ input.showhide:checked + i .show-inline {display: none;}
 input.showhide:checked + i .hide-inline {display: inline;}
 input.showhide:checked ~ span.hidden {display: inline;}
 input.showhide:checked ~ div.hidden {display: block;}
+input.showhide2:checked ~ span.hidden {display: inline;}
 
 /* code page */
 

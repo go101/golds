@@ -7,6 +7,7 @@ import (
 	"go/token"
 	"go/types"
 	"log"
+	"path/filepath"
 	"reflect"
 	"sort"
 	"time"
@@ -31,8 +32,8 @@ func (d *CodeAnalyzer) AnalyzePackages(onSubTaskDone func(int, time.Duration, ..
 
 	stopWatch.Duration(true)
 
-	d.sortPackagesDepHeight()
-	d.sortPackagesDepDepth()
+	d.sortPackagesByDepHeight()
+	d.calculatePackagesDepDepths()
 
 	logProgress(SubTask_SortPackagesByDependencies)
 
@@ -1231,13 +1232,18 @@ func (d *CodeAnalyzer) collectSelectorsFroNonInterfaceType(t *TypeInfo, smm *Sel
 	}
 
 	if namedType == nil {
-		//debug := false
-		//if len(structType.DirectSelectors) == 1 && structType.DirectSelectors[0].Name() == "C" {
-		//	debug = true
-		//}
-		//if debug {
-		//	log.Println("================================== structType=", structType)
-		//}
+
+		//	if len(structType.DirectSelectors) == 1 {
+		//		sel := structType.DirectSelectors[0]
+		//		if sel.Field != nil &&
+		//		sel.Field.Mode == EmbedMode_Direct &&
+		//		sel.Field.Type.TypeName != nil &&
+		//		sel.Field.Type.TypeName.Name() == "Type" &&
+		//		//sel.Field.Type.TypeName.Package().Path() == "go/types" &&
+		//		true {
+		//			log.Println("=====================", sel.Field.Type.TypeName.Name(), sel.Field.Type.TypeName.Package().Path(), sel, "==========", sel.Field.Type.TypeName)
+		//		}
+		//	}
 
 		numEmbeddeds := 0
 		for _, sel := range structType.DirectSelectors {
@@ -1613,7 +1619,7 @@ func (d *CodeAnalyzer) confirmPackageModules() {
 }
 
 // Important for registerFunctionForInvolvedTypeNames and registerValueForItsTypeName.
-func (d *CodeAnalyzer) sortPackagesDepHeight() {
+func (d *CodeAnalyzer) sortPackagesByDepHeight() {
 	var seen = make(map[string]struct{}, len(d.packageList))
 	var calculatePackageDepHeight func(pkg *Package)
 	calculatePackageDepHeight = func(pkg *Package) {
@@ -1628,7 +1634,7 @@ func (d *CodeAnalyzer) sortPackagesDepHeight() {
 			if dep.DepHeight > max {
 				max = dep.DepHeight
 			} else if dep.DepHeight == 0 {
-				log.Println("sortPackagesDepHeight: the dep.DepHeight is not calculated yet!")
+				log.Println("sortPackagesByDepHeight: the dep.DepHeight is not calculated yet!")
 			}
 		}
 		pkg.DepHeight = max + 1
@@ -1651,8 +1657,22 @@ func (d *CodeAnalyzer) sortPackagesDepHeight() {
 	//	log.Println(">>>>>>>>>>>>>>>>", pkg.DepHeight, pkg.Path())
 	//}
 }
-func (d *CodeAnalyzer) sortPackagesDepDepth() {
+
+// This method should be put in user space.
+//
+// main packages have depth==0, their direct dependencies have depth==1, ...
+func (d *CodeAnalyzer) calculatePackagesDepDepths() {
 	var seen = make(map[string]struct{}, len(d.packageList))
+	for _, pkg := range d.packageList {
+		if pkg.PPkg.Name == "main" {
+			pkg.DepDepth = 1
+			seen[pkg.Path()] = struct{}{}
+		}
+	}
+	var hasMain = len(seen) > 0
+
+	const MaxDepth int32 = 0x7fffffff
+
 	var calculatePackageDepDepth func(pkg *Package)
 	calculatePackageDepDepth = func(pkg *Package) {
 		if _, ok := seen[pkg.Path()]; ok {
@@ -1660,7 +1680,6 @@ func (d *CodeAnalyzer) sortPackagesDepDepth() {
 		}
 		seen[pkg.Path()] = struct{}{}
 
-		const MaxDepth int32 = 0x7fffffff
 		var min = MaxDepth
 		for _, dep := range pkg.DepedBys {
 			calculatePackageDepDepth(dep)
@@ -1677,12 +1696,41 @@ func (d *CodeAnalyzer) sortPackagesDepDepth() {
 		}
 	}
 
+	var max = int32(0)
 	for _, pkg := range d.packageList {
 		calculatePackageDepDepth(pkg)
+		if pkg.DepDepth > max {
+			max = pkg.DepDepth
+		}
+	}
+
+	var hasShollowestUserPackages = false
+	if !hasMain {
+		for _, pkg := range d.packageList {
+			if pkg.DepDepth == 1 && !d.IsStandardPackage(pkg) {
+				hasShollowestUserPackages = true
+			}
+		}
+	}
+	if hasMain || hasShollowestUserPackages {
+		max++
+		d.builtinPkg.DepDepth++ // == 2
 	}
 
 	for _, pkg := range d.packageList {
-		pkg.DepDepth--
+		if pkg.DepDepth == 1 && d.IsStandardPackage(pkg) {
+			pkg.DepDepth = max
+		} else if hasMain {
+			if pkg.PPkg.Name == "main" {
+				pkg.DepDepth--
+			}
+		} else if hasShollowestUserPackages {
+			if !d.IsStandardPackage(pkg) {
+				pkg.DepDepth--
+			}
+		} else {
+			pkg.DepDepth--
+		}
 	}
 
 	//pkgs := append(d.packageList[:0:0], d.packageList...)
@@ -1740,10 +1788,11 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 
 	// ToDo: use info.TypeOf, info.ObjectOf
 
-	for _, file := range pkg.PPkg.Syntax {
-		d.stats.AstFiles++
-		d.stats.Imports += int32(len(file.Imports))
-		incSliceStat(d.stats.FilesByImportCount[:], len(file.Imports))
+	for i, file := range pkg.PPkg.Syntax {
+		//d.stats.AstFiles++
+		//d.stats.Imports += int32(len(file.Imports))
+		//incSliceStat(d.stats.FilesByImportCount[:], len(file.Imports))
+		d.stat_OnNewAstFile(len(file.Imports), filepath.Base(pkg.PPkg.CompiledGoFiles[i]), pkg)
 
 		//if len(file.Imports) == 0 {
 		//	log.Println("----", pkg.PPkg.Fset.PositionFor(file.Pos(), false))
@@ -1900,7 +1949,7 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 								Denoting: srcTypeInfo,
 								TypeName: tn,
 							}
-							srcTypeInfo.Aliases = append(srcTypeInfo.Aliases, tn.Alias)
+							srcTypeInfo.Aliases = append(srcTypeInfo.Aliases, tn)
 
 							if isBuiltinPkg || isUnsafePkg {
 								tn.Alias.attributes |= Builtin
@@ -2078,13 +2127,16 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 			if lastResultIsError {
 				d.stats.ExportedFunctionWithLastErrorResult++
 			}
-			incSliceStat(d.stats.ExportedIdentifiersByLength[:], len(f.Name()))
-			d.stats.ExportedIdentifersSumLength += int32(len(f.Name()))
-			d.stats.ExportedIdentifers++
-			d.stats.ExportedFunctionParameters += int32(numParams)
-			d.stats.ExportedFunctionResults += int32(numResults)
-			incSliceStat(d.stats.ExportedFunctionsByParameterCount[:], numParams)
-			incSliceStat(d.stats.ExportedFunctionsByResultCount[:], numResults)
+			//incSliceStat(d.stats.ExportedIdentifiersByLength[:], len(f.Name()))
+			//d.stats.ExportedIdentifersSumLength += int32(len(f.Name()))
+			//d.stats.ExportedIdentifers++
+			d.stat_OnNewExportedIdentifer(len(f.Name()), f)
+
+			//d.stats.ExportedFunctionParameters += int32(numParams)
+			//d.stats.ExportedFunctionResults += int32(numResults)
+			//incSliceStat(d.stats.ExportedFunctionsByParameterCount[:], numParams)
+			//incSliceStat(d.stats.ExportedFunctionsByResultCount[:], numResults)
+			d.stat_OnNewExportedFunction(numParams, numResults, f)
 		}
 	}
 	//for _, tn := range pkg.PackageAnalyzeResult.AllTypeNames {
@@ -2116,15 +2168,30 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 	}
 	for _, v := range pkg.PackageAnalyzeResult.AllVariables {
 		d.registerValueForItsTypeName(v)
+		//if d.debug {
+		//	d.debug = false
+		//	log.Println(v.Position())
+		//}
 		if v.Exported() {
 			d.stats.ExportedVariables++
-			incSliceStat(d.stats.ExportedIdentifiersByLength[:], len(v.Name()))
-			d.stats.ExportedIdentifersSumLength += int32(len(v.Name()))
-			d.stats.ExportedIdentifers++
+
+			//incSliceStat(d.stats.ExportedIdentifiersByLength[:], len(v.Name()))
+			//d.stats.ExportedIdentifersSumLength += int32(len(v.Name()))
+			//d.stats.ExportedIdentifers++
+			d.stat_OnNewExportedIdentifer(len(v.Name()), v)
 
 			kind := Kind(v.TType())
 			d.stats.ExportedVariablesByTypeKind[kind]++
 		}
+		// ToDo: for a variable specification without the Type protion (then
+		// must have an initial value portion), and if its type is a unamed
+		// struct or interface type (or contains such types), then this type
+		// has no chances to get its .DirectSelectors fullfilled.
+		//
+		// An example: var reserved = new(struct{ types.Type })
+		//
+		// Currently, this is not bad, for we don't need calculate method set
+		// for such types and the struct and interface types contained in it.
 		if v.AstSpec.Type != nil {
 			d.lookForAndRegisterUnnamedInterfaceAndStructTypes(v.AstSpec.Type, v.Pkg)
 		}
@@ -2133,9 +2200,11 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 		d.registerValueForItsTypeName(c)
 		if c.Exported() {
 			d.stats.ExportedConstants++
-			incSliceStat(d.stats.ExportedIdentifiersByLength[:], len(c.Name()))
-			d.stats.ExportedIdentifersSumLength += int32(len(c.Name()))
-			d.stats.ExportedIdentifers++
+
+			//incSliceStat(d.stats.ExportedIdentifiersByLength[:], len(c.Name()))
+			//d.stats.ExportedIdentifersSumLength += int32(len(c.Name()))
+			//d.stats.ExportedIdentifers++
+			d.stat_OnNewExportedIdentifer(len(c.Name()), c)
 
 			kind := Kind(c.TType())
 			d.stats.ExportedConstantsByTypeKind[kind]++
@@ -2153,9 +2222,10 @@ func (d *CodeAnalyzer) analyzePackage_CollectMoreStatistics(pkg *Package) {
 		d.stats.roughTypeNameCount++
 
 		if isBuiltinPkg != token.IsExported(tn.Name()) {
-			incSliceStat(d.stats.ExportedIdentifiersByLength[:], len(tn.Name()))
-			d.stats.ExportedIdentifersSumLength += int32(len(tn.Name()))
-			d.stats.ExportedIdentifers++
+			//incSliceStat(d.stats.ExportedIdentifiersByLength[:], len(tn.Name()))
+			//d.stats.ExportedIdentifersSumLength += int32(len(tn.Name()))
+			//d.stats.ExportedIdentifers++
+			d.stat_OnNewExportedIdentifer(len(tn.Name()), tn)
 
 			denoting := tn.Denoting()
 			kind := denoting.Kind()
@@ -2175,14 +2245,16 @@ func (d *CodeAnalyzer) analyzePackage_CollectMoreStatistics(pkg *Package) {
 				}
 			}
 			if kind == reflect.Interface {
-				incSliceStat(d.stats.ExportedNamedInterfacesByMethodCount[:], len(denoting.AllMethods))
-				incSliceStat(d.stats.ExportedNamedInterfacesByExportedMethodCount[:], numExportedMethods)
-				d.stats.ExportedNamedInterfacesExportedMethods += int32(numExportedMethods)
 				d.stats.roughExportedIdentifierCount += int32(numExportedMethods)
+				//incSliceStat(d.stats.ExportedNamedInterfacesByMethodCount[:], len(denoting.AllMethods))
+				//incSliceStat(d.stats.ExportedNamedInterfacesByExportedMethodCount[:], numExportedMethods)
+				//d.stats.ExportedNamedInterfacesExportedMethods += int32(numExportedMethods)
+				d.stat_OnNewExportedInterfaceTypeNames(len(denoting.AllMethods), numExportedMethods, tn)
 				continue
 			}
-			incSliceStat(d.stats.ExportedNamedNonInterfaceTypesByMethodCount[:], len(denoting.AllMethods))
-			incSliceStat(d.stats.ExportedNamedNonInterfaceTypesByExportedMethodCount[:], numExportedMethods)
+			//incSliceStat(d.stats.ExportedNamedNonInterfaceTypesByMethodCount[:], len(denoting.AllMethods))
+			//incSliceStat(d.stats.ExportedNamedNonInterfaceTypesByExportedMethodCount[:], numExportedMethods)
+			d.stat_OnNewExportedNonInterfaceTypeNames(len(denoting.AllMethods), numExportedMethods, tn)
 
 			if numExportedMethods > 0 {
 				d.stats.ExportedNamedNonInterfacesExportedMethods += int32(numExportedMethods)
@@ -2191,9 +2263,6 @@ func (d *CodeAnalyzer) analyzePackage_CollectMoreStatistics(pkg *Package) {
 			}
 
 			if kind == reflect.Struct {
-				incSliceStat(d.stats.ExportedNamedStructsByFieldCount[:], len(denoting.AllFields))
-				d.stats.ExportedNamedStructTypeFields += int32(len(denoting.AllFields))
-
 				hasEmbeddeds, numExportedPromoteds := false, 0
 				numExporteds, numExpliciteds, numExportedExpliciteds := 0, 0, 0
 				for _, sel := range denoting.AllFields {
@@ -2206,36 +2275,41 @@ func (d *CodeAnalyzer) analyzePackage_CollectMoreStatistics(pkg *Package) {
 						}
 					}
 					if sel.Depth == 0 {
-						incSliceStat(d.stats.ExportedIdentifiersByLength[:], len(sel.Name()))
-						d.stats.ExportedIdentifersSumLength += int32(len(sel.Name()))
-						d.stats.ExportedIdentifers++
+						//incSliceStat(d.stats.ExportedIdentifiersByLength[:], len(sel.Name()))
+						//d.stats.ExportedIdentifersSumLength += int32(len(sel.Name()))
+						//d.stats.ExportedIdentifers++
+						d.stat_OnNewExportedIdentifer(len(sel.Name()), &struct {
+							*TypeName
+							*Selector
+						}{tn, sel})
 
 						numExpliciteds++
 					} else {
 						hasEmbeddeds = true
 					}
 				}
-				if hasEmbeddeds {
-					d.stats.ExportedNamedStructTypesWithPromotedFields++
-				}
 				ut := d.RegisterType(denoting.TT.Underlying())
-				if ut.EmbeddingFields > 0 {
-					d.stats.ExportedNamedStructTypesWithEmbeddingFields++
-				}
-				incSliceStat(d.stats.ExportedNamedStructsByEmbeddingFieldCount[:], int(ut.EmbeddingFields))
-
-				incSliceStat(d.stats.ExportedNamedStructsByExplicitFieldCount[:], numExpliciteds)
-				d.stats.ExportedNamedStructTypeExplicitFields += int32(numExpliciteds)
-				incSliceStat(d.stats.ExportedNamedStructsByExportedFieldCount[:], numExporteds)
-				d.stats.ExportedNamedStructTypeExportedFields += int32(numExporteds)
-				incSliceStat(d.stats.ExportedNamedStructsByExportedExplicitFieldCount[:], numExportedExpliciteds)
-				d.stats.ExportedNamedStructTypeExportedExplicitFields += int32(numExportedExpliciteds)
-				d.stats.roughExportedIdentifierCount += int32(numExportedExpliciteds)
-
-				incSliceStat(d.stats.ExportedNamedStructsByExportedPromotedFieldCount[:], numExportedPromoteds)
-				//if numExportedPromoteds >= 5 {
-				//	log.Println(numExportedPromoteds, tn.Package().Path(), tn.Name())
+				//if hasEmbeddeds {
+				//	d.stats.ExportedNamedStructTypesWithPromotedFields++
 				//}
+				//if ut.EmbeddingFields > 0 {
+				//	d.stats.ExportedNamedStructTypesWithEmbeddingFields++
+				//}
+				//incSliceStat(d.stats.ExportedNamedStructsByEmbeddingFieldCount[:], int(ut.EmbeddingFields))
+				//
+				//incSliceStat(d.stats.ExportedNamedStructsByExplicitFieldCount[:], numExpliciteds)
+				//d.stats.ExportedNamedStructTypeExplicitFields += int32(numExpliciteds)
+				//incSliceStat(d.stats.ExportedNamedStructsByExportedFieldCount[:], numExporteds)
+				//d.stats.ExportedNamedStructTypeExportedFields += int32(numExporteds)
+				//incSliceStat(d.stats.ExportedNamedStructsByExportedExplicitFieldCount[:], numExportedExpliciteds)
+				//d.stats.ExportedNamedStructTypeExportedExplicitFields += int32(numExportedExpliciteds)
+				//d.stats.roughExportedIdentifierCount += int32(numExportedExpliciteds)
+				//
+				//incSliceStat(d.stats.ExportedNamedStructsByExportedPromotedFieldCount[:], numExportedPromoteds)
+				//
+				//incSliceStat(d.stats.ExportedNamedStructsByFieldCount[:], len(denoting.AllFields))
+				//d.stats.ExportedNamedStructTypeFields += int32(len(denoting.AllFields))
+				d.stat_OnNewExportedStructTypeName(hasEmbeddeds, len(denoting.AllFields), int(ut.EmbeddingFields), numExpliciteds, numExporteds, numExportedExpliciteds, numExportedPromoteds, tn)
 			}
 		}
 	}
@@ -2257,12 +2331,13 @@ func (d *CodeAnalyzer) analyzePackage_CollectMoreStatisticsFinal() {
 
 	d.stats.Packages = int32(len(d.packageList))
 	for _, pkg := range d.packageList {
-		if d.IsStandardPackage(pkg) {
-			d.stats.StdPackages++
-		}
-		d.stats.FilesWithGenerateds += int32(len(pkg.SourceFiles))
-		d.stats.AllPackageDeps += int32(len(pkg.Deps))
-		incSliceStat(d.stats.PackagesByDeps[:], len(pkg.Deps))
+		//if d.IsStandardPackage(pkg) {
+		//	d.stats.StdPackages++
+		//}
+		//d.stats.FilesWithGenerateds += int32(len(pkg.SourceFiles))
+		//d.stats.AllPackageDeps += int32(len(pkg.Deps))
+		//incSliceStat(d.stats.PackagesByDeps[:], len(pkg.Deps))
+		d.stat_OnNewPackage(d.IsStandardPackage(pkg), len(pkg.SourceFiles), len(pkg.Deps), pkg.Path())
 	}
 
 	d.stats.roughExportedIdentifierCount += d.stats.ExportedIdentifers

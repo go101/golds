@@ -113,7 +113,7 @@ func (ds *docServer) buildReferencesPage(w http.ResponseWriter, result *Referenc
 		result.Package.Path(),
 	)
 
-	ds.writeResourceIndexHTML(page, result.Package, result.Resource, true)
+	ds.writeResourceIndexHTML(page, result.Package, result.Resource, false, false, false)
 
 	if result.Selector != nil {
 		page.WriteByte('.')

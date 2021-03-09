@@ -72,43 +72,43 @@ func (ds *docServer) loadingPage(w http.ResponseWriter, r *http.Request) {
 		var code = '';
 		var pre = document.getElementsByTagName('pre')[0];
 		var timer = ''
-		var needjump = false
+		var needjump = false;
 
 		function fromi() {
 			for (;;from++){
 				if (document.getElementById('loading-message-' + from)) {
-					continue
+					continue;
 				}
-				break
+				break;
 			}
 		}
 
-		fromi()
+		fromi();
 		timer = setInterval(function () {
 			if (needjump) {
 				console.log("jump: ")
-				clearInterval(timer)
-				window.location.href = window.location.protocol+'//'+window.location.host
-				return
+				clearInterval(timer);
+				window.location.href = window.location.href.split('?')[0];
+				return;
 			}
 			createXMLHttpRequest(url, 'get', page+from, function (data) {
 				console.log('data', data);
 				for (var i=0;i<data.length;i++){
-					code=document.createElement('code')
-					code.setAttribute('id','loading-message-'+data[i].ID)
-					code.innerHTML=data[i].Message+ "<br/>"
-					pre.appendChild(code)
+					code=document.createElement('code');
+					code.setAttribute('id','loading-message-'+data[i].ID);
+					code.innerHTML=data[i].Message+ "<br/>";
+					pre.appendChild(code);
 
 					if (data[i].Message === "") {
-						needjump=true
+						needjump=true;
 					}
 
-					console.log("data[i].Message=" + data[i].Message)
-					console.log("needjump=" + needjump)
+					console.log("data[i].Message=" + data[i].Message);
+					console.log("needjump=" + needjump);
 				}
-				fromi()
+				fromi();
 			});
-		}, 2000)
+		}, 2000);
 	}
 </script>
 `,

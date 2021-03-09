@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"go/ast"
+	"go/types"
 	"io/ioutil"
 	"log"
 	"path/filepath"
@@ -254,8 +255,14 @@ func (d *CodeAnalyzer) CollectIdentiferFromFile(pkg *Package, fileInfo *SourceFi
 			obj := pkg.PPkg.TypesInfo.ObjectOf(n)
 			if obj != nil {
 				d.regObjectReference(obj, fileInfo, n)
+				if v, ok := obj.(*types.Var); ok && v.Embedded() {
+					obj = pkg.PPkg.TypesInfo.Uses[n]
+					if obj != nil {
+						d.regObjectReference(obj, fileInfo, n)
+					}
+				}
 			}
-			// ToDo: also collect some implicit refs.
+			// ToDo: more implicit cases?
 		}
 		return true
 	})
@@ -270,6 +277,7 @@ func (d *CodeAnalyzer) CacheSourceFiles() {
 	defer wg.Wait()
 
 	for _, pkg := range d.packageList {
+		//isUnsafe := pkg.Path() == "unsafe"
 		for i := range pkg.SourceFiles {
 			wg.Add(1)
 			info := &pkg.SourceFiles[i]
@@ -279,20 +287,26 @@ func (d *CodeAnalyzer) CacheSourceFiles() {
 			}
 
 			sem <- struct{}{}
-			go func() {
+			go func() { //isUnsafeDotGo bool) {
 				defer func() {
 					<-sem
 					wg.Done()
 				}()
 
-				content, err := ioutil.ReadFile(filePath)
+				var content []byte
+				//if isUnsafeDotGo {
+				//content = unsafe_go
+				//} else {
+				var err error
+				content, err = ioutil.ReadFile(filePath)
 				if err != nil {
 					log.Printf("ReadFile (%s) error: %s", filePath, err)
 					return
 				}
+				//}
 				info.Content = content
 				//log.Printf("ReadFile (%s) done", filePath)
-			}()
+			}() //isUnsafe && filePath == "unsafe.go")
 		}
 	}
 }

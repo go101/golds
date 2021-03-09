@@ -321,6 +321,9 @@ func (e *English) Text_PackageLevelResourceSimpleStat(statsAreExact bool, num, n
 		if numExporteds == 0 {
 			return fmt.Sprintf("at least %d, none are unexported", num)
 		} else if numExporteds != num {
+			if numExporteds == 1 {
+				return fmt.Sprintf("at least %d, in which %d is exported", num, numExporteds)
+			}
 			return fmt.Sprintf("at least %d, in which %d are exported", num, numExporteds)
 		} else {
 			return fmt.Sprintf("at least %d exporteds", num)
@@ -352,6 +355,10 @@ func (*English) Text_UnexportedResourcesHeader(show bool, numUnexporteds int, ex
 		}
 		return fmt.Sprintf("/* %d+ unexporteds: */", numUnexporteds)
 	}
+}
+
+func (*English) Text_ListUnexportes() string {
+	return "list unexporteds"
 }
 
 ///////////////////////////////////////////////////////////////////
@@ -533,8 +540,9 @@ func (*English) Text_StatisticsTitle(titleName string) string {
 	}
 }
 
-func (*English) Text_PackageStatistics(values map[string]interface{}) string {
-	return fmt.Sprintf(`
+func (*English) Text_PackageStatistics(values map[string]interface{}) []string {
+	return []string{
+		fmt.Sprintf(`
 	Total <a href="%s">%d packages</a>, %d of them are standard packages.
 	Total %d source files, %d of them are Go source files.
 	Averagely,
@@ -542,130 +550,168 @@ func (*English) Text_PackageStatistics(values map[string]interface{}) string {
 	- each Go source file imports %.2f packages,
 	- each package depends %.2f other packages.
 
-	<img src="%s"></image>
-	<img src="%s"></image>
 `,
-		values["overviewPageURL"],
-		values["packageCount"],
-		values["standardPackageCount"],
-		values["sourceFileCount"],
-		values["goSourceFileCount"],
-		values["averageSourceFileCountPerPackage"],
-		values["averageImportCountPerFile"],
-		values["averageDependencyCountPerPackage"],
 
-		values["gosourcefilesByImportsChartURL"],
-		values["packagesByDependenciesChartURL"],
-	)
+			//<!--img src=""></image-->%s
+			//<!--img src=""></image-->%s
+
+			values["overviewPageURL"],
+			values["packageCount"],
+			values["standardPackageCount"],
+			values["sourceFileCount"],
+			values["goSourceFileCount"],
+			values["averageSourceFileCountPerPackage"],
+			values["averageImportCountPerFile"],
+			values["averageDependencyCountPerPackage"],
+
+			//values["gosourcefilesByImportsChartURL"],
+			//values["packagesByDependenciesChartURL"],
+			//values["gosourcefilesByImportsChartSVG"],
+			//values["packagesByDependenciesChartSVG"],
+		),
+	}
 }
 
-func (*English) Text_TypeStatistics(values map[string]interface{}) string {
-	return fmt.Sprintf(`
+func (*English) Text_TypeStatistics(values map[string]interface{}) []string {
+	return []string{
+		fmt.Sprintf(`
 	Total %d exported type names, %d of them are aliases.
 	In them, %d are composite types and %d are basic types.
 	In the basic types, %d are integers (%d are unsigneds).
 
-	<img src="%s"></image>
+`,
+			//<!--img src=""></image-->%s
+			values["exportedTypeNameCount"],
+			values["exportedTypeAliases"],
+			values["exportedCompositeTypeNames"],
+			values["exportedBasicTypeNames"],
+			values["exportedIntergerTypeNames"],
+			values["exportedUnsignedTypeNames"],
 
+			//values["exportedtypenamesByKindsChartURL"],
+			//values["exportedtypenamesByKindsChartSVG"],
+		),
+
+		fmt.Sprintf(`
 	In %d exported struct types, %d have embedded fields,
 	and %d have promoted fields.
 
-	<img src="%s"></image>
+`,
+			//<!--img src=""></image-->%s
 
+			values["exportedStructTypeNames"],
+			values["exportedNamedStructTypesWithEmbeddingFields"],
+			values["exportedNamedStructTypesWithPromotedFields"],
+
+			//values["exportedstructtypesByEmbeddingfieldsChartURL"],
+			//values["exportedstructtypesByEmbeddingfieldsChartSVG"],
+		),
+
+		fmt.Sprintf(`
 	On average, each exported struct type has
 	* %.2f fields (including promoteds and unexporteds),
 	* %.2f explicit fields (including unexporteds),
 	* %.2f exported fields (including promoteds),
 	* %.2f exported explicit fields.
 
-	<img src="%s"></image>
-	<img src="%s"></image>
-	<img src="%s"></image>
+`,
+			//<!--img src=""></image-->%s
+			//<!--img src=""></image-->%s
+			//<!--img src=""></image-->%s
 
+			values["exportedNamedStructTypeFieldsPerExportedStruct"],
+			values["exportedNamedStructTypeExplicitFieldsPerExportedStruct"],
+			values["exportedNamedStructTypeExportedFieldsPerExportedStruct"],
+			values["exportedNamedStructTypeExportedExplicitFieldsPerExportedStruct"],
+
+			//values["exportedstructtypesByExplicitfieldsChartURL"],
+			//values["exportedstructtypesByExportedexplicitfieldsChartURL"],
+			////values["exportedstructtypesByExportedfieldsChartURL"],
+			//values["exportedstructtypesByExportedpromotedfieldsChartURL"],
+			//values["exportedstructtypesByExplicitfieldsChartSVG"],
+			//values["exportedstructtypesByExportedexplicitfieldsChartSVG"],
+			////values["exportedstructtypesByExportedfieldsChartSVG"],
+			//values["exportedstructtypesByExportedpromotedfieldsChartSVG"],
+		),
+
+		fmt.Sprintf(`
 	Averagely,
 	- for exported non-interface types with at least one exported
 	  method, each of them has %.2f exported methods.
 	- each exported interface type specified %.2f exported methods.
 
-	<img src="%s"></image>
-	<img src="%s"></image>
 `,
-		values["exportedTypeNameCount"],
-		values["exportedTypeAliases"],
-		values["exportedCompositeTypeNames"],
-		values["exportedBasicTypeNames"],
-		values["exportedIntergerTypeNames"],
-		values["exportedUnsignedTypeNames"],
+			//<!--img src=""></image-->%s
+			//<!--img src=""></image-->%s
 
-		values["exportedtypenamesByKindsChartURL"],
+			values["exportedNamedNonInterfacesExportedMethodsPerExportedNonInterfaceType"],
+			values["exportedNamedInterfacesExportedMethodsPerExportedInterfaceType"],
 
-		values["exportedStructTypeNames"],
-		values["exportedNamedStructTypesWithEmbeddingFields"],
-		values["exportedNamedStructTypesWithPromotedFields"],
-
-		values["exportedstructtypesByEmbeddingfieldsChartURL"],
-
-		values["exportedNamedStructTypeFieldsPerExportedStruct"],
-		values["exportedNamedStructTypeExplicitFieldsPerExportedStruct"],
-		values["exportedNamedStructTypeExportedFieldsPerExportedStruct"],
-		values["exportedNamedStructTypeExportedExplicitFieldsPerExportedStruct"],
-
-		values["exportedstructtypesByExplicitfieldsChartURL"],
-		values["exportedstructtypesByExportedexplicitfieldsChartURL"],
-		//values["exportedstructtypesByExportedfieldsChartURL"],
-		values["exportedstructtypesByExportedpromotedfieldsChartURL"],
-
-		values["exportedNamedNonInterfacesExportedMethodsPerExportedNonInterfaceType"],
-		values["exportedNamedInterfacesExportedMethodsPerExportedInterfaceType"],
-
-		values["exportednoninterfacetypesByExportedmethodsChartURL"],
-		values["exportedinterfacetypesByExportedmethodsChartURL"],
-	)
+			//values["exportednoninterfacetypesByExportedmethodsChartURL"],
+			//values["exportedinterfacetypesByExportedmethodsChartURL"],
+			//values["exportednoninterfacetypesByExportedmethodsChartSVG"],
+			//values["exportedinterfacetypesByExportedmethodsChartSVG"],
+		),
+	}
 }
 
-func (*English) Text_ValueStatistics(values map[string]interface{}) string {
-	return fmt.Sprintf(`
+func (*English) Text_ValueStatistics(values map[string]interface{}) []string {
+	return []string{
+		fmt.Sprintf(`
 	Total %d exported variables and %d exported constants.
 
-	<img src="%s"></image>
-	<img src="%s"></image>
+`,
+			//<!--img src=""></image-->%s
+			//<!--img src=""></image-->%s
 
+			values["exportedVariables"],
+			values["exportedConstants"],
+
+			//values["exportedvariablesByTypekindsChartURL"],
+			//values["exportedconstantsByTypekindsChartURL"],
+			//values["exportedvariablesByTypekindsChartSVG"],
+			//values["exportedconstantsByTypekindsChartSVG"],
+		),
+
+		fmt.Sprintf(`
 	Total %d exported functions and %d exported explicit methods.
 	On average, each of these functions and methods has
 	%.2f parameters and %.2f results. For %d (%d%%) of these
 	functions and methods, the last result types are <code>error</code>.
 
-	<img src="%s"></image>
-	<img src="%s"></image>
 `,
-		values["exportedVariables"],
-		values["exportedConstants"],
+			//<!--img src=""></image-->%s
+			//<!--img src=""></image-->%s
 
-		values["exportedvariablesByTypekindsChartURL"],
-		values["exportedconstantsByTypekindsChartURL"],
+			values["exportedFunctions"],
+			values["exportedMethods"],
+			values["averageParameterCountPerExportedFunction"],
+			values["averageResultCountPerExportedFunction"],
+			values["exportedFunctionWithLastErrorResult"],
+			values["exportedFunctionWithLastErrorResultPercentage"],
 
-		values["exportedFunctions"],
-		values["exportedMethods"],
-		values["averageParameterCountPerExportedFunction"],
-		values["averageResultCountPerExportedFunction"],
-		values["exportedFunctionWithLastErrorResult"],
-		values["exportedFunctionWithLastErrorResultPercentage"],
-
-		values["exportedfunctionsByParametersChartURL"],
-		values["exportedfunctionsByResultsChartURL"],
-	)
+			//values["exportedfunctionsByParametersChartURL"],
+			//values["exportedfunctionsByResultsChartURL"],
+			//values["exportedfunctionsByParametersChartSVG"],
+			//values["exportedfunctionsByResultsChartSVG"],
+		),
+	}
 }
 
-func (*English) Text_Othertatistics(values map[string]interface{}) string {
-	return fmt.Sprintf(`
+func (*English) Text_Othertatistics(values map[string]interface{}) []string {
+	return []string{
+		fmt.Sprintf(`
 	The average length of exported identifiers is %.2f.
 
-	<img src="%s"></image>
 `,
-		values["averageIdentiferLength"],
+			//<!--img src=""></image-->%s
 
-		values["exportedidentifiersByLengthsChartURL"],
-	)
+			values["averageIdentiferLength"],
+
+		//values["exportedidentifiersByLengthsChartURL"],
+		//values["exportedidentifiersByLengthsChartSVG"],
+		),
+	}
 }
 
 ///////////////////////////////////////////////////////////////////

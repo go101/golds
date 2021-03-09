@@ -317,6 +317,10 @@ func (*Chinese) Text_UnexportedResourcesHeader(show bool, numUnexporteds int, ex
 	}
 }
 
+func (*Chinese) Text_ListUnexportes() string {
+	return "列出未导出的"
+}
+
 ///////////////////////////////////////////////////////////////////
 // package details page: type details
 ///////////////////////////////////////////////////////////////////
@@ -489,8 +493,9 @@ func (*Chinese) Text_StatisticsTitle(titleName string) string {
 	}
 }
 
-func (*Chinese) Text_PackageStatistics(values map[string]interface{}) string {
-	return fmt.Sprintf(`
+func (*Chinese) Text_PackageStatistics(values map[string]interface{}) []string {
+	return []string{
+		fmt.Sprintf(`
 	共<a href="%s">%d个库包</a>，其中%d个是标准库包。
 	共%d个源文件，其中%d个为Go源文件。
 	平均说来：
@@ -498,127 +503,165 @@ func (*Chinese) Text_PackageStatistics(values map[string]interface{}) string {
 	- 每个Go源文件引入了%.2f个库包；
 	- 每个库包依赖于%.2f个其它库包。
 
-	<img src="%s"></image>
-	<img src="%s"></image>
 `,
-		values["overviewPageURL"],
-		values["packageCount"],
-		values["standardPackageCount"],
-		values["sourceFileCount"],
-		values["goSourceFileCount"],
-		values["averageSourceFileCountPerPackage"],
-		values["averageImportCountPerFile"],
-		values["averageDependencyCountPerPackage"],
 
-		values["gosourcefilesByImportsChartURL"],
-		values["packagesByDependenciesChartURL"],
-	)
+			//<!--img src=""></image-->%s
+			//<!--img src=""></image-->%s
+
+			values["overviewPageURL"],
+			values["packageCount"],
+			values["standardPackageCount"],
+			values["sourceFileCount"],
+			values["goSourceFileCount"],
+			values["averageSourceFileCountPerPackage"],
+			values["averageImportCountPerFile"],
+			values["averageDependencyCountPerPackage"],
+
+		//values["gosourcefilesByImportsChartURL"],
+		//values["packagesByDependenciesChartURL"],
+		//values["gosourcefilesByImportsChartSVG"],
+		//values["packagesByDependenciesChartSVG"],
+		),
+	}
 }
 
-func (*Chinese) Text_TypeStatistics(values map[string]interface{}) string {
-	return fmt.Sprintf(`
+func (*Chinese) Text_TypeStatistics(values map[string]interface{}) []string {
+	return []string{
+		fmt.Sprintf(`
 	共%d个导出类型名，其中%d个为类型别名。
 	它们中有%d个为组合类型、%d个为基本类型。
 	在基本类型中，%d个为整数型（其中%d个为无符号类型）。
 
-	<img src="%s"></image>
+`,
+			//<!--img src=""></image-->%s
 
+			values["exportedTypeNameCount"],
+			values["exportedTypeAliases"],
+			values["exportedCompositeTypeNames"],
+			values["exportedBasicTypeNames"],
+			values["exportedIntergerTypeNames"],
+			values["exportedUnsignedTypeNames"],
+
+			//values["exportedtypenamesByKindsChartURL"],
+			//values["exportedtypenamesByKindsChartSVG"],
+		),
+
+		fmt.Sprintf(`
 	在%d个导出结构体类型中，%d个含有内嵌字段，%d个拥有提升字段。
 
-	<img src="%s"></image>
+`,
+			//<!--img src=""></image-->%s
 
+			values["exportedStructTypeNames"],
+			values["exportedNamedStructTypesWithEmbeddingFields"],
+			values["exportedNamedStructTypesWithPromotedFields"],
+
+			//values["exportedstructtypesByEmbeddingfieldsChartURL"],
+			//values["exportedstructtypesByEmbeddingfieldsChartSVG"],
+		),
+
+		fmt.Sprintf(`
 	平均说来，每个导出结构体类型拥有
 	* %.2f个字段（包括提升字段和非导出字段）；
 	* %.2f个显式字段（包括非导出字段）；
 	* %.2f个导出字段（包括提升字段）；
 	* %.2f个导出显式字段。
 
-	<img src="%s"></image>
-	<img src="%s"></image>
-	<img src="%s"></image>
+`,
+			//<!--img src=""></image-->%s
+			//<!--img src=""></image-->%s
+			//<!--img src=""></image-->%s
 
+			values["exportedNamedStructTypeFieldsPerExportedStruct"],
+			values["exportedNamedStructTypeExplicitFieldsPerExportedStruct"],
+			values["exportedNamedStructTypeExportedFieldsPerExportedStruct"],
+			values["exportedNamedStructTypeExportedExplicitFieldsPerExportedStruct"],
+
+			//values["exportedstructtypesByExplicitfieldsChartURL"],
+			//values["exportedstructtypesByExportedexplicitfieldsChartURL"],
+			////values["exportedstructtypesByExportedfieldsChartURL"],
+			//values["exportedstructtypesByExportedpromotedfieldsChartURL"],
+			//values["exportedstructtypesByExplicitfieldsChartSVG"],
+			//values["exportedstructtypesByExportedexplicitfieldsChartSVG"],
+			////values["exportedstructtypesByExportedfieldsChartSVGL"],
+			//values["exportedstructtypesByExportedpromotedfieldsChartSVG"],
+		),
+
+		fmt.Sprintf(`
 	平均说来，
 	- 对于拥有至少一个导出方法的导出非接口类型，每个拥有%.2f个导出方法。
 	- 每个导出接口类型指定了%.2f个导出方法。
 
-	<img src="%s"></image>
-	<img src="%s"></image>
 `,
-		values["exportedTypeNameCount"],
-		values["exportedTypeAliases"],
-		values["exportedCompositeTypeNames"],
-		values["exportedBasicTypeNames"],
-		values["exportedIntergerTypeNames"],
-		values["exportedUnsignedTypeNames"],
+			//<!--img src=""></image-->%s
+			//<!--img src=""></image-->%s
 
-		values["exportedtypenamesByKindsChartURL"],
+			values["exportedNamedNonInterfacesExportedMethodsPerExportedNonInterfaceType"],
+			values["exportedNamedInterfacesExportedMethodsPerExportedInterfaceType"],
 
-		values["exportedStructTypeNames"],
-		values["exportedNamedStructTypesWithEmbeddingFields"],
-		values["exportedNamedStructTypesWithPromotedFields"],
-
-		values["exportedstructtypesByEmbeddingfieldsChartURL"],
-
-		values["exportedNamedStructTypeFieldsPerExportedStruct"],
-		values["exportedNamedStructTypeExplicitFieldsPerExportedStruct"],
-		values["exportedNamedStructTypeExportedFieldsPerExportedStruct"],
-		values["exportedNamedStructTypeExportedExplicitFieldsPerExportedStruct"],
-
-		values["exportedstructtypesByExplicitfieldsChartURL"],
-		values["exportedstructtypesByExportedexplicitfieldsChartURL"],
-		//values["exportedstructtypesByExportedfieldsChartURL"],
-		values["exportedstructtypesByExportedpromotedfieldsChartURL"],
-
-		values["exportedNamedNonInterfacesExportedMethodsPerExportedNonInterfaceType"],
-		values["exportedNamedInterfacesExportedMethodsPerExportedInterfaceType"],
-
-		values["exportednoninterfacetypesByExportedmethodsChartURL"],
-		values["exportedinterfacetypesByExportedmethodsChartURL"],
-	)
+			//values["exportednoninterfacetypesByExportedmethodsChartURL"],
+			//values["exportedinterfacetypesByExportedmethodsChartURL"],
+			//values["exportednoninterfacetypesByExportedmethodsChartSVG"],
+			//values["exportedinterfacetypesByExportedmethodsChartSVG"],
+		),
+	}
 }
 
-func (*Chinese) Text_ValueStatistics(values map[string]interface{}) string {
-	return fmt.Sprintf(`
+func (*Chinese) Text_ValueStatistics(values map[string]interface{}) []string {
+	return []string{
+		fmt.Sprintf(`
 	共%d个导出变量和%d个导出常量。
 
-	<img src="%s"></image>
-	<img src="%s"></image>
+`,
+			//<!--img src=""></image-->%s
+			//<!--img src=""></image-->%s
+			values["exportedVariables"],
+			values["exportedConstants"],
 
+			//values["exportedvariablesByTypekindsChartURL"],
+			//values["exportedconstantsByTypekindsChartURL"],
+			//values["exportedvariablesByTypekindsChartSVG"],
+			//values["exportedconstantsByTypekindsChartSVG"],
+		),
+
+		fmt.Sprintf(`
 	共%d个导出函数和%d个导出显式方法。
 	平均说来，每个这样的函数或方法拥有%.2f个参数和%.2f个输出结果。
 	这些函数和方法中的%d个（占%d%%）的最后一个输出结果的类型为<code>error</code>。
 
-	<img src="%s"></image>
-	<img src="%s"></image>
 `,
-		values["exportedVariables"],
-		values["exportedConstants"],
+			//<!--img src=""></image-->%s
+			//<!--img src=""></image-->%s
 
-		values["exportedvariablesByTypekindsChartURL"],
-		values["exportedconstantsByTypekindsChartURL"],
+			values["exportedFunctions"],
+			values["exportedMethods"],
+			values["averageParameterCountPerExportedFunction"],
+			values["averageResultCountPerExportedFunction"],
+			values["exportedFunctionWithLastErrorResult"],
+			values["exportedFunctionWithLastErrorResultPercentage"],
 
-		values["exportedFunctions"],
-		values["exportedMethods"],
-		values["averageParameterCountPerExportedFunction"],
-		values["averageResultCountPerExportedFunction"],
-		values["exportedFunctionWithLastErrorResult"],
-		values["exportedFunctionWithLastErrorResultPercentage"],
-
-		values["exportedfunctionsByParametersChartURL"],
-		values["exportedfunctionsByResultsChartURL"],
-	)
+			//values["exportedfunctionsByParametersChartURL"],
+			//values["exportedfunctionsByResultsChartURL"],
+			//values["exportedfunctionsByParametersChartSVG"],
+			//values["exportedfunctionsByResultsChartSVG"],
+		),
+	}
 }
 
-func (*Chinese) Text_Othertatistics(values map[string]interface{}) string {
-	return fmt.Sprintf(`
+func (*Chinese) Text_Othertatistics(values map[string]interface{}) []string {
+	return []string{
+		fmt.Sprintf(`
 	输出标识符的平均长度为%.2f。
 
-	<img src="%s"></image>
 `,
-		values["averageIdentiferLength"],
+			//<!--img src=""></image-->%s
 
-		values["exportedidentifiersByLengthsChartURL"],
-	)
+			values["averageIdentiferLength"],
+
+			//values["exportedidentifiersByLengthsChartURL"],
+			//values["exportedidentifiersByLengthsChartSVG"],
+		),
+	}
 }
 
 ///////////////////////////////////////////////////////////////////

@@ -87,46 +87,122 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 		)
 	}
 
-	page.WriteString("\n")
-
-	if len(pkg.Files) > 0 {
-
-		page.WriteString("\n")
-
-		func() {
-			page.WriteString("<div>")
-			defer page.WriteString("</div>")
-			fmt.Fprint(page, `<span class="title">`, page.Translation().Text_InvolvedFiles(len(pkg.Files)), `</span>`)
-
-			for _, info := range pkg.Files {
-				page.WriteString("\n\t")
-				if info.MainPosition != nil && info.HasDocs {
-					page.WriteString("  ")
-					writeMainFunctionArrow(page, pkg.Package, *info.MainPosition)
-					writeSourceCodeDocLink(page, pkg.Package, info.Filename)
-				} else if info.MainPosition != nil {
-					page.WriteString("  ")
-					writeMainFunctionArrow(page, pkg.Package, *info.MainPosition)
-					page.WriteString("   ")
-				} else if info.HasDocs {
-					page.WriteString("  ")
-					page.WriteString("   ")
-					writeSourceCodeDocLink(page, pkg.Package, info.Filename)
-				} else {
-					page.WriteString("  ")
-					page.WriteString("   ")
-					page.WriteString("   ")
-				}
-				writeSrouceCodeFileLink(page, pkg.Package, info.Filename)
-			}
-		}()
-	}
-
 	var isMainPackage = pkg.Package.PPkg.Name == "main"
 
 	const classHiddenItem = "hidden"
 
-	var writePackageLevelValues = func(title, name string, values []code.ValueResource, numExporteds int) {
+	page.WriteString("\n")
+
+	if len(pkg.Files) > 0 {
+		writeFileTitle := func(info FileInfo) {
+			if info.MainPosition != nil && info.DocText != "" {
+				writeMainFunctionArrow(page, pkg.Package, *info.MainPosition)
+				writeSourceCodeDocLink(page, pkg.Package, info.Filename)
+			} else if info.MainPosition != nil {
+				writeMainFunctionArrow(page, pkg.Package, *info.MainPosition)
+				page.WriteString("   ")
+			} else if info.DocText != "" {
+				page.WriteString("   ")
+				writeSourceCodeDocLink(page, pkg.Package, info.Filename)
+			} else {
+				page.WriteString("   ")
+				page.WriteString("   ")
+			}
+			writeSrouceCodeFileLink(page, pkg.Package, info.Filename)
+		}
+
+		func() {
+			page.WriteString("\n")
+			page.WriteString("<div>")
+			defer page.WriteString("</div>")
+			fmt.Fprint(page, `<span class="title">`, page.Translation().Text_InvolvedFiles(len(pkg.Files)), `</span>`)
+
+			//writeLeadingSpaces := func() {
+			//	page.WriteString("\n\t")
+			//	page.WriteString("  ")
+			//	page.WriteString("   ")
+			//	page.WriteString("   ")
+			//	page.WriteString("\t")
+			//}
+			//checked := ""
+			//if isMainPackage {
+			//	checked = " checked"
+			//}
+			for i, info := range pkg.Files {
+				page.WriteString("\n\t")
+				//if len(info.Resources) == 0 {
+				if info.DocText == "" {
+					page.WriteString(`<span class="nodocs">`)
+					writeFileTitle(info)
+					page.WriteString(`</span>`)
+					continue
+				}
+
+				fid := fmt.Sprintf("file-%d", i)
+				writeFoldingBlock(page, fid, "content", "items", false,
+					func() {
+						writeFileTitle(info)
+					},
+					func() {
+						page.WriteString("\n")
+						writePageText(page, "\t\t", info.DocText, true)
+					},
+					//func() {
+					//	if info.HasHiddenRes {
+					//		writeLeadingSpaces()
+					//		fmt.Fprintf(page, `<input%[1]s type='checkbox' class="showhide2" id='%[2]s'><i><label for='%[2]s'>%[3]s</label></i>`,
+					//			checked, fid, page.Translation().Text_ListUnexportes())
+					//	}
+					//	for _, res := range info.Resources {
+					//		func() {
+					//			hidden := true
+					//			if res.Type != nil {
+					//				if res.Type.TypeName.Exported() {
+					//					hidden = false
+					//				}
+					//			} else if res.Value.Exported() {
+					//				hidden = false
+					//			}
+					//			hiddenClass := ""
+					//			if hidden {
+					//				hiddenClass = ` class="` + classHiddenItem + `"`
+					//			}
+					//			fmt.Fprintf(page, `<span%s>`, hiddenClass)
+					//			defer page.WriteString(`</span>`)
+					//			if hidden {
+					//				page.WriteString(`<i>`)
+					//				defer page.WriteString(`</i>`)
+					//			}
+					//			writeLeadingSpaces()
+					//			if res.Type != nil {
+					//				page.WriteString(" type ")
+					//				fmt.Fprintf(page, `<a href="#name-%s">%s</a>`, res.Type.TypeName.Name(), res.Type.TypeName.Name())
+					//				return
+					//			}
+					//
+					//			switch res.Value.(type) {
+					//			default:
+					//				log.Println("impossible")
+					//				return
+					//			case *code.Variable:
+					//				page.WriteString("  var ")
+					//			case *code.Constant:
+					//				page.WriteString("const ")
+					//			case *code.Function:
+					//				page.WriteString(" func ")
+					//			}
+					//
+					//			fmt.Fprintf(page, `<a href="#name-%s">%s</a>`, res.Value.Name(), res.Value.Name())
+					//		}()
+					//	}
+					//},
+				)
+			}
+		}()
+	}
+
+	//var writePackageLevelValues = func(title, name string, values []code.ValueResource, numExporteds int) {
+	var writePackageLevelValues = func(title, name string, values []ResourceWithPosition, numExporteds int) {
 
 		page.WriteString("\n")
 
@@ -135,11 +211,11 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 			defer page.WriteString("</div>")
 
 			func() {
-				page.WriteString(`<span class="title value-res title-stat">`)
+				page.WriteString(`<span class="title value-res">`)
 				defer page.WriteString(`</span>`)
 				page.WriteString(title)
-				page.WriteString(`<span class="title-stat">`)
-				defer page.WriteString(`</span>`)
+				page.WriteString(`<span class="title-stat"><i>`)
+				defer page.WriteString(`</i></span>`)
 				page.WriteString(page.Translation().Text_Parenthesis(false))
 				defer page.WriteString(page.Translation().Text_Parenthesis(true))
 				page.WriteString(page.Translation().Text_PackageLevelResourceSimpleStat(true, len(values), numExporteds, collectUnexporteds))
@@ -147,7 +223,8 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 
 			page.WriteString("\n\n")
 
-			for i, v := range values {
+			for i, vwp := range values {
+				v := vwp.Value
 				if i == numExporteds {
 					page.WriteString("\t")
 					writeUnexportedResourcesHeader(page,
@@ -169,18 +246,19 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 
 				if doc := v.Documentation(); doc == "" {
 					page.WriteString(`<span class="nodocs">`)
-					ds.writeResourceIndexHTML(page, pkg.Package, v, false)
+					ds.writeResourceIndexHTML(page, pkg.Package, v, true, true, true)
 					page.WriteString(`</span>`)
 				} else {
 					writeFoldingBlock(page, v.Name(), "content", "docs", false,
 						func() {
-							ds.writeResourceIndexHTML(page, pkg.Package, v, false)
+							ds.writeResourceIndexHTML(page, pkg.Package, v, true, true, true)
 						},
 						func() {
 							page.WriteString("\n")
 							writePageText(page, "\t\t", doc, true)
 							page.WriteString("\n\n")
-						})
+						},
+					)
 				}
 
 				if unexported {
@@ -214,6 +292,16 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 		return
 	}
 
+	var writeItemHeader = func(title, stat string) {
+		page.WriteString(title)
+
+		page.WriteString(page.Translation().Text_Parenthesis(false))
+		defer page.WriteString(page.Translation().Text_Parenthesis(true))
+		page.WriteString("<i>")
+		defer page.WriteString("</i>")
+		page.WriteString(stat)
+	}
+
 	if len(pkg.TypeNames) == 0 {
 		goto WriteFunctions
 	}
@@ -224,8 +312,8 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 		page.WriteString(`<span class="title type-res">`)
 		defer page.WriteString(`</span>`)
 		page.WriteString(page.Translation().Text_PackageLevelTypeNames())
-		page.WriteString(`<span class="title-stat">`)
-		defer page.WriteString(`</span>`)
+		page.WriteString(`<span class="title-stat"><i>`)
+		defer page.WriteString(`</i></span>`)
 		page.WriteString(page.Translation().Text_Parenthesis(false))
 		defer page.WriteString(page.Translation().Text_Parenthesis(true))
 		page.WriteString(page.Translation().Text_PackageLevelResourceSimpleStat(true, len(pkg.TypeNames), int(pkg.NumExportedTypeNames), collectUnexporteds))
@@ -248,7 +336,8 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 
 	page.WriteString(`<div id="exported-types">`)
 
-	for i, td := range pkg.TypeNames {
+	for i, tdwp := range pkg.TypeNames {
+		td := tdwp.Type
 		if i == int(pkg.NumExportedTypeNames) {
 			page.WriteString("</div><div>")
 			page.WriteString("\t")
@@ -265,12 +354,12 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 
 		if doc := td.TypeName.Documentation(); doc == "" && td.AllListsAreBlank {
 			page.WriteString(`<span class="nodocs">`)
-			ds.writeResourceIndexHTML(page, pkg.Package, td.TypeName, false)
+			ds.writeResourceIndexHTML(page, pkg.Package, td.TypeName, true, true, false)
 			page.WriteString(`</span>`)
 		} else {
 			writeFoldingBlock(page, td.TypeName.Name(), "content", "docs", false,
 				func() {
-					ds.writeResourceIndexHTML(page, pkg.Package, td.TypeName, false)
+					ds.writeResourceIndexHTML(page, pkg.Package, td.TypeName, true, true, false)
 				},
 				func() {
 					if doc != "" {
@@ -286,11 +375,10 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 						page.WriteString("\n\t\t")
 						writeFoldingBlock(page, td.TypeName.Name(), "fields", "items", false,
 							func() {
-								page.WriteString(page.Translation().Text_Fields())
-
-								page.WriteString(page.Translation().Text_Parenthesis(false))
-								page.WriteString(page.Translation().Text_PackageLevelResourceSimpleStat(true, count, numExporteds, collectUnexporteds))
-								page.WriteString(page.Translation().Text_Parenthesis(true))
+								writeItemHeader(
+									page.Translation().Text_Fields(),
+									page.Translation().Text_PackageLevelResourceSimpleStat(true, count, numExporteds, collectUnexporteds),
+								)
 							},
 							func() {
 								exported := true
@@ -334,17 +422,17 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 										goto ListFields
 									}
 								}
-							})
+							},
+						)
 					}
 					if count, numExporteds := len(td.Methods), int(td.NumExportedMethods); count > 0 {
 						page.WriteString("\n\t\t")
 						writeFoldingBlock(page, td.TypeName.Name(), "methods", "items", isBuiltin,
 							func() {
-								page.WriteString(page.Translation().Text_Methods())
-
-								page.WriteString(page.Translation().Text_Parenthesis(false))
-								page.WriteString(page.Translation().Text_PackageLevelResourceSimpleStat(true, count, numExporteds, collectUnexporteds))
-								page.WriteString(page.Translation().Text_Parenthesis(true))
+								writeItemHeader(
+									page.Translation().Text_Methods(),
+									page.Translation().Text_PackageLevelResourceSimpleStat(true, count, numExporteds, collectUnexporteds),
+								)
 							},
 							func() {
 								exported := true
@@ -375,7 +463,8 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 														writePageText(page, "\t\t\t\t// ", mthdComment, true)
 													}
 													page.WriteString("\n")
-												})
+												},
+											)
 										}
 									}()
 								}
@@ -388,17 +477,17 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 										goto ListMethods
 									}
 								}
-							})
+							},
+						)
 					}
 					if count, numExporteds := len(td.ImplementedBys), int(td.NumExportedImpedBys); count > 0 {
 						page.WriteString("\n\t\t")
 						writeFoldingBlock(page, td.TypeName.Name(), "impledby", "items", false,
 							func() {
-								page.WriteString(page.Translation().Text_ImplementedBy())
-
-								page.WriteString(page.Translation().Text_Parenthesis(false))
-								page.WriteString(page.Translation().Text_PackageLevelResourceSimpleStat(false, count, numExporteds, collectUnexporteds))
-								page.WriteString(page.Translation().Text_Parenthesis(true))
+								writeItemHeader(
+									page.Translation().Text_ImplementedBy(),
+									page.Translation().Text_PackageLevelResourceSimpleStat(false, count, numExporteds, collectUnexporteds),
+								)
 							},
 							func() {
 								exported := true
@@ -425,17 +514,17 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 										goto ListImpedBys
 									}
 								}
-							})
+							},
+						)
 					}
 					if count, numExporteds := len(td.Implements), int(td.NumExportedImpls); count > 0 {
 						page.WriteString("\n\t\t")
 						writeFoldingBlock(page, td.TypeName.Name(), "impls", "items", false,
 							func() {
-								page.WriteString(page.Translation().Text_Implements())
-
-								page.WriteString(page.Translation().Text_Parenthesis(false))
-								page.WriteString(page.Translation().Text_PackageLevelResourceSimpleStat(false, count, numExporteds, collectUnexporteds))
-								page.WriteString(page.Translation().Text_Parenthesis(true))
+								writeItemHeader(
+									page.Translation().Text_Implements(),
+									page.Translation().Text_PackageLevelResourceSimpleStat(false, count, numExporteds, collectUnexporteds),
+								)
 							},
 							func() {
 								exported := true
@@ -459,17 +548,17 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 										goto ListImpls
 									}
 								}
-							})
+							},
+						)
 					}
 					if count, numExporteds := len(td.AsOutputsOf), int(td.NumExportedAsOutputsOfs); count > 0 {
 						page.WriteString("\n\t\t")
 						writeFoldingBlock(page, td.TypeName.Name(), "results", "items", false,
 							func() {
-								page.WriteString(page.Translation().Text_AsOutputsOf())
-
-								page.WriteString(page.Translation().Text_Parenthesis(false))
-								page.WriteString(page.Translation().Text_PackageLevelResourceSimpleStat(false, count, numExporteds, collectUnexporteds))
-								page.WriteString(page.Translation().Text_Parenthesis(true))
+								writeItemHeader(
+									page.Translation().Text_AsOutputsOf(),
+									page.Translation().Text_PackageLevelResourceSimpleStat(false, count, numExporteds, collectUnexporteds),
+								)
 							},
 							func() {
 								exported := true
@@ -493,17 +582,17 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 										goto ListAsOutputsOf
 									}
 								}
-							})
+							},
+						)
 					}
 					if count, numExporteds := len(td.AsInputsOf), int(td.NumExportedAsInputsOfs); count > 0 {
 						page.WriteString("\n\t\t")
 						writeFoldingBlock(page, td.TypeName.Name(), "params", "items", false,
 							func() {
-								page.WriteString(page.Translation().Text_AsInputsOf())
-
-								page.WriteString(page.Translation().Text_Parenthesis(false))
-								page.WriteString(page.Translation().Text_PackageLevelResourceSimpleStat(false, count, numExporteds, collectUnexporteds))
-								page.WriteString(page.Translation().Text_Parenthesis(true))
+								writeItemHeader(
+									page.Translation().Text_AsInputsOf(),
+									page.Translation().Text_PackageLevelResourceSimpleStat(false, count, numExporteds, collectUnexporteds),
+								)
 							},
 							func() {
 								exported := true
@@ -527,17 +616,17 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 										goto ListAsInputsOf
 									}
 								}
-							})
+							},
+						)
 					}
 					if count, numExporteds := len(td.Values), int(td.NumExportedValues); count > 0 {
 						page.WriteString("\n\t\t")
 						writeFoldingBlock(page, td.TypeName.Name(), "values", "items", false,
 							func() {
-								page.WriteString(page.Translation().Text_AsTypesOf())
-
-								page.WriteString(page.Translation().Text_Parenthesis(false))
-								page.WriteString(page.Translation().Text_PackageLevelResourceSimpleStat(true, count, numExporteds, collectUnexporteds))
-								page.WriteString(page.Translation().Text_Parenthesis(true))
+								writeItemHeader(
+									page.Translation().Text_AsTypesOf(),
+									page.Translation().Text_PackageLevelResourceSimpleStat(true, count, numExporteds, collectUnexporteds),
+								)
 							},
 							func() {
 								exported := true
@@ -561,7 +650,8 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 										goto ListAsTypesOf
 									}
 								}
-							})
+							},
+						)
 					}
 					page.WriteString("\n\n")
 				})
@@ -623,14 +713,30 @@ Done:
 	return page.Done(w)
 }
 
+type ResourceWithPosition struct {
+	Position  token.Position
+	FileIndex int32 // -1 means owner file not found
+	Offset    int32
+
+	//Res code.Resource
+	// Use the following two instead of the above one to avoid
+	// 1. change much code
+	// 2. too many type assertions
+	Type  *TypeDetails       // for PackageDetails.TypeNames only. Alway nil for FileInfo.
+	Value code.ValueResource // also for TypeNames in FileInfo
+}
+
 type FileInfo struct {
 	Filename     string
 	MainPosition *token.Position // for main packages only
-	HasDocs      bool
+	Resources    []ResourceWithPosition
+	DocText      string
+	//HasDocs      bool
+	//HasHiddenRes bool
 }
 
 type PackageDetails struct {
-	//Mod  *Module // ToDo
+	//Mod *Module // ToDo:
 
 	Package *code.Package
 
@@ -642,12 +748,17 @@ type PackageDetails struct {
 	NumDeps     uint32
 	NumDepedBys uint32
 
-	Files     []FileInfo
-	TypeNames []*TypeDetails
-	//ValueResources    []code.ValueResource
-	Functions            []code.ValueResource
-	Variables            []code.ValueResource
-	Constants            []code.ValueResource
+	Files []FileInfo
+	//TypeNames []*TypeDetails
+	TypeNames []ResourceWithPosition
+	////ValueResources []code.ValueResource
+	//Functions        []code.ValueResource
+	//Variables        []code.ValueResource
+	//Constants        []code.ValueResource
+	Functions []ResourceWithPosition
+	Variables []ResourceWithPosition
+	Constants []ResourceWithPosition
+
 	NumExportedTypeNames uint32
 	NumExportedFunctions uint32
 	NumExportedVariables uint32
@@ -661,6 +772,8 @@ type TypeDetails struct {
 	TypeName         *code.TypeName
 	AllListsAreBlank bool
 	Popularity       int
+
+	Aliases []*TypeForListing // excluding self if self is an alias.
 
 	Fields             []*SelectorForListing // []*code.Selector
 	Methods            []*code.Selector
@@ -759,13 +872,50 @@ func buildPackageDetailsData(analyzer *code.CodeAnalyzer, pkgPath string, alsoCo
 	//lineStartOffsets := make(map[string][]int, len(pkg.PPkg.GoFiles))
 
 	for i := range pkg.SourceFiles {
-		info := &pkg.SourceFiles[i]
-		if info.OriginalFile != "" {
+		f := &pkg.SourceFiles[i]
+		if f.OriginalFile != "" {
+			docText := ""
+			if f.AstFile != nil && f.AstFile.Doc != nil {
+				docText = f.AstFile.Doc.Text()
+			}
 			files = append(files, FileInfo{
-				Filename: info.BareFilename,
-				HasDocs:  info.AstFile != nil && info.AstFile.Doc != nil,
+				Filename: f.BareFilename,
+				DocText:  docText,
+				//HasDocs:  f.AstFile != nil && f.AstFile.Doc != nil,
 			})
 		}
+	}
+	numAllResources := len(pkg.PackageAnalyzeResult.AllConstants) +
+		len(pkg.PackageAnalyzeResult.AllVariables) +
+		len(pkg.PackageAnalyzeResult.AllFunctions)
+	numResesPerFile := numAllResources
+	// ToDo: would better to cache several [1024]ResourceWithPosition in Server?
+	if len(files) > 5 {
+		numResesPerFile /= (len(files) - 1)
+		numResesPerFile++
+	}
+
+	filename2index := make(map[string]int, len(files))
+	for i := range files {
+		filename2index[files[i].Filename] = i
+		files[i].Resources = make([]ResourceWithPosition, 0, numAllResources)
+	}
+	regResForFile := func(res code.Resource) ResourceWithPosition {
+		pos := res.Position()
+		off, findex := int32(pos.Offset), int32(-1)
+		if i, ok := filename2index[filepath.Base(pos.Filename)]; ok {
+			findex = int32(i)
+		}
+		rwp := ResourceWithPosition{Position: pos, FileIndex: findex, Offset: off}
+		if tn, ok := res.(*code.TypeName); ok {
+			rwp.Type = &TypeDetails{TypeName: tn}
+		} else {
+			rwp.Value = res.(code.ValueResource)
+		}
+		if findex >= 0 {
+			files[findex].Resources = append(files[findex].Resources, rwp)
+		}
+		return rwp
 	}
 
 	// Now, these file are also put into pkg.SourceFiles.
@@ -794,13 +944,18 @@ func buildPackageDetailsData(analyzer *code.CodeAnalyzer, pkgPath string, alsoCo
 	//		len(pkg.PackageAnalyzeResult.AllVariables)+
 	//		len(pkg.PackageAnalyzeResult.AllFunctions))
 
-	var functions = make([]code.ValueResource, 0, len(pkg.PackageAnalyzeResult.AllFunctions))
-	var variables = make([]code.ValueResource, 0, len(pkg.PackageAnalyzeResult.AllVariables))
-	var constants = make([]code.ValueResource, 0, len(pkg.PackageAnalyzeResult.AllConstants))
+	//var functions = make([]code.ValueResource, 0, len(pkg.PackageAnalyzeResult.AllFunctions))
+	//var variables = make([]code.ValueResource, 0, len(pkg.PackageAnalyzeResult.AllVariables))
+	//var constants = make([]code.ValueResource, 0, len(pkg.PackageAnalyzeResult.AllConstants))
+	var functions = make([]ResourceWithPosition, 0, len(pkg.PackageAnalyzeResult.AllFunctions))
+	var variables = make([]ResourceWithPosition, 0, len(pkg.PackageAnalyzeResult.AllVariables))
+	var constants = make([]ResourceWithPosition, 0, len(pkg.PackageAnalyzeResult.AllConstants))
 
 	for _, f := range pkg.PackageAnalyzeResult.AllFunctions {
 		if e := f.Exported(); (alsoCollectNonExporteds || e) && !f.IsMethod() {
-			functions = append(functions, f)
+			//functions = append(functions, f)
+			rwp := regResForFile(f)
+			functions = append(functions, rwp)
 			if e {
 				pkgDetails.NumExportedFunctions++
 			}
@@ -808,7 +963,9 @@ func buildPackageDetailsData(analyzer *code.CodeAnalyzer, pkgPath string, alsoCo
 	}
 	for _, v := range pkg.PackageAnalyzeResult.AllVariables {
 		if e := v.Exported(); alsoCollectNonExporteds || e {
-			variables = append(variables, v)
+			//variables = append(variables, v)
+			rwp := regResForFile(v)
+			variables = append(variables, rwp)
 			if e {
 				pkgDetails.NumExportedVariables++
 			}
@@ -816,31 +973,45 @@ func buildPackageDetailsData(analyzer *code.CodeAnalyzer, pkgPath string, alsoCo
 	}
 	for _, c := range pkg.PackageAnalyzeResult.AllConstants {
 		if e := c.Exported(); alsoCollectNonExporteds || e {
-			constants = append(constants, c)
+			//constants = append(constants, c)
+			rwp := regResForFile(c)
+			constants = append(constants, rwp)
 			if e {
 				pkgDetails.NumExportedConstants++
 			}
 		}
 	}
 
-	//sort.Slice(valueResources, func(i, j int) bool {
-	//	// ToDo: cache lower names?
-	//	return strings.ToLower(valueResources[i].Name()) < strings.ToLower(valueResources[j].Name())
-	//})
-	sortValues := func(values []code.ValueResource) {
+	////sort.Slice(valueResources, func(i, j int) bool {
+	////	// ToDo: cache lower names?
+	////	return strings.ToLower(valueResources[i].Name()) < strings.ToLower(valueResources[j].Name())
+	////})
+	//sortValues := func(values []code.ValueResource) {
+	//	sort.Slice(values, func(a, b int) bool {
+	//		if ea, eb := values[a].Exported(), values[b].Exported(); ea != eb {
+	//			return ea
+	//		}
+	//		// ToDo: cache lower names?
+	//		return strings.ToLower(values[a].Name()) < strings.ToLower(values[b].Name())
+	//	})
+	//}
+	sortValues := func(values []ResourceWithPosition) {
 		sort.Slice(values, func(a, b int) bool {
-			if ea, eb := values[a].Exported(), values[b].Exported(); ea != eb {
+			va, vb := values[a].Value, values[b].Value
+			if ea, eb := va.Exported(), vb.Exported(); ea != eb {
 				return ea
 			}
 			// ToDo: cache lower names?
-			return strings.ToLower(values[a].Name()) < strings.ToLower(values[b].Name())
+			return strings.ToLower(va.Name()) < strings.ToLower(vb.Name())
 		})
 	}
 	sortValues(functions)
 	sortValues(variables)
 	sortValues(constants)
 
-	var typeResources = make([]*TypeDetails, 0, len(pkg.PackageAnalyzeResult.AllTypeNames))
+	//var typeResources = make([]*TypeDetails, 0, len(pkg.PackageAnalyzeResult.AllTypeNames))
+	var typeResources = make([]ResourceWithPosition, 0, len(pkg.PackageAnalyzeResult.AllTypeNames))
+
 	//var unexportedTypesResources = make([]*code.TypeName, 0, len(pkg.PackageAnalyzeResult.AllTypeNames))
 	for _, tn := range pkg.PackageAnalyzeResult.AllTypeNames {
 		if e := tn.Exported(); e {
@@ -850,8 +1021,11 @@ func buildPackageDetailsData(analyzer *code.CodeAnalyzer, pkgPath string, alsoCo
 		}
 
 		denoting := tn.Denoting()
-		td := &TypeDetails{TypeName: tn}
-		typeResources = append(typeResources, td)
+		//td := &TypeDetails{TypeName: tn}
+		//typeResources = append(typeResources, td)
+		rwp := regResForFile(tn)
+		td := rwp.Type
+		typeResources = append(typeResources, rwp)
 
 		// Generally, we don't collect info for a type alias, execpt it denotes an unnamed or unexported type.
 		// The info has been (or will be) collected for that denoting type.
@@ -877,13 +1051,14 @@ func buildPackageDetailsData(analyzer *code.CodeAnalyzer, pkgPath string, alsoCo
 		var values []code.ValueResource
 		values = append(values, denoting.AsTypesOf...)
 		// ToDo: also combine values of []T, chan T, ...
-		if t := analyzer.TryRegisteringType(types.NewPointer(denoting.TT), false); t != nil {
+		if t := analyzer.TryRegisteringType(types.NewPointer(denoting.TT)); t != nil {
 			values = append(values, t.AsTypesOf...)
 		}
 		td.Values, td.NumExportedValues = buildValueList(values, pkg, alsoCollectNonExporteds)
 	}
 
-	for _, td := range typeResources {
+	for _, tdwp := range typeResources {
+		td := tdwp.Type
 		td.calculatePopularity()
 
 		td.AllListsAreBlank =
@@ -898,12 +1073,32 @@ func buildPackageDetailsData(analyzer *code.CodeAnalyzer, pkgPath string, alsoCo
 
 	// default sort-by
 	sort.Slice(typeResources, func(a, b int) bool {
-		if ea, eb := typeResources[a].TypeName.Exported(), typeResources[b].TypeName.Exported(); ea != eb {
+		tna, tnb := typeResources[a].Type.TypeName, typeResources[b].Type.TypeName
+		if ea, eb := tna.Exported(), tnb.Exported(); ea != eb {
 			return ea
 		}
 		// ToDo: cache lower names?
-		return strings.ToLower(typeResources[a].TypeName.Name()) < strings.ToLower(typeResources[b].TypeName.Name())
+		return strings.ToLower(tna.Name()) < strings.ToLower(tnb.Name())
 	})
+
+	//
+	for i := range files {
+		resources := files[i].Resources
+		sort.Slice(resources, func(a, b int) bool {
+			return resources[a].Offset < resources[b].Offset
+		})
+		//for k := range resources {
+		//	if resources[k].Type != nil {
+		//		if !resources[k].Type.TypeName.Exported() {
+		//			files[i].HasHiddenRes = true
+		//			break
+		//		}
+		//	} else if !resources[k].Value.Exported() {
+		//		files[i].HasHiddenRes = true
+		//		break
+		//	}
+		//}
+	}
 
 	// ...
 	pkgDetails.Files = files
@@ -929,22 +1124,36 @@ func buildTypeFieldList(denoting *code.TypeInfo, alsoCollectNonExporteds bool) (
 	return sortFieldList(fields), numExporteds
 }
 
+func createSelectorForListing(l *SelectorForListing, s *code.Selector) {
+	l.Selector = s
+	if s.Depth > 0 {
+		l.Middles = make([]*code.Field, s.Depth)
+		chain := s.EmbeddingChain
+		for k := int(s.Depth) - 1; k >= 0; k-- {
+			//log.Println(s.Depth, k, chain)
+			l.Middles[k] = chain.Field
+			chain = chain.Prev
+		}
+	}
+}
+
 func sortFieldList(selectors []*code.Selector) []*SelectorForListing {
 	selList := make([]SelectorForListing, len(selectors))
 	result := make([]*SelectorForListing, len(selectors))
 	for i, sel := range selectors {
 		selForListing := &selList[i]
 		result[i] = selForListing
-		selForListing.Selector = sel
-		if sel.Depth > 0 {
-			selForListing.Middles = make([]*code.Field, sel.Depth)
-			chain := sel.EmbeddingChain
-			for k := int(sel.Depth) - 1; k >= 0; k-- {
-				//log.Println(sel.Depth, k, chain)
-				selForListing.Middles[k] = chain.Field
-				chain = chain.Prev
-			}
-		}
+		//selForListing.Selector = sel
+		//if sel.Depth > 0 {
+		//	selForListing.Middles = make([]*code.Field, sel.Depth)
+		//	chain := sel.EmbeddingChain
+		//	for k := int(sel.Depth) - 1; k >= 0; k-- {
+		//		//log.Println(sel.Depth, k, chain)
+		//		selForListing.Middles[k] = chain.Field
+		//		chain = chain.Prev
+		//	}
+		//}
+		createSelectorForListing(selForListing, sel)
 	}
 
 	sort.Slice(result, func(a, b int) bool {
@@ -1288,7 +1497,7 @@ func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pk
 					buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, v.Package().Path()}, page, tn.Name(), "name-", tn.Name())
 					page.WriteString(").")
 				} else {
-					// ToDo: faster way: ds.analyzer.TryRegisteringType(tn.Type(). false) == forTypeName.Denoting()?
+					// ToDo: faster way: ds.analyzer.TryRegisteringType(tn.Type()) == forTypeName.Denoting()?
 					if forTypeName != nil && types.Identical(tn.Type(), forTypeName.Denoting().TT) {
 						fmt.Fprintf(page, `(*%[1]s).`, tn.Name())
 					} else {
@@ -1302,7 +1511,7 @@ func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pk
 					buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, v.Package().Path()}, page, tn.Name(), "name-", tn.Name())
 					page.WriteString(".")
 				} else {
-					// ToDo: faster way: ds.analyzer.TryRegisteringType(tn.Type(). false) == forTypeName.Denoting()?
+					// ToDo: faster way: ds.analyzer.TryRegisteringType(tn.Type()) == forTypeName.Denoting()?
 					if forTypeName != nil && types.Identical(tn.Type(), forTypeName.Denoting().TT) {
 						fmt.Fprintf(page, `%[1]s.`, tn.Name())
 					} else {
@@ -1368,22 +1577,36 @@ func (ds *docServer) writeTypeForListing(page *htmlPage, t *TypeForListing, pkg 
 	}
 
 	if t.Package() != pkg {
+		if implerName == "" {
+			if t.IsPointer {
+				page.WriteString("*")
+			} else {
+				page.WriteString(" ")
+			}
+		}
+
 		if t.Pkg.Path() != "builtin" {
 			page.WriteString(t.Pkg.Path())
 			page.WriteByte('.')
 		}
 
-		if implerName == "" && t.IsPointer {
-			page.WriteString("(*")
-			defer page.WriteByte(')')
-		}
+		//if implerName == "" && t.IsPointer {
+		//	page.WriteString("(*")
+		//	defer page.WriteByte(')')
+		//}
 	} else {
-		if implerName == "" && t.IsPointer {
-			if dotMStyle == DotMStyle_NotShow {
-				page.WriteString("*")
-			} else { // for method implementation listing
-				page.WriteString("(*")
-				defer page.WriteByte(')')
+		if implerName == "" {
+			if t.IsPointer {
+				if dotMStyle == DotMStyle_NotShow {
+					page.WriteString("*")
+				} else { // for method implementation listing
+					page.WriteString("(*")
+					defer page.WriteByte(')')
+				}
+			} else {
+				if dotMStyle == DotMStyle_NotShow {
+					page.WriteString(" ")
+				}
 			}
 		}
 	}
@@ -1538,7 +1761,7 @@ func writeKindText(page *htmlPage, tt types.Type) {
 }
 
 //func (ds *docServer) writeResourceIndexHTML(page *htmlPage, res code.Resource, fileLineOffsets map[string][]int, writeType, writeReceiver bool) {
-func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Package, res code.Resource, writeResNameOnly bool) {
+func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Package, res code.Resource, writeKeyword, writeType, writeComment bool) {
 	//pos := res.Position()
 	//if lineOffsets, ok := fileLineOffsets[pos.Filename]; ok {
 	//	correctPosition(lineOffsets, &pos)
@@ -1594,7 +1817,7 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Pac
 	default:
 		panic("should not")
 	case *code.TypeName:
-		if !writeResNameOnly {
+		if writeKeyword {
 			if buildIdUsesPages && !isBuiltin {
 				page.WriteByte(' ')
 				buildPageHref(page.PathInfo, pagePathInfo{ResTypeReference, res.Package().Path() + ".." + res.Name()}, page, "type")
@@ -1606,7 +1829,7 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Pac
 
 		writeResName()
 
-		if !writeResNameOnly {
+		if writeType {
 			showSource := false
 			if isBuiltin {
 				// builtin package source code are fake.
@@ -1652,7 +1875,7 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Pac
 			writeKindText(page, res.Denoting().TT)
 		}
 	case *code.Constant:
-		if !writeResNameOnly {
+		if writeKeyword {
 			if buildIdUsesPages && !isBuiltin {
 				buildPageHref(page.PathInfo, pagePathInfo{ResTypeReference, res.Package().Path() + ".." + res.Name()}, page, "const")
 				page.WriteByte(' ')
@@ -1663,7 +1886,7 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Pac
 
 		writeResName()
 
-		if !writeResNameOnly {
+		if writeType {
 			btt, ok := res.TType().Underlying().(*types.Basic)
 			if !ok {
 				panic("constants should be always of basic types, but " + res.String() + " : " + res.TType().String())
@@ -1683,7 +1906,7 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Pac
 			}
 		}
 	case *code.Variable:
-		if !writeResNameOnly {
+		if writeKeyword {
 			if buildIdUsesPages && !isBuiltin {
 				page.WriteByte(' ')
 				page.WriteByte(' ')
@@ -1696,7 +1919,7 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Pac
 
 		writeResName()
 
-		if !writeResNameOnly {
+		if writeType {
 			page.WriteByte(' ')
 			//page.WriteString(res.TType().String())
 			if res.AstSpec.Type != nil {
@@ -1707,7 +1930,7 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Pac
 			}
 		}
 	case *code.Function:
-		if !writeResNameOnly {
+		if writeKeyword {
 			var recv *types.Var
 			if res.Func != nil {
 				sig := res.Func.Type().(*types.Signature)
@@ -1741,13 +1964,13 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Pac
 
 		writeResName()
 
-		if !writeResNameOnly {
+		if writeType {
 			ds.WriteAstType(page, res.AstDecl.Type, res.Pkg, res.Pkg, false, nil, nil)
 			//ds.writeValueTType(page, res.TType(), res.Pkg, false)
 		}
 	}
 
-	if !writeResNameOnly {
+	if writeComment {
 		if comment := res.Comment(); comment != "" {
 			page.WriteString(" // ")
 			writePageText(page, "", comment, true)
@@ -2021,7 +2244,7 @@ func (ds *docServer) WriteAstType(w *htmlPage, typeLit ast.Expr, codePkg, docPkg
 			w.Write(period)
 		}
 
-		// ToDo: faster way: ds.analyzer.TryRegisteringType(tn.Type(). false) == forTypeName.Denoting()?
+		// ToDo: faster way: ds.analyzer.TryRegisteringType(tn.Type()) == forTypeName.Denoting()?
 		if forTypeName != nil && types.Identical(tn.Type(), forTypeName.Denoting().TT) {
 			w.Write(BoldTagStart)
 			defer w.Write(BoldTagEnd)
@@ -2316,9 +2539,13 @@ func writeFoldingBlock(page *htmlPage, resName, statName, contentKind string, ex
 	if expandInitially {
 		checked = " checked"
 	}
+	labelClass := ""
+	if statName == "stats" {
+		labelClass = ` class="stats"`
+	}
 
-	fmt.Fprintf(page, `<input type='checkbox'%[4]s class="fold" id="%[1]s-fold-%[2]s"><label for="%[1]s-fold-%[2]s">`,
-		resName, statName, contentKind, checked)
+	fmt.Fprintf(page, `<input type='checkbox'%[4]s class="fold" id="%[1]s-fold-%[2]s"><label%[5]s for="%[1]s-fold-%[2]s">`,
+		resName, statName, contentKind, checked, labelClass)
 	writeTitleContent()
 	fmt.Fprintf(page, `</label><span id='%[1]s-fold-%[2]s-%[3]s' class="fold-%[3]s">`,
 		resName, statName, contentKind, checked)

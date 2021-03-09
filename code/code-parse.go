@@ -3,11 +3,13 @@ package code
 import (
 	"fmt"
 	"go/ast"
+
 	"go/build"
 	"go/parser"
 	"go/token"
 	"go/types"
 	"log"
+
 	"os"
 	"strings"
 	"sync/atomic"
@@ -87,20 +89,25 @@ func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...i
 	}
 
 	// ...
+	var argsWithoutBuiltin = make([]string, 0, len(args))
 	for _, arg := range args {
 		if arg == "builtin" {
-			goto Start
+			//goto Start
+		} else {
+			argsWithoutBuiltin = append(argsWithoutBuiltin, arg)
 		}
 	}
+	args = argsWithoutBuiltin
 
 	// "builtin" package is always needed.
 	// ToDo: remove this line, use a custom builtin page.
-	args = append(args, "builtin")
+	//args = append(args, "builtin")
 
-Start:
+	//Start:
+
 	//log.Println("[parse packages ...], args:", args)
 
-	// ToDo: check cache to avoid parsing again.
+	//
 
 	var numParsedPackages int32
 
@@ -169,9 +176,23 @@ Start:
 		log.Fatal("exit for above errors")
 	}
 
-	if num := numParsedPackages; num&(num-1) != 0 {
-		logProgress(true, SubTask_ParsePackagesDone, num)
+	//if num := numParsedPackages; num&(num-1) != 0 {
+	//	logProgress(true, SubTask_ParsePackagesDone, num)
+	//}
+
+	builtinPPkgs, err := packages.Load(configForParsing, "builtin")
+	if err != nil {
+		log.Println("packages.Load (parse builtin package):", err)
+		return false
 	}
+	if len(builtinPPkgs) != 1 {
+		log.Println("packages.Load: load builtin page error (unknown).")
+		return false
+	}
+	numParsedPackages++
+	logProgress(true, SubTask_ParsePackagesDone, numParsedPackages)
+
+	//...
 
 	defer func() {
 		logProgress(true, SubTask_CollectPackages, int32(len(d.packageList)))
@@ -183,6 +204,9 @@ Start:
 	}
 
 	var allPPkgs = collectPPackages(ppkgs)
+	var builtinPPkg = builtinPPkgs[0]
+	allPPkgs[builtinPPkg.PkgPath] = builtinPPkg
+
 	d.packageList = make([]*Package, 0, len(allPPkgs))
 	d.packageTable = make(map[string]*Package, len(allPPkgs))
 
@@ -299,6 +323,13 @@ func fillUnsafePackage(unsafePPkg *packages.Package, builtinPPkg *packages.Packa
 		log.Fatal("ast package for unsafe is not found")
 	}
 
+	//fset := token.NewFileSet()
+	//f, err := parser.ParseFile(fset, "unsafe.go", unsafe_go, parser.ParseComments)
+	//if err != nil {
+	//	fmt.Println(err)
+	//	return
+	//}
+
 	// It is strange that unsafePPkg.Fset is not blank
 	// (it looks all parsed packages (by go/Packages.Load) share the same FileSet)
 	// even if unsafePPkg.GoFiles and unsafePPkg.Syntax (and more) are both blank.
@@ -310,6 +341,7 @@ func fillUnsafePackage(unsafePPkg *packages.Package, builtinPPkg *packages.Packa
 	var artitraryExpr, intExpr ast.Expr
 	var artitraryType types.Type
 
+	//for filename, astFile := range map[string]*ast.File{"unsafe.go": f} {
 	for filename, astFile := range astPkg.Files {
 		unsafePPkg.GoFiles = append(unsafePPkg.GoFiles, filename)
 		unsafePPkg.CompiledGoFiles = append(unsafePPkg.CompiledGoFiles, filename)

@@ -80,6 +80,7 @@ type Translation interface {
 	Text_PackageLevelConstants() string
 	Text_PackageLevelResourceSimpleStat(statsAreExact bool, num, numExporteds int, mentionExporteds bool) string
 	Text_UnexportedResourcesHeader(show bool, numUnexporteds int, exact bool) string
+	Text_ListUnexportes() string
 
 	Text_BasicType() string
 	Text_Fields() string // ToDo: merge these into one?
@@ -115,10 +116,10 @@ type Translation interface {
 	Text_Statistics() string
 	Text_ChartTitle(chartName string) string
 	Text_StatisticsTitle(titleName string) string
-	Text_PackageStatistics(values map[string]interface{}) string
-	Text_TypeStatistics(values map[string]interface{}) string
-	Text_ValueStatistics(values map[string]interface{}) string
-	Text_Othertatistics(values map[string]interface{}) string
+	Text_PackageStatistics(values map[string]interface{}) []string
+	Text_TypeStatistics(values map[string]interface{}) []string
+	Text_ValueStatistics(values map[string]interface{}) []string
+	Text_Othertatistics(values map[string]interface{}) []string
 
 	// Footer
 	Text_GeneratedPageFooter(goldsVersion, qrCodeLink, goOS, goArch string) string

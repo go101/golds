@@ -55,7 +55,8 @@ func buildTestData_Package(details *PackageDetails) TestData_Package {
 	constNames := make([]string, 0, len(details.Constants))
 	funcNames := make([]string, 0, len(details.Functions))
 
-	for _, t := range details.TypeNames {
+	for _, twp := range details.TypeNames {
+		t := twp.Type
 		fieldNames := make([]string, 0, len(t.Fields))
 		for _, f := range t.Fields {
 			fieldNames = append(fieldNames, f.Name())
@@ -132,15 +133,15 @@ func buildTestData_Package(details *PackageDetails) TestData_Package {
 	//}
 
 	for _, v := range details.Variables {
-		varNames = append(varNames, v.Name())
+		varNames = append(varNames, v.Value.Name())
 	}
 
 	for _, v := range details.Constants {
-		constNames = append(constNames, v.Name())
+		constNames = append(constNames, v.Value.Name())
 	}
 
 	for _, v := range details.Functions {
-		funcNames = append(funcNames, v.Name())
+		funcNames = append(funcNames, v.Value.Name())
 	}
 
 	return TestData_Package{

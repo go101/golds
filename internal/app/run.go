@@ -1,8 +1,10 @@
 package app
 
 import (
+	"bytes"
 	"flag"
 	"fmt"
+	"go/build"
 	"io"
 	"log"
 	"os"
@@ -98,6 +100,15 @@ func Run() {
 
 		util.ServeFiles(validateDir(*dirFlag), *portFlag, silentMode, Version)
 		return
+	}
+
+	output, err := util.RunShellCommand(time.Second*5, "", nil, "go", "env", "GOROOT")
+	if err != nil {
+		log.Printf("Run: go env GOROOT error: %s", os.Args[0], err)
+		return
+	}
+	if gr := string(bytes.TrimSpace(output)); gr != "" {
+		build.Default.GOROOT = gr
 	}
 
 	// docs generating

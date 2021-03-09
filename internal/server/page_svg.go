@@ -3,9 +3,12 @@ package server
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"net/http"
 	"reflect"
 	"strconv"
+
+	"go101.org/golds/code"
 )
 
 func (ds *docServer) svgFile(w http.ResponseWriter, r *http.Request, svgFile string) {
@@ -30,7 +33,7 @@ func (ds *docServer) svgFile(w http.ResponseWriter, r *http.Request, svgFile str
 		// For docs generation.
 		page := NewHtmlPage(goldsVersion, "", nil, ds.currentTranslation, pagePathInfo{ResTypeSVG, svgFile})
 
-		data = ds.buildSVG(svgFile, page)
+		data = ds.buildSVG(svgFile, page.Translation().Text_ChartTitle(svgFile))
 		ds.cachePage(pageKey, data)
 
 		page.Write(data)
@@ -39,94 +42,100 @@ func (ds *docServer) svgFile(w http.ResponseWriter, r *http.Request, svgFile str
 	w.Write(data)
 }
 
-func (ds *docServer) buildSVG(svgFile string, page *htmlPage) (svgData []byte) {
-	xName := func(max int) func(int) string {
-		return func(i int) string {
-			if i == max {
-				return fmt.Sprintf("(%d+)", i)
-			} else {
+// ToDo: add an io.Writer parameter
+func (ds *docServer) buildSVG(svgFile string, chartTitle string) (svgData []byte) {
+	xName := func(max int) func(int, bool) string {
+		return func(i int, noPlus bool) string {
+			//if oneBased {
+			//	i++
+			//}
+			if noPlus || i < max {
 				return strconv.Itoa(i)
+			} else {
+				return fmt.Sprintf("(%d+)", i)
 			}
 		}
 	}
 
-	xNameFromOne := func(max int) func(int) string {
-		return func(i int) string {
-			i++
-			if i == max {
-				return fmt.Sprintf("(%d+)", i)
-			} else {
-				return strconv.Itoa(i)
-			}
-		}
-	}
+	//xNameFromOne := func(max int) func(int) string {
+	//	return func(i int) string {
+	//		i++
+	//		if i == max {
+	//			return fmt.Sprintf("(%d+)", i)
+	//		} else {
+	//			return strconv.Itoa(i)
+	//		}
+	//	}
+	//}
 
-	kindName := func(i int) string {
-		k := reflect.Kind(i + 1)
-		switch k {
-		default:
-			return reflect.Kind(k).String()
-		case reflect.Array:
-			return "[...]T"
-		case reflect.Slice:
-			return "[ ]T"
-		case reflect.Ptr:
-			return "*T"
+	kindName := func(max int) func(int, bool) string {
+		return func(i int, noPlus bool) string {
+			//if oneBased {
+			//	i++
+			//}
+			k := reflect.Kind(i)
+			switch k {
+			default:
+				return reflect.Kind(k).String()
+			case reflect.Array:
+				return "[...]T"
+			case reflect.Slice:
+				return "[ ]T"
+			case reflect.Ptr:
+				return "*T"
+			}
 		}
 	}
 
 	stats := ds.analyzer.Statistics()
-	chartTitle := page.Translation().Text_ChartTitle(svgFile)
 	switch svgFile {
-	case "gosourcefiles-by-imports":
-		svgData = createSourcefileImportsSVG(chartTitle, stats.FilesByImportCount[:], xName(len(stats.FilesByImportCount)-1))
-	case "packages-by-dependencies":
-		svgData = createSourcefileImportsSVG(chartTitle, stats.PackagesByDeps[:], xName(len(stats.PackagesByDeps)-1))
-	case "exportedtypenames-by-kinds":
-		svgData = createSourcefileImportsSVG(chartTitle, stats.ExportedTypeNamesByKind[1:], kindName)
-	case "exportedstructtypes-by-embeddingfields":
-		svgData = createSourcefileImportsSVG(chartTitle, stats.ExportedNamedStructsByEmbeddingFieldCount[:], xName(len(stats.ExportedNamedStructsByEmbeddingFieldCount)-1))
-	//case "exportedstructtypes-by-allfields":
-	//	svgData = createSourcefileImportsSVG(chartTitle, stats.ExportedNamedStructsByFieldCount[:], xName(len(stats.ExportedNamedStructsByFieldCount)-1))
-	case "exportedstructtypes-by-explicitfields":
-		svgData = createSourcefileImportsSVG(chartTitle, stats.ExportedNamedStructsByExplicitFieldCount[:], xName(len(stats.ExportedNamedStructsByExplicitFieldCount)-1))
-	//case "exportedstructtypes-by-exportedfields":
-	//	svgData = createSourcefileImportsSVG(chartTitle, stats.ExportedNamedStructsByExportedFieldCount[:], xName(len(stats.ExportedNamedStructsByExportedFieldCount)-1))
-	case "exportedstructtypes-by-exportedexplicitfields":
-		svgData = createSourcefileImportsSVG(chartTitle, stats.ExportedNamedStructsByExportedExplicitFieldCount[:], xName(len(stats.ExportedNamedStructsByExportedExplicitFieldCount)-1))
-	case "exportedstructtypes-by-exportedpromotedfields":
-		svgData = createSourcefileImportsSVG(chartTitle, stats.ExportedNamedStructsByExportedPromotedFieldCount[:], xName(len(stats.ExportedNamedStructsByExportedPromotedFieldCount)-1))
-	case "exportedfunctions-by-parameters":
-		svgData = createSourcefileImportsSVG(chartTitle, stats.ExportedFunctionsByParameterCount[:], xName(len(stats.ExportedFunctionsByParameterCount)-1))
-	case "exportedfunctions-by-results":
-		svgData = createSourcefileImportsSVG(chartTitle, stats.ExportedFunctionsByResultCount[:], xName(len(stats.ExportedFunctionsByResultCount)-1))
-	case "exportedidentifiers-by-lengths":
-		svgData = createSourcefileImportsSVG(chartTitle, stats.ExportedIdentifiersByLength[1:], xNameFromOne(len(stats.ExportedIdentifiersByLength)-1))
-	case "exportednoninterfacetypes-by-exportedmethods":
-		svgData = createSourcefileImportsSVG(chartTitle, stats.ExportedNamedNonInterfaceTypesByExportedMethodCount[:], xName(len(stats.ExportedNamedNonInterfaceTypesByExportedMethodCount)-1))
-	case "exportedvariables-by-typekinds":
-		svgData = createSourcefileImportsSVG(chartTitle, stats.ExportedVariablesByTypeKind[1:], kindName)
-	case "exportedconstants-by-typekinds":
-		svgData = createSourcefileImportsSVG(chartTitle, stats.ExportedConstantsByTypeKind[1:], kindName)
-	case "exportedinterfacetypes-by-exportedmethods":
-		svgData = createSourcefileImportsSVG(chartTitle, stats.ExportedNamedInterfacesByExportedMethodCount[:], xName(len(stats.ExportedNamedInterfacesByExportedMethodCount)-1))
 	default:
+		log.Println("unknown svg file:", svgFile)
+	case "gosourcefiles-by-imports":
+		svgData = createSourcefileImportsSVG(chartTitle, stats.FilesByImportCount[:], xName, 0, &stats.FilesImportCountTopList) // xName(len(stats.FilesByImportCount)-1))
+	case "packages-by-dependencies":
+		svgData = createSourcefileImportsSVG(chartTitle, stats.PackagesByDeps[:], xName, 0, &stats.PackagesDepsTopList) // xName(len(stats.PackagesByDeps)-1))
+	case "exportedtypenames-by-kinds":
+		svgData = createSourcefileImportsSVG(chartTitle, stats.ExportedTypeNamesByKind[:], kindName, 1, nil) // [1:]
+	case "exportedstructtypes-by-embeddingfields":
+		svgData = createSourcefileImportsSVG(chartTitle, stats.ExportedNamedStructsByEmbeddingFieldCount[:], xName, 0, &stats.ExportedNamedStructsEmbeddingFieldCountTopList) // xName(len(stats.ExportedNamedStructsByEmbeddingFieldCount)-1))
+	//case "exportedstructtypes-by-allfields":
+	//	svgData = createSourcefileImportsSVG(chartTitle, stats.ExportedNamedStructsByFieldCount[:], xName, 0, nil) // xName(len(stats.ExportedNamedStructsByFieldCount)-1))
+	case "exportedstructtypes-by-explicitfields":
+		svgData = createSourcefileImportsSVG(chartTitle, stats.ExportedNamedStructsByExplicitFieldCount[:], xName, 0, &stats.ExportedNamedStructsExplicitFieldCountTopList) // xName(len(stats.ExportedNamedStructsByExplicitFieldCount)-1))
+	//case "exportedstructtypes-by-exportedfields":
+	//	svgData = createSourcefileImportsSVG(chartTitle, stats.ExportedNamedStructsByExportedFieldCount[:], xName, 0, nil) // xName(len(stats.ExportedNamedStructsByExportedFieldCount)-1))
+	case "exportedstructtypes-by-exportedexplicitfields":
+		svgData = createSourcefileImportsSVG(chartTitle, stats.ExportedNamedStructsByExportedExplicitFieldCount[:], xName, 0, &stats.ExportedNamedStructsExportedExplicitFieldCount) // xName(len(stats.ExportedNamedStructsByExportedExplicitFieldCount)-1))
+	case "exportedstructtypes-by-exportedpromotedfields":
+		svgData = createSourcefileImportsSVG(chartTitle, stats.ExportedNamedStructsByExportedPromotedFieldCount[:], xName, 0, &stats.ExportedNamedStructsExportedPromotedFieldCount) // xName(len(stats.ExportedNamedStructsByExportedPromotedFieldCount)-1))
+	case "exportednoninterfacetypes-by-exportedmethods":
+		svgData = createSourcefileImportsSVG(chartTitle, stats.ExportedNamedNonInterfaceTypesByExportedMethodCount[:], xName, 0, &stats.ExportedNamedNonInterfaceTypesExportedMethodCountTopList) // xName(len(stats.ExportedNamedNonInterfaceTypesByExportedMethodCount)-1))
+	case "exportedinterfacetypes-by-exportedmethods":
+		svgData = createSourcefileImportsSVG(chartTitle, stats.ExportedNamedInterfacesByExportedMethodCount[:], xName, 0, &stats.ExportedNamedInterfacesExportedMethodCountTopList) // xName(len(stats.ExportedNamedInterfacesByExportedMethodCount)-1))
+	case "exportedvariables-by-typekinds":
+		svgData = createSourcefileImportsSVG(chartTitle, stats.ExportedVariablesByTypeKind[:], kindName, 1, nil) // [1:]
+	case "exportedconstants-by-typekinds":
+		svgData = createSourcefileImportsSVG(chartTitle, stats.ExportedConstantsByTypeKind[:], kindName, 1, nil) // [1:]
+	case "exportedfunctions-by-parameters":
+		svgData = createSourcefileImportsSVG(chartTitle, stats.ExportedFunctionsByParameterCount[:], xName, 0, &stats.ExportedFunctionsParameterCountTopList) // xName(len(stats.ExportedFunctionsByParameterCount)-1))
+	case "exportedfunctions-by-results":
+		svgData = createSourcefileImportsSVG(chartTitle, stats.ExportedFunctionsByResultCount[:], xName, 0, &stats.ExportedFunctionsResultCountTopList) // xName(len(stats.ExportedFunctionsByResultCount)-1))
+	case "exportedidentifiers-by-lengths":
+		svgData = createSourcefileImportsSVG(chartTitle, stats.ExportedIdentifiersByLength[:], xName, 1, &stats.ExportedIdentiferLengthTopList) // [1:], xNameFromOne(len(stats.ExportedIdentifiersByLength)-1))
 	}
 
 	return
 }
 
 // ToDo: add a bgColor parameter.
-func createSourcefileImportsSVG(title string, stat []int32, xName func(i int) string) []byte {
-	if xName == nil {
-		xName = func(i int) string {
-			return strconv.Itoa(i)
-		}
-	}
+func createSourcefileImportsSVG(title string, stat []int32, xNamer func(int) func(int, bool) string, fromIndex int, topList *code.TopList) []byte {
+	xName := xNamer(len(stat) - 1)
 
 	maxV := int32(0)
 	n := 0
-	for i, v := range stat {
+	for i := fromIndex; i < len(stat); i++ {
+		v := stat[i]
 		if v > maxV {
 			maxV = v
 		}
@@ -137,7 +146,7 @@ func createSourcefileImportsSVG(title string, stat []int32, xName func(i int) st
 	stat = stat[:n]
 
 	barCount := 0
-	for i := 0; i < len(stat); i++ {
+	for i := fromIndex; i < len(stat); i++ {
 		barCount++
 		v := stat[i]
 		if v == 0 {
@@ -185,7 +194,7 @@ func createSourcefileImportsSVG(title string, stat []int32, xName func(i int) st
 
 	barY += marginTop
 	barX := marginH + nameTextW
-	for i := 0; i < len(stat); i++ {
+	for i := fromIndex; i < len(stat); i++ {
 		drawDots := false
 
 		v := stat[i]
@@ -224,9 +233,11 @@ func createSourcefileImportsSVG(title string, stat []int32, xName func(i int) st
 				)
 			}
 
+			noPlus := topList != nil && topList.Criteria == len(stat)-1
+
 			textY := barY + barH - 3
 			nameTextX := barX - barMarginLeft
-			nameText := xName(i)
+			nameText := xName(i, noPlus)
 
 			fmt.Fprintf(buf, `<text xml:space="preserve" text-anchor="end" font-family='"Courier New", Courier, monospace' font-size="12" x="%d" y="%d" fill="#000">%s</text>
 `,
@@ -236,11 +247,17 @@ func createSourcefileImportsSVG(title string, stat []int32, xName func(i int) st
 			)
 
 			if v != 0 {
-				fmt.Fprintf(buf, `<text xml:space="preserve" text-anchor="start" font-style="italic" font-family='"Courier New", Courier, monospace' font-size="12" x="%.2f" y="%d" fill="#000">(%s)</text>
+				extraComment := ""
+				if topList != nil && i == len(stat)-1 && topList.Criteria > i {
+					extraComment = fmt.Sprintf(", %d: %d", topList.Criteria, len(topList.Items))
+				}
+
+				fmt.Fprintf(buf, `<text xml:space="preserve" text-anchor="start" font-style="italic" font-family='"Courier New", Courier, monospace' font-size="12" x="%.2f" y="%d" fill="#000">(%d%s)</text>
 `,
 					valueTextX,
 					textY,
-					strconv.Itoa(int(v)),
+					v,
+					extraComment,
 				)
 			}
 		}
@@ -253,64 +270,64 @@ func createSourcefileImportsSVG(title string, stat []int32, xName func(i int) st
 }
 
 // ToDo: add a bgColor parameter.
-func createSourcefileImportsSVG_old(stat []int32, xName func(i int) string) []byte {
-	if xName == nil {
-		xName = func(i int) string {
-			return strconv.Itoa(i)
-		}
-	}
-
-	buf := bytes.NewBuffer(make([]byte, 0, 1024*16))
-	buf.WriteString(`<svg width="528" height="168" xmlns="http://www.w3.org/2000/svg">
-<rect fill="#ddf" id="canvas_background" height="402" width="582" y="-1" x="-1"/>
-`,
-	)
-
-	maxV := int32(0)
-	for _, v := range stat {
-		if v > maxV {
-			maxV = v
-		}
-	}
-
-	n := len(stat)
-	dn := (n + 15) / 16
-
-	const barWidth = 6
-	const maxBarHeight = 132
-
-	for i, v := range stat {
-		x := 8 + i*8
-		if maxV > 0 {
-			barHeight := float64(maxBarHeight) * float64(v) / float64(maxV)
-			y := 19.0 + float64(maxBarHeight) - barHeight
-
-			fmt.Fprintf(buf, `<rect x="%d" y="%.2f" width="%d" height="%.2f" fill="#000" />
-`,
-				x, y, barWidth, barHeight,
-			)
-		}
-
-		if i%dn == 0 {
-			textX := x + barWidth/2
-			topY, bottomY := 13, 162
-
-			fmt.Fprintf(buf, `<text xml:space="preserve" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" x="%d" y="%d" fill="#000">%s</text>
-`,
-				textX,
-				topY,
-				strconv.Itoa(int(v)),
-			)
-
-			fmt.Fprintf(buf, `<text xml:space="preserve" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" x="%d" y="%d" fill="#000">%s</text>
-`,
-				textX,
-				bottomY,
-				xName(i),
-			)
-		}
-	}
-
-	buf.WriteString(`</svg>`)
-	return buf.Bytes()
-}
+//func createSourcefileImportsSVG_old(stat []int32, xName func(i int) string) []byte {
+//	if xName == nil {
+//		xName = func(i int) string {
+//			return strconv.Itoa(i)
+//		}
+//	}
+//
+//	buf := bytes.NewBuffer(make([]byte, 0, 1024*16))
+//	buf.WriteString(`<svg width="528" height="168" xmlns="http://www.w3.org/2000/svg">
+//<rect fill="#ddf" id="canvas_background" height="402" width="582" y="-1" x="-1"/>
+//`,
+//	)
+//
+//	maxV := int32(0)
+//	for _, v := range stat {
+//		if v > maxV {
+//			maxV = v
+//		}
+//	}
+//
+//	n := len(stat)
+//	dn := (n + 15) / 16
+//
+//	const barWidth = 6
+//	const maxBarHeight = 132
+//
+//	for i, v := range stat {
+//		x := 8 + i*8
+//		if maxV > 0 {
+//			barHeight := float64(maxBarHeight) * float64(v) / float64(maxV)
+//			y := 19.0 + float64(maxBarHeight) - barHeight
+//
+//			fmt.Fprintf(buf, `<rect x="%d" y="%.2f" width="%d" height="%.2f" fill="#000" />
+//`,
+//				x, y, barWidth, barHeight,
+//			)
+//		}
+//
+//		if i%dn == 0 {
+//			textX := x + barWidth/2
+//			topY, bottomY := 13, 162
+//
+//			fmt.Fprintf(buf, `<text xml:space="preserve" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" x="%d" y="%d" fill="#000">%s</text>
+//`,
+//				textX,
+//				topY,
+//				strconv.Itoa(int(v)),
+//			)
+//
+//			fmt.Fprintf(buf, `<text xml:space="preserve" text-anchor="middle" font-family="Helvetica, Arial, sans-serif" font-size="12" x="%d" y="%d" fill="#000">%s</text>
+//`,
+//				textX,
+//				bottomY,
+//				xName(i),
+//			)
+//		}
+//	}
+//
+//	buf.WriteString(`</svg>`)
+//	return buf.Bytes()
+//}

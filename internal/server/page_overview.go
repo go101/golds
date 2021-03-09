@@ -128,23 +128,23 @@ func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*Package
 			if hidden {
 				extraClass = " hidden"
 			}
-			std := ""
-			if pkg.IsStandard {
-				std = ` data-std="1"`
+			main := ""
+			if pkg.Name == "main" {
+				main = ` data-main="1"`
 			}
 			// ToDo: could pkg path contains invalid id chars?
 			//       if so, use pkg id instead.
 			if writeDataAttrs {
 				fmt.Fprintf(page, `<i id="max-digit-count" class="hidden">%d</i>`, maxDigitCount)
 			}
-			fmt.Fprintf(page, `<div class="anchor pkg%s" id="pkg-%s"`, extraClass, pkg.Path)
+			fmt.Fprintf(page, `<div class="anchor pkg alphabet%s" id="pkg-%s"`, extraClass, pkg.Path)
 			if writeDataAttrs {
-				fmt.Fprintf(page, ` data-importedbys="%d" data-depheight="%d" data-depdepth="%d"%s`, pkg.NumImportedBys, pkg.DepHeight, pkg.DepDepth, std)
+				fmt.Fprintf(page, ` data-importedbys="%d" data-depheight="%d" data-depdepth="%d"%s`, pkg.NumImportedBys, pkg.DepHeight, pkg.DepDepth, main)
 			}
 			page.WriteString(`>`)
 			defer page.WriteString(`</div>`)
 		} else {
-			page.WriteByte('\n')
+			page.WriteString("\n")
 		}
 
 		page.WriteString(`<code>`)
@@ -181,9 +181,21 @@ func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*Package
 			)
 
 		}
-		fmt.Fprintf(page, `<i class="importedbys"> (%d)</i>`, pkg.NumImportedBys)
-		fmt.Fprintf(page, `<i class="depheight"> (%d)</i>`, pkg.DepHeight)
-		fmt.Fprintf(page, `<i class="depdepth"> (%d)</i>`, pkg.DepDepth)
+
+		if writeDataAttrs {
+			fmt.Fprintf(page, `<i class="importedbys"> (%d)</i>`, pkg.NumImportedBys)
+			fmt.Fprintf(page, `<i class="depheight"> (%d)</i>`, pkg.DepHeight)
+			fmt.Fprintf(page, `<i class="depdepth"> (%d)</i>`, pkg.DepDepth)
+		}
+	}
+
+	if !writeAnchorTarget {
+		page.WriteString(`<div id="packages">`)
+		for i, pkg := range packages {
+			listPackage(i, pkg, false, false)
+		}
+		page.WriteString(`</div>`)
+		return
 	}
 
 	switch wdPkgsListingManner {
@@ -271,11 +283,11 @@ type PackageForListing struct {
 	Prefix    string // the part shared with the last one in list
 	Remaining string // the part different from the last one in list
 
-	DepHeight      int32
-	DepDepth       int32
 	NumImportedBys int32
+	DepHeight      int32
+	DepDepth       int32 // The value mains how close to main pacakges.
 
-	IsStandard         bool
+	//IsStandard         bool
 	InWorkingDirectory bool
 }
 
@@ -300,8 +312,10 @@ func (ds *docServer) buildOverviewData() *Overview {
 		pkg.DepHeight = p.DepHeight
 		pkg.DepDepth = p.DepDepth
 		pkg.NumImportedBys = int32(len(p.DepedBys))
+		if pkg.Name == "builtin" {
+			pkg.NumImportedBys = int32(numPkgs) - 1
+		}
 
-		pkg.IsStandard = ds.analyzer.IsStandardPackage(p)
 		pkg.InWorkingDirectory = strings.HasPrefix(p.Directory, ds.workingDirectory)
 	}
 
@@ -313,7 +327,10 @@ func (ds *docServer) buildOverviewData() *Overview {
 				return result[a].InWorkingDirectory
 			}
 		}
-		return result[a].Path < result[b].Path
+		// ...
+
+		//return result[a].Path < result[b].Path
+		return ComparePackagePaths(result[a].Path, result[b].Path, '/')
 	})
 	ImprovePackagesForListing(result)
 
@@ -348,25 +365,57 @@ func FindPackageCommonPrefixPaths(pa, pb string) string {
 		n = len(pb)
 		pa, pb = pb, pa
 	}
-	var i = 0
-	for ; i < n; i++ {
-		if pa[i] == pb[i] {
-			continue
+	if n <= len(pb) { // BCE hint
+		var i = 0
+		for ; i < n; i++ {
+			if pa[i] == pb[i] {
+				continue
+			}
+			break
 		}
-		break
-	}
-	if i == n {
-		if len(pb) == n {
-			return pa // or pb
+		if i == n {
+			if len(pb) == n {
+				return pa // or pb
+			}
+			if len(pb) > n && pb[n] == '/' {
+				return pb[:n+1]
+			}
 		}
-		if len(pb) > n && pb[n] == '/' {
-			return pb[:n+1]
-		}
-	}
-	for i--; i >= 0; i-- {
-		if pb[i] == '/' {
-			return pb[:i+1]
+		for i--; i >= 0; i-- {
+			if pb[i] == '/' {
+				return pb[:i+1]
+			}
 		}
 	}
 	return ""
+}
+
+// Should be faster than using strings.Split or Strings.Tokens
+// return true for pa <= pb.
+func ComparePackagePaths(pa, pb string, sep byte) bool {
+	true, false := true, false
+	var n = len(pa)
+	if n > len(pb) {
+		n = len(pb)
+		pa, pb = pb, pa
+		true, false = false, true
+	}
+	if len(pa) <= len(pb) { // BCE hint
+		for i := 0; i < len(pa); i++ {
+			if pa[i] == sep {
+				if pb[i] == sep {
+					continue
+				}
+				return true
+			} else if pb[i] == sep {
+				return false
+			}
+			if pa[i] < pb[i] {
+				return true
+			} else if pa[i] > pb[i] {
+				return false
+			}
+		}
+	}
+	return true
 }

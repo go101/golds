@@ -125,7 +125,7 @@ func (ds *docServer) buildSourceCodePage(w http.ResponseWriter, result *SourceFi
 		result.PkgPath,
 	)
 
-	if result.NumRatios > 0 {
+	if result.NumRatios > 0 || result.NumImportRatios > 0 {
 		page.WriteString("<style>")
 		page.WriteString("input[type=radio] {display: none;}\n")
 		for i := int32(0); i < result.NumRatios; i++ {
@@ -135,10 +135,23 @@ func (ds *docServer) buildSourceCodePage(w http.ResponseWriter, result *SourceFi
 			}
 			page.WriteByte('\n')
 		}
-		page.WriteString("{ background: #226; color: #ff8;}\n</style>")
+		page.WriteString("{background: #226; color: #ff8;}\n")
+		for i := int32(0); i < result.NumImportRatios; i++ {
+			fmt.Fprintf(page, `input[id=i%[1]d]:checked ~pre .i%[1]d`, i)
+			if i < result.NumImportRatios-1 {
+				page.WriteByte(',')
+			}
+			page.WriteByte('\n')
+		}
+		page.WriteString("{background: brown; color: #eed;}\n")
+		page.WriteString("</style>")
 
 		for i := int32(0); i < result.NumRatios; i++ {
 			fmt.Fprintf(page, `<input id="r%d" type="radio" name="g"/>`, i)
+			page.WriteByte('\n')
+		}
+		for i := int32(0); i < result.NumImportRatios; i++ {
+			fmt.Fprintf(page, `<input id="i%d" type="radio" name="i"/>`, i)
 			page.WriteByte('\n')
 		}
 	}
@@ -174,14 +187,15 @@ func (ds *docServer) buildSourceCodePage(w http.ResponseWriter, result *SourceFi
 }
 
 type SourceFileAnalyzeResult struct {
-	PkgPath       string
-	BareFilename  string
-	OriginalPath  string
-	GeneratedPath string
-	Lines         []string
-	NumRatios     int32
-	DocStartLine  int
-	DocEndLine    int
+	PkgPath         string
+	BareFilename    string
+	OriginalPath    string
+	GeneratedPath   string
+	Lines           []string
+	NumRatios       int32 // not including import idendifiers
+	NumImportRatios int32
+	DocStartLine    int
+	DocEndLine      int
 }
 
 var (
@@ -497,6 +511,8 @@ type astVisitor struct {
 
 	topLevelStructTypeNodeDepth int32
 	topLevelStructTypeSpec      *ast.TypeSpec
+
+	pkgPath2RatioID map[string]int32
 }
 
 type astFunctionInfo struct {
@@ -566,7 +582,7 @@ func (v *astVisitor) tryToHandleSomeSpecialNodes(beforeNode ast.Node) {
 		default:
 			panic("should not")
 		case *ast.CommentGroup:
-			v.handleNode(node, "comment")
+			v.handleNode(node, "comment", "")
 		case *KeywordToken:
 			v.handleKeywordToken(node.pos, node.keyword)
 		case *ChanCommOprator:
@@ -582,7 +598,7 @@ func (v *astVisitor) tryToHandleSomeSpecialNodes(beforeNode ast.Node) {
 			if fPosition.IsValid() {
 				start := v.pkg.PPkg.Fset.PositionFor(node.Pos(), false)
 				end := v.pkg.PPkg.Fset.PositionFor(node.End(), false)
-				v.buildText(start, end, "", buildSrouceCodeLineLink(v.currentPathInfo, v.dataAnalyzer, v.dataAnalyzer.RuntimePackage(), fPosition))
+				v.buildText(start, end, "", buildSrouceCodeLineLink(v.currentPathInfo, v.dataAnalyzer, v.dataAnalyzer.RuntimePackage(), fPosition), "")
 			}
 		}
 
@@ -711,28 +727,48 @@ func (v *astVisitor) buildLine() {
 	v.lineBuilder.Reset()
 }
 
-func (v *astVisitor) buildText(litStart, litEnd token.Position, class, link string) {
+func (v *astVisitor) buildText(litStart, litEnd token.Position, class, link, labelForId string) {
+	if litStart.Offset < v.offset {
+		//log.Printf("already handled: %s", v.content[litStart.Offset:litEnd.Offset])
+		// Posible cases:
+		// 1. the "func" keyword has been handled in FuncDecl, but re-handled now in FuncType.
+		return
+	}
 	v.buildConfirmedLines(litStart.Line, "")
 	v.writeEscapedHTML(v.content[v.offset:litStart.Offset], "")
 	v.offset = litStart.Offset
 
-	if litStart.Line != litEnd.Line {
-		//log.Println("=============================", litStart.Line, litEnd.Line)
-		v.buildConfirmedLines(litEnd.Line, class)
+	if labelForId != "" {
+		fmt.Fprintf(&v.lineBuilder, `<label for="%s">`, labelForId)
+		defer fmt.Fprintf(&v.lineBuilder, `</label>`)
 	}
 	if link != "" {
 		fmt.Fprintf(&v.lineBuilder, `<a href="%s">`, link)
 		defer fmt.Fprintf(&v.lineBuilder, `</a>`)
+	}
+	if litStart.Line != litEnd.Line {
+		//log.Println("=============================", litStart.Line, litEnd.Line)
+		v.buildConfirmedLines(litEnd.Line, class)
 	}
 	// This segment will not cross lines for sure.
 	v.writeEscapedHTML(v.content[v.offset:litEnd.Offset], class)
 	v.offset = litEnd.Offset
 }
 
-func (v *astVisitor) buildLink(idStart, idEnd token.Position, link string) {
+func (v *astVisitor) buildLink(idStart, idEnd token.Position, link, extraClass string) {
+	if idStart.Offset < v.offset {
+		//log.Printf("already handled: %s", v.content[litStart.Offset:litEnd.Offset])
+		// Posible cases:
+		// 1. import spec is handled, but the import name is handled subsequently.
+		return
+	}
+	class := "ident"
+	if extraClass != "" {
+		class += " " + extraClass
+	}
 	v.buildConfirmedLines(idStart.Line, "")
 	v.writeEscapedHTML(v.content[v.offset:idStart.Offset], "")
-	fmt.Fprintf(&v.lineBuilder, `<a href="%s" class="%s">`, link, "ident")
+	fmt.Fprintf(&v.lineBuilder, `<a href="%s" class="%s">`, link, class)
 	defer v.lineBuilder.WriteString(`</a>`)
 	v.writeEscapedHTML(v.content[idStart.Offset:idEnd.Offset], "")
 	v.offset = idEnd.Offset
@@ -740,6 +776,13 @@ func (v *astVisitor) buildLink(idStart, idEnd token.Position, link string) {
 
 //func (v *astVisitor) buildIdentifier(idStart, idEnd token.Position, ratioId int32, link, id string) {
 func (v *astVisitor) buildIdentifier(idStart, idEnd token.Position, ratioId int32, link string) {
+	if idStart.Offset < v.offset {
+		//log.Printf("already handled: %s", v.content[litStart.Offset:litEnd.Offset])
+		// Posible cases:
+		// 1.
+		return
+	}
+
 	var class = "ident"
 
 	//startOffset := idStart.Offset
@@ -754,6 +797,7 @@ func (v *astVisitor) buildIdentifier(idStart, idEnd token.Position, ratioId int3
 	//log.Println("!!!!!!!!!!! @@@ v.offset:", v.offset)
 
 	//v.lineBuilder.Write(v.content[v.offset:startOffsett])
+	//v.writeEscapedHTML(v.content[v.offset:idStart.Offset], class)
 	v.writeEscapedHTML(v.content[v.offset:idStart.Offset], "")
 
 	if ratioId >= 0 {
@@ -949,7 +993,7 @@ func (v *astVisitor) Visit(n ast.Node) (w ast.Visitor) {
 		if v.topLevelInterfaceTypeInfo == nil {
 			it, ok1 := ts.Type.(*ast.InterfaceType)
 			tn, ok2 := v.info.ObjectOf(ts.Name).(*types.TypeName)
-			if ok1 && ok2 {
+			if ok1 && ok2 && ts.Name.Name != "_" {
 				v.topLevelInterfaceTypeNodeDepth = v.astNodeDepth
 				v.topLevelInterfaceTypeInfo = &astInterfaceTypeInfo{
 					TypeName: tn.Name(),
@@ -1135,10 +1179,38 @@ func (v *astVisitor) Visit(n ast.Node) (w ast.Visitor) {
 		v.handleKeyword(node.Defer, token.DEFER)
 	case *ast.GoStmt:
 		v.handleKeyword(node.Go, token.GO)
-	case *ast.FuncDecl:
-		v.handleKeyword(node.Type.Func, token.FUNC)
+	// ...
+	case *ast.ImportSpec:
+		// a package might be imported sevral times.
+		importRatioId, ok := v.pkgPath2RatioID[node.Path.Value]
+		if !ok {
+			path, err := strconv.Unquote(node.Path.Value)
+			if err != nil {
+				//continue
+				panic(node.Path.Value + " can't be unqoted")
+			}
+			//log.Println(v.result.NumImportRatios, path)
+			importRatioId = v.result.NumImportRatios
+			v.pkgPath2RatioID[path] = importRatioId
+			v.result.NumImportRatios++
+		}
+		if node.Name != nil {
+			v.handleIdent(node.Name)
+		}
+		importClass := fmt.Sprintf("i%d", importRatioId)
+		v.handleBasicLit(node.Path, importClass, importClass)
+
 	case *ast.GenDecl:
 		v.handleKeyword(node.TokPos, node.Tok)
+	case *ast.FuncDecl:
+		v.handleKeyword(node.Type.Func, token.FUNC)
+	case *ast.FuncType:
+		// The "func" kwyword might have already been handled
+		// if this FuncType is part of a FuncDecl.
+		// See the start of buildText() for details.
+		if node.Func != token.NoPos {
+			v.handleKeyword(node.Func, token.FUNC)
+		}
 	case *ast.InterfaceType:
 		v.handleKeyword(node.Interface, token.INTERFACE)
 	case *ast.MapType:
@@ -1152,17 +1224,9 @@ func (v *astVisitor) Visit(n ast.Node) (w ast.Visitor) {
 			chanPos = v.findTokenBetween(node.Arrow, node.End(), "chan", true).pos
 		}
 		v.handleKeyword(chanPos, token.CHAN)
-	// ...
-	case *ast.ImportSpec:
-		// ToDo: click the import name to highlight all uses.
-		//       For imports without names, insert a name.
-
-		if node.Name == nil {
-		}
-
 	//...
 	case *ast.BasicLit:
-		v.handleBasicLit(node)
+		v.handleBasicLit(node, "", "")
 	case *ast.Ident:
 		v.handleIdent(node)
 	}
@@ -1170,7 +1234,7 @@ func (v *astVisitor) Visit(n ast.Node) (w ast.Visitor) {
 	return
 }
 
-func (v *astVisitor) handleNode(node ast.Node, class string) {
+func (v *astVisitor) handleNode(node ast.Node, class, labelForId string) {
 	start := v.fset.PositionFor(node.Pos(), false)
 	end := v.fset.PositionFor(node.End(), false)
 	//log.Println("=============================", start.Line, start.Offset, end.Line, end.Offset)
@@ -1178,16 +1242,19 @@ func (v *astVisitor) handleNode(node ast.Node, class string) {
 	//v.correctPosition(&end)
 	//log.Println("                             ", start.Line, start.Offset, end.Line, end.Offset)
 
-	v.buildText(start, end, class, "")
+	v.buildText(start, end, class, "", labelForId)
 }
 
-func (v *astVisitor) handleBasicLit(basicLit *ast.BasicLit) {
+func (v *astVisitor) handleBasicLit(basicLit *ast.BasicLit, extraClass, labelForId string) {
 	class := "lit-number"
 	if basicLit.Kind == token.STRING {
 		class = "lit-string"
 	}
+	if extraClass != "" {
+		class += " " + extraClass
+	}
 
-	v.handleNode(basicLit, class)
+	v.handleNode(basicLit, class, labelForId)
 }
 
 func (v *astVisitor) handleSelectKeyword(selectPos token.Pos, fPosition token.Position) {
@@ -1210,7 +1277,7 @@ func (v *astVisitor) handleToken(pos token.Pos, token, class, link string) {
 	end := start
 	end.Column += length
 	end.Offset += length
-	v.buildText(start, end, class, link)
+	v.buildText(start, end, class, link, "")
 }
 
 func (v *astVisitor) handleIdent(ident *ast.Ident) {
@@ -1238,7 +1305,10 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 
 	if pkgName, ok := obj.(*types.PkgName); ok {
 		//v.buildIdentifier(start, end, -1, "/pkg:"+pkgName.Imported().Path())
-		v.buildIdentifier(start, end, -1, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, pkgName.Imported().Path()}, nil, ""))
+		importRatioId := v.pkgPath2RatioID[pkgName.Imported().Path()]
+		importClass := fmt.Sprintf("i%d", importRatioId)
+		//v.buildIdentifier(start, end, -1, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, pkgName.Imported().Path()}, nil, ""))
+		v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, pkgName.Imported().Path()}, nil, ""), importClass)
 		return
 	}
 
@@ -1262,7 +1332,7 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 				if !fPosition.IsValid() {
 					break
 				}
-				v.buildText(start, end, "", buildSrouceCodeLineLink(v.currentPathInfo, v.dataAnalyzer, v.dataAnalyzer.RuntimePackage(), fPosition))
+				v.buildText(start, end, "", buildSrouceCodeLineLink(v.currentPathInfo, v.dataAnalyzer, v.dataAnalyzer.RuntimePackage(), fPosition), "")
 				return
 			}
 
@@ -1438,7 +1508,7 @@ GoOn:
 						if !token.IsExported(anchorName) {
 							anchorName = objPkgPath + "." + anchorName
 						}
-						v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeImplementation, objPkgPath + "." + v.topLevelInterfaceTypeInfo.TypeName}, nil, "")+"#name-"+anchorName)
+						v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeImplementation, objPkgPath + "." + v.topLevelInterfaceTypeInfo.TypeName}, nil, "")+"#name-"+anchorName, "")
 						v.topLevelInterfaceTypeInfo.Methods = v.topLevelInterfaceTypeInfo.Methods[1:]
 						return
 					}
@@ -1450,7 +1520,7 @@ GoOn:
 					enclosingTypeName := v.topLevelStructTypeSpec.Name.Name
 					fieldName := obj.Name()
 					if fieldName != "_" && buildIdUsesPages {
-						v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeReference, objPkgPath + ".." + enclosingTypeName + "." + obj.Name()}, nil, ""))
+						v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeReference, objPkgPath + ".." + enclosingTypeName + "." + obj.Name()}, nil, ""), "")
 						return
 					}
 				}
@@ -1480,12 +1550,12 @@ GoOn:
 						v.buildIdentifier(start, end, -1, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, objPkgPath}, nil, "")+"#name-"+obj.Name())
 						return
 					} else if buildIdUsesPages {
-						v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeReference, objPkgPath + ".." + obj.Name()}, nil, ""))
+						v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeReference, objPkgPath + ".." + obj.Name()}, nil, ""), "")
 						return
 					}
 				case *types.Func, *types.Var, *types.Const:
 					if buildIdUsesPages {
-						v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeReference, objPkgPath + ".." + obj.Name()}, nil, ""))
+						v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeReference, objPkgPath + ".." + obj.Name()}, nil, ""), "")
 						return
 					}
 				}
@@ -1645,9 +1715,9 @@ func (ds *docServer) analyzeSoureCode(pkgPath, bareFilename string) (*SourceFile
 	//filePath := srcPath
 	generatedFilePath := fileInfo.GeneratedFile
 	filePath := fileInfo.OriginalFile
-	if fileInfo != nil && fileInfo.GeneratedFile != "" {
-		filePath = fileInfo.GeneratedFile
-		if fileInfo.GeneratedFile == fileInfo.OriginalFile {
+	if generatedFilePath != "" {
+		filePath = generatedFilePath
+		if generatedFilePath == fileInfo.OriginalFile {
 			generatedFilePath = ""
 		}
 	}
@@ -1657,7 +1727,7 @@ func (ds *docServer) analyzeSoureCode(pkgPath, bareFilename string) (*SourceFile
 	//}
 	content := fileInfo.Content
 	if content == nil {
-		return nil, errors.New("source code content not available")
+		return nil, errors.New("source code content not available: " + filePath)
 	}
 
 	//log.Println("===================== goFilePath=", srcPath)
@@ -1762,6 +1832,18 @@ func (ds *docServer) analyzeSoureCode(pkgPath, bareFilename string) (*SourceFile
 			sameFileObjects: make(map[types.Object]int32, 256),
 		}
 		av.lineBuilder.Grow(1024)
+		av.pkgPath2RatioID = make(map[string]int32, len(fileInfo.AstFile.Imports))
+		// ToDo: construct pkgPath2RatioID here?
+
+		//defer func() {
+		//	if v := recover(); v != nil {
+		//		log.Println("====== pased lines:", len(av.result.Lines), filePath)
+		//		if n := len(av.result.Lines); n > 0 {
+		//			log.Printf("       %s", av.result.Lines[n-1])
+		//		}
+		//		log.Println(v)
+		//	}
+		//}()
 
 		//if fileInfo.GoFileContentOffset > 0 {
 		//	ab.buildConfirmedLines(int(fileInfo.GoFileLineOffset+1), "")

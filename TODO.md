@@ -2,38 +2,55 @@
 
 ### Soon to do
 
-* sort packages: ab-cd should after ab/xy
 
-* supports "golds a.go", need change "builtin" parse handling. remove: args = append(args, "builtin")
+* also grey the same parts in asInputsOf/.... lists
 
 * move most readme content to go101.org.
   * keep case table, simple install, simple feature overview, simple usage (golds std, golds ./...)
 
-* top list: most parameters, most results
+* code page: each funciton enclosed in a span so that local id hightlighting needs less time.
+* reduce code page size
+  * some buildIdentifier -> buildLink
+  * ...
 
-* show/run examples/tests/banchmarks
+* css style
+  * https://github.com/go101/golds/issues/13
+* enhance tests
+  * test by ast comments
+* add more comments, and clear some
+
+* show statistics floating on the right of the overview page.
+
+* show/run examples/tests/banchmarks 
+  (Tests==true, cause reflect.EmbedWithUnexpMeth not found in analyzePackage_ConfirmTypeSources/registerDirectFields now)
   * run source code, run main package
   * Open a new page to avoid using JavaScript?
   * "go/doc": doc.Examples(...)importance
   * websocket: monitor page leave and shutdown unfinished Go processes.
 
-* list contained resources under each source file (folding initally)
-
-* method list: add an option: show promoted path (default hidden, pure css)
-  field list: two options: show promoteds, show promoted path (default shown, pure css)
 
 * add "d➜" in overview page: hover on a package: show its brief intro.
-* more hovers: 
+* more hovers:
+  * in code, show tooltip as the full selector path for shortened selectors.
 
-* show statistics floating on the right of the overview page.
+* now, there is not a way to view the uses of embedded fields (control+click?)
+
+* implicit
+  * switch expr := srcNode.(type) { // this expr might need to be enclosed in mutilple labels
+    case T1: _ = expr
+    case T2: _ = expr
+    }
 
 * -format=[html|json|txt|md]
+
+* type alias and same-underlyings list
 
 * hotkey
   * t/f/v/c to expend/collapse resources
   * HOME: to overview page.
     * add a settings page on overview page: switch theme/language etc.
   * P: from code page to package detail page
+  * e: toggle show (fields/methods) promoteds | show full selector path | show explicits only
 
 * uses pages: show package reference list (for example, find all unsafe uses)
 * id uses need consider whether or not the id is promoted.
@@ -41,22 +58,20 @@
   Need an option on page: check the owner type of selectors or not.
 * uses pages: also count some implicit uses, such as unkeyed struct literals
 * show identifier uses: use fake ids for some cases
-  * unnamed types
+  * unnamed types ([192]uint64, []*debug/dwarf.TypedefType, ...)
   * string literals
   * fields of package-level unnamed structs (current no ways to represent as TypeName.field, need a fake typename)
     * even for named types, its files obtained by embedding have not definitions, so now uses are not collected for them
   * methods of unnamed stricts (obtained by embedding, now uses are not collected for them)
+  * filter: only show those in type specifications
 
-* code page: add links in import sections
-* code page: each funciton enclosed in a span so that local id hightlighting needs less time.
-* in code, show tooltip as the full selector path for shortened selectors.
-* click an import path to highlight all its uses in the current file
-  ctrl+click to go to package detail page.
-  
+
   
 * use js to fold functions in code pages
   * use js to fold interface method implementations
 * use js to check input in :target in onload, expend it if applicable
+* add ol=nn,nn querystring to source page: srcpage?#line-nnn&cols=nn,nn+mm,mm
+  so that JS can hightlight the identifier. Multiple id instances might exist in one line
 * use cookie to remember options: show-unexporteds, sort-by
 
 * field list: align them as which in code. But need to consider embedding chain...
@@ -76,9 +91,6 @@
 
 * modify the cache system to only cache most visited and recent ones
 
-* css style
-  * https://github.com/go101/golds/issues/13
-
 * method docs 
   * how to handle duplicated methods caused by interface embedding interfaces.
     Their docs might be different.
@@ -93,7 +105,6 @@
 * module page. Containing Module: xxxx/xxxx
   * sort by requiredBys
 
-
 * pkg details page: show values by file/position order (only for javascript on)
 
 * overview page: show std pkgages only
@@ -101,10 +112,6 @@
 
 * search (non-semantic search, pure word searching)
   * ref: https://github.com/g-harel/gothrough
-
-* enhance tests
-  * test by ast comments
-* add more comments, and clear some
 
 * gen mode: merge docs for several (GOOS, GOARCH) compositions. At least for std.
 
@@ -135,6 +142,7 @@
 * For std pacakges: show which version of Go introduced a particular function/type, etc.
   * or for any modules
   * note: https://github.com/golang/go/issues/44081
+  * use godoc data for history data before Go 1.16.
 
 * go-callvis like, call relations
 
@@ -223,7 +231,7 @@
   visible structs mean the ones returned by exported functions or exported struct types.
   * the exported methods and fields of the exported alias of unexported types
 * for a type
-  * show the types with the same underlying type.
+  * show the types with the same underlying type. (if is sturct, filer: ignore field tags or not)
   * as field types of, and embedded in n types
   * show filed tags in docs
   * show comparable/embeddable or not. Fill TypeInfo.attributes.
@@ -234,7 +242,7 @@
   * method: show whether or not is promoted
   * as fields of types list (and embedded-in list, this is important, must do)
   * for interface: subset of list
-  * for non-interface: embedded by list
+  * for non-interface: embedded by list. (maybe it is better to add some filters to id-use pages: only show those in type specifications)
   * convertible/assignable types
   * show struct paddings/sizes
   * filter by kind
@@ -254,6 +262,11 @@
 
 ### Done
 
+* (done) code: click an import path to highlight all its uses in the current file
+* (done) top list: most parameters, most results
+* (done) list contained resources under each source file (folding initally)
+* (done) supports "golds a.go", need change "builtin" parse handling. remove: args = append(args, "builtin")
+* (done) sort packages: ab-cd should after ab/xy
 * (done) put unexported function in asParams/asResult lists
 * (done) make overview and package detials pages always contain unexported info, Use JS to sort and show.
 * (cancelled) add an index section

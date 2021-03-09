@@ -74,7 +74,7 @@ func (ds *docServer) buildImplementationPage(w http.ResponseWriter, result *Meth
 	)
 	page.WriteString("<b>")
 	//writeSrouceCodeLineLink(page, result.TypeName.Package(), result.TypeName.Position(), result.TypeName.Name(), "")
-	ds.writeResourceIndexHTML(page, result.TypeName.Package(), result.TypeName, true)
+	ds.writeResourceIndexHTML(page, result.TypeName.Package(), result.TypeName, false, false, false)
 	page.WriteString(`</b></span><span style="font-size:large;">`)
 	writeKindText(page, result.TypeName.Denoting().TT)
 	page.WriteString("</span>\n")
@@ -85,7 +85,7 @@ func (ds *docServer) buildImplementationPage(w http.ResponseWriter, result *Meth
 	}
 
 	fmt.Fprintf(page, `
-<code><span class="title">%s<span class="title-stat">%s</span></span>
+<code><span class="title">%s<span class="title-stat"><i>%s</i></span></span>
 `,
 		page.Translation().Text_MethodImplementations(),
 		nonImplementingMethodCountText,

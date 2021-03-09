@@ -118,15 +118,28 @@ func TestAnalyzeStandardPackage(t *testing.T) {
 					}
 				}
 
+				// ToDo: now, we ignore types like struct{T} etc.
+				if bt.TypeName == nil {
+					break
+				}
+
 				if len(analyzer.allTypeInfos) > typesCount {
+					t.Log("============================")
 					t.Log("> new types are added: ", btt)
+					t.Errorf("  ti = %#v", ti)
 				} else if ttset.Len() != num2 || bttset.Len() != num1 {
 					// This is a bug in std types.MethodSet implementation (Go SDK 1.14-)
 					// https://github.com/golang/go/issues/37081
 
+					t.Log("============================")
+					t.Logf("> method numbers not match: %d : %d and %d : %d", ttset.Len(), num2, bttset.Len(), num1)
 					t.Log("      promoted selectors collected? ", ti.attributes|promotedSelectorsCollected != 0, bt.attributes|promotedSelectorsCollected != 0)
-					t.Log("      >> ", bttset)
-					t.Errorf("%v: method numbers not match: %d : %d and %d : %d. (%d) %v : %v", ti, ttset.Len(), num2, bttset.Len(), num1, len(bt.DirectSelectors), bt.DirectSelectors, bt.AllMethods)
+					t.Log("      >> btt = ", btt)
+					t.Log("      -- ", bttset)
+					t.Log("      >> tt = ", tt)
+					t.Log("      -- ", ttset)
+					t.Log("      >> bt = ", bt)
+					t.Errorf("      -- %v: .\n      -- (%d)      -- %v      -- %v", ti, len(bt.DirectSelectors), bt.DirectSelectors, bt.AllMethods)
 				}
 			}
 		}

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 	"go/build"
 	"io"
@@ -250,6 +251,7 @@ func (ds *docServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		// resPath doesn't contian unexported selectors with their package path prefixes for sure.
 		// Two forms: pkg..id or pkg..type.selector.
 		// As pkg might contains ".", so here we use ".." the seperator.
+		// ToDo: // is better than ..?
 		const sep = ".."
 		index := strings.LastIndex(resPath, sep)
 		if index < 0 {
@@ -265,27 +267,37 @@ func (ds *docServer) validateArguments(args []string) ([]string, error) {
 	if len(args) == 0 {
 		//args = []string{"."}
 		panic("should not")
-	} else if len(args) == 1 && args[0] == "std" {
+	}
+
+	if len(args) == 1 && args[0] == "std" {
 		os.Setenv("GO111MODULE", "off")
 		os.Setenv("CGO_ENABLED", "0")
 	} else {
-		hasToolchain, dotPath := false, ""
-		for i, p := range args {
+		toolchainPath, dotPath := "", ""
+		oldArgs := args
+		args = args[:0]
+		for _, p := range oldArgs {
 			if p == "toolchain" {
-				hasToolchain = true
-				args[i] = "./..."
-			} else if dotPath != "" {
-				continue
-			}
-			if p == "." || strings.HasPrefix(p, "./") || strings.HasPrefix(p, ".\\") {
-				dotPath = p
+				toolchainPath = filepath.Join(build.Default.GOROOT, "src", "cmd")
+				if _, err := os.Stat(toolchainPath); errors.Is(err, os.ErrNotExist) {
+					log.Printf("the toolchain argument is ignored for the assumed source directory (%s) doesn not exist", toolchainPath)
+					continue
+				}
+				// looks both are ok.
+				//args = append(args, toolchainPath + string(filepath.Separator) + "..."
+				args = append(args, toolchainPath+"/...")
+			} else {
+				if p == "." || strings.HasPrefix(p, "./") || strings.HasPrefix(p, ".\\") {
+					dotPath = p
+				}
+				args = append(args, p)
 			}
 		}
-		if hasToolchain {
+		if toolchainPath != "" {
 			if dotPath != "" {
-				return nil, fmt.Errorf("toolchain argument conflicts with %s\n", dotPath)
+				return nil, fmt.Errorf("the toolchain argument conflicts with %s\n", dotPath)
 			}
-			os.Chdir(filepath.Join(build.Default.GOROOT, "src", "cmd"))
+			os.Chdir(toolchainPath)
 		}
 	}
 

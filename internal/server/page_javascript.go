@@ -40,7 +40,6 @@ function initOverviewPage() {
 			importedbys: parseInt(n.dataset.importedbys),
 			depdepth: parseInt(n.dataset.depdepth),
 			depheight: parseInt(n.dataset.depheight),
-			standard: n.dataset.std == "1"
 		};
 		pkgsByAlphabet[i] = t;
 		pkgsByImportedby[i] = t;
@@ -57,17 +56,15 @@ function initOverviewPage() {
 	});
 	pkgsByDepDepth.sort(function(a, b) {
 		if (a.depdepth == b.depdepth) {
-			if (a.standard == b.standard) {
-				if (a.node.id < b.node.id) {
-					return -1;
-				}
+			if (a.node.id < b.node.id) {
+				return -1;
 			}
-			if (b.standard) {
-				return -1
-			}
-			return 1
+			return 1;
 		}
-		return a.depdepth - b.depdepth;
+		if (a.depdepth < b.depdepth) {
+			return -1;
+		}
+		return 1;
 	});
 
 	var showSortByImportBysButton = true
@@ -95,7 +92,7 @@ function initOverviewPage() {
 	var content = content1;
 	var wdPkgContainer = document.getElementById("wd-packages");
 	if (wdPkgContainer == null) {
-		buttons1.style.display = "inline"
+		buttons1.style.display = "inline";
 	} else {
 		pkgStartOrderId += wdPkgContainer.querySelectorAll(".pkg").length;
 
@@ -119,8 +116,8 @@ function initOverviewPage() {
 	var sortByDepdepth = content.querySelector("#btn-depdepth");
 
 	sortByAlphabet.classList.add("chosen");
-	var currentSortBy = "alphabet"
-	var currentButton = sortByAlphabet
+	var currentSortBy = "alphabet";
+	var currentButton = sortByAlphabet;
 
 	sortByAlphabet.addEventListener('click', function(event) {
 		if (currentSortBy == "alphabet") {
@@ -193,7 +190,7 @@ function initPackageDetailsPage() {
 		var n = nodesTypeRes[i];
 		var t = {node: n, popularity: parseInt(n.dataset.popularity)};
 		typesByAlphabet[i] = t;
-		typesByPopularity[i] = t
+		typesByPopularity[i] = t;
 	}
 	typesByPopularity.sort(function(a, b) {
 		if (a.popularity == b.popularity) {
@@ -228,33 +225,33 @@ function initPackageDetailsPage() {
 	//showJavaScriptRelatedElements(buttons);
 	buttons.style.display = "block";
 
-	var currentSortBy = "alphabet"
+	var currentSortBy = "alphabet";
 	var sortByAlphabet = buttons.querySelector("#sort-types-by-alphabet");
 	var sortByPopularity = buttons.querySelector("#sort-types-by-popularity");
 	sortByAlphabet.classList.add("chosen");
 	sortByAlphabet.addEventListener('click', function(event) {
 		if (currentSortBy == "alphabet") {
-			return
+			return;
 		}
 
 		typesByAlphabet.forEach(function (x) {
 			container.appendChild(x.node);
 		});
 
-		currentSortBy = "alphabet"
+		currentSortBy = "alphabet";
 		sortByAlphabet.classList.add("chosen");
 		sortByPopularity.classList.remove("chosen");
 	})
 	sortByPopularity.addEventListener('click', function(event) {
 		if (currentSortBy == "popularity") {
-			return
+			return;
 		}
 
 		typesByPopularity.forEach(function (x) {
 			container.appendChild(x.node);
 		});
 
-		currentSortBy = "popularity"
+		currentSortBy = "popularity";
 		sortByPopularity.classList.add("chosen");
 		sortByAlphabet.classList.remove("chosen");
 	})

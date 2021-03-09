@@ -24,8 +24,8 @@ type Package struct {
 	Mod       *Module
 	Deps      []*Package
 	DepedBys  []*Package
-	DepHeight int32 // 0 means the height is not determined yet
-	DepDepth  int32 // 0 means the depth is not determined yet
+	DepHeight int32 // 0 means the height is not determined yet. The order determines the parse order.
+	DepDepth  int32 // 0 means the depth is not determined yet. The value mains how close to main pacakges. (Moved to user space).
 
 	// This field might be shared with PackageForDisplay
 	// for concurrent reads.
@@ -196,7 +196,18 @@ type TypeSource struct {
 //	return ts.TypeName.Denoting(d)
 //}
 
+type EmbedInfo struct {
+	TypeName *TypeName
+	IsStar   bool
+}
+
 type TypeName struct {
+	Pkg     *Package // some duplicated with types.TypeName.Pkg(), except builtin types
+	AstDecl *ast.GenDecl
+	AstSpec *ast.TypeSpec
+
+	*types.TypeName
+
 	// One and only one of the two is nil.
 	Alias *TypeAlias
 	Named *TypeInfo
@@ -212,15 +223,13 @@ type TypeName struct {
 	Source     TypeSource
 	StarSource *TypeSource
 
-	UsePositions []token.Position
+	//UsePositions []token.Position
 
-	*types.TypeName
+	// ToDo: maybe it is better to add some filters to id-use pages,
+	//       * only show those in type specifications.
+	//EmbeddedIn []EmbedInfo
 
 	index uint32 // ToDo: any useful?
-
-	Pkg     *Package // some duplicated with types.TypeName.Pkg(), except builtin types
-	AstDecl *ast.GenDecl
-	AstSpec *ast.TypeSpec
 }
 
 //func (tn *TypeName) IndexString() string {
@@ -338,6 +347,9 @@ type TypeInfo struct {
 
 	Underlying *TypeInfo
 
+	// For named and basic types.
+	TypeName *TypeName
+
 	//Implements     []*TypeInfo
 	///StarImplements []*TypeInfo // if TT is neither pointer nor interface.
 	Implements []Implementation
@@ -346,13 +358,13 @@ type TypeInfo struct {
 	ImplementedBys []*TypeInfo
 
 	// For builtin and unnamed types only.
-	Aliases []*TypeAlias // ToDo:
+	Aliases []*TypeName
 
-	// For named and basic types.
-	TypeName *TypeName
+	// ToDo: For unnamed and builtin basic types.
+	Underlieds []*TypeName
 
 	// For unnamed types.
-	UsePositions []token.Position
+	//UsePositions []token.Position
 
 	// For unnamed interfaces and structs, this field must be nil.
 	//Pkg *Package // Looks this field is never used. (It really should not exist in this type.)
@@ -836,9 +848,9 @@ type MethodSignature struct {
 type EmbedMode uint8
 
 const (
-	EmbedMode_None EmbedMode = iota
-	EmbedMode_Direct
-	EmbedMode_Indirect
+	EmbedMode_None     EmbedMode = iota
+	EmbedMode_Direct             // TypeName (note: it might be a pointer alias)
+	EmbedMode_Indirect           // *TypeName
 )
 
 type Field struct {

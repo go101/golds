@@ -3,29 +3,14 @@ It tries to extract as much information as possible from Go code to help gophers
 
 * [Demo of the generated docs for standard packages](https://docs.go101.org/index.html)
   (please note that the demo site is genenated with some features being turned off deliberately to reduce the docs size).
-* [FAQ](https://go101.org/article/tool-golds.html#faq).
 * Please follow [@Go100and1](https://twitter.com/go100and1) to get the latest news of **Golds**
   (and Go details/facts/tips/etc.).
 
-### Installation
+### Installation & Usage
 
-Run `go get -u go101.org/golds` (before Go Toolchain 1.16, the `GO111MODULE` enviroment variable needs to be set as `on` to utilize the `GOPROXY` setting) or `go install go101.org/golds@latest` (since Go Toolchain 1.16) to install (and update) **Golds**. 
-
-Note, if the tool program name `golds` conflicts with another tool with the same name you are using,
-you can run any of the following commands to install **Golds** as a program with a different name:
-* **Go** **do**cs **ge**nerator  
-  `go get -u go101.org/golds/godoge` (before Go Toolchain 1.16)  
-  `go install go101.org/golds/godoge@latest` (since Go Toolchain 1.16)
-* **Go** **co**de **re**ader  
-  `go get -u go101.org/golds/gocore` (before Go Toolchain 1.16)  
-  `go install go101.org/golds/gocore@latest` (since Go Toolchain 1.16)
-* **Go** **l**ocal **d**ocs (mainly for legacy. `gold` was [the old default program name](https://github.com/go101/gold) of **Golds**)  
-  `go get -u go101.org/golds/gold` (before Go Toolchain 1.16)  
-  `go install go101.org/golds/gold@latest` (since Go Toolchain 1.16)
-
-You may also clone this project firstly, then run the `go install` command in the respective program folders to install **Golds** as `golds`, `godoge`, or `gocore`.
-
-_(NOTE: Go commands will install output binaries into the **Go binary installation path** specified by the `GOBIN` environment variable, which defaults to the path of the `bin` subfolder under the first path specified in the `GOPATH` environment variable, which defaults to the path of the `go` subfolder under the path specified by the `HOME` environment variable. Please specify the **Go binary installation path** in the `PATH` environment variable to run **Golds** commands successfully.)_
+The module name of this project is `go101.org/golds` and the default Go program name is `golds`.
+About more information about installation and usages,
+please visit [this page on Go101.org](https://go101.org/article/tool-golds.html).
 
 ### Main Features
 
@@ -50,6 +35,7 @@ _(NOTE: Go commands will install output binaries into the **Go binary installati
   * Click the name of a method specified in an interface type declaration to show the methods implementing it (only for package-level named interface types now).
     In the method-implementation page, click each the name of an interface method to show the uses of the interface method.
 * Shows code statistics ([demo](https://docs.go101.org/std/statistics.html)).
+  * Click some of the SVG pictures to show corresponding toppest list.
 * Supports generating static HTML docs pages, to avoid rebuilding the docs later.
   This is good for package developers to host docs of their own packages.
   (The docs of standard packages are generated within about 7 seconds, and the docs of the kubernetes project packages are generated within about one minute.)
@@ -72,43 +58,6 @@ Only a code snapshot is analyzed. When code changes, a new analyzation is needed
 Testing packages are excluded currently.
 
 Code examples in docs are not shown currently.
-
-### Usage
-
-Start the docs server:
-* Run `golds .` to show docs of the package in the current directory (and all its dependency packages).
-* Run `golds ./...` to show docs of all packages under the current directory (and all their dependency packages).
-* Run `golds std` to show docs of standard packages.
-* Run `golds toolchain` to show docs of official toolchain packages (and all their dependency packages).
-* Run `golds aPackage` to show docs of the specified package (and all its dependency packages).
-* Run `golds ./... std aPackage` to show docs of all packages in the current directory, all standard packages, and a specified package (and all their dependency packages).
-
-Each of the above commands will open a browser window automatically.
-We can use the `-s` or `-silent` options to turn off this behavior.
-
-Generate static HTML docs pages (the `-dir` option is optional in this mode, its default value is `.`) with the `-gen` option:
-* `golds -gen -dir=generated .`
-* `golds -gen -dir=generated ./...`
-* `golds -gen -dir=generated std`
-
-The above commands will generated the full docs of specified packages,
-which are good to read code but make the size of the generate docs large.
-The following options are available to generate compact docs:
-* `-nouses`: don't generate identifier-uses pages (identifier-uses pages will occupy about 9/10 of the total page count and 2/3 of the full docs size).
-* `-plainsrc`: generate simpler source code pages (no highlighting and no code navigations to reduce the total page size by 1/6 of the full docs size).
-* `-only-list-exporteds`: don't list unexported package-level resources in package-details pages.
-* `-compact` is a shortcut of the combination of the above compact docs generation options.
-
-The size of the docs generated by `golds -gen -compact ./...` is about 1/6 of `golds -gen ./...`.
-
-The `-wdpkgs-listing` option is used to specify how to list the packages in the working directory. Availabe values include
-* `general` (the default, list them with others by alphabetical order)
-* `promoted` (list them before others)
-* `solo` (list them without others)
-
-We can run `golds -dir=.` (or simply `golds`) from the HTML docs generation directory to view the generated docs in browser (**Golds** also means __Go local directory server__). The `-s` or `-silent` options also work in this mode.
-
-The `golds` command recognizes the `GOOS` and `GOARCH` environment variables.
 
 ### Analyzation Cases
 

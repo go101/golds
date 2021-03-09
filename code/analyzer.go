@@ -6,8 +6,8 @@ import (
 	"go/token"
 	"go/types"
 	"log"
-	"reflect"
 	"strings"
+	//"runtime/debug"
 
 	"golang.org/x/tools/go/types/typeutil"
 )
@@ -81,114 +81,6 @@ type CodeAnalyzer struct {
 	forbidRegisterTypes bool // for debug
 
 	debug bool
-}
-
-const KindCount = reflect.UnsafePointer + 1
-
-type Stats struct {
-	Packages       int32
-	StdPackages    int32
-	AllPackageDeps int32
-	PackagesByDeps [100]int32
-	//PackagesByImportBys [1024]int32 // use sorting packages by importBys instead.
-
-	FilesWithoutGenerateds int32 // without generated ones
-	FilesWithGenerateds    int32 // with generated ones
-	CodeLines              int32 // ToDo: stat code lines. Use the info in AstFile?
-	BlankCodeLines         int32
-	CommentCodeLines       int32
-
-	// To calculate imports per file.
-	// Deps per packages are available in other ways.
-	AstFiles           int32
-	Imports            int32
-	FilesByImportCount [100]int32
-
-	// Types
-	ExportedTypeNamesByKind    [KindCount]int32
-	ExportedTypeNames          int32
-	ExportedTypeAliases        int32
-	ExportedCompositeTypeNames int32
-	ExportedBasicTypeNames     int32
-	ExportedNumericTypeNames   int32
-	ExportedIntergerTypeNames  int32
-	ExportedUnsignedTypeNames  int32
-
-	// This records the count of all package-level declared types.
-	// However,
-	// * types without methods should not be counted.
-	// * some local declared types with methods should also be counted.
-	roughTypeNameCount int32
-	// This recoreds the count of all package-level declared exported identifiers,
-	// exported field/method names, and fake identifiers (#HashOrderID) for unnamed types.
-	roughExportedIdentifierCount int32
-
-	//ExportedNamedStructTypeNames                        int32 // should be equal to ExportedTypeNamesByKind[reflect.Struct]
-	ExportedNamedStructTypesWithEmbeddingFields   int32
-	ExportedNamedStructTypesWithPromotedFields    int32
-	ExportedNamedStructTypeFields                 int32
-	ExportedNamedStructTypeExplicitFields         int32
-	ExportedNamedStructTypeExportedFields         int32
-	ExportedNamedStructTypeExportedExplicitFields int32
-
-	ExportedNamedStructsByEmbeddingFieldCount        [100]int32
-	ExportedNamedStructsByFieldCount                 [100]int32 // including promoteds and non-exporteds
-	ExportedNamedStructsByExplicitFieldCount         [100]int32 // including non-exporteds but not including promoted
-	ExportedNamedStructsByExportedFieldCount         [100]int32 // including promoteds
-	ExportedNamedStructsByExportedExplicitFieldCount [100]int32 // not including promoteds
-	ExportedNamedStructsByExportedPromotedFieldCount [100]int32
-
-	ExportedNamedNonInterfaceTypesByMethodCount         [100]int32 // T and *T combined
-	ExportedNamedNonInterfaceTypesByExportedMethodCount [100]int32 // T and *T combined
-	ExportedNamedNonInterfacesExportedMethods           int32
-	ExportedNamedNonInterfacesWithExportedMethods       int32
-
-	ExportedNamedInterfacesByMethodCount         [100]int32
-	ExportedNamedInterfacesByExportedMethodCount [100]int32 // the last element means (N-1)+
-	ExportedNamedInterfacesExportedMethods       int32
-
-	// Values
-	ExportedVariables int32
-	ExportedConstants int32
-	ExportedFunctions int32
-	ExportedMethods   int32 // non-interface methods
-
-	ExportedVariablesByTypeKind [KindCount]int32
-	ExportedConstantsByTypeKind [KindCount]int32
-
-	// ToDo: Methods corresponding the same interface method should be viewed as one method in counting.
-	ExportedFunctionParameters          int32      // including methods
-	ExportedFunctionResults             int32      // including methods
-	ExportedFunctionWithLastErrorResult int32      // including methods
-	ExportedFunctionsByParameterCount   [100]int32 // including methods
-	ExportedFunctionsByResultCount      [100]int32 // including methods
-	//ExportedMethodsByParameterCount   [100]int32 // the last element means (N-1)+
-	//ExportedMethodsByResultCount      [100]int32 // the last element means (N-1)+
-
-	// Others.
-	ExportedIdentifers          int32
-	ExportedIdentifersSumLength int32
-	ExportedIdentifiersByLength [100]int32
-}
-
-func incSliceStat(stats []int32, index int) {
-	if index >= len(stats) {
-		stats[len(stats)-1]++
-	} else {
-		stats[index]++
-	}
-}
-
-func (d *CodeAnalyzer) Statistics() Stats {
-	return d.stats
-}
-
-func (d *CodeAnalyzer) RoughTypeNameCount() int32 {
-	return d.stats.roughTypeNameCount
-}
-
-func (d *CodeAnalyzer) RoughExportedIdentifierCount() int32 {
-	return d.stats.roughExportedIdentifierCount
 }
 
 type Identifier struct {
@@ -350,20 +242,42 @@ func (d *CodeAnalyzer) RegisterTypeName(tn *TypeName) {
 }
 
 func (d *CodeAnalyzer) RegisterType(t types.Type) *TypeInfo {
-	return d.TryRegisteringType(t, true)
+	return d.registeringType(t, true)
 }
 
 //var numNameds, numNamedInterfaces = 0, 0
 
-func (d *CodeAnalyzer) TryRegisteringType(t types.Type, createOnNonexist bool) *TypeInfo {
+func (d *CodeAnalyzer) TryRegisteringType(t types.Type) *TypeInfo {
+	return d.registeringType(t, false)
+}
+
+//var iiiii uint32
+
+func (d *CodeAnalyzer) registeringType(t types.Type, createOnNonexist bool) *TypeInfo {
 	typeInfo, _ := d.ttype2TypeInfoTable.At(t).(*TypeInfo)
 	if typeInfo == nil && createOnNonexist {
 		if d.forbidRegisterTypes {
 			log.Println("=================================", t)
 		}
 
-		//d.lastTypeIndex++ // the old design
+		//d.lastTypeIndex++ // the old design (1-based)
 		typeInfo = &TypeInfo{TT: t, index: d.lastTypeIndex}
+		//if st, ok := t.(*types.Struct); ok {
+		//	if st.NumFields() == 1 {
+		//		ft := st.Field(0).Type()
+		//		if nt, ok := ft.(*types.Named); ok {
+		//			if true &&
+		//				nt.Obj().Name() == "Type" &&
+		//				nt.Obj().Pkg().Name() == "types" &&
+		//				st.Field(0).Name() == "Type" {
+		//				log.Println("=====================", nt.Obj().Pkg())
+		//				debug.PrintStack()
+		//				//d.debug = true
+		//				iiiii = d.lastTypeIndex
+		//			}
+		//		}
+		//	}
+		//}
 		d.ttype2TypeInfoTable.Set(t, typeInfo)
 		if d.allTypeInfos == nil {
 			d.allTypeInfos = make([]*TypeInfo, 0, 8192)
@@ -372,7 +286,7 @@ func (d *CodeAnalyzer) TryRegisteringType(t types.Type, createOnNonexist bool) *
 			// which maight be an unnecesary design.
 			//d.allTypeInfos = append(d.allTypeInfos, nil)
 		}
-		d.lastTypeIndex++ // the new design
+		d.lastTypeIndex++ // the new design (0-based)
 		d.allTypeInfos = append(d.allTypeInfos, typeInfo)
 
 		switch t := t.(type) {
@@ -544,24 +458,37 @@ func (d *CodeAnalyzer) iterateTypenames(typeLiteral ast.Expr, pkg *Package, onTy
 }
 
 func (d *CodeAnalyzer) lookForAndRegisterUnnamedInterfaceAndStructTypes(typeLiteral ast.Node, pkg *Package) {
+	var reg = func(n ast.Expr) *TypeInfo {
+		tv := pkg.PPkg.TypesInfo.Types[n]
+		return d.RegisterType(tv.Type)
+	}
+
 	switch node := typeLiteral.(type) {
 	default:
 		panic(fmt.Sprintf("unexpected ast expression. %T : %v", node, node))
 	case *ast.BadExpr:
 		log.Println("encounter BadExpr:", node)
+		return
 	case *ast.Ident, *ast.SelectorExpr:
 		// named types and basic types will be registered from other routes.
+		return
 	case *ast.ParenExpr:
+		reg(node)
 		d.lookForAndRegisterUnnamedInterfaceAndStructTypes(node.X, pkg)
 	case *ast.StarExpr:
+		reg(node)
 		d.lookForAndRegisterUnnamedInterfaceAndStructTypes(node.X, pkg)
 	case *ast.ArrayType:
+		reg(node)
 		d.lookForAndRegisterUnnamedInterfaceAndStructTypes(node.Elt, pkg)
 	case *ast.Ellipsis: // ...Ele
+		reg(node)
 		d.lookForAndRegisterUnnamedInterfaceAndStructTypes(node.Elt, pkg)
 	case *ast.ChanType:
+		reg(node)
 		d.lookForAndRegisterUnnamedInterfaceAndStructTypes(node.Value, pkg)
 	case *ast.FuncType:
+		reg(node)
 		for _, field := range node.Params.List {
 			d.lookForAndRegisterUnnamedInterfaceAndStructTypes(field.Type, pkg)
 		}
@@ -571,16 +498,15 @@ func (d *CodeAnalyzer) lookForAndRegisterUnnamedInterfaceAndStructTypes(typeLite
 			}
 		}
 	case *ast.MapType:
+		reg(node)
 		d.lookForAndRegisterUnnamedInterfaceAndStructTypes(node.Key, pkg)
 		d.lookForAndRegisterUnnamedInterfaceAndStructTypes(node.Value, pkg)
 	case *ast.StructType:
-		tv := pkg.PPkg.TypesInfo.Types[node]
-		typeInfo := d.RegisterType(tv.Type)
-		d.registerDirectFields(typeInfo, node, pkg)
+		d.registerDirectFields(reg(node), node, pkg)
+		return
 	case *ast.InterfaceType:
-		tv := pkg.PPkg.TypesInfo.Types[node]
-		typeInfo := d.RegisterType(tv.Type)
-		d.registerExplicitlySpecifiedMethods(typeInfo, node, pkg)
+		d.registerExplicitlySpecifiedMethods(reg(node), node, pkg)
+		return
 	}
 }
 
