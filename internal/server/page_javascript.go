@@ -20,7 +20,32 @@ func (ds *docServer) javascriptFile(w http.ResponseWriter, r *http.Request, them
 }
 
 var jsFile = []byte(`
-function onPageLoad () {
+function todo() {
+	const urlParams = new URLSearchParams(window.location.search);
+	var name = urlParams.get('name');
+	// pase name to get method/field/... if provided.
+	var line = urlParams.get('line');
+	var id = urlParams.get('id');
+	var segments = urlParams.get('segments');
+}
+
+function onPageLoad() {
+	var lastClicked;
+	var lastClickedBorder;
+	document.addEventListener("click", function(e){
+		if (e.target.tagName == "A") {
+			if (lastClicked != e.target) {
+				if (lastClicked != null) {
+					lastClicked.style.border = lastClickedBorder;
+				}
+				lastClicked = e.target;
+				lastClickedBorder = lastClicked.style.border;
+				lastClicked.style.border = "medium dashed #079";
+			}
+		}
+		e.stopPropagation();
+	});
+
 	if (document.getElementById("overview") != null) {
 		initOverviewPage();
 	}
@@ -147,7 +172,7 @@ function initOverviewPage() {
 		currentButton.classList.remove("chosen");
 		currentButton = sortByAlphabet;
 		currentButton.classList.add("chosen");
-	})
+	});
 	sortByImportedbys.addEventListener('click', function(event) {
 		if (currentSortBy == "importedbys") {
 			return;
@@ -167,7 +192,7 @@ function initOverviewPage() {
 		currentButton.classList.remove("chosen");
 		currentButton = sortByImportedbys;
 		currentButton.classList.add("chosen");
-	})
+	});
 	sortByDepdepth.addEventListener('click', function(event) {
 		if (currentSortBy == "depdepth") {
 			return;
@@ -187,10 +212,12 @@ function initOverviewPage() {
 		currentButton.classList.remove("chosen");
 		currentButton = sortByDepdepth;
 		currentButton.classList.add("chosen");
-	})
+	});
 }
 
 function initPackageDetailsPage() {
+	autoExpandForPackageDetailsPage();
+
 	var buttons = document.getElementById("exported-types-buttons");
 	var container = document.getElementById("exported-types");
 	var nodesTypeRes = container.querySelectorAll(".type-res");
@@ -251,7 +278,7 @@ function initPackageDetailsPage() {
 		currentSortBy = "alphabet";
 		sortByAlphabet.classList.add("chosen");
 		sortByPopularity.classList.remove("chosen");
-	})
+	});
 	sortByPopularity.addEventListener('click', function(event) {
 		if (currentSortBy == "popularity") {
 			return;
@@ -264,7 +291,40 @@ function initPackageDetailsPage() {
 		currentSortBy = "popularity";
 		sortByPopularity.classList.add("chosen");
 		sortByAlphabet.classList.remove("chosen");
-	})
+	});
+}
+
+function autoExpandForPackageDetailsPage() {
+	const hashChanged = function(newHash) {
+		var div = document.getElementById(newHash.substr(1));
+		if (div == null) {
+			return;
+		}
+		const prefix = "#name-";
+		if (newHash.indexOf(prefix) != 0) {
+			return;
+		}
+		var checkbox = document.getElementById(newHash.substr(prefix.length)+"-fold-content");
+		if (checkbox == null) {
+			return;
+		}
+		checkbox.checked = true;
+	};
+
+	if ("onhashchange" in window) {
+		window.onhashchange = function () {
+			hashChanged(window.location.hash);
+		}
+	} else {
+		var storedHash = window.location.hash;
+		window.setInterval(function () {
+			if (window.location.hash != storedHash) {
+				storedHash = window.location.hash;
+				hashChanged(storedHash);
+			}
+		}, 100);
+	}
+	hashChanged(window.location.hash);
 }
 
 

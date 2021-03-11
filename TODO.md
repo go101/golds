@@ -2,6 +2,7 @@
 
 ### Soon to do
 
+* stat: lines of code. ave. lines/file.
 
 * also grey the same parts in asInputsOf/.... lists
 
@@ -11,7 +12,11 @@
 * code page: each funciton enclosed in a span so that local id hightlighting needs less time.
 * reduce code page size
   * some buildIdentifier -> buildLink
-  * ...
+  * use short class names: codeline => l
+  * use short tag names
+  * no need to <code></code> in each code line.
+  * no need <span class="codeline", use pre > code > span in css instead.
+  * replace \t\t\t with margin-left
 
 * css style
   * https://github.com/go101/golds/issues/13
@@ -44,6 +49,7 @@
 * -format=[html|json|txt|md]
 
 * type alias and same-underlyings list
+  * https://github.com/golang/go/issues/44905
 
 * hotkey
   * t/f/v/c to expend/collapse resources

@@ -199,6 +199,10 @@ func Run() {
 	case "golds":
 	}
 
+	if *portFlag == "" {
+		*portFlag = "56789"
+	}
+
 	server.Run(options, flag.Args(), *portFlag, silentMode, printUsage, appPkgPath, getRoughBuildTime)
 }
 

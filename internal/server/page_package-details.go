@@ -1935,12 +1935,6 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Pac
 		}
 	case *code.Function:
 		if writeKeyword {
-			var recv *types.Var
-			if res.Func != nil {
-				sig := res.Func.Type().(*types.Signature)
-				recv = sig.Recv()
-			}
-
 			if buildIdUsesPages && !isBuiltin {
 				page.WriteByte(' ')
 				buildPageHref(page.PathInfo, pagePathInfo{ResTypeReference, res.Package().Path() + ".." + res.Name()}, page, "func")
@@ -1949,22 +1943,42 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Pac
 				page.WriteString(" func ")
 			}
 
-			// This if-block will be never entered now.
-			if recv != nil {
-				switch tt := recv.Type().(type) {
-				case *types.Named:
-					fmt.Fprintf(page, `(%s) `, tt.Obj().Name())
-				case *types.Pointer:
-					if named, ok := tt.Elem().(*types.Named); ok {
-						fmt.Fprintf(page, `(*%s) `, named.Obj().Name())
-					} else {
-						panic("should not")
-					}
-				default:
-					panic("should not")
-				}
-			}
+			//var recv *types.Var
+			//if res.Func != nil {
+			//	sig := res.Func.Type().(*types.Signature)
+			//	recv = sig.Recv()
+			//}
+			//// This if-block will be never entered now.
+			//if recv != nil {
+			//	switch tt := recv.Type().(type) {
+			//	case *types.Named:
+			//		fmt.Fprintf(page, `(%s) `, tt.Obj().Name())
+			//	case *types.Pointer:
+			//		if named, ok := tt.Elem().(*types.Named); ok {
+			//			fmt.Fprintf(page, `(*%s) `, named.Obj().Name())
+			//		} else {
+			//			panic("should not")
+			//		}
+			//	default:
+			//		panic("should not")
+			//	}
+			//}
 		}
+
+		//>> for statistis toppest list listing
+		if res.IsMethod() {
+			recvParam, tn, isStar := res.ReceiverTypeName()
+			_ = recvParam
+			if isStar {
+				page.WriteString("(*")
+				page.WriteString(tn.Name())
+				page.WriteString(")")
+			} else {
+				page.WriteString(tn.Name())
+			}
+			page.WriteByte('.')
+		}
+		//<<
 
 		writeResName()
 

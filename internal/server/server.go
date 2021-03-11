@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -107,32 +106,20 @@ func Run(options PageOutputOptions, args []string, recommendedPort string, silen
 		ds.initSettings(os.Getenv("LANG"))
 	}
 
-	port, delta := recommendedPort, -1
-	defaultPort, err := strconv.Atoi(recommendedPort)
+	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf(":%v", recommendedPort))
 	if err != nil {
-		if recommendedPort != "" {
-			log.Printf("Invalid port: %s. A new one will be selected automatically.", recommendedPort)
-		}
-		defaultPort = 56789
-		port = strconv.Itoa(defaultPort)
+		log.Fatal(err)
 	}
-
-	if defaultPort > 65535 {
-		defaultPort = 65535
-	} else if defaultPort < 1024 {
-		defaultPort = 1024
-	}
-	if defaultPort < 9000 {
+	delta := -1
+	if addr.Port < 1234 {
 		delta = 1
 	}
 
 NextTry:
-	l, err := net.Listen("tcp", fmt.Sprintf(":%v", port))
+	l, err := net.ListenTCP("tcp", addr)
 	if err != nil {
 		if strings.Index(err.Error(), "bind: address already in use") >= 0 {
-			defaultPort += delta
-			port = strconv.Itoa(defaultPort)
-			//port = strconv.Itoa(50000 + 1 + rand.Int()%9999)
+			addr.Port += delta
 			goto NextTry
 		}
 		log.Fatal(err)
@@ -147,11 +134,11 @@ NextTry:
 		ds.analyze(args, printUsage)
 		ds.analyzingLogger.SetPrefix("")
 		serverStarted := ds.currentTranslationSafely().Text_Server_Started()
-		ds.analyzingLogger.Printf("%s http://localhost:%v\n", serverStarted, port)
+		ds.analyzingLogger.Printf("%s http://localhost:%v\n", serverStarted, addr.Port)
 	}()
 
 	if !silentMode {
-		err = util.OpenBrowser(fmt.Sprintf("http://localhost:%v", port))
+		err = util.OpenBrowser(fmt.Sprintf("http://localhost:%v", addr.Port))
 		if err != nil {
 			log.Println(err)
 		}
