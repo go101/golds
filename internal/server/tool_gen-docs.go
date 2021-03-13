@@ -329,7 +329,12 @@ func GenDocs(options PageOutputOptions, args []string, outputDir string, silentM
 	ds.analyze(args, printUsage)
 
 	// ...
-	outputDir = filepath.Join(outputDir, "generated-"+time.Now().Format("20060102150405"))
+	genOutputDir := outputDir
+	if genOutputDir == "." {
+		genOutputDir = ds.workingDirectory
+	}
+	defer os.Chdir(ds.workingDirectory)
+	genOutputDir = filepath.Join(genOutputDir, "generated-"+time.Now().Format("20060102150405"))
 
 	// ...
 	//defer func() { log.Println("============== contentPool.numByteSlices:", contentPool.numByteSlices) }() // 10 for std
@@ -413,7 +418,7 @@ func GenDocs(options PageOutputOptions, args []string, outputDir string, silentM
 			numPages++
 			numBytes += len(pg.Content)
 
-			path := filepath.Join(outputDir, pg.FilePath)
+			path := filepath.Join(genOutputDir, pg.FilePath)
 			path = strings.Replace(path, "/", string(filepath.Separator), -1)
 			path = strings.Replace(path, "\\", string(filepath.Separator), -1)
 
@@ -439,8 +444,7 @@ func GenDocs(options PageOutputOptions, args []string, outputDir string, silentM
 	}
 
 	log.Printf("Done (%d pages are generated and %d bytes are written).", numPages, numBytes)
-	//outputDir, _ = filepath.Abs(outputDir)
-	log.Printf("Docs are generated in %s.", outputDir)
+	log.Printf("Docs are generated in %s.", outputDir) // genOutputDir)
 	log.Println("Run the following command to view the docs:")
-	log.Printf("\t%s", viewDocsCommand(outputDir))
+	log.Printf("\t%s", viewDocsCommand(outputDir)) // genOutputDir))
 }

@@ -287,6 +287,8 @@ func (ds *docServer) validateArguments(args []string) ([]string, error) {
 }
 
 func (ds *docServer) analyze(args []string, printUsage func(io.Writer)) {
+	ds.workingDirectory, _ = os.Getwd()
+
 	args, err := ds.validateArguments(args)
 	if err != nil {
 		log.Println(err)
@@ -295,8 +297,6 @@ func (ds *docServer) analyze(args []string, printUsage func(io.Writer)) {
 		//}
 		os.Exit(1)
 	}
-
-	ds.workingDirectory, _ = os.Getwd()
 
 	var stopWatch = util.NewStopWatch()
 	defer func() {
