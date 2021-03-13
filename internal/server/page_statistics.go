@@ -82,9 +82,12 @@ func (ds *docServer) buildStatisticsPage(w http.ResponseWriter) []byte {
 		"standardPackageCount":             stats.StdPackages,
 		"sourceFileCount":                  stats.FilesWithoutGenerateds,
 		"goSourceFileCount":                stats.AstFiles,
-		"averageSourceFileCountPerPackage": float64(stats.FilesWithGenerateds) / float64(stats.Packages),
+		"goSourceLineCount":                stats.CodeLinesWithBlankLines,
 		"averageImportCountPerFile":        float64(stats.Imports) / float64(stats.AstFiles),
+		"averageCodeLineCountPerFile":      math.Round(float64(stats.CodeLinesWithBlankLines) / float64(stats.AstFiles)),
 		"averageDependencyCountPerPackage": float64(stats.AllPackageDeps) / float64(stats.Packages),
+		"averageSourceFileCountPerPackage": float64(stats.FilesWithGenerateds) / float64(stats.Packages),
+		"averageCodeLineCountPerPackage":   math.Round(float64(stats.CodeLinesWithBlankLines) / float64(stats.Packages)),
 
 		//"gosourcefilesByImportsChartURL": buildPageHref(page.PathInfo, pagePathInfo{ResTypeSVG, "gosourcefiles-by-imports"}, nil, ""),
 		//"packagesByDependenciesChartURL": buildPageHref(page.PathInfo, pagePathInfo{ResTypeSVG, "packages-by-dependencies"}, nil, ""),

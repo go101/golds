@@ -142,17 +142,19 @@ func (*Chinese) Text_StatisticsWithMoreLink(detailedStatsLink string) string {
 }
 
 func (*Chinese) Text_SimpleStats(stats *code.Stats) string {
-	return fmt.Sprintf(`分析了%d个代码包，解析了%d个Go源文件。
+	return fmt.Sprintf(`分析了%d个代码包，解析了%d个Go源文件和%d行代码。
 平均说来：
-* 每个Go源文件引入了个%.2f代码包；
+* 每个Go源文件引入了个%.2f代码包，
+  包含%.0f行代码；
 * 每个代码包依赖于%.2f个其它代码包，
   含有%.2f个源文件，并且导出了
   - %.2f个类型名；
   - %.2f个变量；
   - %.2f个常量；
   - %.2f个函数。`,
-		stats.Packages, stats.AstFiles,
+		stats.Packages, stats.AstFiles, stats.CodeLinesWithBlankLines,
 		float64(stats.Imports)/float64(stats.AstFiles),
+		float64(stats.CodeLinesWithBlankLines)/float64(stats.AstFiles),
 		float64(stats.AllPackageDeps)/float64(stats.Packages),
 		float64(stats.FilesWithoutGenerateds)/float64(stats.Packages),
 		float64(stats.ExportedTypeNames)/float64(stats.Packages),
@@ -499,9 +501,8 @@ func (*Chinese) Text_PackageStatistics(values map[string]interface{}) []string {
 	共<a href="%s">%d个库包</a>，其中%d个是标准库包。
 	共%d个源文件，其中%d个为Go源文件。
 	平均说来：
-	- 每个库包含有%.2f个源文件；
-	- 每个Go源文件引入了%.2f个库包；
-	- 每个库包依赖于%.2f个其它库包。
+	- 每个Go源文件引入了%.2f个库包，包含%.0f行代码（含空行）；
+	- 每个库包依赖于%.2f个其它库包，含有%.2f个源文件。
 
 `,
 
@@ -513,9 +514,11 @@ func (*Chinese) Text_PackageStatistics(values map[string]interface{}) []string {
 			values["standardPackageCount"],
 			values["sourceFileCount"],
 			values["goSourceFileCount"],
-			values["averageSourceFileCountPerPackage"],
+			values["goSourceLineCount"],
 			values["averageImportCountPerFile"],
+			values["averageCodeLineCountPerFile"],
 			values["averageDependencyCountPerPackage"],
+			values["averageSourceFileCountPerPackage"],
 
 		//values["gosourcefilesByImportsChartURL"],
 		//values["packagesByDependenciesChartURL"],

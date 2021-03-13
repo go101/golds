@@ -1788,11 +1788,19 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 
 	// ToDo: use info.TypeOf, info.ObjectOf
 
+	var locOfPkg = 0
+	defer func() {
+		d.stat_OnPackageCodeLineCount(locOfPkg, pkg)
+	}()
+
 	for i, file := range pkg.PPkg.Syntax {
 		//d.stats.AstFiles++
 		//d.stats.Imports += int32(len(file.Imports))
 		//incSliceStat(d.stats.FilesByImportCount[:], len(file.Imports))
-		d.stat_OnNewAstFile(len(file.Imports), filepath.Base(pkg.PPkg.CompiledGoFiles[i]), pkg)
+		//d.stats.CodeLinesWithBlankLines += int32(pkg.PPkg.Fset.PositionFor(pkg.PPkg.Syntax[i].End(), false).Line)
+		loc := pkg.PPkg.Fset.PositionFor(pkg.PPkg.Syntax[i].End(), false).Line
+		d.stat_OnNewAstFile(len(file.Imports), loc, filepath.Base(pkg.PPkg.CompiledGoFiles[i]), pkg)
+		locOfPkg += loc
 
 		//if len(file.Imports) == 0 {
 		//	log.Println("----", pkg.PPkg.Fset.PositionFor(file.Pos(), false))

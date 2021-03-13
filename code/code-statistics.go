@@ -26,6 +26,12 @@ type Stats struct {
 	FilesByImportCount      [100]int32
 	FilesImportCountTopList TopList
 
+	CodeLinesWithBlankLines           int32
+	FilesByCodeLinesWithBlankLines    [100]int32
+	FilesCodeLineTopList              TopList
+	PackagesByCodeLinesWithBlankLines [100]int32
+	PackagesCodeLineTopList           TopList
+
 	// Types
 	ExportedTypeNamesByKind    [KindCount]int32
 	ExportedTypeNames          int32
@@ -160,16 +166,31 @@ func (d *CodeAnalyzer) stat_OnNewPackage(std bool, numSrcFiles, numDeps int, pkg
 	d.stats.PackagesDepsTopList.Push(numDeps, &pkgPath)
 }
 
-func (d *CodeAnalyzer) stat_OnNewAstFile(numImports int, bareFileName string, pkg *Package) {
+func (d *CodeAnalyzer) stat_OnNewAstFile(numImports, linesWithBlanks int, bareFileName string, pkg *Package) {
 	d.stats.AstFiles++
 	d.stats.Imports += int32(numImports)
 	incSliceStat(d.stats.FilesByImportCount[:], numImports)
 
-	d.stats.FilesImportCountTopList.TryToInit(16)
-	d.stats.FilesImportCountTopList.Push(numImports, &struct {
+	pkgFile := &struct {
 		*Package
 		Filename string
-	}{pkg, bareFileName})
+	}{pkg, bareFileName}
+	d.stats.FilesImportCountTopList.TryToInit(16)
+	d.stats.FilesImportCountTopList.Push(numImports, pkgFile)
+
+	// ...
+	d.stats.CodeLinesWithBlankLines += int32(linesWithBlanks)
+	numHundreds := linesWithBlanks / 100
+	incSliceStat(d.stats.FilesByCodeLinesWithBlankLines[:], numHundreds)
+	d.stats.FilesCodeLineTopList.TryToInit(20) // 2,000 lines
+	d.stats.FilesCodeLineTopList.Push(numHundreds, pkgFile)
+}
+
+func (d *CodeAnalyzer) stat_OnPackageCodeLineCount(linesWithBlanks int, pkg *Package) {
+	numThousands := linesWithBlanks / 1000
+	incSliceStat(d.stats.PackagesByCodeLinesWithBlankLines[:], numThousands)
+	d.stats.PackagesCodeLineTopList.TryToInit(20) // 20,000 lines
+	d.stats.PackagesCodeLineTopList.Push(numThousands, pkg)
 }
 
 func (d *CodeAnalyzer) stat_OnNewExportedNonInterfaceTypeNames(numAllMethods, numExportedMethods int, tn interface{}) {

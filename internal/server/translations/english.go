@@ -161,17 +161,19 @@ func (*English) Text_StatisticsWithMoreLink(detailedStatsLink string) string {
 }
 
 func (*English) Text_SimpleStats(stats *code.Stats) string {
-	return fmt.Sprintf(`Total %d packages analyzed and %d Go files parsed.
-On average,
-* each Go source file imports %.2f packages,
+	return fmt.Sprintf(`Total %d packages analyzed and %d Go files
+(%d lines of code) parsed. On average,
+* each Go source file imports %.2f packages
+  and contains %.0f lines of code.
 * each package depends on %.2f other packages,
   contains %.2f source code files, and exports
   - %.2f type names,
   - %.2f variables,
   - %.2f constants,
   - %.2f functions.`,
-		stats.Packages, stats.AstFiles,
+		stats.Packages, stats.AstFiles, stats.CodeLinesWithBlankLines,
 		float64(stats.Imports)/float64(stats.AstFiles),
+		float64(stats.CodeLinesWithBlankLines)/float64(stats.AstFiles),
 		float64(stats.AllPackageDeps)/float64(stats.Packages),
 		float64(stats.FilesWithoutGenerateds)/float64(stats.Packages),
 		float64(stats.ExportedTypeNames)/float64(stats.Packages),
@@ -560,10 +562,10 @@ func (*English) Text_PackageStatistics(values map[string]interface{}) []string {
 		fmt.Sprintf(`
 	Total <a href="%s">%d packages</a>, %d of them are standard packages.
 	Total %d source files, %d of them are Go source files.
+	Total %d lines of Go code.
 	Averagely,
-	- each package contains %.2f source files,
-	- each Go source file imports %.2f packages,
-	- each package depends %.2f other packages.
+	- each Go source file imports %.2f packages and contains %.0f lines of code.
+	- each package depends %.2f other packages and contains %.2f source files.
 
 `,
 
@@ -575,9 +577,11 @@ func (*English) Text_PackageStatistics(values map[string]interface{}) []string {
 			values["standardPackageCount"],
 			values["sourceFileCount"],
 			values["goSourceFileCount"],
-			values["averageSourceFileCountPerPackage"],
+			values["goSourceLineCount"],
 			values["averageImportCountPerFile"],
+			values["averageCodeLineCountPerFile"],
 			values["averageDependencyCountPerPackage"],
+			values["averageSourceFileCountPerPackage"],
 
 			//values["gosourcefilesByImportsChartURL"],
 			//values["packagesByDependenciesChartURL"],
