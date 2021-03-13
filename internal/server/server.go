@@ -125,11 +125,6 @@ NextTry:
 		log.Fatal(err)
 	}
 
-	args, err = ds.validateArguments(args)
-	if err != nil {
-		log.Fatal(err)
-	}
-
 	go func() {
 		ds.analyze(args, printUsage)
 		ds.analyzingLogger.SetPrefix("")
@@ -292,6 +287,15 @@ func (ds *docServer) validateArguments(args []string) ([]string, error) {
 }
 
 func (ds *docServer) analyze(args []string, printUsage func(io.Writer)) {
+	args, err := ds.validateArguments(args)
+	if err != nil {
+		log.Println(err)
+		//if printUsage != nil {
+		printUsage(os.Stdout)
+		//}
+		os.Exit(1)
+	}
+
 	ds.workingDirectory, _ = os.Getwd()
 
 	var stopWatch = util.NewStopWatch()
