@@ -105,7 +105,7 @@ func Run() {
 	// Use user GOROOT instead binary releaser GOROOT.
 	output, err := util.RunShellCommand(time.Second*5, "", nil, "go", "env", "GOROOT")
 	if err != nil {
-		log.Printf("Run: go env GOROOT error: %s", os.Args[0], err)
+		log.Printf("Run: go env GOROOT error: %s", err)
 		return
 	}
 	if gr := string(bytes.TrimSpace(output)); gr != "" {

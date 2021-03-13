@@ -500,6 +500,7 @@ func (*Chinese) Text_PackageStatistics(values map[string]interface{}) []string {
 		fmt.Sprintf(`
 	共<a href="%s">%d个库包</a>，其中%d个是标准库包。
 	共%d个源文件，其中%d个为Go源文件。
+	共%d行源代码。
 	平均说来：
 	- 每个Go源文件引入了%.2f个库包，包含%.0f行代码（含空行）；
 	- 每个库包依赖于%.2f个其它库包，含有%.2f个源文件。
