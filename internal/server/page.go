@@ -260,24 +260,6 @@ func (page *htmlPage) Done(w io.Writer) []byte {
 	return data
 }
 
-func (page *htmlPage) writePageLink(writeHref func(), linkText string, fragments ...string) {
-	if linkText != "" {
-		page.WriteString(`<a href="`)
-	}
-	writeHref()
-	if len(fragments) > 0 {
-		page.WriteByte('#')
-		for _, fm := range fragments {
-			page.WriteString(fm)
-		}
-	}
-	if linkText != "" {
-		page.WriteString(`">`)
-		page.WriteString(linkText)
-		page.WriteString(`</a>`)
-	}
-}
-
 func (page *htmlPage) Write(data []byte) (int, error) {
 	dataLen := len(data)
 	if dataLen != 0 {
@@ -349,6 +331,76 @@ func (page *htmlPage) WriteByte(c byte) error {
 	bs[n] = c
 	page.content[len(page.content)-1] = bs
 	return nil
+}
+
+//func (page *htmlPage) writePageLink(writeHref func(), linkText string, fragments ...string) {
+//	if linkText != "" {
+//		page.WriteString(`<a href="`)
+//	}
+//	writeHref()
+//	if len(fragments) > 0 {
+//		page.WriteByte('#')
+//		for _, fm := range fragments {
+//			page.WriteString(fm)
+//		}
+//	}
+//	if linkText != "" {
+//		page.WriteString(`">`)
+//		page.WriteString(linkText)
+//		page.WriteString(`</a>`)
+//	}
+//}
+
+type writer interface {
+	WriteString(string) (int, error)
+	WriteByte(byte) error
+}
+
+func _() {
+	var _ writer = &htmlPage{}
+	var _ writer = &lengthCounter{}
+	var _ writer = &strings.Builder{}
+}
+
+type lengthCounter struct {
+	n int
+}
+
+func (c *lengthCounter) WriteString(s string) (int, error) {
+	c.n += len(s)
+	return len(s), nil
+}
+func (c *lengthCounter) WriteByte(byte) error {
+	c.n++
+	return nil
+}
+
+// writeHref should also write into w.
+func writePageLink(writeHref func(), w writer, linkText string, fragments ...string) {
+	if linkText != "" {
+		w.WriteString(`<a href="`)
+	}
+	writeHref()
+	if len(fragments) > 0 {
+		w.WriteByte('#')
+		for _, fm := range fragments {
+			w.WriteString(fm)
+		}
+	}
+	if linkText != "" {
+		w.WriteString(`">`)
+		w.WriteString(linkText)
+		w.WriteString(`</a>`)
+	}
+}
+
+func buildString(f func(w writer)) string {
+	var lc lengthCounter
+	f(&lc)
+	var b strings.Builder
+	b.Grow(lc.n)
+	f(&b)
+	return b.String()
 }
 
 //========================================

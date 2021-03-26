@@ -15,7 +15,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"go101.org/golds/code"
 )
@@ -183,13 +182,6 @@ func PreviousVersion(version string) string {
 }
 
 // ToDo:
-//buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, "builtin"}, nil, "")+"#name-"+obj.Name()
-//=>
-//buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, "builtin"}, nil, "#", name-"+obj.Name())
-//
-//buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, "builtin"}, nil, "?", "key=value", "#")
-
-// ToDo:
 // path prefixes should be removed from srouce file paths.
 // * project root path
 // * module cache root path
@@ -200,9 +192,7 @@ func PreviousVersion(version string) string {
 // src:handledPath will be hashed as the generated path, or not.
 
 // If page is not nil, write the href directly into page (write the full <a...</a> if linkText is not blank).
-// Otherwise, build the href as a string and return it (only the href part).
-// inRootPage is for generation mode only. inRootPage==false means in "pages/xxx" pages.
-// Note: fragments is only meaningful when page != nil.
+// The fragments arguments don't include "#".
 //
 // ToDo: improve the design.
 func buildPageHref(currentPageInfo, linkedPageInfo pagePathInfo, page *htmlPage, linkText string, fragments ...string) (r string) {
@@ -210,31 +200,77 @@ func buildPageHref(currentPageInfo, linkedPageInfo pagePathInfo, page *htmlPage,
 		goto Generate
 	}
 
-	if linkedPageInfo.resType == ResTypeNone {
-		if page != nil {
-			page.writePageLink(func() {
-				page.WriteByte('/')
-				page.WriteString(linkedPageInfo.resPath)
-			}, linkText, fragments...)
-		} else {
-			r = "/" + linkedPageInfo.resPath
+	//if linkedPageInfo.resType == ResTypeNone {
+	//	if page != nil {
+	//		//page.writePageLink(func() {
+	//		//	page.WriteByte('/')
+	//		//	page.WriteString(linkedPageInfo.resPath)
+	//		//}, linkText, fragments...)
+	//		writePageLink(func() {
+	//			page.WriteByte('/')
+	//			page.WriteString(linkedPageInfo.resPath)
+	//		}, page, linkText, fragments...)
+	//	} else {
+	//		r = "/" + linkedPageInfo.resPath
+	//	}
+	//} else {
+	//	if page != nil {
+	//		page.writePageLink(func() {
+	//			page.WriteByte('/')
+	//			page.WriteString(string(linkedPageInfo.resType))
+	//			page.WriteByte(':')
+	//			page.WriteString(linkedPageInfo.resPath)
+	//		}, linkText, fragments...)
+	//	} else {
+	//		r = "/" + string(linkedPageInfo.resType) + ":" + linkedPageInfo.resPath
+	//	}
+	//}
+
+	{
+		writeLink := func(w writer) {
+			if linkedPageInfo.resType == ResTypeNone {
+				writePageLink(func() {
+					w.WriteByte('/')
+					w.WriteString(linkedPageInfo.resPath)
+				}, w, linkText, fragments...)
+			} else {
+				writePageLink(func() {
+					w.WriteByte('/')
+					w.WriteString(string(linkedPageInfo.resType))
+					w.WriteByte(':')
+					w.WriteString(linkedPageInfo.resPath)
+				}, w, linkText, fragments...)
+			}
 		}
-	} else {
+
 		if page != nil {
-			page.writePageLink(func() {
-				page.WriteByte('/')
-				page.WriteString(string(linkedPageInfo.resType))
-				page.WriteByte(':')
-				page.WriteString(linkedPageInfo.resPath)
-			}, linkText, fragments...)
+			writeLink(page)
 		} else {
-			r = "/" + string(linkedPageInfo.resType) + ":" + linkedPageInfo.resPath
+			r = buildString(writeLink)
 		}
 	}
 
 	return
 
 Generate:
+
+	//if customSourceCodeLinks && linkedPageInfo.resType == ResTypeSource {
+	//	needRegisterHref = false
+	//	i := strings.LastIndexByte(linkedPageInfo.resPath, '/')
+	//	if i < 0 {
+	//		return
+	//	}
+	//
+	//	if page != nil {
+	//		page.writePageLink(func() {
+	//			page.WriteString(relativeHref)
+	//		}, linkText, fragments...)
+	//	} else {
+	//		r = relativeHref
+	//	}
+	//
+	//	return
+	//}
 
 	if !buildIdUsesPages && linkedPageInfo.resType == ResTypeReference {
 		panic("identifer-uses page (" + linkedPageInfo.resPath + ") should not be build")
@@ -264,12 +300,16 @@ Generate:
 	var generatedHref = makeHref(linkedPageInfo)
 	var relativeHref = RelativePath(currentHref, generatedHref)
 
+	writeLink := func(w writer) {
+		writePageLink(func() {
+			w.WriteString(relativeHref)
+		}, w, linkText, fragments...)
+	}
+
 	if page != nil {
-		page.writePageLink(func() {
-			page.WriteString(relativeHref)
-		}, linkText, fragments...)
+		writeLink(page)
 	} else {
-		r = relativeHref
+		r = buildString(writeLink)
 	}
 
 	if needRegisterHref {
@@ -334,7 +374,7 @@ func GenDocs(options PageOutputOptions, args []string, outputDir string, silentM
 		genOutputDir = ds.workingDirectory
 	}
 	defer os.Chdir(ds.workingDirectory)
-	genOutputDir = filepath.Join(genOutputDir, "generated-"+time.Now().Format("20060102150405"))
+	//genOutputDir = filepath.Join(genOutputDir, "generated-"+time.Now().Format("20060102150405"))
 
 	// ...
 	//defer func() { log.Println("============== contentPool.numByteSlices:", contentPool.numByteSlices) }() // 10 for std
@@ -443,7 +483,9 @@ func GenDocs(options PageOutputOptions, args []string, outputDir string, silentM
 		return
 	}
 
-	log.Printf("Done (%d pages are generated and %d bytes are written).", numPages, numBytes)
+	if !silent {
+		log.Printf("Done (%d pages are generated and %d bytes are written).", numPages, numBytes)
+	}
 	log.Printf("Docs are generated in %s.", outputDir) // genOutputDir)
 	log.Println("Run the following command to view the docs:")
 	log.Printf("\t%s", viewDocsCommand(outputDir)) // genOutputDir))

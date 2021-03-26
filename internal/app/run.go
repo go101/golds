@@ -67,11 +67,17 @@ func Run() {
 	// ...
 	log.SetFlags(log.Lshortfile)
 
-	var validateDir = func(dir string) string {
+	var validateDir = func(dir string, forGenerating bool) string {
 		if dir == "" {
-			dir = "."
+			if forGenerating {
+				dir = "generated-" + time.Now().Format("20060102150405")
+			} else {
+				dir = "."
+			}
 		} else if dir == "memory" {
-			dir = "" // not to save, for testing purpose.
+			if forGenerating {
+				dir = "" // not to save, for testing purpose.
+			}
 		} else {
 			dir = strings.TrimRight(dir, "\\/")
 			dir = strings.Replace(dir, "/", string(filepath.Separator), -1)
@@ -98,7 +104,7 @@ func Run() {
 			*portFlag = "9999" // to be consistent with the one used in the old golf program.
 		}
 
-		util.ServeFiles(validateDir(*dirFlag), *portFlag, silentMode, Version)
+		util.ServeFiles(validateDir(*dirFlag, false), *portFlag, silentMode, Version)
 		return
 	}
 
@@ -170,7 +176,7 @@ func Run() {
 
 	// static docs generating mode
 	if gen := *genFlag; gen {
-		outputDir := validateDir(*dirFlag)
+		outputDir := validateDir(*dirFlag, true)
 		switch intent := *genIntentFlag; intent {
 		default:
 			log.Println("Unknown gen intent:", intent)
@@ -222,14 +228,19 @@ var silentFlag = flag.Bool("silent", false, "not open a browser automatically")
 var moregcFlag = flag.Bool("moregc", false, "increase garbage collection frequency")
 var footerFlag = flag.String("footer", "verbose", "verbose | simple | none")
 var nouses = flag.Bool("nouses", false, "disable the identifier uses feature")
-var plainsrc = flag.Bool("plainsrc", false, "disable the source navigation feature")
 var nounexporteds = flag.Bool("only-list-exporteds", false, "don't collect unexported package-level resources")
 var compact = flag.Bool("compact", false, "sacrifice some disk-consuming features in generation")
+
+var plainsrc = flag.Bool("plainsrc", false, "disable the source navigation feature")
+var srcViewingMannerFlag = flag.String("source-code-viewing", "", "specify how to show source code")
+
+// plain | rich | github.com | gitlab.com | "{{.FileName}}#L{{.LineNumber}}"
+
+var footerShowingMannerFlag = flag.String("footer-showing", "", "specify how page footers should be shown")
 
 // depreciated by "-wdpkgs-listing=promoted" since v0.1.8
 var emphasizeWdPackagesFlag = flag.Bool("emphasize-wdpkgs", false, "promote working directory packages")
 var wdPkgsListingMannerFlag = flag.String("wdpkgs-listing", "", "specify how to list working directory packages")
-var footerShowingMannerFlag = flag.String("footer-showing", "", "specify how page footers should be shown")
 
 func printVersion(out io.Writer) {
 	fmt.Fprintf(out, "Golds %s\n", Version)

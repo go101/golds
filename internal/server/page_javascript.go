@@ -65,6 +65,7 @@ function initOverviewPage() {
 	var nodesPkg = pkgContainer.querySelectorAll(".pkg");
 	var pkgsByAlphabet = new Array(nodesPkg.length);
 	var pkgsByImportedby = new Array(nodesPkg.length);
+	var pkgsByCodeLines = new Array(nodesPkg.length);
 	var pkgsByDepDepth = new Array(nodesPkg.length);
 	//var pkgsByDepHeight = new Array(nodesPkg.length);
 	for (var i = 0; i < nodesPkg.length; i++) {
@@ -73,11 +74,13 @@ function initOverviewPage() {
 			node: n,
 			order: n.querySelector(".order"),
 			importedbys: parseInt(n.dataset.importedbys),
+			codelines: parseInt(n.dataset.loc),
 			depdepth: parseInt(n.dataset.depdepth),
 			depheight: parseInt(n.dataset.depheight),
 		};
 		pkgsByAlphabet[i] = t;
 		pkgsByImportedby[i] = t;
+		pkgsByCodeLines[i] = t;
 		pkgsByDepDepth[i] = t;
 	}
 	pkgsByImportedby.sort(function(a, b) {
@@ -88,6 +91,15 @@ function initOverviewPage() {
 			return 1;
 		}
 		return b.importedbys - a.importedbys;
+	});
+	pkgsByCodeLines.sort(function(a, b) {
+		if (a.codelines == b.codelines) {
+			if (a.node.id < b.node.id) {
+				return -1;
+			}
+			return 1;
+		}
+		return b.codelines - a.codelines;
 	});
 	pkgsByDepDepth.sort(function(a, b) {
 		if (a.depdepth == b.depdepth) {
@@ -103,10 +115,17 @@ function initOverviewPage() {
 	});
 
 	var showSortByImportBysButton = true;
+	var showSortByCodeLinesButton = true;
 	var showSortByDepDepthButton = true;
 	for (var i = 0; i < nodesPkg.length; i++) {
 		if (pkgsByAlphabet[i].node.id != pkgsByImportedby[i].node.id) {
 			showSortByImportBysButton = true;
+			break;
+		}
+	}
+	for (var i = 0; i < nodesPkg.length; i++) {
+		if (pkgsByAlphabet[i].node.id != pkgsByCodeLines[i].node.id) {
+			showSortByCodeLinesButton = true;
 			break;
 		}
 	}
@@ -116,7 +135,7 @@ function initOverviewPage() {
 			break;
 		}
 	}
-	if (!showSortByImportBysButton && !showSortByDepDepthButton) {
+	if (!showSortByImportBysButton && !showSortByCodeLinesButton && !showSortByDepDepthButton) {
 		return;
 	}
 
@@ -148,6 +167,7 @@ function initOverviewPage() {
 
 	var sortByAlphabet = content.querySelector("#btn-alphabet");
 	var sortByImportedbys = content.querySelector("#btn-importedbys");
+	var sortByCodeLines = content.querySelector("#btn-codelines");
 	var sortByDepdepth = content.querySelector("#btn-depdepth");
 
 	sortByAlphabet.classList.add("chosen");
@@ -191,6 +211,26 @@ function initOverviewPage() {
 
 		currentButton.classList.remove("chosen");
 		currentButton = sortByImportedbys;
+		currentButton.classList.add("chosen");
+	});
+	sortByCodeLines.addEventListener('click', function(event) {
+		if (currentSortBy == "codelines") {
+			return;
+		}
+
+		pkgContainer.innerHTML = "";
+		pkgsByCodeLines.forEach(function (x, i) {
+			pkgContainer.appendChild(x.node);
+			var o = (i+pkgStartOrderId).toString();
+			x.order.innerText = SPACES.substr(0, maxDigitCount-o.length) + o;
+		});
+
+		pkgContainer.classList.remove(currentSortBy);
+		currentSortBy = "codelines";
+		pkgContainer.classList.add(currentSortBy);
+
+		currentButton.classList.remove("chosen");
+		currentButton = sortByCodeLines;
 		currentButton.classList.add("chosen");
 	});
 	sortByDepdepth.addEventListener('click', function(event) {

@@ -225,6 +225,8 @@ func (*English) Text_SortByItem(by string) string {
 		return "imported-by count"
 	case "depdepth":
 		return "dependency distance"
+	case "codelines":
+		return "lines of code"
 	default:
 		panic("unknown sort-by: " + by)
 	}

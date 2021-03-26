@@ -85,6 +85,7 @@ all involved modules/packages are fetched to local machine and verify cgo tools 
 | standard packages v1.14 | 199 | 2.6s | 400M | |
 | [Pebble](https://github.com/cockroachdb/pebble) _rev:284ba06_ | 200 | 2.2s | 500M | |
 | [ebiten](https://github.com/hajimehoshi/ebiten) _v1.11.1_ | 214 | 2.1s | 472M | |
+| [dominikh/go-tools](https://github.com/dominikh/go-tools) _rev:919f4c9_ | 235 | 4.5s | 465M | |
 | [tailscale](https://github.com/tailscale/tailscale) _v0.98.0_ | 275 | 2.5s | 539M | |
 | [etcd](https://github.com/etcd-io/etcd) _v3.4.7_ | 391 | 3.5s | 700M | _(need run `go mod vendor` before running **Golds**)_ |
 | [go-ethereum](https://github.com/ethereum/go-ethereum) _v1.9.14_ | 459 | 5.5s | 1.3G | |

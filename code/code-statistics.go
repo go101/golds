@@ -15,9 +15,6 @@ type Stats struct {
 
 	FilesWithoutGenerateds int32 // without generated ones
 	FilesWithGenerateds    int32 // with generated ones
-	CodeLines              int32 // ToDo: stat code lines. Use the info in AstFile?
-	BlankCodeLines         int32
-	CommentCodeLines       int32
 
 	// To calculate imports per file.
 	// Deps per packages are available in other ways.
@@ -179,6 +176,7 @@ func (d *CodeAnalyzer) stat_OnNewAstFile(numImports, linesWithBlanks int, bareFi
 	d.stats.FilesImportCountTopList.Push(numImports, pkgFile)
 
 	// ...
+	pkg.CodeLinesWithBlankLines += int32(linesWithBlanks)
 	d.stats.CodeLinesWithBlankLines += int32(linesWithBlanks)
 	numHundreds := linesWithBlanks / 100
 	incSliceStat(d.stats.FilesByCodeLinesWithBlankLines[:], numHundreds)

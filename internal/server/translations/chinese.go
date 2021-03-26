@@ -206,6 +206,8 @@ func (*Chinese) Text_SortByItem(by string) string {
 		return "按被引入量排序"
 	case "depdepth":
 		return "按依赖距离排序"
+	case "codelines":
+		return "按代码行数排序"
 	default:
 		panic("unknown sort-by: " + by)
 	}

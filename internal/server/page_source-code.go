@@ -1412,15 +1412,12 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 						if !token.IsExported(funcName) {
 							anchorName = methodPkgPath + "." + anchorName
 						}
-						link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeImplementation, v.pkg.Path() + "." + v.topLevelFuncInfo.RecvTypeName}, nil, "") + "#name-" + anchorName
+						link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeImplementation, v.pkg.Path() + "." + v.topLevelFuncInfo.RecvTypeName}, nil, "", "name-", anchorName)
 					}
 				}
 			} else if collectUnexporteds || token.IsExported(funcName) {
-				link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, v.pkg.Path()}, nil, "") + "#name-" + funcName
+				link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, v.pkg.Path()}, nil, "", "name-", funcName)
 			} else {
-				//if !genDocsMode {
-				//	link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, v.pkg.Path()}, nil, "") + "?show=all#name-" + funcName
-				//}
 				goto GoOn // see below "case scp.Parent() == types.Universe:"
 			}
 		}
@@ -1583,9 +1580,6 @@ End:
 }
 
 func buildSrouceCodeLineLink(currentPathInfo pagePathInfo, analyzer *code.CodeAnalyzer, pkg *code.Package, p token.Position) string {
-	//return "/src:" + analyzer.OriginalGoSourceFile(p.Filename) + "#line-" + strconv.Itoa(p.Line)
-	//return buildPageHref(ResTypeSource, analyzer.OriginalGoSourceFile(p.Filename), false, "", nil) + "#line-" + strconv.Itoa(p.Line)
-
 	//if p.Filename == "" {
 	//	panic(fmt.Sprint(pkg.Path(), p))
 	//}
@@ -1602,18 +1596,13 @@ func buildSrouceCodeLineLink(currentPathInfo pagePathInfo, analyzer *code.CodeAn
 		sourceFilename = fileInfo.AstBareFileName()
 	}
 
-	return buildPageHref(currentPathInfo, pagePathInfo{ResTypeSource, pkg.Path() + "/" + sourceFilename}, nil, "") + "#line-" + strconv.Itoa(p.Line)
+	return buildPageHref(currentPathInfo, pagePathInfo{ResTypeSource, pkg.Path() + "/" + sourceFilename}, nil, "", "line-", strconv.Itoa(p.Line))
 }
 
 func writeSrouceCodeLineLink(page *htmlPage, pkg *code.Package, p token.Position, text, class string) {
 	if class != "" {
 		class = fmt.Sprintf(` class="%s"`, class)
 	}
-	//fmt.Fprintf(page, `<a href="/src:%s#line-%d"%s>%s</a>`, ds.analyzer.OriginalGoSourceFile(p.Filename), p.Line, class, text)
-
-	//fmt.Fprintf(page, `<a href="`)
-	//buildPageHref(ResTypeSource, ds.analyzer.OriginalGoSourceFile(p.Filename), inGenModeRootPages, "", page)
-	//fmt.Fprintf(page, `#line-%d"%s>%s</a>`, p.Line, class, text)
 
 	var sourceFilename string
 	fileInfo := pkg.SourceFileInfoByFilePath(p.Filename)
@@ -1634,16 +1623,11 @@ func writeSrouceCodeLineLink(page *htmlPage, pkg *code.Package, p token.Position
 
 func writeSrouceCodeFileLink(page *htmlPage, pkg *code.Package, sourceFilename string) {
 	//originalFile := ds.analyzer.OriginalGoSourceFile(sourceFilename)
-	////fmt.Fprintf(page, `<a href="/src:%[1]s">%[1]s</a>`, originalFile)
-	//buildPageHref(ResTypeSource, originalFile, false, originalFile, page)
 	buildPageHref(page.PathInfo, pagePathInfo{ResTypeSource, pkg.Path() + "/" + sourceFilename}, page, sourceFilename)
 }
 
 func writeSourceCodeDocLink(page *htmlPage, pkg *code.Package, sourceFilename string) {
 	//originalFile := ds.analyzer.OriginalGoSourceFile(sourceFilename)
-	////fmt.Fprintf(page, `<a href="/src:%s#doc">d-&gt;</a> `, originalFile)
-	//buildPageHref(ResTypeSource, originalFile, false, "d-&gt;", page, "doc")
-	//buildPageHref(page.PathInfo, pagePathInfo{ResTypeSource, pkg.Path() + "/" + sourceFilename}, page, "d-&gt;", "doc")
 	buildPageHref(page.PathInfo, pagePathInfo{ResTypeSource, pkg.Path() + "/" + sourceFilename}, page, "d➜", "doc")
 	page.WriteByte(' ')
 }

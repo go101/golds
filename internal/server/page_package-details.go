@@ -146,6 +146,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 					func() {
 						page.WriteString("\n")
 						writePageText(page, "\t\t", info.DocText, true)
+						page.WriteString("\n")
 					},
 					//func() {
 					//	if info.HasHiddenRes {

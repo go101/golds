@@ -44,6 +44,8 @@ type PackageAnalyzeResult struct {
 	AllImports   []*Import
 	SourceFiles  []SourceFileInfo
 	Directory    string
+
+	CodeLinesWithBlankLines int32
 }
 
 func NewPackageAnalyzeResult() *PackageAnalyzeResult {

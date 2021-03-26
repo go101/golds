@@ -2,7 +2,17 @@
 
 ### Soon to do
 
-* stat: lines of code. ave. lines/file.
+
+* implicit
+  * switch expr := srcNode.(type) { // this expr might need to be enclosed in mutilple labels
+    case T1: _ = expr
+    case T2: _ = expr
+    }
+
+* type alias and same-underlyings list
+  * https://github.com/golang/go/issues/44905
+
+
 
 * also grey the same parts in asInputsOf/.... lists
 
@@ -17,6 +27,8 @@
   * no need to <code></code> in each code line.
   * no need <span class="codeline", use pre > code > span in css instead.
   * replace \t\t\t with margin-left
+
+* use css chart instead of svg? https://chartscss.org/
 
 * css style
   * https://github.com/go101/golds/issues/13
@@ -40,16 +52,11 @@
 
 * now, there is not a way to view the uses of embedded fields (control+click?)
 
-* implicit
-  * switch expr := srcNode.(type) { // this expr might need to be enclosed in mutilple labels
-    case T1: _ = expr
-    case T2: _ = expr
-    }
+
 
 * -format=[html|json|txt|md]
 
-* type alias and same-underlyings list
-  * https://github.com/golang/go/issues/44905
+
 
 * hotkey
   * t/f/v/c to expend/collapse resources
@@ -268,6 +275,8 @@
 
 ### Done
 
+* (done) Sort pkgs by LOC
+* (done) stat: lines of code. ave. lines/file.
 * (done) code: click an import path to highlight all its uses in the current file
 * (done) top list: most parameters, most results
 * (done) list contained resources under each source file (folding initally)

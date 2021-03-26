@@ -86,6 +86,10 @@ func (ds *docServer) buildOverviewPage(w http.ResponseWriter, overview *Overview
 	page.WriteString(`<label id="btn-importedbys" class="button">`)
 	page.WriteString(page.Translation().Text_SortByItem("importedbys"))
 	page.WriteString(`</label></span>`)
+	page.WriteString(`<span id="codelines"> | `)
+	page.WriteString(`<label id="btn-codelines" class="button">`)
+	page.WriteString(page.Translation().Text_SortByItem("codelines"))
+	page.WriteString(`</label></span>`)
 	page.WriteString(`<span id="depdepth"> | `)
 	page.WriteString(`<label id="btn-depdepth" class="button">`)
 	page.WriteString(page.Translation().Text_SortByItem("depdepth"))
@@ -139,7 +143,7 @@ func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*Package
 			}
 			fmt.Fprintf(page, `<div class="anchor pkg alphabet%s" id="pkg-%s"`, extraClass, pkg.Path)
 			if writeDataAttrs {
-				fmt.Fprintf(page, ` data-importedbys="%d" data-depheight="%d" data-depdepth="%d"%s`, pkg.NumImportedBys, pkg.DepHeight, pkg.DepDepth, main)
+				fmt.Fprintf(page, ` data-loc="%d" data-importedbys="%d" data-depheight="%d" data-depdepth="%d"%s`, pkg.LOC, pkg.NumImportedBys, pkg.DepHeight, pkg.DepDepth, main)
 			}
 			page.WriteString(`>`)
 			defer page.WriteString(`</div>`)
@@ -184,6 +188,7 @@ func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*Package
 
 		if writeDataAttrs {
 			fmt.Fprintf(page, `<i class="importedbys"> (%d)</i>`, pkg.NumImportedBys)
+			fmt.Fprintf(page, `<i class="codelines"> (%d)</i>`, pkg.LOC)
 			fmt.Fprintf(page, `<i class="depheight"> (%d)</i>`, pkg.DepHeight)
 			fmt.Fprintf(page, `<i class="depdepth"> (%d)</i>`, pkg.DepDepth)
 		}
@@ -286,6 +291,7 @@ type PackageForListing struct {
 	NumImportedBys int32
 	DepHeight      int32
 	DepDepth       int32 // The value mains how close to main pacakges.
+	LOC            int32
 
 	//IsStandard         bool
 	InWorkingDirectory bool
@@ -309,6 +315,7 @@ func (ds *docServer) buildOverviewData() *Overview {
 		pkg.Name = p.PPkg.Name
 		pkg.Index = p.Index
 
+		pkg.LOC = p.CodeLinesWithBlankLines
 		pkg.DepHeight = p.DepHeight
 		pkg.DepDepth = p.DepDepth
 		pkg.NumImportedBys = int32(len(p.DepedBys))

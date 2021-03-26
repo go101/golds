@@ -43,21 +43,32 @@ a.path-duplicate {color: #9cd;}
 .golds-update {text-align: center; font-size: smaller; background: #eee; padding: 3px;}
 
 div.alphabet .importedbys {display: none;}
+div.alphabet .codelines {display: none;}
 div.alphabet .depdepth {display: none;}
 div.alphabet .depheight {display: none;}
 div.importedbys .importedbys {display: inline;}
+div.importedbys .codelines {display: none;}
 div.importedbys .depdepth {display: none;}
 div.importedbys .depheight {display: none;}
 div.depdepth .depdepth {display: inline;}
+div.depdepth .codelines {display: none;}
 div.depdepth .importedbys {display: none;}
 div.depdepth .depheight {display: none;}
 div.depheight .depheight {display: inline;}
+div.depheight .codelines {display: none;}
 div.depheight .importedbys {display: none;}
 div.depheight .depdepth {display: none;}
+div.codelines .codelines {display: inline;}
+div.codelines .depheight {display: none;}
+div.codelines .importedbys {display: none;}
+div.codelines .depdepth {display: none;}
 
+div.codelines a.path-duplicate {color: #079;}
 div.importedbys a.path-duplicate {color: #079;}
 div.depdepth a.path-duplicate {color: #079;}
 div.depheight a.path-duplicate {color: #079;}
+
+i.codelines, i.importedbys, i.depdepth, i.depheight {font-size: smaller;}
 
 /* package details page */
 
