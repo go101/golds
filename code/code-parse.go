@@ -176,9 +176,10 @@ func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...i
 			packages.NeedTypes | packages.NeedExportsFile | packages.NeedFiles |
 			packages.NeedCompiledGoFiles | packages.NeedTypesSizes |
 			packages.NeedSyntax | packages.NeedTypesInfo,
-		Tests: true, // ToDo: parse tests
-		// It looks, if Tests is set to true, then run "GOOS=windows golds std" will fail with
-		//		panic: TypeName for runtime.LFNode not found
+		Tests: false, // ToDo: parse tests
+		// It looks, if Tests is set to true, "golds std" panics with error:
+		// * panic: TypeName for reflect.EmbedWithUnexpMeth not found
+		// * or panic: TypeName for runtime.LFNode not found
 
 		//Logf: func(format string, args ...interface{}) {
 		//	log.Println("================================================\n", args)

@@ -194,7 +194,6 @@ func PreviousVersion(version string) string {
 //
 // ToDo: improve the design.
 func buildPageHref(currentPageInfo, linkedPageInfo pagePathInfo, page *htmlPage, linkText string, fragments ...string) (r string) {
-
 	if linkedPageInfo.resType == ResTypeSource && sourceReadingStyle == SourceReadingStyle_external {
 		if writeExternalSourceCodeLink == nil {
 			panic("writeExternalSourceCodeLink == nil")
@@ -378,7 +377,7 @@ func GenDocs(options PageOutputOptions, args []string, outputDir string, silentM
 	}
 	// ...
 	ds := &docServer{}
-	ds.analyze(args, options, true, printUsage)
+	ds.analyze(args, options, forTesting, printUsage)
 
 	// ...
 	genOutputDir := outputDir
