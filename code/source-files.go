@@ -13,12 +13,12 @@ import (
 	"sync"
 )
 
-func (d *CodeAnalyzer) CollectSourceFiles() {
-	//log.Println("=================== CollectSourceFiles")
+func (d *CodeAnalyzer) collectSourceFiles() {
+	//log.Println("=================== collectSourceFiles")
 
 	//d.sourceFile2PackageTable = make(map[string]SourceFile, len(d.packageList)*5)
-	d.sourceFile2PackageTable = make(map[string]*Package, len(d.packageList)*5)
-	d.generatedFile2OriginalFileTable = make(map[string]string, 128)
+	//d.sourceFile2PackageTable = make(map[string]*Package, len(d.packageList)*5)
+	//d.generatedFile2OriginalFileTable = make(map[string]string, 128)
 	//d.sourceFileLineOffsetTable = make(map[string]int32, 256)
 	for _, pkg := range d.packageList {
 		//log.Println("====== ", pkg.Path())
@@ -44,20 +44,20 @@ func (d *CodeAnalyzer) CollectSourceFiles() {
 			panic(fmt.Sprintf("!!! len(pkg.PPkg.CompiledGoFiles) != len(pkg.PPkg.Syntax), %d:%d, %s", len(pkg.PPkg.CompiledGoFiles), len(pkg.PPkg.Syntax), pkg.Path()))
 		}
 
-		for _, path := range pkg.PPkg.OtherFiles {
-			d.sourceFile2PackageTable[path] = pkg
+		for _, _ = range pkg.PPkg.OtherFiles {
+			//d.sourceFile2PackageTable[path] = pkg
 			d.stats.FilesWithoutGenerateds++
 		}
 
-		for _, path := range pkg.PPkg.CompiledGoFiles {
-			d.sourceFile2PackageTable[path] = pkg
+		for _, _ = range pkg.PPkg.CompiledGoFiles {
+			//d.sourceFile2PackageTable[path] = pkg
 		}
 
-		for _, path := range pkg.PPkg.GoFiles {
-			if _, ok := d.sourceFile2PackageTable[path]; !ok {
-				//log.Println("! in GoFiles but not CompiledGoFiles:", path)
-				d.sourceFile2PackageTable[path] = pkg
-			}
+		for _, _ = range pkg.PPkg.GoFiles {
+			//if _, ok := d.sourceFile2PackageTable[path]; !ok {
+			//	//log.Println("! in GoFiles but not CompiledGoFiles:", path)
+			//	d.sourceFile2PackageTable[path] = pkg
+			//}
 			d.stats.FilesWithoutGenerateds++
 		}
 
@@ -70,7 +70,7 @@ func (d *CodeAnalyzer) CollectSourceFiles() {
 //==================================
 
 type SourceFileInfo struct {
-	Pkg *Package // to remove one field in Identifier.
+	Pkg *Package // to remove one field in Identifier. Also good to external source line generation.
 
 	// Filename only.
 	BareFilename          string
@@ -196,7 +196,7 @@ func (d *CodeAnalyzer) BuildCgoFileMappings(pkg *Package) {
 					Pkg:           pkg,
 					BareFilename:  filepath.Base(compiledFile),
 					OriginalFile:  compiledFile,
-					GeneratedFile: compiledFile,
+					GeneratedFile: "", //compiledFile,
 					AstFile:       pkg.PPkg.Syntax[i],
 				},
 			)
@@ -208,9 +208,9 @@ func (d *CodeAnalyzer) BuildCgoFileMappings(pkg *Package) {
 			continue
 		}
 
-		if info.OriginalFile != "" && info.GeneratedFile != info.OriginalFile {
-			d.generatedFile2OriginalFileTable[info.GeneratedFile] = info.OriginalFile
-		}
+		//if info.OriginalFile != "" && info.GeneratedFile != info.OriginalFile {
+		//	d.generatedFile2OriginalFileTable[info.GeneratedFile] = info.OriginalFile
+		//}
 
 		//info.AstFile = pkg.PPkg.Syntax[i]
 		pkg.SourceFiles = append(pkg.SourceFiles, *info)
@@ -231,10 +231,12 @@ func (d *CodeAnalyzer) BuildCgoFileMappings(pkg *Package) {
 	}
 }
 
-func (d *CodeAnalyzer) CollectObjectReferences() {
+func (d *CodeAnalyzer) collectObjectReferences() {
 	for _, pkg := range d.packageList {
 		for i := range pkg.SourceFiles {
 			info := &pkg.SourceFiles[i]
+			// This if-block is still needed for std packages.
+			// For other packages, this field has been set in confirmPackageModules.
 			if pkg.Directory == "" && info.OriginalFile != "" {
 				pkg.Directory = filepath.Dir(info.OriginalFile)
 			}
@@ -243,12 +245,12 @@ func (d *CodeAnalyzer) CollectObjectReferences() {
 			if info.AstFile == nil {
 				continue
 			}
-			d.CollectIdentiferFromFile(pkg, info)
+			d.collectIdentiferFromFile(pkg, info)
 		}
 	}
 }
 
-func (d *CodeAnalyzer) CollectIdentiferFromFile(pkg *Package, fileInfo *SourceFileInfo) {
+func (d *CodeAnalyzer) collectIdentiferFromFile(pkg *Package, fileInfo *SourceFileInfo) {
 	ast.Inspect(fileInfo.AstFile, func(n ast.Node) bool {
 		switch n := n.(type) {
 		case *ast.Ident:
@@ -270,7 +272,7 @@ func (d *CodeAnalyzer) CollectIdentiferFromFile(pkg *Package, fileInfo *SourceFi
 
 // ToDo: can we get the content from the collected AST files?
 //       Need to hack the std packages?
-func (d *CodeAnalyzer) CacheSourceFiles() {
+func (d *CodeAnalyzer) cacheSourceFiles() {
 	n := runtime.GOMAXPROCS(-1)
 	sem := make(chan struct{}, n)
 	var wg sync.WaitGroup

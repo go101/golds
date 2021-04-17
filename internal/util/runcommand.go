@@ -24,3 +24,11 @@ func RunShellCommand(timeout time.Duration, wd string, envs []string, cmd string
 	command.Env = append(os.Environ(), envs...)
 	return command.CombinedOutput()
 }
+
+func RunShell(timeout time.Duration, wd string, envs []string, cmdAndArgs ...string) ([]byte, error) {
+	if len(cmdAndArgs) == 0 {
+		panic("command is not specified")
+	}
+
+	return RunShellCommand(timeout, wd, envs, cmdAndArgs[0], cmdAndArgs[1:]...)
+}

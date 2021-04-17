@@ -2,6 +2,16 @@
 
 ### Soon to do
 
+* show/run examples/tests/banchmarks 
+  (Tests==true, cause reflect.EmbedWithUnexpMeth not found in analyzePackage_ConfirmTypeSources/registerDirectFields now)
+  * run source code, run main package
+  * Open a new page to avoid using JavaScript?
+  * "go/doc": doc.Examples(...)importance
+  * websocket: monitor page leave and shutdown unfinished Go processes.
+
+* wdpkgs-listing=solo: from a dep pkg details page to overview, auto show the hidden one ...
+
+* support gopath psudo module name? https://groups.google.com/g/golang-nuts/c/-pmx4eksLpA
 
 * implicit
   * switch expr := srcNode.(type) { // this expr might need to be enclosed in mutilple labels
@@ -12,12 +22,19 @@
 * type alias and same-underlyings list
   * https://github.com/golang/go/issues/44905
 
-
+* stat: keyword use count: most implemented interface.
 
 * also grey the same parts in asInputsOf/.... lists
 
+* uses page filter: declartions | value:writes | value:reads | type:field
+  * writes includes (v=x, field:x, and Struct{x}, ...)
+  * as Type, as Field (for embedding field)
+
 * move most readme content to go101.org.
   * keep case table, simple install, simple feature overview, simple usage (golds std, golds ./...)
+
+* use "go.lds" config file for docs generation.
+  * -use-config=true and -config=go.lds for -gen defaultly 
 
 * code page: each funciton enclosed in a span so that local id hightlighting needs less time.
 * reduce code page size
@@ -38,12 +55,9 @@
 
 * show statistics floating on the right of the overview page.
 
-* show/run examples/tests/banchmarks 
-  (Tests==true, cause reflect.EmbedWithUnexpMeth not found in analyzePackage_ConfirmTypeSources/registerDirectFields now)
-  * run source code, run main package
-  * Open a new page to avoid using JavaScript?
-  * "go/doc": doc.Examples(...)importance
-  * websocket: monitor page leave and shutdown unfinished Go processes.
+* use tree view for overview page to show modules.
+
+
 
 
 * add "d➜" in overview page: hover on a package: show its brief intro.
@@ -52,11 +66,11 @@
 
 * now, there is not a way to view the uses of embedded fields (control+click?)
 
-
+* add a button on overview page to do static analysis
 
 * -format=[html|json|txt|md]
 
-
+* show which packages are CVS dirty in overview page.
 
 * hotkey
   * t/f/v/c to expend/collapse resources
@@ -78,7 +92,9 @@
   * methods of unnamed stricts (obtained by embedding, now uses are not collected for them)
   * filter: only show those in type specifications
 
-
+* some buildPageHref can make page != nil
+    and buildPageHref should be a method of DocServer
+    add a Pkg field for pagePathInfo to optimize?
   
 * use js to fold functions in code pages
   * use js to fold interface method implementations
@@ -275,6 +291,7 @@
 
 ### Done
 
+* (done) link code to external source hosting website:
 * (done) Sort pkgs by LOC
 * (done) stat: lines of code. ave. lines/file.
 * (done) code: click an import path to highlight all its uses in the current file

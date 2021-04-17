@@ -98,6 +98,13 @@ func (*English) Text_Analyzing_CollectPackages(numPkgs int, d time.Duration) str
 	return fmt.Sprintf("Collected %d packages: %s", numPkgs, d)
 }
 
+func (*English) Text_Analyzing_CollectModules(numMods int, d time.Duration) string {
+	if numMods == 1 {
+		return fmt.Sprintf("Collected one module: %s", d)
+	}
+	return fmt.Sprintf("Collected %d modules: %s", numMods, d)
+}
+
 func (*English) Text_Analyzing_SortPackagesByDependencies(d time.Duration) string {
 	return fmt.Sprintf("Sorted packages by dependency relations: %s", d)
 }

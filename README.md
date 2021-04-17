@@ -19,7 +19,7 @@ please visit [this page on Go101.org](https://go101.org/article/tool-golds.html)
 * Lists types not only by alphabet, but also by popularity (only avaliable when JavaScript is on),
   which is good to understanding some packages with many types declared.
 * Supports listing unexported types and values, which is helpful to understand some packages.
-* Treats `main` packages as the same as library packages.
+* Treats `main` packages as same as library packages.
 * Rich package-level type/value information collection:
   * Shows type implementation relations ([demo 1](https://docs.go101.org/std/pkg/go/ast.html#name-Node) and [demo 2](https://docs.go101.org/std/pkg/bytes.html#name-Buffer)).
   * Shows method implementation relations ([demo](https://docs.go101.org/std/imp/io.Reader.html#name-Read)).
@@ -39,7 +39,7 @@ please visit [this page on Go101.org](https://go101.org/article/tool-golds.html)
 * Supports generating static HTML docs pages, to avoid rebuilding the docs later.
   This is good for package developers to host docs of their own packages.
   (The docs of standard packages are generated within about 7 seconds, and the docs of the kubernetes project packages are generated within about one minute.)
-* All functionalities are implemented locally, no external websites are needed.
+* All functionalities are implemented locally, no external websites are needed (except explicitly required by you).
 * Just fell free to open any number of pages in new browser windows as needed.
 
 _(NOTE: This tool is still in its early experimental phase. More new features will be added from time to time in future versions.)_

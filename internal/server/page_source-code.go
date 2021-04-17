@@ -1281,6 +1281,10 @@ func (v *astVisitor) handleToken(pos token.Pos, token, class, link string) {
 }
 
 func (v *astVisitor) handleIdent(ident *ast.Ident) {
+	if sourceReadingStyle != SourceReadingStyle_rich {
+		return
+	}
+
 	start := v.fset.PositionFor(ident.Pos(), false)
 	end := v.fset.PositionFor(ident.End(), false)
 
@@ -1368,10 +1372,6 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 
 	objPos := objPkg.PPkg.Fset.PositionFor(obj.Pos(), false)
 
-	//objPos.Line += v.dataAnalyzer.SourceFileLineOffset(objPos.Filename)
-	//v.correctPosition(&objPos)
-	//objPos.Filename = v.dataAnalyzer.OriginalGoSourceFile(objPos.Filename)
-
 	var sameFileObjOrderId int32 = -1
 	if v.topLevelFuncInfo != nil &&
 		obj.Pos() > v.topLevelFuncInfo.Node.Pos() &&
@@ -1407,7 +1407,7 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 					if !token.IsExported(funcName) {
 						methodPkgPath = v.pkg.Path()
 					}
-					if enableSoruceNavigation && v.dataAnalyzer.CheckTypeMethodContributingToTypeImplementations(v.pkg.Path(), v.topLevelFuncInfo.RecvTypeName, methodPkgPath, funcName) {
+					if sourceReadingStyle == SourceReadingStyle_rich && v.dataAnalyzer.CheckTypeMethodContributingToTypeImplementations(v.pkg.Path(), v.topLevelFuncInfo.RecvTypeName, methodPkgPath, funcName) {
 						anchorName := funcName
 						if !token.IsExported(funcName) {
 							anchorName = methodPkgPath + "." + anchorName
@@ -1500,7 +1500,7 @@ GoOn:
 				//log.Printf("   reciver: %v\n", ot.Recv())
 
 				if v.topLevelInterfaceTypeInfo != nil && v.topLevelInterfaceTypeInfo.TypeName != "_" && len(v.topLevelInterfaceTypeInfo.Methods) > 0 {
-					if enableSoruceNavigation && ident.Pos() == v.topLevelInterfaceTypeInfo.Methods[0].Pos() {
+					if sourceReadingStyle == SourceReadingStyle_rich && ident.Pos() == v.topLevelInterfaceTypeInfo.Methods[0].Pos() {
 						anchorName := obj.Name()
 						if !token.IsExported(anchorName) {
 							anchorName = objPkgPath + "." + anchorName
@@ -1617,18 +1617,26 @@ func writeSrouceCodeLineLink(page *htmlPage, pkg *code.Package, p token.Position
 	}
 
 	fmt.Fprintf(page, `<a href="`)
-	buildPageHref(page.PathInfo, pagePathInfo{ResTypeSource, pkg.Path() + "/" + sourceFilename}, page, "")
-	fmt.Fprintf(page, `#line-%d"%s>%s</a>`, p.Line, class, text)
+	buildPageHref(page.PathInfo, pagePathInfo{ResTypeSource, pkg.Path() + "/" + sourceFilename}, page, "", "line-", strconv.Itoa(p.Line))
+	fmt.Fprintf(page, `"%s>%s</a>`, class, text)
 }
 
 func writeSrouceCodeFileLink(page *htmlPage, pkg *code.Package, sourceFilename string) {
-	//originalFile := ds.analyzer.OriginalGoSourceFile(sourceFilename)
 	buildPageHref(page.PathInfo, pagePathInfo{ResTypeSource, pkg.Path() + "/" + sourceFilename}, page, sourceFilename)
 }
 
-func writeSourceCodeDocLink(page *htmlPage, pkg *code.Package, sourceFilename string) {
-	//originalFile := ds.analyzer.OriginalGoSourceFile(sourceFilename)
-	buildPageHref(page.PathInfo, pagePathInfo{ResTypeSource, pkg.Path() + "/" + sourceFilename}, page, "d➜", "doc")
+func writeSourceCodeDocLink(page *htmlPage, pkg *code.Package, sourceFilename string, startLine, endLine int32) {
+	if sourceReadingStyle == SourceReadingStyle_external {
+		start, end := strconv.Itoa(int(startLine)), ""
+		if endLine == startLine {
+			buildPageHref(page.PathInfo, pagePathInfo{ResTypeSource, pkg.Path() + "/" + sourceFilename}, page, "d➜", "doc", "line-", start)
+		} else {
+			end = strconv.Itoa(int(endLine))
+			buildPageHref(page.PathInfo, pagePathInfo{ResTypeSource, pkg.Path() + "/" + sourceFilename}, page, "d➜", "doc", "line-", start, ":", end)
+		}
+	} else {
+		buildPageHref(page.PathInfo, pagePathInfo{ResTypeSource, pkg.Path() + "/" + sourceFilename}, page, "d➜", "doc")
+	}
 	page.WriteByte(' ')
 }
 
@@ -1683,9 +1691,6 @@ func (ds *docServer) analyzeSoureCode(pkgPath, bareFilename string) (*SourceFile
 		return nil, errors.New("package not found")
 	}
 
-	//log.Println("==================== ", srcPath)
-	//log.Println(ds.analyzer.OriginalGoSourceFile(srcPath))
-
 	//ds.analyzer.BuildCgoFileMappings(pkg)
 
 	var fileInfo = pkg.SourceFileInfoByBareFilename(bareFilename)
@@ -1695,16 +1700,22 @@ func (ds *docServer) analyzeSoureCode(pkgPath, bareFilename string) (*SourceFile
 
 	//log.Printf("%#v", fileInfo)
 
-	//generatedFilePath := srcPath
-	//filePath := srcPath
+	////generatedFilePath := srcPath
+	////filePath := srcPath
+	//generatedFilePath := fileInfo.GeneratedFile
+	//filePath := fileInfo.OriginalFile
+	//if generatedFilePath != "" {
+	//	filePath = generatedFilePath
+	//	if generatedFilePath == fileInfo.OriginalFile {
+	//		generatedFilePath = ""
+	//	}
+	//}
 	generatedFilePath := fileInfo.GeneratedFile
 	filePath := fileInfo.OriginalFile
-	if generatedFilePath != "" {
-		filePath = generatedFilePath
-		if generatedFilePath == fileInfo.OriginalFile {
-			generatedFilePath = ""
-		}
+	if filePath == generatedFilePath {
+		generatedFilePath = ""
 	}
+
 	//content, err := ioutil.ReadFile(filePath)
 	//if err != nil {
 	//	return nil, err
@@ -1726,7 +1737,9 @@ func (ds *docServer) analyzeSoureCode(pkgPath, bareFilename string) (*SourceFile
 	}
 
 	var result *SourceFileAnalyzeResult
-	if !enableSoruceNavigation || fileInfo.AstFile == nil {
+	//if !enableSoruceNavigation || fileInfo.AstFile == nil {
+	if sourceReadingStyle == SourceReadingStyle_plain || fileInfo.AstFile == nil {
+
 		//log.Println("fileInfo == nil")
 
 		lineCount, _ := BuildLineOffsets(content, true)

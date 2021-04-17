@@ -17,12 +17,12 @@ type PageOutputOptions struct {
 
 	PreferredLang string
 
-	NoIdentifierUsesPages bool
-	PlainSourceCodePages  bool
-	NotCollectUnexporteds bool
-	//EmphasizeWDPkgs       bool
-	WdPkgsListingManner string
-	FooterShowingManner string
+	NoIdentifierUsesPages  bool
+	NotCollectUnexporteds  bool
+	AllowNetworkConnection bool
+	SourceReadingStyle     string
+	WdPkgsListingManner    string
+	FooterShowingManner    string
 
 	// ToDo:
 	//ListUnexportedRes   bool
@@ -35,24 +35,28 @@ var (
 
 	goldsVersion string
 
-	buildIdUsesPages       = true // might be false in gen mode
-	enableSoruceNavigation = true // false to disable method implementation pages and some code reading features
-	collectUnexporteds     = true // false to not collect package-level resources
+	buildIdUsesPages = true // might be false in gen mode
+	//enableSoruceNavigation = true // false to disable method implementation pages and some code reading features
+	sourceReadingStyle = SourceReadingStyle_rich
+	collectUnexporteds = true // false to not collect package-level resources
 	//emphasizeWDPackages    = false // list packages in the current directory before other packages
-	wdPkgsListingManner = WdPkgsListingManner_general
-	footerShowingManner = FooterShowingManner_none
+	allowNetworkConnection = false
+	wdPkgsListingManner    = WdPkgsListingManner_general
+	footerShowingManner    = FooterShowingManner_none
 
-	// ToDo: use this one to replace the above ones.
+	// ToDo: use this one to replace the above ones, and put it in docServer (good or bad?).
 	pageOutputOptions PageOutputOptions
+
+	writeExternalSourceCodeLink func(w writer, pkgFile, line, endLine string) (handled bool, err error)
 )
 
 // This function should be called at prgram startup phase once.
 func setPageOutputOptions(options PageOutputOptions, forTesting bool) {
 	goldsVersion = options.GoldsVersion
 	buildIdUsesPages = !options.NoIdentifierUsesPages || forTesting
-	enableSoruceNavigation = !options.PlainSourceCodePages || forTesting
+	sourceReadingStyle = options.SourceReadingStyle
 	collectUnexporteds = !options.NotCollectUnexporteds || forTesting
-	//emphasizeWDPackages = options.EmphasizeWDPkgs || forTesting
+	allowNetworkConnection = options.AllowNetworkConnection && !forTesting
 	wdPkgsListingManner = options.WdPkgsListingManner
 	footerShowingManner = options.FooterShowingManner
 }
@@ -66,6 +70,11 @@ const (
 	FooterShowingManner_simple             = "simple"
 	FooterShowingManner_verbose            = "verbose"
 	FooterShowingManner_verbose_and_qrcode = "verbose+qrcode"
+
+	SourceReadingStyle_plain     = "plain"
+	SourceReadingStyle_highlight = "highlight"
+	SourceReadingStyle_rich      = "rich"
+	SourceReadingStyle_external  = "external" // auto detect project hosting URL
 )
 
 type pageResType string
@@ -352,6 +361,7 @@ func (page *htmlPage) WriteByte(c byte) error {
 //}
 
 type writer interface {
+	Write([]byte) (int, error)
 	WriteString(string) (int, error)
 	WriteByte(byte) error
 }
@@ -366,6 +376,10 @@ type lengthCounter struct {
 	n int
 }
 
+func (c *lengthCounter) Write(s []byte) (int, error) {
+	c.n += len(s)
+	return len(s), nil
+}
 func (c *lengthCounter) WriteString(s string) (int, error) {
 	c.n += len(s)
 	return len(s), nil

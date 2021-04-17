@@ -97,13 +97,13 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 		writeFileTitle := func(info FileInfo) {
 			if info.MainPosition != nil && info.DocText != "" {
 				writeMainFunctionArrow(page, pkg.Package, *info.MainPosition)
-				writeSourceCodeDocLink(page, pkg.Package, info.Filename)
+				writeSourceCodeDocLink(page, pkg.Package, info.Filename, info.DocStartLine, info.DocEndLine)
 			} else if info.MainPosition != nil {
 				writeMainFunctionArrow(page, pkg.Package, *info.MainPosition)
 				page.WriteString("   ")
 			} else if info.DocText != "" {
 				page.WriteString("   ")
-				writeSourceCodeDocLink(page, pkg.Package, info.Filename)
+				writeSourceCodeDocLink(page, pkg.Package, info.Filename, info.DocStartLine, info.DocEndLine)
 			} else {
 				page.WriteString("   ")
 				page.WriteString("   ")
@@ -146,7 +146,9 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 					func() {
 						page.WriteString("\n")
 						writePageText(page, "\t\t", info.DocText, true)
-						page.WriteString("\n")
+						if i < len(pkg.Files)-1 {
+							page.WriteString("\n")
+						}
 					},
 					//func() {
 					//	if info.HasHiddenRes {
@@ -735,8 +737,9 @@ type FileInfo struct {
 	Filename     string
 	MainPosition *token.Position // for main packages only
 	Resources    []ResourceWithPosition
-	DocText      string
 	//HasDocs      bool
+	DocText                  string
+	DocStartLine, DocEndLine int32
 	//HasHiddenRes bool
 }
 
@@ -873,20 +876,26 @@ func buildPackageDetailsData(analyzer *code.CodeAnalyzer, pkgPath string, alsoCo
 	isBuiltin := pkgPath == "builtin"
 
 	// ...
-	files := make([]FileInfo, 0, len(pkg.PPkg.GoFiles)+len(pkg.PPkg.OtherFiles))
+	//files := make([]FileInfo, 0, len(pkg.PPkg.GoFiles)+len(pkg.PPkg.OtherFiles))
+	files := make([]FileInfo, 0, len(pkg.SourceFiles))
 	//lineStartOffsets := make(map[string][]int, len(pkg.PPkg.GoFiles))
-
 	for i := range pkg.SourceFiles {
 		f := &pkg.SourceFiles[i]
 		if f.OriginalFile != "" {
+			var start, end token.Position
 			docText := ""
 			if f.AstFile != nil && f.AstFile.Doc != nil {
 				docText = f.AstFile.Doc.Text()
+				start = pkg.PPkg.Fset.PositionFor(f.AstFile.Doc.Pos(), false)
+				end = pkg.PPkg.Fset.PositionFor(f.AstFile.Doc.End(), false)
 			}
+
 			files = append(files, FileInfo{
 				Filename: f.BareFilename,
-				DocText:  docText,
 				//HasDocs:  f.AstFile != nil && f.AstFile.Doc != nil,
+				DocText:      docText,
+				DocStartLine: int32(start.Line),
+				DocEndLine:   int32(end.Line),
 			})
 		}
 	}
@@ -1056,7 +1065,8 @@ func buildPackageDetailsData(analyzer *code.CodeAnalyzer, pkgPath string, alsoCo
 		var values []code.ValueResource
 		values = append(values, denoting.AsTypesOf...)
 		// ToDo: also combine values of []T, chan T, ...
-		if t := analyzer.TryRegisteringType(types.NewPointer(denoting.TT)); t != nil {
+		//if t := analyzer.TryRegisteringType(types.NewPointer(denoting.TT)); t != nil {
+		if t := analyzer.LookForType(types.NewPointer(denoting.TT)); t != nil {
 			values = append(values, t.AsTypesOf...)
 		}
 		td.Values, td.NumExportedValues = buildValueList(values, pkg, alsoCollectNonExporteds)

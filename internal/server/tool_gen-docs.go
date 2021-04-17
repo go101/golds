@@ -15,8 +15,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-
-	"go101.org/golds/code"
 )
 
 var _ = runtime.GC
@@ -196,35 +194,72 @@ func PreviousVersion(version string) string {
 //
 // ToDo: improve the design.
 func buildPageHref(currentPageInfo, linkedPageInfo pagePathInfo, page *htmlPage, linkText string, fragments ...string) (r string) {
+
+	if linkedPageInfo.resType == ResTypeSource && sourceReadingStyle == SourceReadingStyle_external {
+		if writeExternalSourceCodeLink == nil {
+			panic("writeExternalSourceCodeLink == nil")
+		}
+
+		var docFragment []string
+		if len(fragments) > 1 && fragments[0] == "doc" {
+			docFragment = fragments[:1]
+			fragments = fragments[1:]
+		}
+
+		var line, endLine string
+		if n := len(fragments); n > 0 {
+			if fragments[0] != "line-" {
+				panic("unexpected fragments[0]: " + fragments[0])
+			}
+			switch {
+			case n > 4:
+				log.Println("warning: fragments[4:] are ignored: " + strings.Join(fragments[4:], ", "))
+				fallthrough
+			case n == 4:
+				if fragments[2] != ":" {
+					panic("unexpected fragments[2]: " + fragments[2])
+				}
+				line = fragments[1]
+				endLine = fragments[3]
+			case n == 3:
+				log.Println("warning: fragments[2] is ignored: " + fragments[2])
+				fallthrough
+			case n == 2:
+				line = fragments[1]
+			case n == 1:
+				panic("too few fragments: " + strconv.Itoa(n))
+			}
+		}
+
+		var err error
+		var handled bool
+		writeHref := func(w writer) {
+			handled, err = writeExternalSourceCodeLink(w, linkedPageInfo.resPath, line, endLine)
+		}
+		link := buildString(writeHref)
+		if err != nil {
+			panic("writeExternalSourceCodeLink error: " + err.Error())
+		}
+		if handled {
+			if page != nil {
+				writePageLink(func() {
+					page.WriteString(link)
+				}, page, linkText)
+			} else {
+				r = link
+			}
+			return
+		}
+
+		// Use default way.
+		if docFragment != nil {
+			fragments = docFragment
+		}
+	}
+
 	if genDocsMode {
 		goto Generate
 	}
-
-	//if linkedPageInfo.resType == ResTypeNone {
-	//	if page != nil {
-	//		//page.writePageLink(func() {
-	//		//	page.WriteByte('/')
-	//		//	page.WriteString(linkedPageInfo.resPath)
-	//		//}, linkText, fragments...)
-	//		writePageLink(func() {
-	//			page.WriteByte('/')
-	//			page.WriteString(linkedPageInfo.resPath)
-	//		}, page, linkText, fragments...)
-	//	} else {
-	//		r = "/" + linkedPageInfo.resPath
-	//	}
-	//} else {
-	//	if page != nil {
-	//		page.writePageLink(func() {
-	//			page.WriteByte('/')
-	//			page.WriteString(string(linkedPageInfo.resType))
-	//			page.WriteByte(':')
-	//			page.WriteString(linkedPageInfo.resPath)
-	//		}, linkText, fragments...)
-	//	} else {
-	//		r = "/" + string(linkedPageInfo.resType) + ":" + linkedPageInfo.resPath
-	//	}
-	//}
 
 	{
 		writeLink := func(w writer) {
@@ -254,28 +289,13 @@ func buildPageHref(currentPageInfo, linkedPageInfo pagePathInfo, page *htmlPage,
 
 Generate:
 
-	//if customSourceCodeLinks && linkedPageInfo.resType == ResTypeSource {
-	//	needRegisterHref = false
-	//	i := strings.LastIndexByte(linkedPageInfo.resPath, '/')
-	//	if i < 0 {
-	//		return
-	//	}
-	//
-	//	if page != nil {
-	//		page.writePageLink(func() {
-	//			page.WriteString(relativeHref)
-	//		}, linkText, fragments...)
-	//	} else {
-	//		r = relativeHref
-	//	}
-	//
-	//	return
-	//}
-
 	if !buildIdUsesPages && linkedPageInfo.resType == ResTypeReference {
 		panic("identifer-uses page (" + linkedPageInfo.resPath + ") should not be build")
 	}
-	if !enableSoruceNavigation && linkedPageInfo.resType == ResTypeImplementation {
+	//if !enableSoruceNavigation && linkedPageInfo.resType == ResTypeImplementation {
+	//	panic("method-implementation page (" + linkedPageInfo.resPath + ") should not be build")
+	//}
+	if sourceReadingStyle != SourceReadingStyle_rich && linkedPageInfo.resType == ResTypeImplementation {
 		panic("method-implementation page (" + linkedPageInfo.resPath + ") should not be build")
 	}
 
@@ -356,24 +376,16 @@ func GenDocs(options PageOutputOptions, args []string, outputDir string, silentM
 	if increaseGCFrequency {
 		debug.SetGCPercent(75)
 	}
-
-	setPageOutputOptions(options, forTesting)
-
 	// ...
-	ds := &docServer{
-		//goldsVersion: options.GoldsVersion,
-		phase:    Phase_Unprepared,
-		analyzer: &code.CodeAnalyzer{},
-	}
-	ds.initSettings(options.PreferredLang)
-	ds.analyze(args, printUsage)
+	ds := &docServer{}
+	ds.analyze(args, options, true, printUsage)
 
 	// ...
 	genOutputDir := outputDir
 	if genOutputDir == "." {
-		genOutputDir = ds.workingDirectory
+		genOutputDir = ds.initialWorkingDirectory
 	}
-	defer os.Chdir(ds.workingDirectory)
+	defer os.Chdir(ds.initialWorkingDirectory)
 	//genOutputDir = filepath.Join(genOutputDir, "generated-"+time.Now().Format("20060102150405"))
 
 	// ...
@@ -486,7 +498,21 @@ func GenDocs(options PageOutputOptions, args []string, outputDir string, silentM
 	if !silent {
 		log.Printf("Done (%d pages are generated and %d bytes are written).", numPages, numBytes)
 	}
+
+	log.Printf(`"Docs are generated in %s.
+`,
+		outputDir,
+	)
+
 	log.Printf("Docs are generated in %s.", outputDir) // genOutputDir)
+	if sourceReadingStyle == SourceReadingStyle_external {
+		for _, w := range ds.wdRepositoryWarnings {
+			log.Println("!!! Warning:", w)
+		}
+		if len(ds.wdRepositoryWarnings) > 0 {
+			log.Println()
+		}
+	}
 	log.Println("Run the following command to view the docs:")
 	log.Printf("\t%s", viewDocsCommand(outputDir)) // genOutputDir))
 }

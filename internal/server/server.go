@@ -1,16 +1,14 @@
 package server
 
 import (
-	"errors"
+	//"bytes"
 	"fmt"
-	"go/build"
 	"io"
 	"log"
 	"math/rand"
 	"net"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -37,8 +35,12 @@ type docServer struct {
 	appPkgPath string
 	//goldsVersion string
 
-	workingDirectory string
-	//emphasizeWDPkgs  bool
+	initialWorkingDirectory string
+	//analysisWorkingDirectory string
+	//modCacheDirectory        string
+
+	//
+	moduleBuildSourceLinkFuncs []BuildSourceLinkFunc
 
 	//
 	allThemes                  []Theme
@@ -78,19 +80,15 @@ type docServer struct {
 	//
 	generalLogger *log.Logger
 	visited       int32
+
+	// ToDo: show which packages are dirty in overview page.
+	wdRepositoryWarnings []string // not commited, not pushed, etc. (useful for docs generation mode)
 }
 
 func Run(options PageOutputOptions, args []string, recommendedPort string, silentMode bool, printUsage func(io.Writer), appPkgPath string, roughBuildTime func() time.Time) {
-	setPageOutputOptions(options, false)
-
 	ds := &docServer{
 		appPkgPath: appPkgPath,
-		//goldsVersion: options.GoldsVersion,
 
-		//emphasizeWDPkgs: options.EmphasizeWDPkgs,
-
-		phase:           Phase_Unprepared,
-		analyzer:        &code.CodeAnalyzer{},
 		analyzingLogger: log.New(os.Stdout, "[Analyzing] ", 0),
 		analyzingLogs:   make([]LoadingLogMessage, 0, 64),
 
@@ -99,11 +97,9 @@ func Run(options PageOutputOptions, args []string, recommendedPort string, silen
 	}
 
 	if options.PreferredLang != "" {
-		ds.visited = 1
-		//ds.changeTranslationByAcceptLanguage(options.PreferredLang)
-		ds.initSettings(options.PreferredLang)
+		ds.visited = 1 // to avoid auto adjusted
 	} else {
-		ds.initSettings(os.Getenv("LANG"))
+		options.PreferredLang = os.Getenv("LANG")
 	}
 
 	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf(":%v", recommendedPort))
@@ -126,7 +122,7 @@ NextTry:
 	}
 
 	go func() {
-		ds.analyze(args, printUsage)
+		ds.analyze(args, options, false, printUsage)
 		ds.analyzingLogger.SetPrefix("")
 		serverStarted := ds.currentTranslationSafely().Text_Server_Started()
 		ds.analyzingLogger.Printf("%s http://localhost:%v\n", serverStarted, addr.Port)
@@ -245,59 +241,23 @@ func (ds *docServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (ds *docServer) validateArguments(args []string) ([]string, error) {
-	if len(args) == 0 {
-		//args = []string{"."}
-		panic("should not")
-	}
+func (ds *docServer) analyze(args []string, options PageOutputOptions, forTesting bool, printUsage func(io.Writer)) {
+	setPageOutputOptions(options, forTesting)
+	ds.initSettings(options.PreferredLang)
 
-	if len(args) == 1 && args[0] == "std" {
-		os.Setenv("GO111MODULE", "off")
-		os.Setenv("CGO_ENABLED", "0")
-	} else {
-		toolchainPath, dotPath := "", ""
-		oldArgs := args
-		args = args[:0]
-		for _, p := range oldArgs {
-			if p == "toolchain" {
-				toolchainPath = filepath.Join(build.Default.GOROOT, "src", "cmd")
-				if _, err := os.Stat(toolchainPath); errors.Is(err, os.ErrNotExist) {
-					log.Printf("the toolchain argument is ignored for the assumed source directory (%s) doesn not exist", toolchainPath)
-					continue
-				}
-				// looks both are ok.
-				//args = append(args, toolchainPath + string(filepath.Separator) + "..."
-				args = append(args, toolchainPath+"/...")
-			} else {
-				if p == "." || strings.HasPrefix(p, "./") || strings.HasPrefix(p, ".\\") {
-					dotPath = p
-				}
-				args = append(args, p)
-			}
-		}
-		if toolchainPath != "" {
-			if dotPath != "" {
-				return nil, fmt.Errorf("the toolchain argument conflicts with %s\n", dotPath)
-			}
-			os.Chdir(toolchainPath)
-		}
-	}
+	// ...
+	//{
+	//	output, err := util.RunShell(time.Second*5, "", nil, "go", "env", "GOMODCACHE")
+	//	if err != nil {
+	//		log.Printf("go env GOMODCACHE: %s (%s)", err, output)
+	//	} else {
+	//		ds.modCacheDirectory = string(bytes.TrimSpace(output))
+	//	}
+	//}
+	ds.initialWorkingDirectory = util.WorkingDirectory()
+	ds.analyzer = &code.CodeAnalyzer{}
 
-	return args, nil
-}
-
-func (ds *docServer) analyze(args []string, printUsage func(io.Writer)) {
-	ds.workingDirectory, _ = os.Getwd()
-
-	args, err := ds.validateArguments(args)
-	if err != nil {
-		log.Println(err)
-		//if printUsage != nil {
-		printUsage(os.Stdout)
-		//}
-		os.Exit(1)
-	}
-
+	// ...
 	var stopWatch = util.NewStopWatch()
 	defer func() {
 		d := stopWatch.Duration(false)
@@ -305,6 +265,15 @@ func (ds *docServer) analyze(args []string, printUsage func(io.Writer)) {
 		ds.registerAnalyzingLogMessage(func() string {
 			return ds.currentTranslation.Text_Analyzing_Done(d, memUsed)
 		})
+
+		if sourceReadingStyle == SourceReadingStyle_external {
+			for _, w := range ds.wdRepositoryWarnings {
+				ds.registerAnalyzingLogMessage(func() string {
+					return "!!! Warning: " + w
+				})
+			}
+		}
+
 		ds.registerAnalyzingLogMessage(func() string { return "" })
 	}()
 
@@ -312,12 +281,17 @@ func (ds *docServer) analyze(args []string, printUsage func(io.Writer)) {
 		return ds.currentTranslationSafely().Text_Analyzing_Start()
 	})
 
-	if !ds.analyzer.ParsePackages(ds.onAnalyzingSubTaskDone, args...) {
+	// ...
+	if err := ds.analyzer.ParsePackages(ds.onAnalyzingSubTaskDone, ds.tryToCompleteModuleInfo, args...); err != nil {
+		log.Println(err)
 		//if printUsage != nil {
 		printUsage(os.Stdout)
 		//}
 		os.Exit(1)
 	}
+
+	// ...
+	ds.confirmModuleBuildSourceLinkFuncs()
 
 	//{
 	//	ds.mutex.Lock()
@@ -325,10 +299,13 @@ func (ds *docServer) analyze(args []string, printUsage func(io.Writer)) {
 	//	ds.mutex.Unlock()
 	//}
 
+	// ...
 	ds.analyzer.AnalyzePackages(ds.onAnalyzingSubTaskDone)
 
-	{
+	func() {
 		ds.mutex.Lock()
+		defer ds.mutex.Unlock()
+
 		ds.phase = Phase_Analyzed
 		//ds.packagePages = make(map[string]packagePage, ds.analyzer.NumPackages())
 		//ds.implPages = make(map[implPageKey][]byte, ds.analyzer.RoughTypeNameCount())
@@ -336,13 +313,15 @@ func (ds *docServer) analyze(args []string, printUsage func(io.Writer)) {
 		//ds.sourcePages = make(map[sourcePageKey][]byte, ds.analyzer.NumSourceFiles())
 		//ds.dependencyPages = make(map[string][]byte, ds.analyzer.NumPackages())
 
-		n := ds.analyzer.NumPackages() +
-			ds.analyzer.NumPackages() +
-			ds.analyzer.NumSourceFiles() +
-			int(ds.analyzer.RoughTypeNameCount()) +
-			int(ds.analyzer.RoughExportedIdentifierCount())
-		ds.cachedPages = make(map[pageCacheKey][]byte, int(n))
-		//ds.cachedPagesOptions = make(map[pageCacheKey]interface{}, ds.analyzer.NumPackages())
-		ds.mutex.Unlock()
-	}
+		if !genDocsMode {
+			n := ds.analyzer.NumPackages() +
+				ds.analyzer.NumPackages() +
+				ds.analyzer.NumSourceFiles() +
+				int(ds.analyzer.RoughTypeNameCount()) +
+				int(ds.analyzer.RoughExportedIdentifierCount())
+			ds.cachedPages = make(map[pageCacheKey][]byte, int(n))
+			//ds.cachedPagesOptions = make(map[pageCacheKey]interface{}, ds.analyzer.NumPackages())
+		}
+
+	}()
 }

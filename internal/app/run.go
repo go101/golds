@@ -111,8 +111,8 @@ func Run() {
 	// Use user GOROOT instead binary releaser GOROOT.
 	output, err := util.RunShellCommand(time.Second*5, "", nil, "go", "env", "GOROOT")
 	if err != nil {
-		log.Printf("Run: go env GOROOT error: %s", err)
-		return
+		log.Fatalf("Run: go env GOROOT error: %s", err)
+		//return
 	}
 	if gr := string(bytes.TrimSpace(output)); gr != "" {
 		build.Default.GOROOT = gr // the initial value is the value of releaser machine
@@ -123,32 +123,33 @@ func Run() {
 	wdPkgsListingManner := *wdPkgsListingMannerFlag
 	switch wdPkgsListingManner {
 	default:
-		log.Println("Unknown wdpkgs-listing option:", wdPkgsListingManner)
-		return
+		log.Fatalln("Unknown wdpkgs-listing option:", wdPkgsListingManner)
+		//return
 	case "":
 		if *emphasizeWdPackagesFlag {
-			log.Println("The -emphasize-wdpkgs option has been depreciated by -wdpkgs-listing=promoted")
-			log.Println()
 			wdPkgsListingManner = server.WdPkgsListingManner_promoted
 		} else {
 			wdPkgsListingManner = server.WdPkgsListingManner_general
 		}
-	case server.WdPkgsListingManner_general:
-		fallthrough
 	case server.WdPkgsListingManner_promoted:
+	case server.WdPkgsListingManner_general:
 		fallthrough
 	case server.WdPkgsListingManner_solo:
 		if *emphasizeWdPackagesFlag {
-			log.Println("emphasize-wdpkgs and wdpkgs-listing options conflict")
-			return
+			log.Fatalln("emphasize-wdpkgs and wdpkgs-listing options conflict")
+			//return
 		}
+	}
+	if wdPkgsListingManner == server.WdPkgsListingManner_promoted || *emphasizeWdPackagesFlag {
+		log.Println("Note: The -emphasize-wdpkgs option has been depreciated by -wdpkgs-listing=promoted")
+		log.Println()
 	}
 
 	footerShowingManner := *footerShowingMannerFlag
 	switch footerShowingManner {
 	default:
-		log.Println("Unknown footer-showing option:", footerShowingManner)
-		return
+		log.Fatalln("Unknown footer-showing option:", footerShowingManner)
+		//return
 	case "":
 		footerShowingManner = server.FooterShowingManner_verbose_and_qrcode
 	case server.FooterShowingManner_none:
@@ -157,21 +158,46 @@ func Run() {
 	case server.FooterShowingManner_verbose_and_qrcode:
 	}
 
+	srcReadingStyle := *srcReadingStyleFlag
+	switch {
+	default:
+		log.Fatalln("Unknown source-code-reading option:", srcReadingStyle)
+		//return
+	case srcReadingStyle == "":
+		if *plainsrc || *compact {
+			srcReadingStyle = server.SourceReadingStyle_plain
+		} else {
+			srcReadingStyle = server.SourceReadingStyle_rich
+		}
+	case srcReadingStyle == server.SourceReadingStyle_plain:
+		if *plainsrc {
+			log.Println("Note: The -plainsrc option has been depreciated by -source-code-reading=plain")
+			log.Println()
+		}
+	case srcReadingStyle == server.SourceReadingStyle_highlight:
+	case srcReadingStyle == server.SourceReadingStyle_rich:
+	case strings.HasPrefix(srcReadingStyle, server.SourceReadingStyle_external):
+	}
+	if srcReadingStyle != server.SourceReadingStyle_plain && *plainsrc {
+		log.Printf("Note: The -plainsrc option surpressed by -source-code-reading=%s", srcReadingStyle)
+		log.Println()
+	}
+
 	if *compact {
 		*nouses = true
-		*plainsrc = true
+		//*plainsrc = true
 		*nounexporteds = true
 	}
 
 	options := server.PageOutputOptions{
-		GoldsVersion:          Version,
-		PreferredLang:         *langFlag,
-		NoIdentifierUsesPages: *nouses,
-		PlainSourceCodePages:  *plainsrc,
-		NotCollectUnexporteds: *nounexporteds,
-		//EmphasizeWDPkgs:       emphasizeWDPkgs,
-		WdPkgsListingManner: wdPkgsListingManner,
-		FooterShowingManner: footerShowingManner,
+		GoldsVersion:           Version,
+		PreferredLang:          *langFlag,
+		NoIdentifierUsesPages:  *nouses,
+		SourceReadingStyle:     srcReadingStyle,
+		AllowNetworkConnection: *allowNetworkConnection,
+		NotCollectUnexporteds:  *nounexporteds,
+		WdPkgsListingManner:    wdPkgsListingManner,
+		FooterShowingManner:    footerShowingManner,
 	}
 
 	// static docs generating mode
@@ -232,9 +258,9 @@ var nounexporteds = flag.Bool("only-list-exporteds", false, "don't collect unexp
 var compact = flag.Bool("compact", false, "sacrifice some disk-consuming features in generation")
 
 var plainsrc = flag.Bool("plainsrc", false, "disable the source navigation feature")
-var srcViewingMannerFlag = flag.String("source-code-viewing", "", "specify how to show source code")
+var srcReadingStyleFlag = flag.String("source-code-reading", "", "specify how and where to show source code")
 
-// plain | rich | github.com | gitlab.com | "{{.FileName}}#L{{.LineNumber}}"
+var allowNetworkConnection = flag.Bool("allow-network-connection", false, "specify whether or not network connections are allowed")
 
 var footerShowingMannerFlag = flag.String("footer-showing", "", "specify how page footers should be shown")
 
@@ -245,10 +271,6 @@ var wdPkgsListingMannerFlag = flag.String("wdpkgs-listing", "", "specify how to 
 func printVersion(out io.Writer) {
 	fmt.Fprintf(out, "Golds %s\n", Version)
 }
-
-// Cancelled options:
-//	-u/-update
-//		Update Golds itself.
 
 // Hidden options:
 //	-moregc
@@ -286,26 +308,44 @@ Options:
 		"memory" means not to save (for testing).
 	-dir=<ContentDirectory>|memory
 		Specifiy the docs generation or file
-		serving diretory. Current directory
-		will be used if no arguments specified.
+		serving diretory. A new created subfolder
+		with a random name under the current directory
+		will be used if this option is not specified.
 		"memory" means not to save (for testing).
 	-nouses
 		Disable the identifier uses feature.
 		For HTML docs generation mode only.
-	-plainsrc
+	-plainsrc (depreciated)
 		Disable the source navigation feature.
 		For HTML docs generation mode only.
+		Depreciated by "-source-code-reading=plain".
+	-source-code-reading=plain|highlight|rich|external
+		How and where to read source code
+		(default is rich):
+		* plain: plain experience.
+		* highlight: highlight keywords only.
+		* rich: rich experience.
+		* external: read code on external code hosting
+		  websites. Do the best, use highlight on fail.
+	-allow-network-connection
+		When enabled,
+		* source files of the packages which external
+		  host URLs couldn't be determined locally
+		  will be found out by sending a HTTPS query.
+		* (possible more cases needing net connection)
 	-only-list-exporteds
 		Not to list unexported resources
 		in package-details pages.
 	-compact
 		This is a shortcut of the combination
 		of several other options, including
-		-nouses and -plainsrc now.
+		-nouses, -only-list-exporteds and
+		-source-code-reading=plain|cvs now.
 	-emphasize-wdpkgs (depreciated)
 		List the packages under the current
 		directory before other pacakges.
 		For HTML docs generation mode only.
+		Depreciated by "-wdpkgs-listing=promoted".
 	-wdpkgs-listing=promoted|solo|general
 		Specify how to list the packages in the
 		working directory (default is general):

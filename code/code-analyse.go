@@ -17,6 +17,7 @@ import (
 	"go101.org/golds/internal/util"
 )
 
+// AnalyzePackages analyzes the input packages.
 func (d *CodeAnalyzer) AnalyzePackages(onSubTaskDone func(int, time.Duration, ...int32)) {
 	//log.Println("[analyze packages ...]")
 
@@ -27,8 +28,6 @@ func (d *CodeAnalyzer) AnalyzePackages(onSubTaskDone func(int, time.Duration, ..
 	var logProgress = func(task int, args ...int32) {
 		onSubTaskDone(task, stopWatch.Duration(true), args...)
 	}
-
-	d.confirmPackageModules()
 
 	stopWatch.Duration(true)
 
@@ -80,15 +79,15 @@ func (d *CodeAnalyzer) AnalyzePackages(onSubTaskDone func(int, time.Duration, ..
 
 	logProgress(SubTask_RegisterInterfaceMethodsForTypes)
 
-	d.CollectSourceFiles()
+	d.collectSourceFiles()
 
 	logProgress(SubTask_CollectSourceFiles)
 
-	d.CollectObjectReferences()
+	d.collectObjectReferences()
 
 	logProgress(SubTask_CollectObjectReferences)
 
-	d.CacheSourceFiles()
+	d.cacheSourceFiles()
 
 	logProgress(SubTask_CacheSourceFiles)
 
@@ -102,6 +101,8 @@ func (d *CodeAnalyzer) AnalyzePackages(onSubTaskDone func(int, time.Duration, ..
 	d.analyzePackage_CollectMoreStatisticsFinal()
 
 	logProgress(SubTask_MakeStatistics)
+
+	d.buildSourceFileTable()
 
 	// ...
 
@@ -963,17 +964,17 @@ func (d *CodeAnalyzer) analyzePackages_CollectSelectors() {
 
 // ...
 
-type SelectListManager struct {
-	current *list.List
-	free    *list.List
-}
+//type selectListManager struct {
+//	current *list.List
+//	free    *list.List
+//}
 
-func NewSelectListManager() *SelectListManager {
-	return &SelectListManager{
-		current: list.New(),
-		free:    list.New(),
-	}
-}
+//func newSelectListManager() *selectListManager {
+//	return &selectListManager{
+//		current: list.New(),
+//		free:    list.New(),
+//	}
+//}
 
 type SeleterMapManager struct {
 	apply   func() (r map[string]*Selector)
@@ -1532,92 +1533,6 @@ func (d *CodeAnalyzer) collectSelectorsFroNonInterfaceType(t *TypeInfo, smm *Sel
 	}
 }
 
-// ToDo
-func (d *CodeAnalyzer) confirmPackageModules() {
-	// Two cases:
-	// 1. check the .../vendor/modules.txt files
-	// 2. check GOPATH/pkg/mod/...
-
-	// # list all module dependency relations
-	// go mod graph
-	//	k8s.io/kubernetes sigs.k8s.io/yaml@v1.1.0
-	//	...
-	//	k8s.io/apiserver@v0.0.0 go.uber.org/zap@v1.10.0
-	//	...
-
-	// # from Michael Matloob
-	// go list -f '{{.Module.Path}} {{.Module.Dir}}' pkg-import-path
-
-	// # list all involved modules
-	// go list -m all
-	//	volcano.sh/volcano
-	//	modernc.org/xc v1.0.0 => modernc.org/xc v1.0.0
-	//	...
-	// go list -f '{{.ImportPath}} {{.Module}}' all
-	//	go101.org/golds/tests/n go101.org/golds
-	//	golang.org/x/mod/internal/lazyregexp golang.org/x/mod v0.1.1-0.20191105210325-c90efee705ee
-	//	unsafe <nil>
-	//	vendor/golang.org/x/crypto/chacha20 <nil>
-	//	...
-	// go list -json all
-	//	.Module
-	//
-	// Maybe, it is still better to analyze it manauuly.
-	// Temp not to show module pages, module info is only used to find asParamsOf/asResultsOf
-
-	// # get the module at CWD
-	// go list -m
-	//	volcano.sh/volcano
-	//   or
-	//	go list -m: not using modules
-
-	// # find GOROOT to find std module info
-	// go env
-
-	//findPkgModule := func(pkg *Package) {
-	//	// d.stdPackages
-	//}
-	//_ = findPkgModule
-
-	//for _, pkg := range d.packageList {
-	//	if len(pkg.PPkg.GoFiles) == 0 {
-	//		continue
-	//	}
-	//	dir := filepath.Dir(pkg.PPkg.GoFiles[0])
-	//	filename := filepath.Join(dir, "go.mod")
-	//	filedata, err := ioutil.ReadFile(filename)
-	//	if err != nil {
-	//		if !errors.Is(err, os.ErrNotExist) {
-	//			log.Printf("ioutil.ReadFile %s error: %s", filename, err)
-	//		}
-	//		continue
-	//	}
-	//
-	//	modFile, err := modfile.ParseLax(filename, filedata, nil)
-	//	if err != nil {
-	//	}
-	//
-	//	mod := Module{
-	//		Dir:     dir,
-	//		Root:    modFile.Module.Mod.Path,
-	//		Version: modFile.Module.Mod.Version,
-	//	}
-	//
-	//	_ = mod
-	//}
-
-	// I decided to delay the impplementation of this funciton now.
-	// One intention to confirm module information is
-	// to support module pages, but this is not very essential.
-	// Another intention to confirm module information
-	// is to calculate the distances of pacakges.
-	// However, it might be not perfect to determine
-	// the distance of two packages by checking if
-	// they are in the same module.
-	//
-	// The module info confirmed in this funciton will be only for showing.
-}
-
 // Important for registerFunctionForInvolvedTypeNames and registerValueForItsTypeName.
 func (d *CodeAnalyzer) sortPackagesByDepHeight() {
 	var seen = make(map[string]struct{}, len(d.packageList))
@@ -1658,8 +1573,6 @@ func (d *CodeAnalyzer) sortPackagesByDepHeight() {
 	//}
 }
 
-// This method should be put in user space.
-//
 // main packages have depth==0, their direct dependencies have depth==1, ...
 func (d *CodeAnalyzer) calculatePackagesDepDepths() {
 	var seen = make(map[string]struct{}, len(d.packageList))
@@ -1779,7 +1692,7 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 
 	registerFunction := func(f *Function) {
 		pkg.PackageAnalyzeResult.AllFunctions = append(pkg.PackageAnalyzeResult.AllFunctions, f)
-		d.RegisterFunction(f)
+		//d.RegisterFunction(f)
 		// function stats are moved to below
 	}
 

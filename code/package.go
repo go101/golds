@@ -11,17 +11,35 @@ import (
 	"golang.org/x/tools/go/packages"
 )
 
+// A Module holds the information for a Go module.
 type Module struct {
-	Dir     string
-	Root    string // root import path
+	Index int // users might make some optimizations by using the index
+
+	Path    string
 	Version string
+
+	RepositoryCommit string // might be the same as Version, or not.
+	RepositoryURL    string
+	RepositoryDir    string // no much useful
+
+	// Generally blank. But
+	// 1. "/src" for std and "/src/cmd" for toolchain.
+	// 2. Some modules are not at the root of their repositories.
+	//    (Often, such a repository contains multiple modules.
+	//    ex., for github.com/aws/aws-sdk-go-v2/service/{ec2,s3},
+	//    they are service/s3, service/ec2)
+	ExtraPathInRepository string
+
+	Dir string // not much useful
+
+	Pkgs []*Package // seen packages
 }
 
+// Package holds the information and the analysis result of a Go package.
 type Package struct {
-	Index int
+	Index int               // ToDo: use this to do some optimizations
 	PPkg  *packages.Package // ToDo: renamed to PP to be consistent with TypeInfo.TT?
 
-	Mod       *Module
 	Deps      []*Package
 	DepedBys  []*Package
 	DepHeight int32 // 0 means the height is not determined yet. The order determines the parse order.
@@ -29,13 +47,18 @@ type Package struct {
 
 	// This field might be shared with PackageForDisplay
 	// for concurrent reads.
-	*PackageAnalyzeResult
+	*PackageAnalyzeResult // ToDo: not as pointer
+
+	Directory string
+	Module    *Module
 }
 
+// Path returns the import path of a Package.
 func (p *Package) Path() string {
 	return p.PPkg.PkgPath // might be prefixed with "vendor/", which is different from import path.
 }
 
+// PackageAnalyzeResult holds the analysis result of a Go package.
 type PackageAnalyzeResult struct {
 	AllTypeNames []*TypeName
 	AllFunctions []*Function
@@ -43,11 +66,11 @@ type PackageAnalyzeResult struct {
 	AllConstants []*Constant
 	AllImports   []*Import
 	SourceFiles  []SourceFileInfo
-	Directory    string
 
 	CodeLinesWithBlankLines int32
 }
 
+// NewPackageAnalyzeResult returns a new initalized PackageAnalyzeResult.
 func NewPackageAnalyzeResult() *PackageAnalyzeResult {
 	// ToDo: maybe it is better to run a statistic phase firstly,
 	// so that the length of each slice will get knowledged.
@@ -60,6 +83,7 @@ func NewPackageAnalyzeResult() *PackageAnalyzeResult {
 	}
 }
 
+// SourceFileInfoByBareFilename returns the SourceFileInfo corresponding the specified bare filename.
 func (r *PackageAnalyzeResult) SourceFileInfoByBareFilename(bareFilename string) *SourceFileInfo {
 	for _, info := range r.SourceFiles {
 		//if info.OriginalGoFile == srcPath {
@@ -78,8 +102,7 @@ func (r *PackageAnalyzeResult) SourceFileInfoByBareFilename(bareFilename string)
 	return nil
 }
 
-// ToDo: better to maintain a global sourceFilePath => SourceFileInfo table?
-//func (r *PackageAnalyzeResult) SourceFileInfo(srcPath string) *SourceFileInfo {
+// SourceFileInfoByFilePath return the SourceFileInfo corresponding the specified file path.
 func (r *PackageAnalyzeResult) SourceFileInfoByFilePath(srcPath string) *SourceFileInfo {
 	for _, info := range r.SourceFiles {
 		if info.OriginalFile == srcPath {
@@ -92,16 +115,17 @@ func (r *PackageAnalyzeResult) SourceFileInfoByFilePath(srcPath string) *SourceF
 	return nil
 }
 
-type RefPos struct {
-	Pkg *Package
-	Pos token.Pos
-}
+//type RefPos struct {
+//	Pkg *Package
+//	Pos token.Pos
+//}
 
-type AstNode struct {
-	Pkg  *Package
-	Node ast.Node
-}
+//type AstNode struct {
+//	Pkg  *Package
+//	Node ast.Node
+//}
 
+// Resource is an interface for Variable/Constant/TypeName/Function/InterfaceMethod.
 type Resource interface {
 	Name() string
 	Exported() bool
@@ -112,12 +136,14 @@ type Resource interface {
 	Package() *Package
 }
 
+// ValueResource is an interface for Variable/Constant/Function/InterfaceMethod..
 type ValueResource interface {
 	Resource
 	TType() types.Type // The result should not be used in comparisons.
 	TypeInfo(d *CodeAnalyzer) *TypeInfo
 }
 
+// FunctionResource is an interface for Function/InterfaceMethod.
 type FunctionResource interface {
 	ValueResource
 	IsMethod() bool
@@ -135,6 +161,7 @@ var (
 	_ FunctionResource = (*InterfaceMethod)(nil)
 )
 
+// AstValueSpecOwneris an interface for Variable/Constant.
 type AstValueSpecOwner interface {
 	AstValueSpec() *ast.ValueSpec
 	Package() *Package
@@ -145,6 +172,7 @@ var (
 	_ AstValueSpecOwner = (*Constant)(nil)
 )
 
+// A Attribute records some imformations by using bits.
 type Attribute uint32
 
 const (
@@ -186,6 +214,7 @@ const (
 	StarReceiver Attribute = 1 << 9
 )
 
+// A TypeSource represents the source type in a type specificaiton.
 type TypeSource struct {
 	TypeName    *TypeName
 	UnnamedType *TypeInfo
@@ -198,11 +227,13 @@ type TypeSource struct {
 //	return ts.TypeName.Denoting(d)
 //}
 
+// EmbedInfo records the information for an embedded field.
 type EmbedInfo struct {
 	TypeName *TypeName
 	IsStar   bool
 }
 
+// A TypeName represents a type name.
 type TypeName struct {
 	Pkg     *Package // some duplicated with types.TypeName.Pkg(), except builtin types
 	AstDecl *ast.GenDecl
@@ -256,6 +287,7 @@ type TypeName struct {
 //	return tn.obj.Name()
 //}
 
+// Exported returns whether or not a TypeName is exported.
 func (tn *TypeName) Exported() bool {
 	if tn.Pkg.Path() == "builtin" {
 		return !token.IsExported(tn.Name())
@@ -263,10 +295,12 @@ func (tn *TypeName) Exported() bool {
 	return tn.TypeName.Exported()
 }
 
+// Position returns the declaration position of a TypeName.
 func (tn *TypeName) Position() token.Position {
 	return tn.Pkg.PPkg.Fset.PositionFor(tn.AstSpec.Name.Pos(), false)
 }
 
+// Documentation returns the documents of a TypeName.
 func (tn *TypeName) Documentation() string {
 	//doc := tn.AstDecl.Doc.Text()
 	//if t := tn.AstSpec.Doc.Text(); t != "" {
@@ -280,10 +314,12 @@ func (tn *TypeName) Documentation() string {
 	return doc
 }
 
+// Comment returns the comment of a TypeName.
 func (tn *TypeName) Comment() string {
 	return tn.AstSpec.Comment.Text()
 }
 
+// Package returns the owner Package of a TypeName.
 func (tn *TypeName) Package() *Package {
 	return tn.Pkg
 }
@@ -304,6 +340,7 @@ func (tn *TypeName) Package() *Package {
 //	return tn.Source.Denoting(d)
 //}
 
+// Denoting returns the denoting TypeInfo of a TypeName.
 func (tn *TypeName) Denoting() *TypeInfo {
 	if tn.Named != nil {
 		return tn.Named
@@ -319,6 +356,7 @@ func (tn *TypeName) Denoting() *TypeInfo {
 //	return tn.Source.TypeName.Underlying(d)
 //}
 
+// TypeAlias represents a type alias,
 type TypeAlias struct {
 	Denoting *TypeInfo
 
@@ -344,6 +382,7 @@ type TypeAlias struct {
 //	return tc.Kind&(Ptr|Interface) == 0
 //}
 
+// TypeInfo represent a type and records its analysis result.
 type TypeInfo struct {
 	TT types.Type
 
@@ -406,10 +445,12 @@ type TypeInfo struct {
 	//counter2 int32
 }
 
+// Kind returns the kinds (as reflect.Kind) of a type.
 func (t *TypeInfo) Kind() reflect.Kind {
 	return Kind(t.TT)
 }
 
+// Kind rerurns the kinds (as reflect.Kind) for a go/types.Type.
 func Kind(tt types.Type) reflect.Kind {
 	switch tt := tt.Underlying().(type) {
 	default:
@@ -477,11 +518,13 @@ func Kind(tt types.Type) reflect.Kind {
 	}
 }
 
+// Implementation represents an implementation relation.
 type Implementation struct {
 	Impler    *TypeInfo // a struct or named type (same as the owner), or a pointer to such a type
 	Interface *TypeInfo // an interface type
 }
 
+// Import represents an import.
 type Import struct {
 	*types.PkgName
 
@@ -490,6 +533,7 @@ type Import struct {
 	AstSpec *ast.ImportSpec
 }
 
+// Constant represents a constant.
 type Constant struct {
 	*types.Const
 
@@ -499,6 +543,7 @@ type Constant struct {
 	AstSpec *ast.ValueSpec
 }
 
+// Position returns the declaration position of a Constant.
 func (c *Constant) Position() token.Position {
 	for _, n := range c.AstSpec.Names {
 		if n.Name == c.Name() {
@@ -508,6 +553,7 @@ func (c *Constant) Position() token.Position {
 	panic("should not")
 }
 
+// Documentation returns the document of a Constant.
 func (c *Constant) Documentation() string {
 	doc := c.AstSpec.Doc.Text()
 	if doc == "" {
@@ -516,14 +562,17 @@ func (c *Constant) Documentation() string {
 	return doc
 }
 
+// Comment returns the comment of a Constant.
 func (c *Constant) Comment() string {
 	return c.AstSpec.Comment.Text()
 }
 
+// Package returns the owner Package of a Constant.
 func (c *Constant) Package() *Package {
 	return c.Pkg
 }
 
+// Exported returns whether or not a Constant is exported.
 func (c *Constant) Exported() bool {
 	if c.Pkg.Path() == "builtin" {
 		return !token.IsExported(c.Name())
@@ -531,10 +580,12 @@ func (c *Constant) Exported() bool {
 	return c.Const.Exported()
 }
 
+// TType returns the go/types.Type of a Constant.
 func (c *Constant) TType() types.Type {
 	return c.Const.Type()
 }
 
+// TypeInfo returns the type of a Constant.
 func (c *Constant) TypeInfo(d *CodeAnalyzer) *TypeInfo {
 	if c.Type == nil {
 		c.Type = d.RegisterType(c.TType())
@@ -542,6 +593,7 @@ func (c *Constant) TypeInfo(d *CodeAnalyzer) *TypeInfo {
 	return c.Type
 }
 
+// AstValueSpec returns the go/ast.ValueSpec for a Constant.
 func (c *Constant) AstValueSpec() *ast.ValueSpec {
 	return c.AstSpec
 }
@@ -566,6 +618,7 @@ func (c *Constant) AstValueSpec() *ast.ValueSpec {
 //	return b.String()
 //}
 
+// Variable represents a variable.
 type Variable struct {
 	*types.Var
 
@@ -575,6 +628,7 @@ type Variable struct {
 	AstSpec *ast.ValueSpec
 }
 
+// Position returns the position in code for a Variable.
 func (v *Variable) Position() token.Position {
 	for _, n := range v.AstSpec.Names {
 		if n.Name == v.Name() {
@@ -584,6 +638,7 @@ func (v *Variable) Position() token.Position {
 	panic("should not")
 }
 
+// Documentation returns the document of a Variable.
 func (v *Variable) Documentation() string {
 	doc := v.AstSpec.Doc.Text()
 	if doc == "" {
@@ -592,14 +647,17 @@ func (v *Variable) Documentation() string {
 	return doc
 }
 
+// Comment returns the comment of a Variable.
 func (v *Variable) Comment() string {
 	return v.AstSpec.Comment.Text()
 }
 
+// Package returns the owner package of a Variable.
 func (v *Variable) Package() *Package {
 	return v.Pkg
 }
 
+// Exported returns whether or not a Variable is exported.
 func (v *Variable) Exported() bool {
 	if v.Pkg.Path() == "builtin" {
 		return !token.IsExported(v.Name())
@@ -607,10 +665,12 @@ func (v *Variable) Exported() bool {
 	return v.Var.Exported()
 }
 
+// TType returns the go/types.Type for a Variable.
 func (v *Variable) TType() types.Type {
 	return v.Var.Type()
 }
 
+// TypeInfo returns the type of a Variable.
 func (v *Variable) TypeInfo(d *CodeAnalyzer) *TypeInfo {
 	if v.Type == nil {
 		v.Type = d.RegisterType(v.TType())
@@ -618,6 +678,7 @@ func (v *Variable) TypeInfo(d *CodeAnalyzer) *TypeInfo {
 	return v.Type
 }
 
+// AstValueSpec returns the go/ast.ValueSpec for a Variable.
 func (v *Variable) AstValueSpec() *ast.ValueSpec {
 	return v.AstSpec
 }
@@ -634,6 +695,7 @@ func (v *Variable) AstValueSpec() *ast.ValueSpec {
 //	return s
 //}
 
+// Function represents a function, including non-interface methods.
 type Function struct {
 	*types.Func
 	*types.Builtin // for builtin functions
@@ -655,6 +717,7 @@ type Function struct {
 	AstDecl *ast.FuncDecl
 }
 
+// Names returns the name of a Function.
 func (f *Function) Name() string {
 	if f.Func != nil {
 		return f.Func.Name()
@@ -662,6 +725,7 @@ func (f *Function) Name() string {
 	return f.Builtin.Name()
 }
 
+// Exported returns whether or or a Function is exported.
 func (f *Function) Exported() bool {
 	if f.Builtin != nil {
 		return true
@@ -672,23 +736,28 @@ func (f *Function) Exported() bool {
 	return f.Func.Exported()
 }
 
+// Position return the position of a Function.
 func (f *Function) Position() token.Position {
 	return f.Pkg.PPkg.Fset.PositionFor(f.AstDecl.Name.Pos(), false)
 }
 
+// Documentation return document of a Function.
 func (f *Function) Documentation() string {
 	// ToDo: html escape
 	return f.AstDecl.Doc.Text()
 }
 
+// Comment always return "".
 func (f *Function) Comment() string {
 	return ""
 }
 
+// Package returns the owner of a Function.
 func (f *Function) Package() *Package {
 	return f.Pkg
 }
 
+// TType returns the go/types.Type for a Function.
 func (f *Function) TType() types.Type {
 	if f.Func != nil {
 		return f.Func.Type()
@@ -696,6 +765,7 @@ func (f *Function) TType() types.Type {
 	return f.Builtin.Type()
 }
 
+// TypeInfo returns the tyoe of a Function.
 func (f *Function) TypeInfo(d *CodeAnalyzer) *TypeInfo {
 	if f.Type == nil {
 		f.Type = d.RegisterType(f.TType())
@@ -703,10 +773,12 @@ func (f *Function) TypeInfo(d *CodeAnalyzer) *TypeInfo {
 	return f.Type
 }
 
+// IsMethod returns whether or not a Function is a method.
 func (f *Function) IsMethod() bool {
 	return f.Func != nil && f.Func.Type().(*types.Signature).Recv() != nil
 }
 
+// String returns the string representation of a Funciton.
 func (f *Function) String() string {
 	if f.Func != nil {
 		return f.Func.String()
@@ -722,8 +794,7 @@ func (f *Function) String() string {
 //	return b.String()
 //}
 
-// Please make sure the Funciton is a method when calling this method.
-//func (f *Function) ReceiverTypeName() (paramField *ast.Field, typeIdent *ast.Ident, isStar bool) {
+// ReceiverTypeName returns the TypeName and whether or not the receiver is a pointer for a method function.
 func (f *Function) ReceiverTypeName() (paramField *ast.Field, typename *TypeName, isStar bool) {
 	if f.AstDecl.Recv == nil {
 		panic("should not")
@@ -754,15 +825,17 @@ func (f *Function) ReceiverTypeName() (paramField *ast.Field, typename *TypeName
 	return
 }
 
+// AstFuncType returns the go/ast.FuncType for a Funciton.
 func (f *Function) AstFuncType() *ast.FuncType {
 	return f.AstDecl.Type
 }
 
+// AstPackage returns the same as Package().
 func (f *Function) AstPackage() *Package {
 	return f.Package()
 }
 
-// As Function.
+// InterfaceMethod represents an interface function.
 type InterfaceMethod struct {
 	InterfaceTypeName *TypeName
 	Method            *Method // .AstFunc == nil, .AstInterface != nil
@@ -771,42 +844,52 @@ type InterfaceMethod struct {
 	//       so there should be multiple Methods ([]*Method).
 }
 
+// Name returns the name of a InterfaceMethod.
 func (im *InterfaceMethod) Name() string {
 	return im.Method.Name
 }
 
+// Name returns whether or not a InterfaceMethod is exported.
 func (im *InterfaceMethod) Exported() bool {
 	return token.IsExported(im.Name())
 }
 
+// Name returns the code position of a InterfaceMethod.
 func (im *InterfaceMethod) Position() token.Position {
 	return im.Method.Pkg.PPkg.Fset.PositionFor(im.Method.AstField.Pos(), false)
 }
 
+// Name returns the document of a InterfaceMethod.
 func (im *InterfaceMethod) Documentation() string {
 	return im.Method.AstField.Doc.Text()
 }
 
+// Name returns the comment of a InterfaceMethod.
 func (im *InterfaceMethod) Comment() string {
 	return im.Method.AstField.Comment.Text()
 }
 
+// Name returns the owner Package of a InterfaceMethod.
 func (im *InterfaceMethod) Package() *Package {
 	return im.InterfaceTypeName.Pkg
 }
 
+// Name returns the go/types.Type for a InterfaceMethod.
 func (im *InterfaceMethod) TType() types.Type {
 	return im.Method.Type.TT
 }
 
+// Name returns the type of a InterfaceMethod.
 func (im *InterfaceMethod) TypeInfo(d *CodeAnalyzer) *TypeInfo {
 	return im.Method.Type
 }
 
+// Name always returns true.
 func (im *InterfaceMethod) IsMethod() bool {
 	return true
 }
 
+// Name returns the string representation of a InterfaceMethod.
 func (im *InterfaceMethod) String() string {
 	// ToDo: show the inteface receiver in result.
 	return im.Method.Type.TT.String()
@@ -820,21 +903,24 @@ func (im *InterfaceMethod) String() string {
 //	return b.String()
 //}
 
-// Please make sure the Funciton is a method when calling this method.
-//func (im *InterfaceMethod) ReceiverTypeName() (paramField *ast.Field, typeIdent *ast.Ident, isStar bool) {
+// ReceiverTypeName returns the TypeName and whether or not the receiver is a pointer for a method function.
 func (im *InterfaceMethod) ReceiverTypeName() (paramField *ast.Field, typename *TypeName, isStar bool) {
 	//return nil, im.InterfaceTypeName.AstSpec.Name, false
 	return nil, im.InterfaceTypeName, false
 }
 
+// AstFuncType returns the go/ast.FuncType for a InterfaceMethod.
 func (im *InterfaceMethod) AstFuncType() *ast.FuncType {
 	return im.Method.AstField.Type.(*ast.FuncType)
 }
 
+// AstPackage returns the Package where a InterfaceMethodis is specified.
+// For embedding reason. The result might be different from the owner package.
 func (im *InterfaceMethod) AstPackage() *Package {
 	return im.Method.Pkg
 }
 
+// MethodSignature represents a hashable struct for a method.
 type MethodSignature struct {
 	Name string // must be an identifier other than "_"
 	Pkg  string // the import path, for unepxorted method names only
@@ -855,6 +941,7 @@ const (
 	EmbedMode_Indirect           // *TypeName
 )
 
+// Field represents a struct field.
 type Field struct {
 	astStruct *ast.StructType
 	AstField  *ast.Field
@@ -868,10 +955,12 @@ type Field struct {
 	Mode EmbedMode
 }
 
+// Position returns the code position for a Field.
 func (fld *Field) Position() token.Position {
 	return fld.Pkg.PPkg.Fset.PositionFor(fld.AstField.Pos(), false)
 }
 
+// Documentation returns the documents of a Field.
 func (fld *Field) Documentation() string {
 	if doc := fld.AstField.Doc; doc != nil {
 		return doc.Text()
@@ -879,6 +968,7 @@ func (fld *Field) Documentation() string {
 	return ""
 }
 
+// Comment returns the comment of a Field.
 func (fld *Field) Comment() string {
 	if comment := fld.AstField.Comment; comment != nil {
 		return comment.Text()
@@ -886,6 +976,7 @@ func (fld *Field) Comment() string {
 	return ""
 }
 
+// Method represent a method.
 type Method struct {
 	AstFunc *ast.FuncDecl // for concrete methods
 	//AstInterface *ast.InterfaceType // for interface methods (the owner interface)
@@ -901,6 +992,7 @@ type Method struct {
 	index uint32 // 0 means this method doesn;t contribute to any type implementations for sure.
 }
 
+// Position returns the code position of a Method.
 func (mthd *Method) Position() token.Position {
 	if mthd.AstFunc != nil { // method declaration
 		return mthd.Pkg.PPkg.Fset.PositionFor(mthd.AstFunc.Pos(), false)
@@ -909,6 +1001,7 @@ func (mthd *Method) Position() token.Position {
 	}
 }
 
+// Documentation returns the document of a Method.
 func (mthd *Method) Documentation() string {
 	if mthd.AstFunc != nil { // method declaration
 		if doc := mthd.AstFunc.Doc; doc != nil {
@@ -923,6 +1016,7 @@ func (mthd *Method) Documentation() string {
 	return ""
 }
 
+// Comment returns the comment of a Method.
 func (mthd *Method) Comment() string {
 	if mthd.AstField != nil { // if mthd.AstField != nil //initerface method specification
 		if comment := mthd.AstField.Comment; comment != nil {
@@ -933,6 +1027,7 @@ func (mthd *Method) Comment() string {
 	return ""
 }
 
+// EmbeddedField represengts am embedded field.
 type EmbeddedField struct {
 	*Field
 	Prev *EmbeddedField
@@ -945,6 +1040,7 @@ const (
 	SelectorCond_Hidden
 )
 
+// Selector represents a selector, either a field or a method.
 type Selector struct {
 	Id string
 
@@ -964,10 +1060,12 @@ type Selector struct {
 	cond SelectorCond
 }
 
+// Reset clears the data for a Selector.
 func (s *Selector) Reset() {
 	*s = Selector{}
 }
 
+// Object returns the go/types.Object represented by a Selector.
 func (s *Selector) Object() types.Object {
 	if s.Field != nil {
 		for _, ident := range s.Field.AstField.Names {
@@ -987,6 +1085,7 @@ func (s *Selector) Object() types.Object {
 	return s.Method.Pkg.PPkg.TypesInfo.ObjectOf(s.Method.AstField.Names[0])
 }
 
+// Position returns the code position of a Selector.
 func (s *Selector) Position() token.Position {
 	if s.Field != nil {
 		return s.Field.Position()
@@ -995,6 +1094,7 @@ func (s *Selector) Position() token.Position {
 	}
 }
 
+// Name returns the name of a Selector.
 func (s *Selector) Name() string {
 	if s.Field != nil {
 		return s.Field.Name
@@ -1003,7 +1103,7 @@ func (s *Selector) Name() string {
 	}
 }
 
-// ToDo: change to Package() for consistency.
+// Package returns the owner package of a Selector.
 func (s *Selector) Package() *Package {
 	if s.Field != nil {
 		return s.Field.Pkg
@@ -1016,6 +1116,7 @@ func (s *Selector) Package() *Package {
 //	return len(s.EmbeddedFields)
 //}
 
+// PointerReceiverOnly returns whether or not a method selector is declared for a pointer type.
 func (s *Selector) PointerReceiverOnly() bool {
 	if s.Method == nil {
 		panic("not a method selector")
@@ -1024,6 +1125,7 @@ func (s *Selector) PointerReceiverOnly() bool {
 	return !s.Indirect && s.Method.PointerRecv
 }
 
+// String returns the string represenation of a Selecctor.
 func (s *Selector) String() string {
 	return EmbededFieldsPath(s.EmbeddingChain, nil, s.Name(), s.Field != nil)
 }
@@ -1044,6 +1146,7 @@ func (s *Selector) String() string {
 //	}
 //}
 
+// EmbededFieldsPath returns the string representaion the middle embedding chain of a Selector.
 func EmbededFieldsPath(embedding *EmbeddedField, b *strings.Builder, selName string, isField bool) (r string) {
 	if embedding == nil {
 		if isField {
@@ -1075,6 +1178,7 @@ func EmbededFieldsPath(embedding *EmbeddedField, b *strings.Builder, selName str
 	return
 }
 
+// PrintSelectors prints a lists of Selectors.
 func PrintSelectors(title string, selectors []*Selector) {
 	log.Printf("%s (%d)\n", title, len(selectors))
 	for _, sel := range selectors {

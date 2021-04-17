@@ -1,3 +1,5 @@
+// Package code is used to analyse Go code packages.
+// It can find out all the implementation relations between package-level type.
 package code
 
 import (
@@ -12,11 +14,13 @@ import (
 	"golang.org/x/tools/go/types/typeutil"
 )
 
+// The analysis steps.
 const (
 	SubTask_PreparationDone = iota
 	SubTask_NFilesParsed
 	SubTask_ParsePackagesDone
 	SubTask_CollectPackages
+	SubTask_CollectModules
 	SubTask_SortPackagesByDependencies
 	SubTask_CollectDeclarations
 	SubTask_CollectRuntimeFunctionPositions
@@ -31,9 +35,12 @@ const (
 	SubTask_CacheSourceFiles
 )
 
+// CodeAnalyzer holds all the analysis results and functionalities.
 type CodeAnalyzer struct {
-	allModules []*Module
-	stdModule  *Module
+	modulesByPath       map[string]*Module // including stdModule
+	nonToolchainModules []Module           // not including stdModule and std/cmd module
+	stdModule           *Module
+	wdModule            *Module // working diretory module. It might be the cmd toolchain module, or nil if modules feature is off.
 
 	//stdPackages  map[string]struct{}
 	packageTable map[string]*Package
@@ -45,9 +52,10 @@ type CodeAnalyzer struct {
 
 	//=== Will be fulfilled in analyse phase ===
 
+	allSourceFiles map[string]*SourceFileInfo
 	//sourceFile2PackageTable  map[string]SourceFile
-	sourceFile2PackageTable         map[string]*Package
-	generatedFile2OriginalFileTable map[string]string
+	//sourceFile2PackageTable         map[string]*Package
+	//generatedFile2OriginalFileTable map[string]string
 
 	// *types.Type -> *TypeInfo
 	lastTypeIndex       uint32
@@ -66,7 +74,7 @@ type CodeAnalyzer struct {
 
 	// Refs of unnamed types, type names, variables, functions, ...
 	// Why not put []RefPos in TypeInfo, Variable, ...?
-	refPositions map[interface{}][]RefPos
+	//refPositions map[interface{}][]RefPos
 
 	// ToDo: some TopN lists
 	stats Stats
@@ -83,6 +91,34 @@ type CodeAnalyzer struct {
 	debug bool
 }
 
+// WorkingDirectoryModule returns the module at the working directory.
+// It might be nil.
+func (d *CodeAnalyzer) WorkingDirectoryModule() *Module {
+	return d.wdModule
+}
+
+// ModuleByPath returns the module corresponding the specified path.
+func (d *CodeAnalyzer) ModuleByPath(path string) *Module {
+	return d.modulesByPath[path]
+}
+
+// IterateModule iterates all modules and passes them to the specified callback f.
+func (d *CodeAnalyzer) IterateModule(f func(*Module)) {
+	if d.stdModule != nil {
+		f(d.stdModule)
+	}
+	if d.wdModule != nil {
+		f(d.wdModule)
+	}
+	for i := range d.nonToolchainModules {
+		m := &d.nonToolchainModules[i]
+		if m != d.wdModule {
+			f(m)
+		}
+	}
+}
+
+// Identifier represents an identifier occurence in code.
 type Identifier struct {
 	//Pkg *Package // gettable from FileInfo
 
@@ -103,7 +139,7 @@ func (d *CodeAnalyzer) regObjectReference(obj types.Object, fileInfo *SourceFile
 	d.objectRefs[obj] = ids
 }
 
-// Package by package, file by file, by positions in source.
+// ObjectReferences returns all the references to the given object.
 func (d *CodeAnalyzer) ObjectReferences(obj types.Object) []Identifier {
 	ids := d.objectRefs[obj]
 	if ids == nil {
@@ -129,61 +165,88 @@ func (d *CodeAnalyzer) resetTempTypeLookupTable() {
 	}
 }
 
+// NumPackages returns packages count.
 func (d *CodeAnalyzer) NumPackages() int {
 	return len(d.packageList)
 }
 
+// PackageAt returns the packages at specified index i.
 func (d *CodeAnalyzer) PackageAt(i int) *Package {
 	return d.packageList[i]
 }
 
-// ToDo: remove the second result
+// PackageByPath returns the packages corresponding the specified path.
 func (d *CodeAnalyzer) PackageByPath(path string) *Package {
 	return d.packageTable[path]
 }
 
+// IsStandardPackage returns whether or not the given package is a standard package.
 func (d *CodeAnalyzer) IsStandardPackage(pkg *Package) bool {
-	return pkg.Mod == d.stdModule
+	return pkg.Module == d.stdModule
 }
 
-// ToDo: add Standard field.
+// IsStandardPackageByPath returns whether or not the package specified by the path is a standard package.
 func (d *CodeAnalyzer) IsStandardPackageByPath(path string) bool {
 	pkg, ok := d.packageTable[path]
 	return ok && d.IsStandardPackage(pkg)
 }
 
+// BuiltinPackge returns the builtin package.
 func (d *CodeAnalyzer) BuiltinPackge() *Package {
 	return d.builtinPkg
 }
 
+// NumSourceFiles returns the source files count.
 func (d *CodeAnalyzer) NumSourceFiles() int {
-	return len(d.sourceFile2PackageTable) // including generated files and non-go files
+	//return len(d.sourceFile2PackageTable) // including generated files and non-go files
+	return len(d.allSourceFiles) // including generated files and non-go files
 }
 
-func (d *CodeAnalyzer) SourceFile2Package(path string) (*Package, bool) {
-	srcFile, ok := d.sourceFile2PackageTable[path]
-	return srcFile, ok
+// Must be callsed after stats.FilesWithGenerateds is confirmed.
+func (d *CodeAnalyzer) buildSourceFileTable() {
+	d.allSourceFiles = make(map[string]*SourceFileInfo, d.stats.FilesWithGenerateds)
+	for _, pkg := range d.packageList {
+		for i := range pkg.SourceFiles {
+			f := &pkg.SourceFiles[i]
+			d.allSourceFiles[pkg.Path()+"/"+f.AstBareFileName()] = f
+		}
+	}
 }
+
+// SourceFile returns the source file coresponding the specified file name.
+// pkgFile: pkg.Path + "/" + file.BareFilename
+func (d *CodeAnalyzer) SourceFile(pkgFile string) *SourceFileInfo {
+	return d.allSourceFiles[pkgFile]
+}
+
+//func (d *CodeAnalyzer) SourceFile2Package(path string) (*Package, bool) {
+//	srcFile, ok := d.sourceFile2PackageTable[path]
+//	return srcFile, ok
+//}
 
 //func (d *CodeAnalyzer) SourceFileLineOffset(path string) int {
 //	return int(d.sourceFileLineOffsetTable[path])
 //}
 
-func (d *CodeAnalyzer) OriginalGoSourceFile(filename string) string {
-	if f, ok := d.generatedFile2OriginalFileTable[filename]; ok {
-		return f
-	}
-	return filename
-}
+//func (d *CodeAnalyzer) OriginalGoSourceFile(filename string) string {
+//	if f, ok := d.generatedFile2OriginalFileTable[filename]; ok {
+//		return f
+//	}
+//	return filename
+//}
 
+// RuntimeFunctionCodePosition returns the position of the specified runtime funciton f.
 func (d *CodeAnalyzer) RuntimeFunctionCodePosition(f string) token.Position {
 	return d.runtimeFuncPositions[f]
 }
 
+// RuntimePackage returns the runtime package.
 func (d *CodeAnalyzer) RuntimePackage() *Package {
 	return d.PackageByPath("runtime")
 }
 
+// Id1 builds an id from the specified package and identifier name.
+// The result is the same as go/types.Id.
 func (d *CodeAnalyzer) Id1(p *types.Package, name string) string {
 	if p == nil {
 		p = d.builtinPkg.PPkg.Types
@@ -192,6 +255,8 @@ func (d *CodeAnalyzer) Id1(p *types.Package, name string) string {
 	return types.Id(p, name)
 }
 
+// Id1b builds an id from the specified package and identifier name.
+// The result is almost the same as go/types.Id.
 func (d *CodeAnalyzer) Id1b(pkg *Package, name string) string {
 	if pkg == nil {
 		return d.Id1(nil, name)
@@ -200,6 +265,7 @@ func (d *CodeAnalyzer) Id1b(pkg *Package, name string) string {
 	return d.Id1(pkg.PPkg.Types, name)
 }
 
+// Id2 builds an id from the specified package and identifier name.
 func (d *CodeAnalyzer) Id2(p *types.Package, name string) string {
 	if p == nil {
 		p = d.builtinPkg.PPkg.Types
@@ -208,6 +274,7 @@ func (d *CodeAnalyzer) Id2(p *types.Package, name string) string {
 	return p.Path() + "." + name
 }
 
+// Id2b builds an id from the specified package and identifier name.
 func (d *CodeAnalyzer) Id2b(pkg *Package, name string) string {
 	if pkg == nil {
 		return d.Id2(nil, name)
@@ -217,11 +284,11 @@ func (d *CodeAnalyzer) Id2b(pkg *Package, name string) string {
 }
 
 // Declared functions.
-func (d *CodeAnalyzer) RegisterFunction(f *Function) {
-	// meaningful?
-}
+//func (d *CodeAnalyzer) RegisterFunction(f *Function) {
+//	// meaningful?
+//}
 
-// The registered name must be a package-level name.
+// RegisterTypeName registers a TypeName.
 func (d *CodeAnalyzer) RegisterTypeName(tn *TypeName) {
 	if d.allTypeNameTable == nil {
 		d.allTypeNameTable = make(map[string]*TypeName, 4096)
@@ -241,17 +308,15 @@ func (d *CodeAnalyzer) RegisterTypeName(tn *TypeName) {
 	}
 }
 
+// RegisterType registers a go/types.Type as TypeInfo.
 func (d *CodeAnalyzer) RegisterType(t types.Type) *TypeInfo {
 	return d.registeringType(t, true)
 }
 
-//var numNameds, numNamedInterfaces = 0, 0
-
-func (d *CodeAnalyzer) TryRegisteringType(t types.Type) *TypeInfo {
+// LookForType trys to find out the TypeInfo registered for the spefified types.Type.
+func (d *CodeAnalyzer) LookForType(t types.Type) *TypeInfo {
 	return d.registeringType(t, false)
 }
-
-//var iiiii uint32
 
 func (d *CodeAnalyzer) registeringType(t types.Type, createOnNonexist bool) *TypeInfo {
 	typeInfo, _ := d.ttype2TypeInfoTable.At(t).(*TypeInfo)
@@ -318,6 +383,7 @@ func (d *CodeAnalyzer) registeringType(t types.Type, createOnNonexist bool) *Typ
 	return typeInfo
 }
 
+// RetrieveTypeName trys to retrieve the TypeName from a TypeInfo.
 func (d *CodeAnalyzer) RetrieveTypeName(t *TypeInfo) (*TypeName, bool) {
 	if tn := t.TypeName; tn != nil {
 		return tn, false
@@ -365,12 +431,13 @@ func (d *CodeAnalyzer) registerTypeMethodContributingToTypeImplementations(pkg, 
 	d.typeMethodsContributingToTypeImplementations[[4]string{pkg, typ, methodPkg, method}] = struct{}{}
 }
 
-// typeIndex must be the index of a non-interface type.
+// CheckTypeMethodContributingToTypeImplementations checks whether or not a method implements some interface methods.
 func (d *CodeAnalyzer) CheckTypeMethodContributingToTypeImplementations(pkg, typ, methodPkg, method string) bool {
 	_, ok := d.typeMethodsContributingToTypeImplementations[[4]string{pkg, typ, methodPkg, method}]
 	return ok
 }
 
+// CleanImplements returns a clean list of the implementions for a TypeInfo.
 func (d *CodeAnalyzer) CleanImplements(self *TypeInfo) []Implementation {
 	// remove:
 	// * self
@@ -1012,6 +1079,7 @@ func (d *CodeAnalyzer) registerValueForItsTypeName(res ValueResource) {
 	}
 }
 
+// BuildMethodSignatureFromFuncObject builds the signature for function object.
 func (d *CodeAnalyzer) BuildMethodSignatureFromFuncObject(funcObj *types.Func) MethodSignature {
 	funcSig, ok := funcObj.Type().(*types.Signature)
 	if !ok {
@@ -1026,6 +1094,7 @@ func (d *CodeAnalyzer) BuildMethodSignatureFromFuncObject(funcObj *types.Func) M
 	return d.BuildMethodSignatureFromFunctionSignature(funcSig, methodName, pkgImportPath)
 }
 
+// BuildMethodSignatureFromFunctionSignature  builds the signature for method function object.
 // pkgImportPath should be only passed for unexported method names.
 func (d *CodeAnalyzer) BuildMethodSignatureFromFunctionSignature(funcSig *types.Signature, methodName string, pkgImportPath string) MethodSignature {
 	if pkgImportPath != "" {

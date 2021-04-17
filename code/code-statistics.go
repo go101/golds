@@ -6,6 +6,7 @@ import (
 
 const KindCount = reflect.UnsafePointer + 1
 
+// A Stats hold all the analysis statistics data.
 type Stats struct {
 	Packages            int32
 	StdPackages         int32
@@ -105,11 +106,14 @@ type Stats struct {
 	ExportedIdentiferLengthTopList TopList
 }
 
+// A TopList specifies the minimu criteria for a top list
+// and hold the top list items.
 type TopList struct {
 	Criteria int
 	Items    []interface{}
 }
 
+// TryToInit inits a TopList if it has not been.
 func (tl *TopList) TryToInit(n int) {
 	if tl.Criteria == 0 {
 		if n <= 0 {
@@ -120,6 +124,7 @@ func (tl *TopList) TryToInit(n int) {
 	}
 }
 
+// Push trys to add a new top item.
 func (tl *TopList) Push(n int, obj interface{}) {
 	if n < tl.Criteria {
 		return
@@ -139,14 +144,17 @@ func incSliceStat(stats []int32, index int) {
 	}
 }
 
+// Statistics returns the analysis statistics data.
 func (d *CodeAnalyzer) Statistics() Stats {
 	return d.stats
 }
 
+// RoughTypeNameCount returns a rough number of all type names.
 func (d *CodeAnalyzer) RoughTypeNameCount() int32 {
 	return d.stats.roughTypeNameCount
 }
 
+// RoughExportedIdentifierCount returns a rough number of exported identifiers.
 func (d *CodeAnalyzer) RoughExportedIdentifierCount() int32 {
 	return d.stats.roughExportedIdentifierCount
 }

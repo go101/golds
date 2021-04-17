@@ -40,7 +40,8 @@ type Translation interface {
 	Text_Analyzing_PreparationDone(d time.Duration) string // ToDo: merge these into one?
 	Text_Analyzing_NFilesParsed(numFiles int, d time.Duration) string
 	Text_Analyzing_ParsePackagesDone(numFiles int, d time.Duration) string
-	Text_Analyzing_CollectPackages(numPkgs int, d time.Duration) string
+	Text_Analyzing_CollectPackages(numMods int, d time.Duration) string
+	Text_Analyzing_CollectModules(numPkgs int, d time.Duration) string
 	Text_Analyzing_SortPackagesByDependencies(d time.Duration) string
 	Text_Analyzing_CollectDeclarations(d time.Duration) string
 	Text_Analyzing_CollectRuntimeFunctionPositions(d time.Duration) string

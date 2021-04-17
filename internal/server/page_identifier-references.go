@@ -146,7 +146,7 @@ func (ds *docServer) buildReferencesPage(w http.ResponseWriter, result *Referenc
 				if !token.IsExported(methodName) {
 					anchorName = methodPkgPath + "." + anchorName
 				}
-				if enableSoruceNavigation {
+				if sourceReadingStyle == SourceReadingStyle_rich { // enableSoruceNavigation {
 					link = buildPageHref(page.PathInfo, pagePathInfo{ResTypeImplementation, result.Package.Path() + "." + result.Resource.Name()}, nil, "", "name-", anchorName)
 				}
 			}

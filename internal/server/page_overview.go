@@ -282,11 +282,11 @@ type PackageForListing struct {
 	Package *code.Package
 
 	Index     int
-	Mod       *code.Module
 	Name      string
 	Path      string // blank for not analyzed yet
 	Prefix    string // the part shared with the last one in list
 	Remaining string // the part different from the last one in list
+	//Module    *code.Module
 
 	NumImportedBys int32
 	DepHeight      int32
@@ -307,9 +307,9 @@ func (ds *docServer) buildOverviewData() *Overview {
 
 		p := ds.analyzer.PackageAt(i)
 		pkg.Package = p
-		if p.Mod != nil {
-			pkg.Mod = p.Mod
-		}
+		//if p.Module != nil {
+		//	pkg.Module = p.Module
+		//}
 		pkg.Path = p.Path()
 		pkg.Remaining = p.Path()
 		pkg.Name = p.PPkg.Name
@@ -323,7 +323,7 @@ func (ds *docServer) buildOverviewData() *Overview {
 			pkg.NumImportedBys = int32(numPkgs) - 1
 		}
 
-		pkg.InWorkingDirectory = strings.HasPrefix(p.Directory, ds.workingDirectory)
+		pkg.InWorkingDirectory = strings.HasPrefix(p.Directory, ds.initialWorkingDirectory)
 	}
 
 	// ToDo: might be problematic sometimes. Should sort token by token.
