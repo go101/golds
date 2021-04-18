@@ -27,10 +27,10 @@ func foo() {
 	x {
 	}
 
-	for _, _ = range x {
+	for range x {
 	}
 
-	for _, _ = range /*da faadsfaf /**/ /* /*dafafaf*/ x {
+	for range /*da faadsfaf /**/ /* /*dafafaf*/ x {
 
 		for range //aaa
 		//aaaa
@@ -59,7 +59,7 @@ func foo() {
 		}
 	}
 
-	for a, _ := range x {
+	for a := range x {
 		_ = a
 	}
 }

@@ -200,7 +200,9 @@ func TestDocsForStandardPackages(t *testing.T) {
 		}
 		pkgTestDataNew, ok := testdataNew[pkgPath]
 		if !ok {
-			t.Errorf("Package %s is missing", pkgPath)
+			if pkgPath != "runtime/cgo" {
+				t.Errorf("Package %s is missing", pkgPath)
+			}
 			continue
 		}
 

@@ -44,16 +44,16 @@ func (d *CodeAnalyzer) collectSourceFiles() {
 			panic(fmt.Sprintf("!!! len(pkg.PPkg.CompiledGoFiles) != len(pkg.PPkg.Syntax), %d:%d, %s", len(pkg.PPkg.CompiledGoFiles), len(pkg.PPkg.Syntax), pkg.Path()))
 		}
 
-		for _, _ = range pkg.PPkg.OtherFiles {
+		for range pkg.PPkg.OtherFiles {
 			//d.sourceFile2PackageTable[path] = pkg
 			d.stats.FilesWithoutGenerateds++
 		}
 
-		for _, _ = range pkg.PPkg.CompiledGoFiles {
+		for range pkg.PPkg.CompiledGoFiles {
 			//d.sourceFile2PackageTable[path] = pkg
 		}
 
-		for _, _ = range pkg.PPkg.GoFiles {
+		for range pkg.PPkg.GoFiles {
 			//if _, ok := d.sourceFile2PackageTable[path]; !ok {
 			//	//log.Println("! in GoFiles but not CompiledGoFiles:", path)
 			//	d.sourceFile2PackageTable[path] = pkg

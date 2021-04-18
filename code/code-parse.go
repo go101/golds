@@ -540,27 +540,6 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 		confirmModuleReposotoryCommit(m)
 	}
 
-	//>>
-	if verboseLogs {
-		printModuleInfo := func(m *Module) {
-			log.Printf("module: %s@%s (%d pkgs)", m.Path, m.Version, len(m.Pkgs))
-			log.Printf("            Pkgs[0].Dir: %s", m.Pkgs[0].Directory)
-			log.Printf("                    Dir: %s", m.Dir)
-			log.Printf("          RepositoryDir: %s", m.RepositoryDir)
-			log.Printf("          RepositoryURL: %s", m.RepositoryURL)
-			log.Printf("  ExtraPathInRepository: %s", m.ExtraPathInRepository)
-		}
-		printModuleInfo(d.stdModule)
-		if hasToolchain {
-			printModuleInfo(d.wdModule)
-		}
-		for i := range d.nonToolchainModules {
-			m := &d.nonToolchainModules[i]
-			printModuleInfo(m)
-		}
-	}
-	//<<
-
 	for i := range d.nonToolchainModules {
 		m := &d.nonToolchainModules[i]
 		if m != d.wdModule && m.Version == "" {

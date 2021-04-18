@@ -292,6 +292,9 @@ func (ds *docServer) analyze(args []string, options PageOutputOptions, forTestin
 
 	// ...
 	ds.confirmModuleBuildSourceLinkFuncs()
+	if verboseLogs {
+		ds.printModulesInfo()
+	}
 
 	//{
 	//	ds.mutex.Lock()

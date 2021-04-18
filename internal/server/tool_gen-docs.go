@@ -484,7 +484,8 @@ func GenDocs(options PageOutputOptions, args []string, outputDir string, silentM
 				log.Fatalln("Write file error:", err)
 			}
 
-			if verboseLogs || !silent {
+			//if verboseLogs || !silent {
+			if !silent {
 				log.Printf("Generated %s (size: %d).", pg.FilePath, pg.Content.DataLength())
 			}
 		}(pg)
@@ -494,7 +495,8 @@ func GenDocs(options PageOutputOptions, args []string, outputDir string, silentM
 		return
 	}
 
-	if verboseLogs || !silent {
+	//if verboseLogs || !silent {
+	if !silent {
 		log.Printf("Done (%d pages are generated and %d bytes are written).", numPages, numBytes)
 	}
 

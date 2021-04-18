@@ -1733,7 +1733,7 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 				//log.Printf("func %s", fd.Name.Name)
 				//log.Printf("(%s) %s (%s) (%s)", fd.Recv, fd.Name.Name, fd.Type.Params, fd.Type.Results)
 
-				// It looks the function delcared in "builtin" are types.Func, instead of types.Builtin.
+				// It looks the function declared in "builtin" are types.Func, instead of types.Builtin.
 				// But the functions declared in "unsafe" are types.Builtin.
 
 				var f *Function

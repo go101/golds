@@ -180,7 +180,7 @@ func Run() {
 	case strings.HasPrefix(srcReadingStyle, server.SourceReadingStyle_external):
 	}
 	if srcReadingStyle != server.SourceReadingStyle_plain && *plainsrc {
-		log.Printf("Note: The -plainsrc option supressed by -source-code-reading=%s", srcReadingStyle)
+		log.Printf("Note: The -plainsrc option suppressed by -source-code-reading=%s", srcReadingStyle)
 		log.Println()
 	}
 

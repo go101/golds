@@ -9,9 +9,12 @@
   * "go/doc": doc.Examples(...)importance
   * websocket: monitor page leave and shutdown unfinished Go processes.
 
-* wdpkgs-listing=solo: from a dep pkg details page to overview, auto show the hidden one ...
+* external source links
+  * handle replace cases
+  * handle non-git-tracked files (view them like generated files)
 
-* support gopath psudo module name? https://groups.google.com/g/golang-nuts/c/-pmx4eksLpA
+* (done) wdpkgs-listing=solo: from a dep pkg details page to overview, auto show the hidden one ...
+* (giveup) support gopath psudo module name? https://groups.google.com/g/golang-nuts/c/-pmx4eksLpA
 
 * implicit
   * switch expr := srcNode.(type) { // this expr might need to be enclosed in mutilple labels

@@ -674,12 +674,24 @@ func findSourceRepository(forModule string) (repoURL, extraPath string, err erro
 
 //======================================
 
+func (ds *docServer) printModulesInfo() {
+	ds.analyzer.IterateModule(func(m *code.Module) {
+		log.Printf("module: %s@%s (%d pkgs)", m.Path, m.Version, len(m.Pkgs))
+		log.Printf("            Pkgs[0].Dir: %s", m.Pkgs[0].Directory)
+		log.Printf("                    Dir: %s", m.Dir)
+		log.Printf("          RepositoryDir: %s", m.RepositoryDir)
+		log.Printf("          RepositoryURL: %s", m.RepositoryURL)
+		log.Printf("              ExtraPath: %s", m.ExtraPathInRepository)
+	})
+}
+
 func (ds *docServer) confirmModuleBuildSourceLinkFuncs() {
 	maxModuleIndex := -1
 	ds.analyzer.IterateModule(func(m *code.Module) {
 		if m.Index > maxModuleIndex {
 			maxModuleIndex = m.Index
 		}
+
 	})
 	ds.moduleBuildSourceLinkFuncs = make([]BuildSourceLinkFunc, maxModuleIndex+1)
 	ds.analyzer.IterateModule(func(m *code.Module) {
