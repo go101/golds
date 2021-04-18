@@ -112,9 +112,9 @@ var reposIdent = []byte(`//line `)
 // https://github.com/golang/go/issues/24183
 // https://github.com/golang/go/issues/26207
 // https://github.com/golang/go/issues/36072
-// The fucntion is not robust enough to handle all kinds of special cases.
+// The function is not robust enough to handle all kinds of special cases.
 // 1. It doesn't consider /*line file:m:n*/ form.
-// 2. It doesn't handle multiple "//line ..." occurences.
+// 2. It doesn't handle multiple "//line ..." occurrences.
 // 3. It should ignore the general content enclosed in other comments.
 //    /*
 //    //line file:m:n

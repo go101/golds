@@ -133,7 +133,7 @@ func validateArgumentsAndSetOptions(args []string, toolchainPath string) ([]stri
 }
 
 // ParsePackages parses input packages.
-func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...int32), completeModuleInfo func(*Module), args ...string) error {
+func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...int32), verboseLogs bool, completeModuleInfo func(*Module), args ...string) error {
 	toolchainPath := filepath.Join(build.Default.GOROOT, "src", "cmd")
 	args, hasToolchain, err := validateArgumentsAndSetOptions(args, toolchainPath)
 	if err != nil {
@@ -200,7 +200,7 @@ func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...i
 		},
 
 		// Reasons to disable this:
-		// 1. to surpress "imported but not used" errors
+		// 1. to suppress "imported but not used" errors
 		// 2. to implemente "voew code" and "jump to definition" features.
 		// It looks the memory comsumed will be doubled.
 		//ParseFile: avoidCheckFuncBody,
@@ -210,7 +210,7 @@ func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...i
 		// ToDo: modify go/packages code to not use go/types.
 		//       use ast only and build type info tailored for docs and code reading.
 		//       But it looks NeedTypes doesn't consume much more memory, so ...
-		//       And, go/types can be used to verify the correctness of the custom implementaion.
+		//       And, go/types can be used to verify the correctness of the custom implementation.
 	}
 
 	ppkgs, err := packages.Load(configForParsing, args...)
@@ -347,7 +347,7 @@ func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...i
 	}
 
 	// ToDo: this is some slow. Try to parse go.mod files manually?
-	d.confirmPackageModules(args, hasToolchain, toolchainPath, completeModuleInfo)
+	d.confirmPackageModules(args, hasToolchain, toolchainPath, completeModuleInfo, verboseLogs)
 
 	logProgress(true, SubTask_CollectModules, int32(len(d.modulesByPath)))
 
@@ -360,7 +360,7 @@ var newlineBrace = []byte{'\n', '{'}
 var newline = []byte{'\n'}
 var space = []byte{' '}
 
-func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, toolchainPath string, completeModuleInfo func(*Module)) {
+func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, toolchainPath string, completeModuleInfo func(*Module), verboseLogs bool) {
 	// go list -deps -json ...
 
 	// In the output, packages under GOROOT have not .Module info.
@@ -429,7 +429,7 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 	}
 
 	d.nonToolchainModules = make([]Module, 0, len(modulesNumPkgs))
-	numAllModules := len(modulesNumPkgs) + 1 // inlcuding the std module
+	numAllModules := len(modulesNumPkgs) + 1 // including the std module
 	if hasToolchain {
 		numAllModules++ // the cmd toolchain module
 	}
@@ -541,7 +541,7 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 	}
 
 	//>>
-	if true {
+	if verboseLogs {
 		printModuleInfo := func(m *Module) {
 			log.Printf("module: %s@%s (%d pkgs)", m.Path, m.Version, len(m.Pkgs))
 			log.Printf("            Pkgs[0].Dir: %s", m.Pkgs[0].Directory)

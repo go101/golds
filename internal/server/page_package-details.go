@@ -804,7 +804,7 @@ type TypeDetails struct {
 	NumExportedAsInputsOfs  int32
 	NumExportedAsOutputsOfs int32
 
-	// ToDo: also list functions for funciton types.
+	// ToDo: also list functions for function types.
 	//       But only for function types with at least
 	//       one type declared in the current package,
 	//       to avoid listing too many.
@@ -1782,7 +1782,7 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Pac
 	//	correctPosition(lineOffsets, &pos)
 	//} else {
 	//	// For many reasons, line offset tables for the files
-	//	// outside of the current package are not avaliable at this time.
+	//	// outside of the current package are not available at this time.
 	//	// * link to methods or fields which are obtained through embedding
 	//	// * link to items in asTypesOf/asInputsOf/asOutputsOf lists.
 	//	//

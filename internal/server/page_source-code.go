@@ -1478,7 +1478,7 @@ GoOn:
 		// Local identifiers.
 		// ToDo: builtin package is an exception?
 		//if obj.Parent() != obj.Pkg().Scope() {
-		//	// ToDo: click to highlight all occurences.
+		//	// ToDo: click to highlight all occurrences.
 		//}
 
 		switch scp := obj.Parent(); {
@@ -1831,16 +1831,6 @@ func (ds *docServer) analyzeSoureCode(pkgPath, bareFilename string) (*SourceFile
 		av.lineBuilder.Grow(1024)
 		av.pkgPath2RatioID = make(map[string]int32, len(fileInfo.AstFile.Imports))
 		// ToDo: construct pkgPath2RatioID here?
-
-		//defer func() {
-		//	if v := recover(); v != nil {
-		//		log.Println("====== pased lines:", len(av.result.Lines), filePath)
-		//		if n := len(av.result.Lines); n > 0 {
-		//			log.Printf("       %s", av.result.Lines[n-1])
-		//		}
-		//		log.Println(v)
-		//	}
-		//}()
 
 		//if fileInfo.GoFileContentOffset > 0 {
 		//	ab.buildConfirmedLines(int(fileInfo.GoFileLineOffset+1), "")

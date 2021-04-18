@@ -36,7 +36,7 @@
 * use "go.lds" config file for docs generation.
   * -use-config=true and -config=go.lds for -gen defaultly 
 
-* code page: each funciton enclosed in a span so that local id hightlighting needs less time.
+* code page: each function enclosed in a span so that local id hightlighting needs less time.
 * reduce code page size
   * some buildIdentifier -> buildLink
   * use short class names: codeline => l
@@ -253,7 +253,7 @@
 * imports
   * add links for import declarations
 * docs for unepxorted types/vars
-  * unnamed type: find all occurences (use fake type ids)
+  * unnamed type: find all occurrences (use fake type ids)
   * (done) the promoted methods and fields of unexported fields
   * the exported methods and fields of exported variables of unexported types.
   * the exported methods and fields of results of unexported types of exported functions (or of fields of visible structs).
@@ -341,12 +341,12 @@
 * (done) show "(generated)" for cgo generated file path in source code page
 * (done) SDL package: starting types positions are still not accurate
   * also need use lineStartOffsets table ...
-* (done) D> file path; M> 123 main pacakge
+* (done) D> file path; M> 123 main package
 * (done) It is really a problem that gcc is needed to show std package docs.
   Need mention: https://github.com/golang/go/wiki/WindowsBuild
   Or add "gold -cgo=false std"
   (Temporarily os.Setenv("CGO_ENABLED", "0") for "gold std")
-* (done) click package name to overview page and use the pacakge as target.
+* (done) click package name to overview page and use the package as target.
 * (done) embedded field in code should be clickable, 
 * (done) field sorting not correct: http://localhost:56789/pkg:k8s.io/api/core/v1#name-ConfigMap
 * (doen) cgo ast.File and Position not match problem: maintain a local modified go/packages package?

@@ -16,7 +16,7 @@ please visit [this page on Go101.org](https://go101.org/article/tool-golds.html)
 
 * JavaScript-off friendly, though the experience is a little richer if JavaScript is on.
   No tracing, no auto external websites visiting.
-* Lists types not only by alphabet, but also by popularity (only avaliable when JavaScript is on),
+* Lists types not only by alphabet, but also by popularity (only available when JavaScript is on),
   which is good to understanding some packages with many types declared.
 * Supports listing unexported types and values, which is helpful to understand some packages.
 * Treats `main` packages as same as library packages.
@@ -28,7 +28,7 @@ please visit [this page on Go101.org](https://go101.org/article/tool-golds.html)
   * Shows the package-level value list of a package-level type.
   * Shows uses of package-level declared types/constants/variables/functions (by clicking the `type`/`const`/`var`/`func` keywords).
 * Smooth code view experiences (good for studying Go projects without opening IDEs):
-  * Click a local identifier to highlight all the occurences of the identifier.
+  * Click a local identifier to highlight all the occurrences of the identifier.
   * Click a use of a non-local identifier to jump to the declaration of the non-local identifier.
   * Click the name of a field or a method in its declaration to show its uses (only for package-level named struct types now).
     If the name represents a method, in the uses page, click the _(method)_ text to show which interface methods the method implements.

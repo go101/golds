@@ -118,7 +118,7 @@ func (d *CodeAnalyzer) IterateModule(f func(*Module)) {
 	}
 }
 
-// Identifier represents an identifier occurence in code.
+// Identifier represents an identifier occurrence in code.
 type Identifier struct {
 	//Pkg *Package // gettable from FileInfo
 
@@ -235,7 +235,7 @@ func (d *CodeAnalyzer) SourceFile(pkgFile string) *SourceFileInfo {
 //	return filename
 //}
 
-// RuntimeFunctionCodePosition returns the position of the specified runtime funciton f.
+// RuntimeFunctionCodePosition returns the position of the specified runtime function f.
 func (d *CodeAnalyzer) RuntimeFunctionCodePosition(f string) token.Position {
 	return d.runtimeFuncPositions[f]
 }
@@ -348,7 +348,7 @@ func (d *CodeAnalyzer) registeringType(t types.Type, createOnNonexist bool) *Typ
 			d.allTypeInfos = make([]*TypeInfo, 0, 8192)
 
 			// The old design ensure all type index > 0,
-			// which maight be an unnecesary design.
+			// which maight be an unnecessary design.
 			//d.allTypeInfos = append(d.allTypeInfos, nil)
 		}
 		d.lastTypeIndex++ // the new design (0-based)
@@ -734,7 +734,7 @@ func (d *CodeAnalyzer) registerParameterAndResultTypes(astFunc *ast.FuncType, pk
 }
 
 // ToDo: also register function variables?
-// This funciton is to ensure that the selectors of unnamed types are all confirmed before comfirming selectors for all types.
+// This function is to ensure that the selectors of unnamed types are all confirmed before comfirming selectors for all types.
 func (d *CodeAnalyzer) registerUnnamedInterfaceAndStructTypesFromParametersAndResults(astFunc *ast.FuncType, pkg *Package) {
 	//log.Println("=========================", f.Pkg.Path(), f.Name())
 
@@ -759,7 +759,7 @@ func (d *CodeAnalyzer) registerExplicitlySpecifiedMethods(typeInfo *TypeInfo, as
 
 	// The logic of the above three lines is not right as it looks.
 	// In the current go/* packages implementation, "interface{A}" and "type A interface {M{}}"
-	// will be viewed as identicial types. If they are passed by the above order to this function, ...
+	// will be viewed as identical types. If they are passed by the above order to this function, ...
 	// So now the above three lines are disabled.
 
 	// Another detail is that, unlike embedded fields, the embedded type names in an interface type can be identical.
@@ -836,7 +836,7 @@ func (d *CodeAnalyzer) registerExplicitlySpecifiedMethods(typeInfo *TypeInfo, as
 	for _, method := range astInterfaceNode.Methods.List {
 		// method is a *ast.Field.
 
-		if len(method.Names) == 0 { // embed interface type (annoymous field)
+		if len(method.Names) == 0 { // embed interface type (anonymous field)
 
 			var id string
 			switch expr := method.Type.(type) {

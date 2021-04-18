@@ -70,7 +70,7 @@ type PackageAnalyzeResult struct {
 	CodeLinesWithBlankLines int32
 }
 
-// NewPackageAnalyzeResult returns a new initalized PackageAnalyzeResult.
+// NewPackageAnalyzeResult returns a new initialized PackageAnalyzeResult.
 func NewPackageAnalyzeResult() *PackageAnalyzeResult {
 	// ToDo: maybe it is better to run a statistic phase firstly,
 	// so that the length of each slice will get knowledged.
@@ -184,7 +184,7 @@ const (
 	// Higher bits are for runtime-only flags.
 	AtributesPersistentMask Attribute = (1 << 25) - 1
 
-	// Caching individual packages seperately might be not a good idea.
+	// Caching individual packages separately might be not a good idea.
 	// There are many complexities here.
 	// * implementation relations become larger along with more packages are involved.
 	// Caching by arguments starting packages, as one file, is simpler.
@@ -207,14 +207,14 @@ const (
 	Sendable   Attribute = 1 << 6
 	Receivable Attribute = 1 << 7
 
-	// For funcitons.
+	// For functions.
 	Variadic Attribute = 1 << 8
 
 	// For methods.
 	StarReceiver Attribute = 1 << 9
 )
 
-// A TypeSource represents the source type in a type specificaiton.
+// A TypeSource represents the source type in a type specification.
 type TypeSource struct {
 	TypeName    *TypeName
 	UnnamedType *TypeInfo
@@ -247,7 +247,7 @@ type TypeName struct {
 
 	//index uint32 // the global index
 
-	// ToDo: simplify the source defintion.
+	// ToDo: simplify the source definition.
 	// Four kinds of sources to affect promoted selectors:
 	// 1. typename
 	// 2. *typename
@@ -778,7 +778,7 @@ func (f *Function) IsMethod() bool {
 	return f.Func != nil && f.Func.Type().(*types.Signature).Recv() != nil
 }
 
-// String returns the string representation of a Funciton.
+// String returns the string representation of a Function.
 func (f *Function) String() string {
 	if f.Func != nil {
 		return f.Func.String()
@@ -825,7 +825,7 @@ func (f *Function) ReceiverTypeName() (paramField *ast.Field, typename *TypeName
 	return
 }
 
-// AstFuncType returns the go/ast.FuncType for a Funciton.
+// AstFuncType returns the go/ast.FuncType for a Function.
 func (f *Function) AstFuncType() *ast.FuncType {
 	return f.AstDecl.Type
 }
@@ -1125,7 +1125,7 @@ func (s *Selector) PointerReceiverOnly() bool {
 	return !s.Indirect && s.Method.PointerRecv
 }
 
-// String returns the string represenation of a Selecctor.
+// String returns the string representation of a Selecctor.
 func (s *Selector) String() string {
 	return EmbededFieldsPath(s.EmbeddingChain, nil, s.Name(), s.Field != nil)
 }
@@ -1146,7 +1146,7 @@ func (s *Selector) String() string {
 //	}
 //}
 
-// EmbededFieldsPath returns the string representaion the middle embedding chain of a Selector.
+// EmbededFieldsPath returns the string representation the middle embedding chain of a Selector.
 func EmbededFieldsPath(embedding *EmbeddedField, b *strings.Builder, selName string, isField bool) (r string) {
 	if embedding == nil {
 		if isField {

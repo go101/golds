@@ -8,7 +8,7 @@ import (
 	"io"
 )
 
-// This funciton is very simple. It is intended to get a single file.
+// This function is very simple. It is intended to get a single file.
 func UncompressTarGzipData(data []byte) ([]byte, error) {
 	gzipReader, err := gzip.NewReader(bytes.NewBuffer(data))
 	if err != nil {

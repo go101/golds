@@ -19,23 +19,25 @@ type BuildSourceLinkFunc func(w writer, commit, extraPath, sourcePath, line, end
 
 type CodeHost struct {
 	ModulePathPrefix string
-	// RepositryPrefixes and GuessRepositryFromSourceURL should be both blank or both non-blank.
-	RepositryPrefixes []string
-	// If len(RepositryPrefixes) > 0, prefix == RepositryPrefixes[0].
+	// RepositryCharacteristics and GuessRepositryFromSourceURL should be both blank or both non-blank.
+	// If it is not blank, the first one in it must be a prefix starting with "https://".
+	// Others are character substrings.
+	RepositryCharacteristics []string
+	// If len(RepositryCharacteristics) > 0, prefix == RepositryCharacteristics[0].
 	// And url is prefixed with prefix.
 	GuessRepositryFromSourceURL   func(url, prefix string) (repo string, extra string)
 	GuessRepositoryFromModulePath func(modulePath string) (repo string, extra string)
 
-	// Only for the hosts which RepositryPrefixes are not blank.
+	// Only for the hosts which RepositryCharacteristics[0] is available.
 	BuildSourceLink BuildSourceLinkFunc
 }
 
 var codeHosts = []CodeHost{
 	{
 		ModulePathPrefix: "github.com/",
-		RepositryPrefixes: []string{
+		RepositryCharacteristics: []string{
 			"https://github.com/",
-			"git@github.com:",
+			"@github.com:",
 		},
 		GuessRepositryFromSourceURL: guessRepositryFromSourceURL_1,
 		GuessRepositoryFromModulePath: func(moduleRelativePath string) (string, string) {
@@ -46,9 +48,9 @@ var codeHosts = []CodeHost{
 	},
 	{
 		ModulePathPrefix: "gitlab.com/",
-		RepositryPrefixes: []string{
+		RepositryCharacteristics: []string{
 			"https://gitlab.com/",
-			"git@gitlab.com:",
+			"@gitlab.com:",
 		},
 		GuessRepositryFromSourceURL: guessRepositryFromSourceURL_1,
 		GuessRepositoryFromModulePath: func(moduleRelativePath string) (string, string) {
@@ -61,9 +63,9 @@ var codeHosts = []CodeHost{
 	},
 	{
 		ModulePathPrefix: "bitbucket.org/",
-		RepositryPrefixes: []string{
+		RepositryCharacteristics: []string{
 			"https://bitbucket.org/",
-			"git@bitbucket.org:",
+			"@bitbucket.org:",
 		},
 		GuessRepositryFromSourceURL: guessRepositryFromSourceURL_1,
 		GuessRepositoryFromModulePath: func(moduleRelativePath string) (string, string) {
@@ -74,9 +76,9 @@ var codeHosts = []CodeHost{
 	},
 	{
 		ModulePathPrefix: "git.sr.ht/",
-		RepositryPrefixes: []string{
+		RepositryCharacteristics: []string{
 			"https://git.sr.ht/",
-			"git@git.sr.ht:",
+			"@git.sr.ht:",
 		},
 		GuessRepositryFromSourceURL:   guessRepositryFromSourceURL_1,
 		GuessRepositoryFromModulePath: nil,
@@ -312,7 +314,9 @@ func (ds *docServer) tryToCompleteModuleInfo(m *code.Module) {
 					m.RepositoryDir = m.Dir[:len(m.Dir)-len(extra)]
 					m.ExtraPathInRepository = extra
 
-					//log.Printf("(vendor) guess moudle %s repository: %s", m.Path, m.RepositoryURL)
+					if verboseLogs {
+						log.Printf("(vendor) guess moudle %s repository: %s", m.Path, m.RepositoryURL)
+					}
 				}
 			}()
 		}
@@ -340,7 +344,9 @@ func (ds *docServer) tryToCompleteModuleInfo(m *code.Module) {
 					m.RepositoryDir = m.Dir[:len(m.Dir)-len(extra)]
 					m.ExtraPathInRepository = extra
 
-					//log.Printf("(modcache) guess moudle %s repository: %s", m.Path, m.RepositoryURL)
+					if verboseLogs {
+						log.Printf("(modcache) guess moudle %s repository: %s", m.Path, m.RepositoryURL)
+					}
 				}
 			}()
 		}
@@ -349,11 +355,15 @@ func (ds *docServer) tryToCompleteModuleInfo(m *code.Module) {
 			func() {
 				srcRepo, extraPath, err := findSourceRepository(m.Path)
 				if err != nil {
-					log.Printf("!!! query source repository for module %s error: %s", m.Path, err)
+					if verboseLogs {
+						log.Printf("!!! query source repository for module %s error: %s", m.Path, err)
+					}
 					return
 				}
 
-				//log.Printf(">>> query moudle %s repository: %s", m.Path, srcRepo)
+				if verboseLogs {
+					log.Printf(">>> query moudle %s repository: %s", m.Path, srcRepo)
+				}
 
 				if strings.HasSuffix(srcRepo, "/") {
 					srcRepo = srcRepo[:len(srcRepo)-1]
@@ -402,11 +412,11 @@ func removeVnSuffix(moudlePath string) string {
 func ensureHttpsRepositoryURL(url string) string {
 	for i := range codeHosts {
 		host := &codeHosts[i]
-		if len(host.RepositryPrefixes) > 0 {
-			httpsPrefix := host.RepositryPrefixes[0]
-			for _, prefix := range host.RepositryPrefixes[1:] {
-				if strings.HasPrefix(url, prefix) {
-					return httpsPrefix + url[len(prefix):]
+		if len(host.RepositryCharacteristics) > 0 {
+			httpsPrefix := host.RepositryCharacteristics[0]
+			for _, c := range host.RepositryCharacteristics[1:] {
+				if k := strings.Index(url, c); k >= 0 {
+					return httpsPrefix + url[k+len(c):]
 				}
 			}
 		}
@@ -419,8 +429,8 @@ func ensureHttpsRepositoryURL(url string) string {
 func guessRepositryFromSourceURL(url string) (repoURL, extraPath string) {
 	for i := range codeHosts {
 		host := &codeHosts[i]
-		if len(host.RepositryPrefixes) > 0 {
-			httpsPrefix := host.RepositryPrefixes[0]
+		if len(host.RepositryCharacteristics) > 0 {
+			httpsPrefix := host.RepositryCharacteristics[0]
 			if strings.HasPrefix(url, httpsPrefix) {
 				if host.GuessRepositryFromSourceURL != nil {
 					return host.GuessRepositryFromSourceURL(url, httpsPrefix)
@@ -489,7 +499,9 @@ func (ds *docServer) tryRetrievingWorkdingDirectoryModuleInfo(m *code.Module) {
 	// ...
 	output, err := util.RunShellCommand(time.Second*5, "", nil, "git", "rev-parse", "--show-toplevel")
 	if err != nil {
-		log.Println("unable to confirm wording diretory module: not in a CVS (only supports git now) directory")
+		if verboseLogs {
+			log.Println("unable to confirm wording diretory module: not in a CVS (only supports git now) directory")
+		}
 		return
 	}
 	projectLocalDir := string(bytes.TrimSpace(output))
@@ -497,7 +509,9 @@ func (ds *docServer) tryRetrievingWorkdingDirectoryModuleInfo(m *code.Module) {
 	// ...
 	output, err = util.RunShellCommand(time.Second*5, "", nil, "git", "rev-parse", "HEAD")
 	if err != nil {
-		log.Printf("unable to confirm wording diretory module: git rev-parse HEAD error: %s", err)
+		if verboseLogs {
+			log.Printf("unable to confirm wording diretory module: git rev-parse HEAD error: %s", err)
+		}
 		return
 	}
 	commitHash := bytes.TrimSpace(output)
@@ -505,20 +519,26 @@ func (ds *docServer) tryRetrievingWorkdingDirectoryModuleInfo(m *code.Module) {
 	// ...
 	output, err = util.RunShellCommand(time.Second*5, "", nil, "git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}")
 	if err != nil {
-		log.Printf("unable to confirm wording diretory module: git rev-parse --abbrev-ref --symbolic-full-name @{upstream} error: %s", err)
+		if verboseLogs {
+			log.Printf("unable to confirm wording diretory module: git rev-parse --abbrev-ref --symbolic-full-name @{upstream} error: %s", err)
+		}
 		return
 	}
 	// output: remote-name/remote-branch
 	var remoteName string
 	if i := bytes.IndexByte(output, '/'); i <= 0 {
-		log.Printf("unable to confirm wording diretory module: could not find remote in %s", output)
+		if verboseLogs {
+			log.Printf("unable to confirm wording diretory module: could not find remote in %s", output)
+		}
 		return
 	} else {
 		remoteName = string(bytes.TrimSpace(output[:i]))
 	}
 	output, err = util.RunShellCommand(time.Second*5, "", nil, "git", "remote", "get-url", remoteName)
 	if err != nil {
-		log.Printf("unable to confirm wording diretory module: git remote get-url origin %s error: %s", remoteName, output)
+		if verboseLogs {
+			log.Printf("unable to confirm wording diretory module: git remote get-url origin %s error: %s", remoteName, output)
+		}
 		return
 	}
 	output = bytes.TrimSpace(output)
@@ -536,7 +556,9 @@ func (ds *docServer) tryRetrievingWorkdingDirectoryModuleInfo(m *code.Module) {
 	output = bytes.TrimSpace(output)
 	if err != nil {
 		warnings = append(warnings, "unable to get project CVS commit status.")
-		log.Printf("unable to get wording diretory commit status: git status -s: %s. %s", err, output)
+		if verboseLogs {
+			log.Printf("unable to get wording diretory commit status: git status -s: %s. %s", err, output)
+		}
 	} else if len(output) != 0 {
 		warnings = append(warnings, "something in project haven't been committed yet to local CVS")
 	}
@@ -544,14 +566,18 @@ func (ds *docServer) tryRetrievingWorkdingDirectoryModuleInfo(m *code.Module) {
 	output = bytes.TrimSpace(output)
 	if err != nil {
 		warnings = append(warnings, "unable to get project CVS push status.")
-		log.Printf("unable to get wording diretory push status: git rev-parse --abbrev-ref --symbolic-full-name @{upstream}: %s. %s", err, output)
+		if verboseLogs {
+			log.Printf("unable to get wording diretory push status: git rev-parse --abbrev-ref --symbolic-full-name @{upstream}: %s. %s", err, output)
+		}
 	}
 	originBranch := string(output)
 	output, err = util.RunShellCommand(time.Second*5, "", nil, "git", "diff", originBranch)
 	output = bytes.TrimSpace(output)
 	if err != nil {
 		warnings = append(warnings, "unable to get project CVS push status.")
-		log.Printf("unable to get wording diretory push status: (git diff %s: %s. %s", originBranch, err, output)
+		if verboseLogs {
+			log.Printf("unable to get wording diretory push status: (git diff %s: %s. %s", originBranch, err, output)
+		}
 	} else if len(output) != 0 {
 		warnings = append(warnings, "something in project haven't been pushed yet to remote CVS")
 	}
@@ -566,7 +592,9 @@ func (ds *docServer) tryRetrievingWorkdingDirectoryModuleInfo(m *code.Module) {
 		ds.wdRepositoryWarnings = warnings
 	}
 
-	log.Printf("(working directory) guess moudle %s repository: %s", m.Path, m.RepositoryURL)
+	if verboseLogs {
+		log.Printf("(working directory) guess moudle %s repository: %s", m.Path, m.RepositoryURL)
+	}
 }
 
 // ToDo: not a perfect implementation.
@@ -659,8 +687,8 @@ func (ds *docServer) confirmModuleBuildSourceLinkFuncs() {
 
 		for i := range codeHosts {
 			host := &codeHosts[i]
-			if len(host.RepositryPrefixes) > 0 {
-				prefix := host.RepositryPrefixes[0]
+			if len(host.RepositryCharacteristics) > 0 {
+				prefix := host.RepositryCharacteristics[0]
 				if strings.HasPrefix(m.RepositoryURL, prefix) {
 					f = host.BuildSourceLink
 					break

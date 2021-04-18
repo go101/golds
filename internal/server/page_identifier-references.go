@@ -17,7 +17,7 @@ import (
 //type usePageKey struct {
 //	pkg string
 //
-//	// ToDo: Generally, this is a pacakge-level identifer and selector identifier.
+//	// ToDo: Generally, this is a package-level identifer and selector identifier.
 //	// It might be extended to fake identiers for unnamed types later.
 //	// It should be nerver a local identifer.
 //	id string

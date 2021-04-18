@@ -58,7 +58,7 @@ func (d *CodeAnalyzer) AnalyzePackages(onSubTaskDone func(int, time.Duration, ..
 
 	logProgress(SubTask_CollectSelectors)
 
-	// ToDo: it might be best to not use the NewMethodSet fucntion in std.
+	// ToDo: it might be best to not use the NewMethodSet function in std.
 	//       Same for NewFieldSet
 
 	//log.Println("[analyze packages 4...]")
@@ -487,7 +487,7 @@ func (d *CodeAnalyzer) analyzePackages_FindImplementations() { // (resultMethodC
 }
 
 // ToDo:
-// The current implementaiton-finding algorithm uses TypeInfo.index as judge conidition.
+// The current implementation-finding algorithm uses TypeInfo.index as judge conidition.
 // So the implementation is not ok for concurrency safe. To make it concurrentcy safe,
 // we can sort each method2TypeIndexes slices, and copy the one for the first method,
 // then get the overlapping for consequencing method slices.
@@ -1078,7 +1078,7 @@ func (d *CodeAnalyzer) collectSelectorsForInterfaceType(t *TypeInfo, depth int, 
 		//}
 		if (t.Underlying.attributes & directSelectorsCollected) == 0 {
 			//if depth == 0 {
-			//	return // ToDo: temp ignore field and paramter/result unnamed interface types
+			//	return // ToDo: temp ignore field and parameter/result unnamed interface types
 			//}
 			log.Println("!!! t.index:", t.index, t.TT)
 			panic("unnamed interface should have collected direct selectors now. " + fmt.Sprintf("%#v", t))
@@ -1733,8 +1733,8 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 				//log.Printf("func %s", fd.Name.Name)
 				//log.Printf("(%s) %s (%s) (%s)", fd.Recv, fd.Name.Name, fd.Type.Params, fd.Type.Results)
 
-				// It looks the funciton delcared in "builtin" are types.Func, instead of types.Builtin.
-				// But the funcitons declared in "unsafe" are types.Builtin.
+				// It looks the function delcared in "builtin" are types.Func, instead of types.Builtin.
+				// But the functions declared in "unsafe" are types.Builtin.
 
 				var f *Function
 
@@ -2107,7 +2107,7 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 		// ToDo: for a variable specification without the Type protion (then
 		// must have an initial value portion), and if its type is a unamed
 		// struct or interface type (or contains such types), then this type
-		// has no chances to get its .DirectSelectors fullfilled.
+		// has no chances to get its .DirectSelectors fulfilled.
 		//
 		// An example: var reserved = new(struct{ types.Type })
 		//

@@ -49,7 +49,7 @@ func TestID(t *testing.T) {
 		}
 	}
 
-	analyzer.ParsePackages(nil, nil, "builtin", "math")
+	analyzer.ParsePackages(nil, false, nil, "builtin", "math")
 	stdPkg := analyzer.PackageByPath("builtin")
 	mathPkg := analyzer.PackageByPath("math")
 
@@ -86,7 +86,7 @@ func TestRegisterType(t *testing.T) {
 // Luckily, his test is okay to test with the results of standard packages.
 func TestAnalyzeStandardPackage(t *testing.T) {
 	var analyzer CodeAnalyzer
-	analyzer.ParsePackages(nil, nil, "std")
+	analyzer.ParsePackages(nil, false, nil, "std")
 	analyzer.AnalyzePackages(nil)
 
 	var cache = &typeutil.MethodSetCache{}

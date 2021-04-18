@@ -87,6 +87,7 @@ func Run() {
 	}
 
 	silentMode := *silentFlag || *sFlag
+	verboseMode := *verboseFlag || *vFlag
 
 	// files serving mode
 	if flag.NArg() == 0 {
@@ -179,7 +180,7 @@ func Run() {
 	case strings.HasPrefix(srcReadingStyle, server.SourceReadingStyle_external):
 	}
 	if srcReadingStyle != server.SourceReadingStyle_plain && *plainsrc {
-		log.Printf("Note: The -plainsrc option surpressed by -source-code-reading=%s", srcReadingStyle)
+		log.Printf("Note: The -plainsrc option supressed by -source-code-reading=%s", srcReadingStyle)
 		log.Println()
 	}
 
@@ -198,6 +199,7 @@ func Run() {
 		NotCollectUnexporteds:  *nounexporteds,
 		WdPkgsListingManner:    wdPkgsListingManner,
 		FooterShowingManner:    footerShowingManner,
+		VerboseLogs:            verboseMode,
 	}
 
 	// static docs generating mode
@@ -240,6 +242,8 @@ func Run() {
 
 var hFlag = flag.Bool("h", false, "show help")
 var helpFlag = flag.Bool("help", false, "show help")
+var vFlag = flag.Bool("v", false, "verbose mode")
+var verboseFlag = flag.Bool("verbose", false, "verbose mode")
 
 //var uFlag = flag.Bool("u", false, "update self")
 //var updateFlag = flag.Bool("update", false, "update self")
@@ -297,7 +301,7 @@ Options:
 		Service port, defaults to 56789 in docs
 		mode and 9999 in files serving mode.
 		If the specified or default port is not
-		availabe, another availabe port will be
+		available, another available port will be
 		selected automatically.
 	-s/-silent
 		Don't open a browser automatically
@@ -307,7 +311,7 @@ Options:
 		Static HTML docs generation mode.
 		"memory" means not to save (for testing).
 	-dir=<ContentDirectory>|memory
-		Specifiy the docs generation or file
+		Specify the docs generation or file
 		serving diretory. A new created subfolder
 		with a random name under the current directory
 		will be used if this option is not specified.
@@ -355,7 +359,7 @@ Options:
 		  alphabetical order.
 	-footer-showing=verbose+qrcode|verbose|simple|none
 		Specify how page footers should be shown.
-		Avaliable values (default is verbose+qrcode):
+		Available values (default is verbose+qrcode):
 		* none: show nothing.
 		* simple: show Golds version only.
 		* verbose: also show Golds author

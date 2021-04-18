@@ -82,7 +82,7 @@ type docServer struct {
 	visited       int32
 
 	// ToDo: show which packages are dirty in overview page.
-	wdRepositoryWarnings []string // not commited, not pushed, etc. (useful for docs generation mode)
+	wdRepositoryWarnings []string // not committed, not pushed, etc. (useful for docs generation mode)
 }
 
 func Run(options PageOutputOptions, args []string, recommendedPort string, silentMode bool, printUsage func(io.Writer), appPkgPath string, roughBuildTime func() time.Time) {
@@ -226,9 +226,9 @@ func (ds *docServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			ds.methodImplementationPage(w, r, resPath[:index], resPath[index+len(sep):])
 		}
 	case ResTypeReference: // "ref"
-		// resPath doesn't contian unexported selectors with their package path prefixes for sure.
+		// resPath doesn't contain unexported selectors with their package path prefixes for sure.
 		// Two forms: pkg..id or pkg..type.selector.
-		// As pkg might contains ".", so here we use ".." the seperator.
+		// As pkg might contains ".", so here we use ".." the separator.
 		// ToDo: // is better than ..?
 		const sep = ".."
 		index := strings.LastIndex(resPath, sep)
@@ -282,7 +282,7 @@ func (ds *docServer) analyze(args []string, options PageOutputOptions, forTestin
 	})
 
 	// ...
-	if err := ds.analyzer.ParsePackages(ds.onAnalyzingSubTaskDone, ds.tryToCompleteModuleInfo, args...); err != nil {
+	if err := ds.analyzer.ParsePackages(ds.onAnalyzingSubTaskDone, verboseLogs, ds.tryToCompleteModuleInfo, args...); err != nil {
 		log.Println(err)
 		//if printUsage != nil {
 		printUsage(os.Stdout)

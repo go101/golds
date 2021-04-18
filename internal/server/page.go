@@ -20,6 +20,7 @@ type PageOutputOptions struct {
 	NoIdentifierUsesPages  bool
 	NotCollectUnexporteds  bool
 	AllowNetworkConnection bool
+	VerboseLogs            bool
 	SourceReadingStyle     string
 	WdPkgsListingManner    string
 	FooterShowingManner    string
@@ -44,6 +45,8 @@ var (
 	wdPkgsListingManner    = WdPkgsListingManner_general
 	footerShowingManner    = FooterShowingManner_none
 
+	verboseLogs = false
+
 	// ToDo: use this one to replace the above ones, and put it in docServer (good or bad?).
 	pageOutputOptions PageOutputOptions
 
@@ -59,6 +62,7 @@ func setPageOutputOptions(options PageOutputOptions, forTesting bool) {
 	allowNetworkConnection = options.AllowNetworkConnection && !forTesting
 	wdPkgsListingManner = options.WdPkgsListingManner
 	footerShowingManner = options.FooterShowingManner
+	verboseLogs = options.VerboseLogs
 }
 
 const (
