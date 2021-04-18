@@ -111,13 +111,13 @@ var codeHosts = []CodeHost{
 			return "https://github.com/golang/" + projecName, extraPath
 		},
 	},
-	{
-		ModulePathPrefix: "go101.org/",
-		GuessRepositoryFromModulePath: func(moduleRelativePath string) (string, string) {
-			projecName, extraPath := splitByNthSlash(moduleRelativePath, 1)
-			return "https://github.com/go101/" + projecName, extraPath
-		},
-	},
+	//{
+	//	ModulePathPrefix: "go101.org/",
+	//	GuessRepositoryFromModulePath: func(moduleRelativePath string) (string, string) {
+	//		projecName, extraPath := splitByNthSlash(moduleRelativePath, 1)
+	//		return "https://github.com/go101/" + projecName, extraPath
+	//	},
+	//},
 	{
 		ModulePathPrefix: "gioui.org",
 		GuessRepositoryFromModulePath: func(moduleRelativePath string) (string, string) {
@@ -565,6 +565,8 @@ func (ds *docServer) tryRetrievingWorkdingDirectoryModuleInfo(m *code.Module) {
 		m.RepositoryURL = ensureHttpsRepositoryURL(projectRemoteURL)
 		ds.wdRepositoryWarnings = warnings
 	}
+
+	log.Printf("(working directory) guess moudle %s repository: %s", m.Path, m.RepositoryURL)
 }
 
 // ToDo: not a perfect implementation.

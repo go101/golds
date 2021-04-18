@@ -534,13 +534,14 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 	for i := range d.nonToolchainModules {
 		m := &d.nonToolchainModules[i]
 		if m.Version == "" {
-			panic("should not")
+			//panic("should not")
+			continue // don't confirm repo for modules which versions are blank.
 		}
 		confirmModuleReposotoryCommit(m)
 	}
 
 	//>>
-	if false {
+	if true {
 		printModuleInfo := func(m *Module) {
 			log.Printf("module: %s@%s (%d pkgs)", m.Path, m.Version, len(m.Pkgs))
 			log.Printf("            Pkgs[0].Dir: %s", m.Pkgs[0].Directory)

@@ -498,11 +498,6 @@ func GenDocs(options PageOutputOptions, args []string, outputDir string, silentM
 		log.Printf("Done (%d pages are generated and %d bytes are written).", numPages, numBytes)
 	}
 
-	log.Printf(`"Docs are generated in %s.
-`,
-		outputDir,
-	)
-
 	log.Printf("Docs are generated in %s.", outputDir) // genOutputDir)
 	if sourceReadingStyle == SourceReadingStyle_external {
 		for _, w := range ds.wdRepositoryWarnings {
