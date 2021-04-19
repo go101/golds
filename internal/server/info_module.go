@@ -275,7 +275,8 @@ func (ds *docServer) tryToCompleteModuleInfo(m *code.Module) {
 
 	// ToDo: handle modules feature off case in which module versions will always blank?
 	//       Or best not to generate any modules in this case.
-	if m.Version == "" { // wd module
+	//if m.ActualVersion() == "" && m.Replace.Path == "" { // wd module
+	if m == ds.analyzer.WorkingDirectoryModule() {
 		//if !strings.HasPrefix(ds.initialWorkingDirectory, m.Dir) {
 		//	log.Printf("working directory module dir is not correct:\n\t%s\n\t%s", m.Dir, ds.initialWorkingDirectory)
 		//	return
@@ -293,7 +294,7 @@ func (ds *docServer) tryToCompleteModuleInfo(m *code.Module) {
 		}
 
 		foundInVendor := false
-		if m.Dir == "" { // this happens for packages in project vendor folder
+		if m.ActualDir() == "" { // this happens for packages in project vendor folder
 			func() {
 				pkgDir := m.Pkgs[0].Directory
 				in, relDir := ds.inVendor(pkgDir)
@@ -315,6 +316,7 @@ func (ds *docServer) tryToCompleteModuleInfo(m *code.Module) {
 				}
 				url, extra := guessRepositoryFromModulePath(m.ActualPath())
 				if url != "" {
+
 					m.RepositoryURL = url
 					m.RepositoryDir = m.Dir[:len(m.Dir)-len(extra)]
 					m.ExtraPathInRepository = extra
@@ -330,7 +332,7 @@ func (ds *docServer) tryToCompleteModuleInfo(m *code.Module) {
 			func() {
 				const atV = "@v"
 				//var i int
-				if m.Dir == "" {
+				if m.ActualDir() == "" {
 					pkgDir := m.Pkgs[0].Directory
 					i := strings.LastIndex(pkgDir, atV)
 					if i <= 0 {
@@ -343,6 +345,7 @@ func (ds *docServer) tryToCompleteModuleInfo(m *code.Module) {
 						m.Dir = pkgDir[:i+len(atV)+k]
 					}
 				}
+
 				url, extra := guessRepositoryFromModulePath(m.ActualPath())
 				if url != "" {
 					m.RepositoryURL = url
@@ -522,22 +525,36 @@ func (ds *docServer) tryRetrievingWorkdingDirectoryModuleInfo(m *code.Module) {
 	commitHash := bytes.TrimSpace(output)
 
 	// ...
-	output, err = util.RunShellCommand(time.Second*5, "", nil, "git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}")
+	var remoteName string
+	output, err = util.RunShellCommand(time.Second*5, "", nil, "git", "remote")
 	if err != nil {
 		if verboseLogs {
-			log.Printf("unable to confirm wording diretory module: git rev-parse --abbrev-ref --symbolic-full-name @{upstream} error: %s", err)
+			log.Printf("unable to confirm wording diretory module: git remote error: %s", err)
 		}
 		return
 	}
-	// output: remote-name/remote-branch
-	var remoteName string
-	if i := bytes.IndexByte(output, '/'); i <= 0 {
-		if verboseLogs {
-			log.Printf("unable to confirm wording diretory module: could not find remote in %s", output)
-		}
-		return
+	output = bytes.TrimSpace(output)
+	if i := bytes.IndexByte(output, '\n'); i < 0 {
+		remoteName = string(output)
 	} else {
-		remoteName = string(bytes.TrimSpace(output[:i]))
+		firstRemote := string(bytes.TrimSpace(output[:i]))
+
+		// output: remote-name/remote-branch
+		output, err = util.RunShellCommand(time.Second*5, "", nil, "git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}")
+		if err != nil {
+			if verboseLogs {
+				log.Printf("unable to confirm wording diretory module: git rev-parse --abbrev-ref --symbolic-full-name @{upstream} error: %s", err)
+			}
+		} else if i := bytes.IndexByte(output, '/'); i <= 0 {
+			if verboseLogs {
+				log.Printf("unable to confirm wording diretory module: could not find remote in %s", output)
+			}
+		} else {
+			remoteName = string(bytes.TrimSpace(output[:i]))
+		}
+		if remoteName == "" {
+			remoteName = firstRemote
+		}
 	}
 	output, err = util.RunShellCommand(time.Second*5, "", nil, "git", "remote", "get-url", remoteName)
 	if err != nil {
@@ -565,27 +582,27 @@ func (ds *docServer) tryRetrievingWorkdingDirectoryModuleInfo(m *code.Module) {
 			log.Printf("unable to get wording diretory commit status: git status -s: %s. %s", err, output)
 		}
 	} else if len(output) != 0 {
-		warnings = append(warnings, "something in project haven't been committed yet to local CVS")
+		warnings = append(warnings, "something in project haven't been committed yet")
 	}
-	output, err = util.RunShellCommand(time.Second*5, "", nil, "git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}")
-	output = bytes.TrimSpace(output)
-	if err != nil {
-		warnings = append(warnings, "unable to get project CVS push status.")
-		if verboseLogs {
-			log.Printf("unable to get wording diretory push status: git rev-parse --abbrev-ref --symbolic-full-name @{upstream}: %s. %s", err, output)
-		}
-	}
-	originBranch := string(output)
-	output, err = util.RunShellCommand(time.Second*5, "", nil, "git", "diff", originBranch)
-	output = bytes.TrimSpace(output)
-	if err != nil {
-		warnings = append(warnings, "unable to get project CVS push status.")
-		if verboseLogs {
-			log.Printf("unable to get wording diretory push status: (git diff %s: %s. %s", originBranch, err, output)
-		}
-	} else if len(output) != 0 {
-		warnings = append(warnings, "something in project haven't been pushed yet to remote CVS")
-	}
+	//output, err = util.RunShellCommand(time.Second*5, "", nil, "git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}")
+	//output = bytes.TrimSpace(output)
+	//if err != nil {
+	//	warnings = append(warnings, "unable to get project CVS push status.")
+	//	if verboseLogs {
+	//		log.Printf("unable to get wording diretory push status: git rev-parse --abbrev-ref --symbolic-full-name @{upstream}: %s. %s", err, output)
+	//	}
+	//}
+	//originBranch := string(output)
+	//output, err = util.RunShellCommand(time.Second*5, "", nil, "git", "diff", originBranch)
+	//output = bytes.TrimSpace(output)
+	//if err != nil {
+	//	warnings = append(warnings, "unable to get project CVS push status.")
+	//	if verboseLogs {
+	//		log.Printf("unable to get wording diretory push status: (git diff %s: %s. %s", originBranch, err, output)
+	//	}
+	//} else if len(output) != 0 {
+	//	warnings = append(warnings, "something in project haven't been pushed yet to remote CVS")
+	//}
 
 	// ...
 
@@ -681,13 +698,14 @@ func findSourceRepository(forModule string) (repoURL, extraPath string, err erro
 
 func (ds *docServer) printModulesInfo() {
 	ds.analyzer.IterateModule(func(m *code.Module) {
-		log.Printf("module: %s@%s (%d pkgs)", m.Path, m.Version, len(m.Pkgs))
+		log.Printf("module: %s@%s (%d pkgs)", m.Path, m.ActualVersion(), len(m.Pkgs))
 		log.Printf("            Pkgs[0].Dir: %s", m.Pkgs[0].Directory)
-		log.Printf("                    Dir: %s", m.Dir)
+		log.Printf("                    Dir: %s", m.ActualDir())
 		log.Printf("          RepositoryDir: %s", m.RepositoryDir)
 		log.Printf("          RepositoryURL: %s", m.RepositoryURL)
 		log.Printf("              ExtraPath: %s", m.ExtraPathInRepository)
 		log.Printf("            Replace.Dir: %s", m.Replace.Dir)
+		log.Printf("           Replace.Path: %s", m.Replace.Path)
 	})
 }
 

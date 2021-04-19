@@ -514,7 +514,7 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 
 	for i := range d.nonToolchainModules {
 		m := &d.nonToolchainModules[i]
-		if m.Version == "" {
+		if m.ActualVersion() == "" && m.Replace.Path == "" {
 			d.wdModule = m
 		}
 	}
@@ -533,7 +533,7 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 	}
 	for i := range d.nonToolchainModules {
 		m := &d.nonToolchainModules[i]
-		if m.Version == "" {
+		if m.ActualVersion() == "" {
 			//panic("should not")
 			continue // don't confirm repo for modules which versions are blank.
 		}
@@ -543,10 +543,11 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 		for i := range d.nonToolchainModules {
 			m := &d.nonToolchainModules[i]
 			if strings.HasPrefix(m.Replace.Path, ".") {
-				if !strings.HasPrefix(m.Dir, d.wdModule.Dir) {
-					panic("should not\n" + m.Dir + "\n" + d.wdModule.Dir + "\n" + m.Replace.Dir)
+				moduleDir := m.ActualDir()
+				if !strings.HasPrefix(moduleDir, d.wdModule.Dir) {
+					panic("should not\n" + moduleDir + "\n" + d.wdModule.Dir + "\n" + m.Replace.Dir)
 				}
-				path := m.Dir[len(d.wdModule.Dir):]
+				path := moduleDir[len(d.wdModule.Dir):]
 				m.ExtraPathInRepository = d.wdModule.ExtraPathInRepository + path
 				m.RepositoryCommit = d.wdModule.RepositoryCommit
 				m.RepositoryDir = d.wdModule.RepositoryDir
@@ -557,16 +558,16 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 
 	for i := range d.nonToolchainModules {
 		m := &d.nonToolchainModules[i]
-		if m != d.wdModule && m.Version == "" {
+		if m != d.wdModule && m.ActualVersion() == "" && strings.HasPrefix(m.Replace.Dir, ".") {
 			log.Printf("!!! the version of module %s is not confirmed, weird", m.Path)
 		}
 	}
 	for _, pkg := range d.packageList {
-		if pkg.Module == nil {
+		if pkg.Module == nil || pkg.Module == d.stdModule {
 			//log.Printf("!!! the module of package %s is not confirmed, weird (or not)", pkg.Path())
 			continue
 		}
-		if pkg.Module != d.stdModule && !strings.HasPrefix(pkg.Path(), pkg.Module.Path) {
+		if !strings.HasPrefix(pkg.Path(), pkg.Module.Path) {
 			log.Println("!!! wrong prefix:", pkg.Path(), pkg.Module.Path)
 		}
 	}
@@ -577,8 +578,14 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 // v0.4.2-0.20210302225053-d515b24adc21
 var findCommentRegexp = regexp.MustCompile(`v[0-9]\S*[0-9]{8,}-([0-9a-f]{6,})`)
 
+const incompatibleSuffix = "+incompatible"
+
 func confirmModuleReposotoryCommit(m *Module) {
-	matches := findCommentRegexp.FindStringSubmatch(m.Version)
+	version := m.ActualVersion()
+	if i := strings.Index(version, incompatibleSuffix); i > 0 {
+		version = version[:i]
+	}
+	matches := findCommentRegexp.FindStringSubmatch(version)
 	if len(matches) >= 2 {
 		m.RepositoryCommit = matches[1]
 		return
@@ -589,18 +596,15 @@ func confirmModuleReposotoryCommit(m *Module) {
 		if strings.HasPrefix(extra, "/") {
 			extra = extra[1:]
 		}
-		if strings.HasPrefix(extra, "/") {
-			extra = extra[1:]
-		}
 		if strings.HasSuffix(extra, "/") {
-			m.RepositoryCommit = extra + m.Version
+			m.RepositoryCommit = extra + version
 		} else {
-			m.RepositoryCommit = extra + "/" + m.Version
+			m.RepositoryCommit = extra + "/" + version
 		}
 		return
 	}
 
-	m.RepositoryCommit = m.Version
+	m.RepositoryCommit = version
 }
 
 func fillUnsafePackage(unsafePPkg *packages.Package, builtinPPkg *packages.Package) {

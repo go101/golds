@@ -53,12 +53,19 @@ func (m *Module) ActualPath() string {
 	return m.Path
 }
 
-//func (m *Module) ActualVersion() string {
-//	if m.Replace.Version != "" {
-//		return m.Replace.Version
-//	}
-//	return m.Version
-//}
+func (m *Module) ActualVersion() string {
+	if m.Replace.Version != "" {
+		return m.Replace.Version
+	}
+	return m.Version
+}
+
+func (m *Module) ActualDir() string {
+	if m.Replace.Dir != "" {
+		return m.Replace.Dir
+	}
+	return m.Dir
+}
 
 // Package holds the information and the analysis result of a Go package.
 type Package struct {
