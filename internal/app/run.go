@@ -282,6 +282,8 @@ func printVersion(out io.Writer) {
 //		to lower peak memroy use. For HTML docs
 //		generation mode only. Enabling it will
 //		slow down the docs generation speed.
+//	-package-docs-manner=collapse|oneline|simple|expand
+//	-identifier-docs-manner==collapse|oneline|expand
 
 // Planning options:
 //	-generated-packages=wd|all
@@ -330,7 +332,7 @@ Options:
 		* highlight: highlight keywords only.
 		* rich: rich experience.
 		* external: read code on external code hosting
-		  websites. Do the best, use highlight on fail.
+		  websites. Do its best, use highlight on fails.
 	-allow-network-connection
 		When enabled,
 		* source files of the packages which external

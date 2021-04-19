@@ -154,7 +154,7 @@ func buildTestData_Package(details *PackageDetails) TestData_Package {
 
 func buildTestData(args []string, silent bool, printUsage func(io.Writer)) map[string]TestData_Package {
 	var analyzer code.CodeAnalyzer
-	analyzer.ParsePackages(nil, false, nil, "std")
+	analyzer.ParsePackages(nil, nil, "std")
 	analyzer.AnalyzePackages(nil)
 
 	numPkgs := analyzer.NumPackages()

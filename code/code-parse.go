@@ -133,7 +133,7 @@ func validateArgumentsAndSetOptions(args []string, toolchainPath string) ([]stri
 }
 
 // ParsePackages parses input packages.
-func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...int32), verboseLogs bool, completeModuleInfo func(*Module), args ...string) error {
+func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...int32), completeModuleInfo func(*Module), args ...string) error {
 	toolchainPath := filepath.Join(build.Default.GOROOT, "src", "cmd")
 	args, hasToolchain, err := validateArgumentsAndSetOptions(args, toolchainPath)
 	if err != nil {
@@ -347,7 +347,7 @@ func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...i
 	}
 
 	// ToDo: this is some slow. Try to parse go.mod files manually?
-	d.confirmPackageModules(args, hasToolchain, toolchainPath, completeModuleInfo, verboseLogs)
+	d.confirmPackageModules(args, hasToolchain, toolchainPath, completeModuleInfo)
 
 	logProgress(true, SubTask_CollectModules, int32(len(d.modulesByPath)))
 
@@ -360,7 +360,7 @@ var newlineBrace = []byte{'\n', '{'}
 var newline = []byte{'\n'}
 var space = []byte{' '}
 
-func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, toolchainPath string, completeModuleInfo func(*Module), verboseLogs bool) {
+func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, toolchainPath string, completeModuleInfo func(*Module)) {
 	// go list -deps -json ...
 
 	// In the output, packages under GOROOT have not .Module info.
@@ -538,6 +538,21 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 			continue // don't confirm repo for modules which versions are blank.
 		}
 		confirmModuleReposotoryCommit(m)
+	}
+	if completeModuleInfo != nil && d.wdModule != nil {
+		for i := range d.nonToolchainModules {
+			m := &d.nonToolchainModules[i]
+			if strings.HasPrefix(m.Replace.Path, ".") {
+				if !strings.HasPrefix(m.Dir, d.wdModule.Dir) {
+					panic("should not\n" + m.Dir + "\n" + d.wdModule.Dir + "\n" + m.Replace.Dir)
+				}
+				path := m.Dir[len(d.wdModule.Dir):]
+				m.ExtraPathInRepository = d.wdModule.ExtraPathInRepository + path
+				m.RepositoryCommit = d.wdModule.RepositoryCommit
+				m.RepositoryDir = d.wdModule.RepositoryDir
+				m.RepositoryURL = d.wdModule.RepositoryURL
+			}
+		}
 	}
 
 	for i := range d.nonToolchainModules {

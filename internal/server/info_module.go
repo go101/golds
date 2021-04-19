@@ -70,7 +70,7 @@ var codeHosts = []CodeHost{
 		GuessRepositryFromSourceURL: guessRepositryFromSourceURL_1,
 		GuessRepositoryFromModulePath: func(moduleRelativePath string) (string, string) {
 			projecName, extraPath := splitByNthSlash(moduleRelativePath, 2)
-			return "https://bitbucket.com/" + projecName, extraPath
+			return "https://bitbucket.org/" + projecName, extraPath
 		},
 		BuildSourceLink: buildSourceLinkFunc_bitbucket,
 	},
@@ -152,7 +152,7 @@ var codeHosts = []CodeHost{
 		ModulePathPrefix: "go.etcd.io/",
 		GuessRepositoryFromModulePath: func(moduleRelativePath string) (string, string) {
 			projecName, extraPath := splitByNthSlash(moduleRelativePath, 1)
-			return " https://github.com/etcd-io/" + projecName, extraPath
+			return "https://github.com/etcd-io/" + projecName, extraPath
 		},
 	},
 	{
@@ -287,6 +287,11 @@ func (ds *docServer) tryToCompleteModuleInfo(m *code.Module) {
 		ds.tryRetrievingWorkdingDirectoryModuleInfo(m)
 		// ToDo: also need ?go-get=1 query if ...
 	} else {
+		if strings.HasPrefix(m.Replace.Path, ".") {
+			log.Printf("(replace) guess moudle %s repository (to use working directory module)", m.Path)
+			return // local replacements will be handled in analyzer.
+		}
+
 		foundInVendor := false
 		if m.Dir == "" { // this happens for packages in project vendor folder
 			func() {
@@ -308,7 +313,7 @@ func (ds *docServer) tryToCompleteModuleInfo(m *code.Module) {
 				if m.RepositoryURL != "" {
 					return
 				}
-				url, extra := guessRepositoryFromModulePath(m.Path)
+				url, extra := guessRepositoryFromModulePath(m.ActualPath())
 				if url != "" {
 					m.RepositoryURL = url
 					m.RepositoryDir = m.Dir[:len(m.Dir)-len(extra)]
@@ -338,7 +343,7 @@ func (ds *docServer) tryToCompleteModuleInfo(m *code.Module) {
 						m.Dir = pkgDir[:i+len(atV)+k]
 					}
 				}
-				url, extra := guessRepositoryFromModulePath(m.Path)
+				url, extra := guessRepositoryFromModulePath(m.ActualPath())
 				if url != "" {
 					m.RepositoryURL = url
 					m.RepositoryDir = m.Dir[:len(m.Dir)-len(extra)]
@@ -353,7 +358,7 @@ func (ds *docServer) tryToCompleteModuleInfo(m *code.Module) {
 
 		if m.RepositoryURL == "" && allowNetworkConnection {
 			func() {
-				srcRepo, extraPath, err := findSourceRepository(m.Path)
+				srcRepo, extraPath, err := findSourceRepository(m.ActualPath())
 				if err != nil {
 					if verboseLogs {
 						log.Printf("!!! query source repository for module %s error: %s", m.Path, err)
@@ -682,6 +687,7 @@ func (ds *docServer) printModulesInfo() {
 		log.Printf("          RepositoryDir: %s", m.RepositoryDir)
 		log.Printf("          RepositoryURL: %s", m.RepositoryURL)
 		log.Printf("              ExtraPath: %s", m.ExtraPathInRepository)
+		log.Printf("            Replace.Dir: %s", m.Replace.Dir)
 	})
 }
 
@@ -740,6 +746,7 @@ func (ds *docServer) buildExternelSourceLink(w writer, pkgFile, line, endLine st
 	if _, err := w.WriteString(module.RepositoryURL); err != nil {
 		return true, err
 	}
+
 	sourcePath := pkgFile[len(module.Path):]
 	if err := buildSourceLinkFunc(w, module.RepositoryCommit, module.ExtraPathInRepository, sourcePath, line, endLine); err != nil {
 		return true, err

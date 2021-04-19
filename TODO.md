@@ -9,10 +9,6 @@
   * "go/doc": doc.Examples(...)importance
   * websocket: monitor page leave and shutdown unfinished Go processes.
 
-* external source links
-  * handle replace cases
-  * handle non-git-tracked files (view them like generated files)
-
 * (done) wdpkgs-listing=solo: from a dep pkg details page to overview, auto show the hidden one ...
 * (giveup) support gopath psudo module name? https://groups.google.com/g/golang-nuts/c/-pmx4eksLpA
 
@@ -120,6 +116,10 @@
   * within a module: allow mutual references  
     for two packages not in the same module, only deping can reference deped.
   * assume v1.x.y doesn;t break v1.m.n (where x.y > m.n)
+  * this is a hard problem without solutions. Close this issue?
+    It is a problem which looks simple but actually hard intrinsicly.
+    Golds deffers from godoc in that Golds generated docs of a packages depends on the packages depend on it.
+    Mention docs size could be reduced much by using -source-code-reading=external. 
 
 * modify the cache system to only cache most visited and recent ones
 

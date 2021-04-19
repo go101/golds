@@ -282,7 +282,7 @@ func (ds *docServer) analyze(args []string, options PageOutputOptions, forTestin
 	})
 
 	// ...
-	if err := ds.analyzer.ParsePackages(ds.onAnalyzingSubTaskDone, verboseLogs, ds.tryToCompleteModuleInfo, args...); err != nil {
+	if err := ds.analyzer.ParsePackages(ds.onAnalyzingSubTaskDone, ds.tryToCompleteModuleInfo, args...); err != nil {
 		log.Println(err)
 		//if printUsage != nil {
 		printUsage(os.Stdout)

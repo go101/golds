@@ -15,8 +15,15 @@ import (
 type Module struct {
 	Index int // users might make some optimizations by using the index
 
+	Dir string
+
 	Path    string
 	Version string
+
+	// ...
+	Replace moduleReplacement
+
+	// If replacement exists, the following info is for the replacement.
 
 	RepositoryCommit string // might be the same as Version, or not.
 	RepositoryURL    string
@@ -30,10 +37,28 @@ type Module struct {
 	//    they are service/s3, service/ec2)
 	ExtraPathInRepository string
 
-	Dir string // not much useful
-
 	Pkgs []*Package // seen packages
 }
+
+type moduleReplacement struct {
+	Dir     string
+	Path    string
+	Version string
+}
+
+func (m *Module) ActualPath() string {
+	if m.Replace.Path != "" && m.Replace.Path[0] != '.' {
+		return m.Replace.Path
+	}
+	return m.Path
+}
+
+//func (m *Module) ActualVersion() string {
+//	if m.Replace.Version != "" {
+//		return m.Replace.Version
+//	}
+//	return m.Version
+//}
 
 // Package holds the information and the analysis result of a Go package.
 type Package struct {
