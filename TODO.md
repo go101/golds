@@ -9,8 +9,20 @@
   * "go/doc": doc.Examples(...)importance
   * websocket: monitor page leave and shutdown unfinished Go processes.
 
-* (done) wdpkgs-listing=solo: from a dep pkg details page to overview, auto show the hidden one ...
-* (giveup) support gopath psudo module name? https://groups.google.com/g/golang-nuts/c/-pmx4eksLpA
+* hotkey
+  * overview page
+    d - show one line docs
+  * pacakge details page
+    p - toggle package docs collapse/expand
+    t - toggle types docs collapse/expand
+    f - toggle functions docs collapse/expand
+    v - toggle variables docs collapse/expand
+    c - toggle constants docs collapse/expand
+    a - toggle all docs collapse/expand
+  * HOME: to overview page.
+    * add a settings page on overview page: switch theme/language etc.
+  * P: from code page to package detail page
+  * e: toggle show (fields/methods) promoteds | show full selector path | show explicits only
 
 * implicit
   * switch expr := srcNode.(type) { // this expr might need to be enclosed in mutilple labels
@@ -20,6 +32,10 @@
 
 * type alias and same-underlyings list
   * https://github.com/golang/go/issues/44905
+
+* options
+    //	-package-docs-showing-initially=collapse|simple|expand
+    //	-identifier-docs-showing-initially=collapse|oneline|expand
 
 * stat: keyword use count: most implemented interface.
 
@@ -47,7 +63,8 @@
 * use css chart instead of svg? https://chartscss.org/
 
 * css style
-  * https://github.com/go101/golds/issues/13
+  * https://github.com/go101/golds/issues/13#issuecomment-769154192
+    bigger font maybe. Matching the font at https://golang.org/pkg/ (Roboto 16px, 1.3em line height)
 * enhance tests
   * test by ast comments
 * add more comments, and clear some
@@ -71,12 +88,7 @@
 
 * show which packages are CVS dirty in overview page.
 
-* hotkey
-  * t/f/v/c to expend/collapse resources
-  * HOME: to overview page.
-    * add a settings page on overview page: switch theme/language etc.
-  * P: from code page to package detail page
-  * e: toggle show (fields/methods) promoteds | show full selector path | show explicits only
+
 
 * uses pages: show package reference list (for example, find all unsafe uses)
 * id uses need consider whether or not the id is promoted.
@@ -294,6 +306,9 @@
 
 ### Done
 
+
+* (done) wdpkgs-listing=solo: from a dep pkg details page to overview, auto show the hidden one ...
+* (giveup) support gopath psudo module name? https://groups.google.com/g/golang-nuts/c/-pmx4eksLpA
 * (done) link code to external source hosting website:
 * (done) Sort pkgs by LOC
 * (done) stat: lines of code. ave. lines/file.

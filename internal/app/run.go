@@ -282,8 +282,6 @@ func printVersion(out io.Writer) {
 //		to lower peak memroy use. For HTML docs
 //		generation mode only. Enabling it will
 //		slow down the docs generation speed.
-//	-package-docs-manner=collapse|oneline|simple|expand
-//	-identifier-docs-manner==collapse|oneline|expand
 
 // Planning options:
 //	-generated-packages=wd|all

@@ -361,7 +361,7 @@ var newline = []byte{'\n'}
 var space = []byte{' '}
 
 func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, toolchainPath string, completeModuleInfo func(*Module)) {
-	// go list -deps -json ...
+	// go list -deps -json [args]
 
 	// In the output, packages under GOROOT have not .Module info.
 	cmdAndArgs := append([]string{"go", "list", "-deps", "-json"}, args...)
@@ -376,8 +376,8 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 		ImportPath string
 		Dir        string
 		Module     Module
+		Doc        string // package documentation string
 		// Root   string // Go root or Go path dir containing this package
-		// Doc    string   // package documentation string
 
 		Goroot   bool // is this package in the Go root? When it is true, Standard is also.
 		Standard bool // is this package part of the standard Go library?
@@ -446,7 +446,12 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 		pkg := d.packageTable[p.ImportPath]
 		if pkg == nil {
 			fmt.Printf("!!! package %s is not found, weird", p.ImportPath)
-		} else if p.Module.Path != "" {
+			continue
+		}
+
+		pkg.OneLineDoc = p.Doc
+
+		if p.Module.Path != "" {
 			pkg.Directory = p.Dir
 			if hasToolchain {
 				// log.Printf("!!! hasToolchain==true but package %s is not in toolchain directory, weird", p.ImportPath)

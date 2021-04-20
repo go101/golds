@@ -231,7 +231,7 @@ func buildSourceLinkFunc_bitbucket(w writer, commit, extraPath, sourcePath, line
 	items := make([]string, 0, 8)
 	items = append(items, "/src/", commit, extraPath, sourcePath)
 	if line != "" {
-		items = append(items, "#lines", line)
+		items = append(items, "#lines-", line)
 		if endLine != "" {
 			items = append(items, ":", endLine)
 		}

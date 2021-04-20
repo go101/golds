@@ -113,7 +113,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 
 		func() {
 			page.WriteString("\n")
-			page.WriteString("<div>")
+			page.WriteString(`<div id="files">`)
 			defer page.WriteString("</div>")
 			fmt.Fprint(page, `<span class="title">`, page.Translation().Text_InvolvedFiles(len(pkg.Files)), `</span>`)
 
@@ -139,7 +139,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 				}
 
 				fid := fmt.Sprintf("file-%d", i)
-				writeFoldingBlock(page, fid, "content", "items", false,
+				writeFoldingBlock(page, fid, "content", "items", true,
 					func() {
 						writeFileTitle(info)
 					},
@@ -210,11 +210,11 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 		page.WriteString("\n")
 
 		func() {
-			page.WriteString("<div>")
+			fmt.Fprintf(page, `<div id="exported-%s">`, name)
 			defer page.WriteString("</div>")
 
 			func() {
-				page.WriteString(`<span class="title value-res">`)
+				page.WriteString(`<span class="title">`)
 				defer page.WriteString(`</span>`)
 				page.WriteString(title)
 				page.WriteString(`<span class="title-stat"><i>`)
@@ -252,7 +252,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 					ds.writeResourceIndexHTML(page, pkg.Package, v, true, true, true)
 					page.WriteString(`</span>`)
 				} else {
-					writeFoldingBlock(page, v.Name(), "content", "docs", false,
+					writeFoldingBlock(page, v.Name(), "content", "docs", true,
 						func() {
 							ds.writeResourceIndexHTML(page, pkg.Package, v, true, true, true)
 						},
@@ -311,8 +311,10 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 
 	page.WriteString("\n")
 
+	page.WriteString(`<div id="exported-types">`)
+
 	func() {
-		page.WriteString(`<span class="title type-res">`)
+		page.WriteString(`<span class="title">`)
 		defer page.WriteString(`</span>`)
 		page.WriteString(page.Translation().Text_PackageLevelTypeNames())
 		page.WriteString(`<span class="title-stat"><i>`)
@@ -341,8 +343,6 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 	page.WriteString(`</label>`)
 	page.WriteString(" */</div>")
 
-	page.WriteString(`<div id="exported-types">`)
-
 	for i, tdwp := range pkg.TypeNames {
 		td := tdwp.Type
 		if i == int(pkg.NumExportedTypeNames) {
@@ -364,7 +364,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 			ds.writeResourceIndexHTML(page, pkg.Package, td.TypeName, true, true, false)
 			page.WriteString(`</span>`)
 		} else {
-			writeFoldingBlock(page, td.TypeName.Name(), "content", "docs", false,
+			writeFoldingBlock(page, td.TypeName.Name(), "content", "docs", true,
 				func() {
 					ds.writeResourceIndexHTML(page, pkg.Package, td.TypeName, true, true, false)
 				},
@@ -402,7 +402,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 											ds.writeFieldForListing(page, pkg.Package, fld, td.TypeName)
 											page.WriteString(`</span>`)
 										} else {
-											writeFoldingBlock(page, td.TypeName.Name(), "field-"+fld.Name(), "docs", false,
+											writeFoldingBlock(page, td.TypeName.Name(), "field-"+fld.Name(), "docs", true,
 												func() {
 													ds.writeFieldForListing(page, pkg.Package, fld, td.TypeName)
 												},
@@ -456,7 +456,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 											ds.writeMethodForListing(page, pkg.Package, mthd, td.TypeName, true, false)
 											page.WriteString(`</span>`)
 										} else {
-											writeFoldingBlock(page, td.TypeName.Name(), "method-"+mthd.Name(), "docs", false,
+											writeFoldingBlock(page, td.TypeName.Name(), "method-"+mthd.Name(), "docs", true,
 												func() {
 													ds.writeMethodForListing(page, pkg.Package, mthd, td.TypeName, true, false)
 												},

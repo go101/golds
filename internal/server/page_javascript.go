@@ -56,6 +56,16 @@ function onPageLoad() {
 }
 
 function initOverviewPage() {
+	document.addEventListener("keydown", function(e){
+		if (e.ctrlKey || e.altKey || e.shiftKey) {
+			return;
+		}
+		var key = e.key || e.which || e.keyCode;
+		if (key == 'd') {
+
+		}
+	});
+
 	var buttons1 = document.getElementById("buttons1");
 	if (buttons1 == null) {
 		return;
@@ -256,7 +266,70 @@ function initOverviewPage() {
 }
 
 function initPackageDetailsPage() {
-	autoExpandForPackageDetailsPage();
+	autoExpandForPackageDetailsPageByPageAnchor();
+
+	var toggleCheckboxes = function(cbs) {
+		var numCheckeds = 0;
+		for (var i = 0; i < cbs.length; i++) {
+			if (cbs[i].checked) {
+				numCheckeds++;
+			}
+		}
+		for (var i = 0; i < cbs.length; i++) {
+			cbs[i].checked = numCheckeds != cbs.length;
+		}
+	}
+	document.addEventListener("keydown", function(e){
+		if (e.ctrlKey || e.altKey || e.shiftKey) {
+			return;
+		}
+
+		var cbsFile = [], cbsTypes = [], cbsFuncs = [], cbsVars = [], cbsConsts = [];
+
+		var key = e.key || e.which || e.keyCode;
+		if (key == 'p' || key == 'a') {
+			var files = document.getElementById("files");
+			if (files != null) {
+				if (key == 'p') {files.scrollIntoView();}
+				cbsFile = files.querySelectorAll("input[type='checkbox']");
+			}
+		}
+		if (key == 't' || key == 'a') {
+			var types = document.getElementById("exported-types");
+			if (types != null) {
+				if (key == 't') {types.scrollIntoView();}
+				cbsTypes = types.querySelectorAll(".type-res > input[type='checkbox']");
+			}
+		}
+		if (key == 'f' || key == 'a') {
+			var funcs = document.getElementById("exported-functions");
+			if (funcs != null) {
+				if (key == 'f') {funcs.scrollIntoView();}
+				cbsFuncs = funcs.querySelectorAll(".value-res > input[type='checkbox']");
+			}
+		}
+		if (key == 'v' || key == 'a') {
+			var vars = document.getElementById("exported-variables");
+			if (vars != null) {
+				if (key == 'v') {vars.scrollIntoView();}
+				cbsVars = vars.querySelectorAll(".value-res > input[type='checkbox']");
+			}
+		}
+		if (key == 'c' || key == 'a') {
+			var consts = document.getElementById("exported-constants");
+			if (consts != null) {
+				if (key == 'c') {consts.scrollIntoView();}
+				cbsConsts = consts.querySelectorAll(".value-res > input[type='checkbox']");
+			}
+		}
+		var cbsAll = new Array(cbsFile.length + cbsTypes.length + cbsFuncs.length + cbsVars.length + cbsConsts.length).slice(0, 0);
+		cbsAll.push(...cbsFile);
+		cbsAll.push(...cbsTypes);
+		cbsAll.push(...cbsFuncs);
+		cbsAll.push(...cbsVars);
+		cbsAll.push(...cbsConsts);
+		toggleCheckboxes(cbsAll);
+	});
 
 	var buttons = document.getElementById("exported-types-buttons");
 	var container = document.getElementById("exported-types");
@@ -334,8 +407,11 @@ function initPackageDetailsPage() {
 	});
 }
 
-function autoExpandForPackageDetailsPage() {
+function autoExpandForPackageDetailsPageByPageAnchor() {
 	const hashChanged = function(newHash) {
+		if (newHash.length < 1) {
+			return
+		}
 		var div = document.getElementById(newHash.substr(1));
 		if (div == null) {
 			return;

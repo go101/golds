@@ -15,7 +15,7 @@ import (
 type Module struct {
 	Index int // users might make some optimizations by using the index
 
-	Dir string
+	Dir string // might be blank for vendored modules
 
 	Path    string
 	Version string
@@ -40,6 +40,8 @@ type Module struct {
 	Pkgs []*Package // seen packages
 }
 
+// Note, for a module m with replacement r,
+// * m.Version and r.Version could be both blank and non-blank or either blank.
 type moduleReplacement struct {
 	Dir     string
 	Path    string
@@ -81,8 +83,9 @@ type Package struct {
 	// for concurrent reads.
 	*PackageAnalyzeResult // ToDo: not as pointer
 
-	Directory string
-	Module    *Module
+	Directory  string
+	Module     *Module
+	OneLineDoc string
 }
 
 // Path returns the import path of a Package.
