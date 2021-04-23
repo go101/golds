@@ -48,7 +48,21 @@ function onPageLoad() {
 
 	if (document.getElementById("overview") != null) {
 		initOverviewPage();
+		return
 	}
+
+	document.addEventListener("keydown", function(e){
+		if (e.ctrlKey || e.altKey || e.shiftKey) {
+			return;
+		}
+		var key = e.key || e.which || e.keyCode;
+		if (key == 35) { // HOME
+			if (document.body.scrollTop == 0) {
+				// ToDo: jump to overview page.
+				//       The implementation is different between sever and doc generation modes.
+			}
+		}
+	});
 
 	if (document.getElementById("package-details") != null) {
 		initPackageDetailsPage();
@@ -62,7 +76,8 @@ function initOverviewPage() {
 		}
 		var key = e.key || e.which || e.keyCode;
 		if (key == 'd') {
-
+			var toggleSummary = document.querySelector("#toggle-summary");
+			toggleSummary.checked = !toggleSummary.checked
 		}
 	});
 

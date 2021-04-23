@@ -14,7 +14,8 @@ func RunShellCommand(timeout time.Duration, wd string, envs []string, cmd string
 		wd, err = os.Getwd()
 		if err != nil {
 			log.Println(`Can't get current path. Set it as "."`)
-			wd = "."
+			//wd = "."
+			wd = ""
 		}
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
@@ -22,7 +23,7 @@ func RunShellCommand(timeout time.Duration, wd string, envs []string, cmd string
 	command := exec.CommandContext(ctx, cmd, args...)
 	command.Dir = wd
 	command.Env = append(os.Environ(), envs...)
-	return command.CombinedOutput()
+	return command.CombinedOutput() // ToDo: maybe it is better not to combine.
 }
 
 func RunShell(timeout time.Duration, wd string, envs []string, cmdAndArgs ...string) ([]byte, error) {

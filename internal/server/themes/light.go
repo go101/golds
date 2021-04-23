@@ -42,6 +42,10 @@ a.path-duplicate {color: #9cd;}
 
 .golds-update {text-align: center; font-size: smaller; background: #eee; padding: 3px;}
 
+.pkg-summary {display: none;}
+input#toggle-summary {display: none;}
+input#toggle-summary:checked ~ div .pkg-summary {display: inline;}
+
 div.alphabet .importedbys {display: none;}
 div.alphabet .codelines {display: none;}
 div.alphabet .depdepth {display: none;}

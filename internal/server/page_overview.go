@@ -187,10 +187,35 @@ func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*Package
 		}
 
 		if writeDataAttrs {
-			fmt.Fprintf(page, `<i class="importedbys"> (%d)</i>`, pkg.NumImportedBys)
+			if pkg.Path != "builtin" {
+				func() {
+					page.WriteString(`<i class="importedbys"> (`)
+					defer page.WriteString(`)</i>`)
+					buildPageHref(page.PathInfo, pagePathInfo{ResTypeDependency, pkg.Path}, page, strconv.Itoa(int(pkg.NumImportedBys)), "imported-by")
+				}()
+			} else {
+				fmt.Fprintf(page, `<i class="importedbys"> (%d)</i>`, pkg.NumImportedBys)
+			}
 			fmt.Fprintf(page, `<i class="codelines"> (%d)</i>`, pkg.LOC)
 			fmt.Fprintf(page, `<i class="depheight"> (%d)</i>`, pkg.DepHeight)
 			fmt.Fprintf(page, `<i class="depdepth"> (%d)</i>`, pkg.DepDepth)
+		}
+
+		const PackageSpace = "Package "
+		d := pkg.OneLineDoc
+		if strings.HasPrefix(d, PackageSpace) {
+			d = d[len(PackageSpace):]
+		}
+		if strings.HasPrefix(d, pkg.Name) {
+			d = d[len(pkg.Name):]
+		}
+		if strings.HasPrefix(d, " ") {
+			d = d[1:]
+		}
+		if len(d) > 0 {
+			page.WriteString(`<span class="pkg-summary"> - `)
+			WriteHtmlEscapedBytes(page, []byte(d))
+			defer page.WriteString(`</span>`)
 		}
 	}
 
@@ -202,6 +227,8 @@ func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*Package
 		page.WriteString(`</div>`)
 		return
 	}
+
+	page.WriteString(`<input type='checkbox' id="toggle-summary">`)
 
 	switch wdPkgsListingManner {
 	case WdPkgsListingManner_promoted, WdPkgsListingManner_solo:
@@ -288,6 +315,8 @@ type PackageForListing struct {
 	Remaining string // the part different from the last one in list
 	//Module    *code.Module
 
+	OneLineDoc string
+
 	NumImportedBys int32
 	DepHeight      int32
 	DepDepth       int32 // The value mains how close to main pacakges.
@@ -314,6 +343,8 @@ func (ds *docServer) buildOverviewData() *Overview {
 		pkg.Remaining = p.Path()
 		pkg.Name = p.PPkg.Name
 		pkg.Index = p.Index
+
+		pkg.OneLineDoc = p.OneLineDoc
 
 		pkg.LOC = p.CodeLinesWithBlankLines
 		pkg.DepHeight = p.DepHeight

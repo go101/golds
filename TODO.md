@@ -8,21 +8,10 @@
   * Open a new page to avoid using JavaScript?
   * "go/doc": doc.Examples(...)importance
   * websocket: monitor page leave and shutdown unfinished Go processes.
+  * use custom implementation? Ast load example_xxx_test.go file only, ...
 
-* hotkey
-  * overview page
-    d - show one line docs
-  * pacakge details page
-    p - toggle package docs collapse/expand
-    t - toggle types docs collapse/expand
-    f - toggle functions docs collapse/expand
-    v - toggle variables docs collapse/expand
-    c - toggle constants docs collapse/expand
-    a - toggle all docs collapse/expand
-  * HOME: to overview page.
-    * add a settings page on overview page: switch theme/language etc.
-  * P: from code page to package detail page
-  * e: toggle show (fields/methods) promoteds | show full selector path | show explicits only
+* hotley: HOME - to overview page.
+  * in gen code, weite a hidden element which text is the overview page relative url.
 
 * implicit
   * switch expr := srcNode.(type) { // this expr might need to be enclosed in mutilple labels
@@ -306,7 +295,16 @@
 
 ### Done
 
-
+* (done) hotkey
+  * overview page
+    d - show one line docs
+  * pacakge details page
+    p - toggle package docs collapse/expand
+    t - toggle types docs collapse/expand
+    f - toggle functions docs collapse/expand
+    v - toggle variables docs collapse/expand
+    c - toggle constants docs collapse/expand
+    a - toggle all docs collapse/expand
 * (done) wdpkgs-listing=solo: from a dep pkg details page to overview, auto show the hidden one ...
 * (giveup) support gopath psudo module name? https://groups.google.com/g/golang-nuts/c/-pmx4eksLpA
 * (done) link code to external source hosting website:

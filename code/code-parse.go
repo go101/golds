@@ -61,27 +61,42 @@ func collectPPackages(ppkgs []*packages.Package) map[string]*packages.Package {
 	return allPPkgs
 }
 
-func collectStdPackages() ([]string, error) {
-	//log.Println("[collect std packages ...]")
-	//defer log.Println("[collect std packages done]")
-
-	var configForCollectStdPkgs = &packages.Config{
-		Tests: false,
-	}
-
-	ppkgs, err := packages.Load(configForCollectStdPkgs, "std")
+func getMatchedPackages(arg string) ([][]byte, error) {
+	output, err := util.RunShell(time.Second*15, "", nil, "go", "list", arg)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("go list %s error: %w", arg, err)
 	}
+	output = bytes.TrimSpace(output)
 
-	pkgs := make([]string, 0, len(ppkgs)+1)
-	pkgs = append(pkgs, "builtin")
-	for _, pp := range ppkgs {
-		pkgs = append(pkgs, pp.PkgPath)
-	}
-
-	return pkgs, nil
+	return bytes.Fields(output), nil
 }
+
+func hasMatchedPackages(arg string) bool {
+	out, err := getMatchedPackages(arg)
+	return err == nil && len(out) > 0
+}
+
+//func collectStdPackages() ([]string, error) {
+//	//log.Println("[collect std packages ...]")
+//	//defer log.Println("[collect std packages done]")
+//
+//	var configForCollectStdPkgs = &packages.Config{
+//		Tests: false,
+//	}
+//
+//	ppkgs, err := packages.Load(configForCollectStdPkgs, "std")
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	pkgs := make([]string, 0, len(ppkgs)+1)
+//	pkgs = append(pkgs, "builtin")
+//	for _, pp := range ppkgs {
+//		pkgs = append(pkgs, pp.PkgPath)
+//	}
+//
+//	return pkgs, nil
+//}
 
 func validateArgumentsAndSetOptions(args []string, toolchainPath string) ([]string, bool, error) {
 	if len(args) == 0 {
@@ -112,6 +127,10 @@ func validateArgumentsAndSetOptions(args []string, toolchainPath string) ([]stri
 				//args = append(args, toolchainPath + string(filepath.Separator) + "..."
 				args = append(args, "./...")
 			} else {
+				if !hasMatchedPackages(p) {
+					log.Printf("argument %s does not match any package, so disgard it", p)
+					continue
+				}
 				hasOthers = true
 				//if p == "." || strings.HasPrefix(p, "./") || strings.HasPrefix(p, ".\\") {
 				//	dotPath = p
@@ -252,7 +271,8 @@ func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...i
 
 	//...
 
-	stdPkgs, err := collectStdPackages()
+	//stdPkgs, err := collectStdPackages()
+	stdPkgs, err := getMatchedPackages("std")
 	if err != nil {
 		return fmt.Errorf("failed to collect std packages: %w", err)
 	}
@@ -335,16 +355,18 @@ func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...i
 		Path:    "", //"std",
 		Version: "",
 		Dir:     "",
-		Pkgs:    make([]*Package, 0, len(stdPkgs)), // might be a little wasting
+		Pkgs:    make([]*Package, 0, len(stdPkgs)+1), // might be a little wasting
 	}
 
 	for _, path := range stdPkgs {
-		pkg := d.packageTable[path]
+		pkg := d.packageTable[string(path)]
 		if pkg != nil {
 			pkg.Module = d.stdModule
 			d.stdModule.Pkgs = append(d.stdModule.Pkgs, pkg)
 		}
 	}
+	d.builtinPkg.Module = d.stdModule
+	d.stdModule.Pkgs = append(d.stdModule.Pkgs, d.builtinPkg)
 
 	// ToDo: this is some slow. Try to parse go.mod files manually?
 	d.confirmPackageModules(args, hasToolchain, toolchainPath, completeModuleInfo)
@@ -370,7 +392,12 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 		log.Printf("unable to list packages and modules info: %s : %s. %s", strings.Join(cmdAndArgs, " "), output, err)
 		return
 	}
+	// Sometimes, "go list ./..." output "go: warning: "./..." matched no packages" without error code.
+	// So the ./... argument might be not filter off by hasMatchedPackages in validateArgumentsAndSetOptions.
 	output = bytes.TrimSpace(output)
+	if i := bytes.IndexByte(output, '{'); i > 0 {
+		output = output[i:]
+	}
 
 	type pkg struct {
 		ImportPath string
