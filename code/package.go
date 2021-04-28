@@ -2,6 +2,7 @@ package code
 
 import (
 	"go/ast"
+	"go/doc"
 	"go/token"
 	"go/types"
 	"log"
@@ -81,7 +82,9 @@ type Package struct {
 
 	// This field might be shared with PackageForDisplay
 	// for concurrent reads.
-	*PackageAnalyzeResult // ToDo: not as pointer
+	*PackageAnalyzeResult // ToDo: not as pointer?
+	SourceFiles           []SourceFileInfo
+	ExampleFiles          []*ast.File
 
 	Directory  string
 	Module     *Module
@@ -100,7 +103,6 @@ type PackageAnalyzeResult struct {
 	AllVariables []*Variable
 	AllConstants []*Constant
 	AllImports   []*Import
-	SourceFiles  []SourceFileInfo
 
 	CodeLinesWithBlankLines int32
 }
@@ -119,8 +121,8 @@ func NewPackageAnalyzeResult() *PackageAnalyzeResult {
 }
 
 // SourceFileInfoByBareFilename returns the SourceFileInfo corresponding the specified bare filename.
-func (r *PackageAnalyzeResult) SourceFileInfoByBareFilename(bareFilename string) *SourceFileInfo {
-	for _, info := range r.SourceFiles {
+func (pkg *Package) SourceFileInfoByBareFilename(bareFilename string) *SourceFileInfo {
+	for _, info := range pkg.SourceFiles {
 		//if info.OriginalGoFile == srcPath {
 		//	return &info
 		//}
@@ -138,8 +140,8 @@ func (r *PackageAnalyzeResult) SourceFileInfoByBareFilename(bareFilename string)
 }
 
 // SourceFileInfoByFilePath return the SourceFileInfo corresponding the specified file path.
-func (r *PackageAnalyzeResult) SourceFileInfoByFilePath(srcPath string) *SourceFileInfo {
-	for _, info := range r.SourceFiles {
+func (pkg *Package) SourceFileInfoByFilePath(srcPath string) *SourceFileInfo {
+	for _, info := range pkg.SourceFiles {
 		if info.OriginalFile == srcPath {
 			return &info
 		}
@@ -270,6 +272,8 @@ type EmbedInfo struct {
 
 // A TypeName represents a type name.
 type TypeName struct {
+	Examples []*Example
+
 	Pkg     *Package // some duplicated with types.TypeName.Pkg(), except builtin types
 	AstDecl *ast.GenDecl
 	AstSpec *ast.TypeSpec
@@ -570,6 +574,8 @@ type Import struct {
 
 // Constant represents a constant.
 type Constant struct {
+	Examples []*Example
+
 	*types.Const
 
 	Type    *TypeInfo
@@ -655,6 +661,8 @@ func (c *Constant) AstValueSpec() *ast.ValueSpec {
 
 // Variable represents a variable.
 type Variable struct {
+	Examples []*Example
+
 	*types.Var
 
 	Type    *TypeInfo
@@ -732,6 +740,8 @@ func (v *Variable) AstValueSpec() *ast.ValueSpec {
 
 // Function represents a function, including non-interface methods.
 type Function struct {
+	Examples []*Example
+
 	*types.Func
 	*types.Builtin // for builtin functions
 
@@ -872,6 +882,8 @@ func (f *Function) AstPackage() *Package {
 
 // InterfaceMethod represents an interface function.
 type InterfaceMethod struct {
+	Examples []*Example
+
 	InterfaceTypeName *TypeName
 	Method            *Method // .AstFunc == nil, .AstInterface != nil
 
@@ -978,6 +990,8 @@ const (
 
 // Field represents a struct field.
 type Field struct {
+	Examples []*Example
+
 	astStruct *ast.StructType
 	AstField  *ast.Field
 	//AstInterface *ast.InterfaceType // for embedding interface in interface (the owner interface)
@@ -1219,4 +1233,22 @@ func PrintSelectors(title string, selectors []*Selector) {
 	for _, sel := range selectors {
 		log.Println("  ", sel)
 	}
+}
+
+// Identifier represents an identifier occurrence in code.
+type Identifier struct {
+	//Pkg *Package // gettable from FileInfo
+
+	FileInfo *SourceFileInfo
+	AstIdent *ast.Ident
+}
+
+//type PackageLevelIdentifier struct {
+//	FileInfo *SourceFileInfo
+//	Examples []*Example
+//}
+
+type Example struct {
+	example *doc.Example
+	fset    *token.FileSet
 }

@@ -871,7 +871,7 @@ func buildPackageDetailsData(analyzer *code.CodeAnalyzer, pkgPath string, alsoCo
 		NumDepedBys: uint32(len(pkg.DepedBys)),
 	}
 
-	//analyzer.BuildCgoFileMappings(pkg)
+	//analyzer.loadSourceFiles(pkg)
 
 	isBuiltin := pkgPath == "builtin"
 

@@ -186,6 +186,12 @@ var codeHosts = []CodeHost{
 			return "https://github.com/googleapis/go-genproto", ""
 		},
 	},
+	{
+		ModulePathPrefix: "google.golang.org/protobuf",
+		GuessRepositoryFromModulePath: func(moduleRelativePath string) (string, string) {
+			return "https://github.com/protocolbuffers/protobuf-go", ""
+		},
+	},
 }
 
 func buildSourceLinkFunc_github(w writer, commit, extraPath, sourcePath, line, endLine string) error {

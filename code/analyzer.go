@@ -21,6 +21,7 @@ const (
 	SubTask_ParsePackagesDone
 	SubTask_CollectPackages
 	SubTask_CollectModules
+	SubTask_CollectExamples
 	SubTask_SortPackagesByDependencies
 	SubTask_CollectDeclarations
 	SubTask_CollectRuntimeFunctionPositions
@@ -56,6 +57,8 @@ type CodeAnalyzer struct {
 	//sourceFile2PackageTable  map[string]SourceFile
 	//sourceFile2PackageTable         map[string]*Package
 	//generatedFile2OriginalFileTable map[string]string
+
+	exampleFileSet *token.FileSet
 
 	// *types.Type -> *TypeInfo
 	lastTypeIndex       uint32
@@ -116,14 +119,6 @@ func (d *CodeAnalyzer) IterateModule(f func(*Module)) {
 			f(m)
 		}
 	}
-}
-
-// Identifier represents an identifier occurrence in code.
-type Identifier struct {
-	//Pkg *Package // gettable from FileInfo
-
-	FileInfo *SourceFileInfo
-	AstIdent *ast.Ident
 }
 
 func (d *CodeAnalyzer) regObjectReference(obj types.Object, fileInfo *SourceFileInfo, id *ast.Ident) {
@@ -217,6 +212,10 @@ func (d *CodeAnalyzer) buildSourceFileTable() {
 // pkgFile: pkg.Path + "/" + file.BareFilename
 func (d *CodeAnalyzer) SourceFile(pkgFile string) *SourceFileInfo {
 	return d.allSourceFiles[pkgFile]
+}
+
+func (d *CodeAnalyzer) ExampleFileSet() *token.FileSet {
+	return d.exampleFileSet
 }
 
 //func (d *CodeAnalyzer) SourceFile2Package(path string) (*Package, bool) {

@@ -177,6 +177,8 @@ func (ds *docServer) onAnalyzingSubTaskDone(task int, d time.Duration, args ...i
 			msg = ds.currentTranslation.Text_Analyzing_CollectPackages(int(args[0]), d)
 		case code.SubTask_CollectModules:
 			msg = ds.currentTranslation.Text_Analyzing_CollectModules(int(args[0]), d)
+		case code.SubTask_CollectExamples:
+			msg = ds.currentTranslation.Text_Analyzing_CollectExamples(d)
 		case code.SubTask_SortPackagesByDependencies:
 			msg = ds.currentTranslation.Text_Analyzing_SortPackagesByDependencies(d)
 		case code.SubTask_CollectDeclarations:

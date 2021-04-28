@@ -4,70 +4,17 @@ import (
 	"bytes"
 	"fmt"
 	"go/ast"
+	"go/parser"
+	"go/token"
 	"go/types"
 	"io/ioutil"
 	"log"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
 )
-
-func (d *CodeAnalyzer) collectSourceFiles() {
-	//log.Println("=================== collectSourceFiles")
-
-	//d.sourceFile2PackageTable = make(map[string]SourceFile, len(d.packageList)*5)
-	//d.sourceFile2PackageTable = make(map[string]*Package, len(d.packageList)*5)
-	//d.generatedFile2OriginalFileTable = make(map[string]string, 128)
-	//d.sourceFileLineOffsetTable = make(map[string]int32, 256)
-	for _, pkg := range d.packageList {
-		//log.Println("====== ", pkg.Path())
-		//if pkg.Path() == "unsafe" {
-		//	//log.Println("///============== ", pkg.PPkg.GoFiles)
-		//	//ast.Print(pkg.PPkg.Fset, pkg.PPkg.Syntax[0])
-		//
-		//	// For unsafe package, pkg.PPkg.CompiledGoFiles is blank.
-		//	// ToDo: fill it in fillUnsafePackage? (Done)
-		//
-		//	path := pkg.PPkg.GoFiles[0]
-		//
-		//	d.sourceFile2PackageTable[path] = SourceFile{
-		//		Path:    path,
-		//		Pkg:     pkg,
-		//		AstFile: pkg.PPkg.Syntax[0],
-		//	}
-		//
-		//	continue
-		//}
-
-		if len(pkg.PPkg.CompiledGoFiles) != len(pkg.PPkg.Syntax) {
-			panic(fmt.Sprintf("!!! len(pkg.PPkg.CompiledGoFiles) != len(pkg.PPkg.Syntax), %d:%d, %s", len(pkg.PPkg.CompiledGoFiles), len(pkg.PPkg.Syntax), pkg.Path()))
-		}
-
-		for range pkg.PPkg.OtherFiles {
-			//d.sourceFile2PackageTable[path] = pkg
-			d.stats.FilesWithoutGenerateds++
-		}
-
-		for range pkg.PPkg.CompiledGoFiles {
-			//d.sourceFile2PackageTable[path] = pkg
-		}
-
-		for range pkg.PPkg.GoFiles {
-			//if _, ok := d.sourceFile2PackageTable[path]; !ok {
-			//	//log.Println("! in GoFiles but not CompiledGoFiles:", path)
-			//	d.sourceFile2PackageTable[path] = pkg
-			//}
-			d.stats.FilesWithoutGenerateds++
-		}
-
-		d.BuildCgoFileMappings(pkg)
-
-		//d.stats.Files += int32(len(pkg.SourceFiles))
-	}
-}
-
-//==================================
 
 type SourceFileInfo struct {
 	Pkg *Package // to remove one field in Identifier. Also good to external source line generation.
@@ -105,6 +52,117 @@ func (info *SourceFileInfo) AstBareFileName() string {
 	return info.BareFilename
 }
 
+func (d *CodeAnalyzer) collectSourceFiles() {
+	//log.Println("=================== collectSourceFiles")
+
+	//d.sourceFile2PackageTable = make(map[string]SourceFile, len(d.packageList)*5)
+	//d.sourceFile2PackageTable = make(map[string]*Package, len(d.packageList)*5)
+	//d.generatedFile2OriginalFileTable = make(map[string]string, 128)
+	//d.sourceFileLineOffsetTable = make(map[string]int32, 256)
+	for _, pkg := range d.packageList {
+		//log.Println("====== ", pkg.Path())
+		//if pkg.Path() == "unsafe" {
+		//	//log.Println("///============== ", pkg.PPkg.GoFiles)
+		//	//ast.Print(pkg.PPkg.Fset, pkg.PPkg.Syntax[0])
+		//
+		//	// For unsafe package, pkg.PPkg.CompiledGoFiles is blank.
+		//	// ToDo: fill it in fillUnsafePackage? (Done)
+		//
+		//	path := pkg.PPkg.GoFiles[0]
+		//
+		//	d.sourceFile2PackageTable[path] = SourceFile{
+		//		Path:    path,
+		//		Pkg:     pkg,
+		//		AstFile: pkg.PPkg.Syntax[0],
+		//	}
+		//
+		//	continue
+		//}
+
+		if len(pkg.PPkg.CompiledGoFiles) != len(pkg.PPkg.Syntax) {
+			panic(fmt.Sprintf("!!! len(pkg.PPkg.CompiledGoFiles) != len(pkg.PPkg.Syntax), %d:%d, %s", len(pkg.PPkg.CompiledGoFiles), len(pkg.PPkg.Syntax), pkg.Path()))
+		}
+
+		//for range pkg.PPkg.OtherFiles {
+		//	//d.sourceFile2PackageTable[path] = pkg
+		//	d.stats.FilesWithoutGenerateds++
+		//}
+		d.stats.FilesWithoutGenerateds += int32(len(pkg.PPkg.OtherFiles))
+
+		//for range pkg.PPkg.CompiledGoFiles {
+		//	//d.sourceFile2PackageTable[path] = pkg
+		//}
+
+		for _, path := range pkg.PPkg.GoFiles {
+			//	//if _, ok := d.sourceFile2PackageTable[path]; !ok {
+			//	//	//log.Println("! in GoFiles but not CompiledGoFiles:", path)
+			//	//	d.sourceFile2PackageTable[path] = pkg
+			//	//}
+			//	d.stats.FilesWithoutGenerateds++
+			if pkg.Directory == "" {
+				pkg.Directory = filepath.Dir(path)
+				break
+			}
+		}
+		d.stats.FilesWithoutGenerateds += int32(len(pkg.PPkg.GoFiles))
+
+		//d.collectSourceFileInfos(pkg)
+		if pkg.SourceFiles != nil {
+			return
+		}
+		func() {
+			pkg.SourceFiles = make([]SourceFileInfo, 0, len(pkg.PPkg.CompiledGoFiles))
+
+			for i, compiledFile := range pkg.PPkg.CompiledGoFiles {
+				if strings.HasSuffix(compiledFile, ".go") {
+					// ToDo: verify compiledFile must be also in  pkg.PPkg.GoFiles
+					pkg.SourceFiles = append(pkg.SourceFiles,
+						SourceFileInfo{
+							Pkg:           pkg,
+							BareFilename:  filepath.Base(compiledFile),
+							OriginalFile:  compiledFile,
+							GeneratedFile: "", //compiledFile,
+							AstFile:       pkg.PPkg.Syntax[i],
+						},
+					)
+					continue
+				}
+
+				//info := generatedFileInfo(pkg, compiledFile, pkg.PPkg.Syntax[i])
+				//
+				//if info.OriginalFile != "" && info.GeneratedFile != info.OriginalFile {
+				//	d.generatedFile2OriginalFileTable[info.GeneratedFile] = info.OriginalFile
+				//}
+				//
+				//info.AstFile = pkg.PPkg.Syntax[i]
+
+				info := generatedFileInfo(pkg, compiledFile, pkg.PPkg.Syntax[i])
+				pkg.SourceFiles = append(pkg.SourceFiles, info)
+
+				//if info.GoFileLineOffset != 0 {
+				//	d.sourceFileLineOffsetTable[info.OriginalGoFile] = info.GoFileLineOffset
+				//}
+			}
+
+			for _, path := range pkg.PPkg.OtherFiles {
+				pkg.SourceFiles = append(pkg.SourceFiles,
+					SourceFileInfo{
+						Pkg:          pkg,
+						BareFilename: filepath.Base(path),
+						OriginalFile: path,
+					},
+				)
+			}
+		}()
+
+		////d.stats.Files += int32(len(pkg.SourceFiles))
+		//d.stat_OnNewPackage(d.IsStandardPackage(pkg), len(pkg.SourceFiles), len(pkg.Deps), pkg.Path())
+		d.stat_OnNewPackage(d.IsStandardPackage(pkg), len(pkg.PPkg.CompiledGoFiles), len(pkg.Deps), pkg.Path())
+	}
+}
+
+//==================================
+
 // ToDo: find a better way to detect generated files.
 var cgoGenIdent = []byte(`// Code generated by cmd/cgo; DO NOT EDIT.`)
 var reposIdent = []byte(`//line `)
@@ -120,26 +178,24 @@ var reposIdent = []byte(`//line `)
 //    //line file:m:n
 //    */
 // Maybe it is best to check the comments nodes in the already provided ast.File.
-func cgoFileInfo(pkg *Package, filename string, astFile *ast.File) *SourceFileInfo {
+func generatedFileInfo(pkg *Package, filename string, astFile *ast.File) SourceFileInfo {
+	var goFilename string
+
 	fileContent, err := ioutil.ReadFile(filename)
 	if err != nil {
-		log.Println("cgoFileInfo ReadFile error:", err)
-		return nil
+		log.Printf("generatedFileInfo: ReadFile(%s) error: %s", filename, err)
+		fileContent = []byte{} // ToDo: might be not needed. To read ioutil.ReadFile docs.
+		goto Done
 	}
 
-	// ToDo: the current implement strongly depends on the cgo file genenration implementation.
+	// ToDo: the current implement strongly depends on the file genenration implementation.
 	//       Here it is assumed that the "// Code generated by cmd/cgo; DO NOT EDIT." is the 4th line.
 	if !bytes.HasPrefix(fileContent, cgoGenIdent) {
-		return &SourceFileInfo{
-			Pkg:                   pkg,
-			BareGeneratedFilename: filepath.Base(filename),
-			OriginalFile:          "",
-			GeneratedFile:         filename,
-			AstFile:               astFile,
-		}
+		goto Done
 	}
 
-	for lineOffset, data := 1, fileContent; len(data) > 0; lineOffset++ {
+	// Scan at most 8 lines.
+	for lineNumber, data := 1, fileContent; lineNumber <= 8 && len(data) > 0; lineNumber++ {
 		i := bytes.IndexByte(data, '\n')
 		k := i
 		if k < 0 {
@@ -156,78 +212,35 @@ func cgoFileInfo(pkg *Package, filename string, astFile *ast.File) *SourceFileIn
 			}
 
 			// Assume the colume offset is 1.
-			var goFilename string
 			if indexA := bytes.LastIndexByte(line[:indexB], ':'); indexA >= 0 {
 				goFilename = string(line[:indexA])
 			} else {
 				goFilename = string(line[:indexB])
 			}
-
-			return &SourceFileInfo{
-				Pkg:           pkg,
-				BareFilename:  filepath.Base(goFilename),
-				OriginalFile:  goFilename,
-				GeneratedFile: filename,
-				AstFile:       astFile,
-				//: int32(len(fileContent) - len(data[i+1:])),
-				//GoFileLineOffset:    int32(lineOffset),
-			}
+			goto Done
 		}
 		if i >= 0 {
 			data = data[i+1:]
 		}
 	}
 
-	return nil
-}
+	log.Printf("??? generatedFileInfo: file (%s) looks like cgo generated but the original file not found", filename)
 
-func (d *CodeAnalyzer) BuildCgoFileMappings(pkg *Package) {
-	if pkg.SourceFiles != nil {
-		return
+Done:
+	var barFilename string
+	if goFilename != "" {
+		barFilename = filepath.Base(goFilename)
+	} else {
+		barFilename = filepath.Base(filename)
 	}
 
-	pkg.SourceFiles = make([]SourceFileInfo, 0, len(pkg.PPkg.CompiledGoFiles))
-
-	for i, compiledFile := range pkg.PPkg.CompiledGoFiles {
-		if strings.HasSuffix(compiledFile, ".go") {
-			// ToDo: verify compiledFile must be also in  pkg.PPkg.GoFiles
-			pkg.SourceFiles = append(pkg.SourceFiles,
-				SourceFileInfo{
-					Pkg:           pkg,
-					BareFilename:  filepath.Base(compiledFile),
-					OriginalFile:  compiledFile,
-					GeneratedFile: "", //compiledFile,
-					AstFile:       pkg.PPkg.Syntax[i],
-				},
-			)
-			continue
-		}
-		info := cgoFileInfo(pkg, compiledFile, pkg.PPkg.Syntax[i])
-		if info == nil {
-			log.Println(compiledFile, "!has no original file:", compiledFile)
-			continue
-		}
-
-		//if info.OriginalFile != "" && info.GeneratedFile != info.OriginalFile {
-		//	d.generatedFile2OriginalFileTable[info.GeneratedFile] = info.OriginalFile
-		//}
-
-		//info.AstFile = pkg.PPkg.Syntax[i]
-		pkg.SourceFiles = append(pkg.SourceFiles, *info)
-
-		//if info.GoFileLineOffset != 0 {
-		//	d.sourceFileLineOffsetTable[info.OriginalGoFile] = info.GoFileLineOffset
-		//}
-	}
-
-	for _, path := range pkg.PPkg.OtherFiles {
-		pkg.SourceFiles = append(pkg.SourceFiles,
-			SourceFileInfo{
-				Pkg:          pkg,
-				BareFilename: filepath.Base(path),
-				OriginalFile: path,
-			},
-		)
+	return SourceFileInfo{
+		Pkg:           pkg,
+		BareFilename:  barFilename,
+		OriginalFile:  goFilename,
+		GeneratedFile: filename,
+		AstFile:       astFile,
+		Content:       fileContent,
 	}
 }
 
@@ -281,8 +294,13 @@ func (d *CodeAnalyzer) cacheSourceFiles() {
 	for _, pkg := range d.packageList {
 		//isUnsafe := pkg.Path() == "unsafe"
 		for i := range pkg.SourceFiles {
-			wg.Add(1)
 			info := &pkg.SourceFiles[i]
+			if info.Content != nil {
+				continue
+			}
+
+			wg.Add(1)
+
 			filePath := info.OriginalFile
 			if info.GeneratedFile != "" {
 				filePath = info.GeneratedFile
@@ -311,4 +329,60 @@ func (d *CodeAnalyzer) cacheSourceFiles() {
 			}() //isUnsafe && filePath == "unsafe.go")
 		}
 	}
+}
+
+func (d *CodeAnalyzer) collectCodeExamples() {
+	collectExampleFiles := func(pkg *Package) []string {
+		filenames := make([]string, 0, 8)
+		first := true
+		if err := filepath.Walk(pkg.Directory, func(p string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if info.IsDir() {
+				if first {
+					first = false
+					return nil
+				}
+				return filepath.SkipDir
+			}
+			name := info.Name()
+			if strings.HasPrefix(name, "example_") && strings.HasSuffix(name, "_test.go") {
+				filenames = append(filenames, name)
+			}
+			return nil
+		}); err != nil {
+			log.Printf("walk package %s dir %s error: %s", pkg.Path(), pkg.Directory, err)
+		}
+		return filenames
+	}
+
+	d.exampleFileSet = token.NewFileSet()
+	for _, pkg := range d.packageList {
+		if pkg.ExampleFiles != nil {
+			continue
+		}
+		filenames := collectExampleFiles(pkg)
+		pkg.ExampleFiles = make([]*ast.File, 0, len(filenames))
+		for _, f := range filenames {
+			f := filepath.Join(pkg.Directory, f)
+			astFile, err := parser.ParseFile(d.exampleFileSet, f, nil, parser.ParseComments)
+			if err != nil {
+				fmt.Printf("parse file %s error: %s", f, err)
+				continue
+			}
+			pkg.ExampleFiles = append(pkg.ExampleFiles, astFile)
+		}
+
+		//log.Println(len(pkg.ExampleFiles), pkg.Path(), pkg.Directory)
+	}
+
+	// ToDo: load tests and
+	//examples := doc.Examples(pkg.ExampleFiles...)
+	//for i, e := range examples {
+	//	log.Println("==================", i)
+	//	//format.Node(os.Stdout, analyzer.ExampleFileSet(), e.Play)
+	//	log.Println(analyzer.ExampleFileSet().PositionFor(e.Code.Pos(), false))
+	//	log.Println(analyzer.ExampleFileSet().PositionFor(e.Code.End(), false))
+	//}
 }

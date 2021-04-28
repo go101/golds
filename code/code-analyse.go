@@ -36,6 +36,10 @@ func (d *CodeAnalyzer) AnalyzePackages(onSubTaskDone func(int, time.Duration, ..
 
 	logProgress(SubTask_SortPackagesByDependencies)
 
+	d.collectSourceFiles()
+
+	logProgress(SubTask_CollectSourceFiles)
+
 	for _, pkg := range d.packageList {
 		d.analyzePackage_CollectDeclarations(pkg)
 	}
@@ -47,7 +51,7 @@ func (d *CodeAnalyzer) AnalyzePackages(onSubTaskDone func(int, time.Duration, ..
 	//log.Println("[analyze packages 2...]")
 
 	for _, pkg := range d.packageList {
-		d.analyzePackage_ConfirmTypeSources(pkg)
+		d.analyzePackage_ConfirmTypeSources(pkg) // need collect source files firstly
 	}
 
 	logProgress(SubTask_ConfirmTypeSources)
@@ -79,13 +83,13 @@ func (d *CodeAnalyzer) AnalyzePackages(onSubTaskDone func(int, time.Duration, ..
 
 	logProgress(SubTask_RegisterInterfaceMethodsForTypes)
 
-	d.collectSourceFiles()
-
-	logProgress(SubTask_CollectSourceFiles)
-
 	d.collectObjectReferences()
 
 	logProgress(SubTask_CollectObjectReferences)
+
+	d.collectCodeExamples() // need the pkg.Directory confirmed in the last step
+
+	logProgress(SubTask_CollectExamples)
 
 	d.cacheSourceFiles()
 
@@ -1706,13 +1710,19 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 		d.stat_OnPackageCodeLineCount(locOfPkg, pkg)
 	}()
 
-	for i, file := range pkg.PPkg.Syntax {
+	//for i, file := range pkg.PPkg.Syntax {
+	for _, fileInfo := range pkg.SourceFiles {
+		file := fileInfo.AstFile
+		if file == nil {
+			continue
+		}
 		//d.stats.AstFiles++
 		//d.stats.Imports += int32(len(file.Imports))
 		//incSliceStat(d.stats.FilesByImportCount[:], len(file.Imports))
 		//d.stats.CodeLinesWithBlankLines += int32(pkg.PPkg.Fset.PositionFor(pkg.PPkg.Syntax[i].End(), false).Line)
-		loc := pkg.PPkg.Fset.PositionFor(pkg.PPkg.Syntax[i].End(), false).Line
-		d.stat_OnNewAstFile(len(file.Imports), loc, filepath.Base(pkg.PPkg.CompiledGoFiles[i]), pkg)
+		loc := pkg.PPkg.Fset.PositionFor(file.End(), false).Line
+		//d.stat_OnNewAstFile(len(file.Imports), loc, filepath.Base(pkg.PPkg.CompiledGoFiles[i]), pkg)
+		_ = filepath.Base
 		locOfPkg += loc
 
 		//if len(file.Imports) == 0 {
@@ -2250,16 +2260,16 @@ func (d *CodeAnalyzer) analyzePackage_CollectMoreStatisticsFinal() {
 	d.stats.ExportedCompositeTypeNames = sum(reflect.Array, reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Ptr, reflect.Slice, reflect.Struct, reflect.UnsafePointer)
 	d.stats.ExportedTypeNames = d.stats.ExportedCompositeTypeNames + d.stats.ExportedBasicTypeNames
 
-	d.stats.Packages = int32(len(d.packageList))
-	for _, pkg := range d.packageList {
-		//if d.IsStandardPackage(pkg) {
-		//	d.stats.StdPackages++
-		//}
-		//d.stats.FilesWithGenerateds += int32(len(pkg.SourceFiles))
-		//d.stats.AllPackageDeps += int32(len(pkg.Deps))
-		//incSliceStat(d.stats.PackagesByDeps[:], len(pkg.Deps))
-		d.stat_OnNewPackage(d.IsStandardPackage(pkg), len(pkg.SourceFiles), len(pkg.Deps), pkg.Path())
-	}
+	//d.stats.Packages = int32(len(d.packageList))
+	//for _, pkg := range d.packageList {
+	//	//if d.IsStandardPackage(pkg) {
+	//	//	d.stats.StdPackages++
+	//	//}
+	//	//d.stats.FilesWithGenerateds += int32(len(pkg.SourceFiles))
+	//	//d.stats.AllPackageDeps += int32(len(pkg.Deps))
+	//	//incSliceStat(d.stats.PackagesByDeps[:], len(pkg.Deps))
+	//	//d.stat_OnNewPackage(d.IsStandardPackage(pkg), len(pkg.SourceFiles), len(pkg.Deps), pkg.Path())
+	//}
 
 	d.stats.roughExportedIdentifierCount += d.stats.ExportedIdentifers
 }

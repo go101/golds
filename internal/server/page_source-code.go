@@ -1521,6 +1521,18 @@ GoOn:
 						return
 					}
 				}
+				// ToDo: the above code works for the "bar" and "baz" fields, but not for the "X" field.
+				//
+				// type Foo struct {
+				// 	bar Type
+				//	baz struct {
+				//		X int
+				//	}
+				//}
+				//
+				// There are two ways to solve this problem:
+				// 1. create a fake type name "unamed-12345" and use "unamed-12345.X" to denote the X field.
+				// 2. modify ref-user page implementation to support "Foo.baz.X" (not recommended, may have loop problem).
 			}
 
 			goto End
@@ -1691,7 +1703,7 @@ func (ds *docServer) analyzeSoureCode(pkgPath, bareFilename string) (*SourceFile
 		return nil, errors.New("package not found")
 	}
 
-	//ds.analyzer.BuildCgoFileMappings(pkg)
+	//ds.analyzer.loadSourceFiles(pkg)
 
 	var fileInfo = pkg.SourceFileInfoByBareFilename(bareFilename)
 	if fileInfo == nil {

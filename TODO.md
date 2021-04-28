@@ -4,14 +4,24 @@
 
 * show/run examples/tests/banchmarks 
   (Tests==true, cause reflect.EmbedWithUnexpMeth not found in analyzePackage_ConfirmTypeSources/registerDirectFields now)
-  * run source code, run main package
-  * Open a new page to avoid using JavaScript?
-  * "go/doc": doc.Examples(...)importance
-  * websocket: monitor page leave and shutdown unfinished Go processes.
   * use custom implementation? Ast load example_xxx_test.go file only, ...
+    * collectionDeclarations ranges sourceFiles
+    * load all example source codes in memory
+    * render examples code in package details pages
+
+* module page. Containing Module: xxxx/xxxx
+  * sort by requiredBys / line of codes
+  * wait https://github.com/golang/go/issues/45649 to be fixed
+  * show project links
+
+* pkg details page: show values by file/position order (only for javascript on)
+* search ids on pkg details/overview pages
 
 * hotley: HOME - to overview page.
   * in gen code, weite a hidden element which text is the overview page relative url.
+
+* embed playground
+  * to run examples
 
 * implicit
   * switch expr := srcNode.(type) { // this expr might need to be enclosed in mutilple labels
@@ -91,6 +101,19 @@
     * even for named types, its files obtained by embedding have not definitions, so now uses are not collected for them
   * methods of unnamed stricts (obtained by embedding, now uses are not collected for them)
   * filter: only show those in type specifications
+  * // ToDo: the above code works for the "bar" and "baz" fields, but not for the "X" field.
+				//
+				// type Foo struct {
+				// 	bar Type
+				//	baz struct {
+				//		X int
+				//	}
+				//}
+				//
+				// There are two ways to solve this problem:
+				// 1. create a fake type name "unamed-12345" and use "unamed-12345.X" to denote the X field.
+				// 2. modify ref-user page implementation to support "Foo.baz.X" (not recommended, may have loop problem).
+
 
 * some buildPageHref can make page != nil
     and buildPageHref should be a method of DocServer
@@ -135,10 +158,7 @@
   * searching uses for id goroutine 0-n
   (forget what these means)
 
-* module page. Containing Module: xxxx/xxxx
-  * sort by requiredBys
 
-* pkg details page: show values by file/position order (only for javascript on)
 
 * overview page: show std pkgages only
   * need maintain a seperated depHeight/depDepth for std module internally.
@@ -148,7 +168,6 @@
 
 * gen mode: merge docs for several (GOOS, GOARCH) compositions. At least for std.
 
-* search ids on pkg details/overview pages
 
 * Rewrite some implemenrations
   * global.pacakgeList, each pkg has a unique id (int32)

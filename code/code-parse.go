@@ -128,7 +128,7 @@ func validateArgumentsAndSetOptions(args []string, toolchainPath string) ([]stri
 				args = append(args, "./...")
 			} else {
 				if !hasMatchedPackages(p) {
-					log.Printf("argument %s does not match any package, so disgard it", p)
+					log.Printf("argument %s does not match any package, so it is discarded", p)
 					continue
 				}
 				hasOthers = true
@@ -323,6 +323,8 @@ func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...i
 	}
 	d.builtinPkg = d.packageTable["builtin"]
 
+	d.stats.Packages = int32(len(d.packageList))
+
 	var pkgNumDepedBys = make(map[*Package]uint32, len(allPPkgs))
 	for _, pkg := range d.packageList {
 		pkg.Deps = make([]*Package, 0, len(pkg.PPkg.Imports))
@@ -477,9 +479,9 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 		}
 
 		pkg.OneLineDoc = p.Doc
+		pkg.Directory = p.Dir
 
 		if p.Module.Path != "" {
-			pkg.Directory = p.Dir
 			if hasToolchain {
 				// log.Printf("!!! hasToolchain==true but package %s is not in toolchain directory, weird", p.ImportPath)
 				// Not weird. Toolchain depends on some golang.org/x/... packages.

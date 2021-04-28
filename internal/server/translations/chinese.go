@@ -83,6 +83,10 @@ func (*Chinese) Text_Analyzing_CollectModules(numMods int, d time.Duration) stri
 	return fmt.Sprintf("搜集了%d个模块：%s", numMods, d)
 }
 
+func (*Chinese) Text_Analyzing_CollectExamples(d time.Duration) string {
+	return fmt.Sprintf("搜集代码示例：%s", d)
+}
+
 func (*Chinese) Text_Analyzing_SortPackagesByDependencies(d time.Duration) string {
 	return fmt.Sprintf("按依赖关系对代码包进行排序：%s", d)
 }

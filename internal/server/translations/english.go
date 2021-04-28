@@ -105,6 +105,10 @@ func (*English) Text_Analyzing_CollectModules(numMods int, d time.Duration) stri
 	return fmt.Sprintf("Collected %d modules: %s", numMods, d)
 }
 
+func (*English) Text_Analyzing_CollectExamples(d time.Duration) string {
+	return fmt.Sprintf("Collected code examples: %s", d)
+}
+
 func (*English) Text_Analyzing_SortPackagesByDependencies(d time.Duration) string {
 	return fmt.Sprintf("Sorted packages by dependency relations: %s", d)
 }
