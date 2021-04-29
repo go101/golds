@@ -404,10 +404,10 @@ func GenDocs(options PageOutputOptions, args []string, outputDir string, silentM
 
 	// ...
 
-	writeFile := func(path string, c Content) error {
+	writeFile := func(path string, c Content) (n int, err error) {
 		f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
 		if err != nil {
-			return err
+			return
 		}
 		defer func() {
 			//release(c) // should not put here.
@@ -415,13 +415,14 @@ func GenDocs(options PageOutputOptions, args []string, outputDir string, silentM
 		}()
 
 		for _, bs := range c {
-			_, err := f.Write(bs)
+			x, err := f.Write(bs)
+			n += x
 			if err != nil {
-				return err
+				return n, err
 			}
 		}
 
-		return nil
+		return
 	}
 
 	type Page struct {
@@ -466,9 +467,6 @@ func GenDocs(options PageOutputOptions, args []string, outputDir string, silentM
 				return
 			}
 
-			numPages++
-			numBytes += len(pg.Content)
-
 			path := filepath.Join(genOutputDir, pg.FilePath)
 			path = strings.Replace(path, "/", string(filepath.Separator), -1)
 			path = strings.Replace(path, "\\", string(filepath.Separator), -1)
@@ -480,8 +478,11 @@ func GenDocs(options PageOutputOptions, args []string, outputDir string, silentM
 			//if err := ioutil.WriteFile(path, pg.Content, 0644); err != nil {
 			//	log.Fatalln("Write file error:", err)
 			//}
-			if err := writeFile(path, pg.Content); err != nil {
+			if n, err := writeFile(path, pg.Content); err != nil {
 				log.Fatalln("Write file error:", err)
+			} else {
+				numPages++
+				numBytes += n
 			}
 
 			//if verboseLogs || !silent {

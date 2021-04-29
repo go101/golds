@@ -169,21 +169,28 @@ func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*Package
 		var index = strconv.Itoa(i + 1)
 		fmt.Fprintf(page, `<span class="order">%s%d</span>. `, SPACES[:maxDigitCount-len(index)], i+1)
 
-		if pkg.Prefix != "" {
-			fmt.Fprintf(page,
-				`<a href="%s" class="path-duplicate">%s</a>`,
-				buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, pkg.Path}, nil, ""),
-				pkg.Prefix,
-			)
-
-		}
-		if pkg.Remaining != "" {
+		if hidden {
+			// a hidden one as :target will be shown.
 			fmt.Fprintf(page,
 				`<a href="%s">%s</a>`,
 				buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, pkg.Path}, nil, ""),
-				pkg.Remaining,
+				pkg.Path,
 			)
-
+		} else {
+			if pkg.Prefix != "" {
+				fmt.Fprintf(page,
+					`<a href="%s" class="path-duplicate">%s</a>`,
+					buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, pkg.Path}, nil, ""),
+					pkg.Prefix,
+				)
+			}
+			if pkg.Remaining != "" {
+				fmt.Fprintf(page,
+					`<a href="%s">%s</a>`,
+					buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, pkg.Path}, nil, ""),
+					pkg.Remaining,
+				)
+			}
 		}
 
 		if writeDataAttrs {
