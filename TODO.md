@@ -14,6 +14,8 @@
   * wait https://github.com/golang/go/issues/45649 to be fixed
   * show project links
 
+* tests only work for Linux now.
+
 * pkg details page: show values by file/position order (only for javascript on)
 * search ids on pkg details/overview pages
 

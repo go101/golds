@@ -714,15 +714,16 @@ func (v *astVisitor) buildConfirmedLines(toLine int, class string) {
 			lastLineEnd--
 		}
 		//log.Println("---", v.offset, lastLineEnd, lineStart)
-		if lastLineEnd < v.offset {
-			bs := v.content[v.offset:]
-			if len(bs) > 100 {
-				bs = bs[:100]
-			}
-			log.Printf(">>>>>>> debug: %s\n%s\n<<<<<<<<", v.goFilePath, bs)
-		} else {
-			v.writeEscapedHTML(v.content[v.offset:lastLineEnd], class)
-		}
+		//if lastLineEnd < v.offset {
+		//	// https://github.com/go101/golds/issues/18
+		//	bs := v.content[v.offset:]
+		//	if len(bs) > 100 {
+		//		bs = bs[:100]
+		//	}
+		//	log.Printf(">>>>>>> debug: %s\n%s\n<<<<<<<<", v.goFilePath, bs)
+		//} else {
+		v.writeEscapedHTML(v.content[v.offset:lastLineEnd], class)
+		//}
 		v.buildLine()
 
 		//log.Println("buildConfirmedLines v.offset = lineStart :", lineStart)
