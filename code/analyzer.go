@@ -318,6 +318,10 @@ func (d *CodeAnalyzer) LookForType(t types.Type) *TypeInfo {
 }
 
 func (d *CodeAnalyzer) registeringType(t types.Type, createOnNonexist bool) *TypeInfo {
+	if t == nil {
+		t = types.Typ[types.Invalid]
+	}
+
 	typeInfo, _ := d.ttype2TypeInfoTable.At(t).(*TypeInfo)
 	if typeInfo == nil && createOnNonexist {
 		if d.forbidRegisterTypes {

@@ -387,6 +387,9 @@ var space = []byte{' '}
 func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, toolchainPath string, completeModuleInfo func(*Module)) {
 	// go list -deps -json [args]
 
+	// There is a bug https://github.com/golang/go/issues/45649
+	// which makes the command return some incorrect modules for some packages.
+
 	// In the output, packages under GOROOT have not .Module info.
 	cmdAndArgs := append([]string{"go", "list", "-deps", "-json"}, args...)
 	output, err := util.RunShell(time.Second*15, "", nil, cmdAndArgs...)
@@ -521,11 +524,10 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 	}
 
 	// confirm std and cmd module version, ...
-	versionData, err := ioutil.ReadFile(filepath.Join(build.Default.GOROOT, "VERSION"))
+	goVersion, err := findGoToolchainVersionFromGoRoot(build.Default.GOROOT)
 	if err != nil {
-		panic("failed to get Goo toolchain version")
+		panic(err)
 	}
-	goVersion := string(bytes.TrimSpace(versionData))
 	d.stdModule.Version = goVersion
 	d.stdModule.Dir = filepath.Dir(toolchainPath) // filepath.Join(build.Default.GOROOT, "src")
 	d.stdModule.RepositoryCommit = goVersion
@@ -641,6 +643,27 @@ func confirmModuleReposotoryCommit(m *Module) {
 	m.RepositoryCommit = version
 }
 
+// devel go1.17-326a792517 Tue May 11 02:46:21 2021 +0000
+var findGoVersionRegexp = regexp.MustCompile(`devel go[.0-9]+-([0-9a-fA-F]{6,})\s`)
+
+func findGoToolchainVersionFromGoRoot(goroot string) (string, error) {
+	versionData, err := ioutil.ReadFile(filepath.Join(goroot, "VERSION"))
+	if err == nil {
+		return string(bytes.TrimSpace(versionData)), nil
+	} else {
+		//panic("failed to get Go toolchain version in GOROOT: " + build.Default.GOROOT)
+	}
+	versionData, err = ioutil.ReadFile(filepath.Join(goroot, "VERSION.cache"))
+	if err != nil {
+		return "", fmt.Errorf("failed to get Go toolchain version in GOROOT (%s): %w", build.Default.GOROOT, err)
+	}
+	matches := findGoVersionRegexp.FindStringSubmatch(string(versionData))
+	if len(matches) >= 2 {
+		return matches[1], nil
+	}
+	return "", fmt.Errorf("failed to get Go toolchain version in GOROOT (%s)", build.Default.GOROOT)
+}
+
 func fillUnsafePackage(unsafePPkg *packages.Package, builtinPPkg *packages.Package) {
 	intType := builtinPPkg.Types.Scope().Lookup("int").Type()
 
@@ -683,8 +706,10 @@ func fillUnsafePackage(unsafePPkg *packages.Package, builtinPPkg *packages.Packa
 	unsafePPkg.TypesInfo.Types = make(map[ast.Expr]types.TypeAndValue)
 	unsafePPkg.Fset = fset
 
-	var artitraryExpr, intExpr ast.Expr
+	var artitraryExpr, intExpr1, intExpr2 ast.Expr
 	var artitraryType types.Type
+
+	var artitraryName, integerName *ast.Ident
 
 	//for filename, astFile := range map[string]*ast.File{"unsafe.go": f} {
 	for filename, astFile := range astPkg.Files {
@@ -730,9 +755,22 @@ func fillUnsafePackage(unsafePPkg *packages.Package, builtinPPkg *packages.Packa
 					if typeObj == nil {
 						panic("a non-nil type object for unsafe.Pointer is expected")
 					}
+
+					// ToDo: is this a bug?
+					//       should get the base type expr instead?
+					//       type Pointer *ArbitraryType
+					//artitraryExpr = typeSpec.Type
+
+					//starExpr, ok := typeSpec.Type.(*ast.StarExpr)
+					//if !ok {
+					//	panic("not a *ast.StarExpr")
+					//}
+					//artitraryExpr = starExpr.X
+
+					// Not a bug, the old way is right. (Really?)
 					artitraryExpr = typeSpec.Type
 				case "ArbitraryType":
-					intExpr = typeSpec.Type
+					intExpr1 = typeSpec.Type
 
 					// ToDo: need invesgate: in testing running, typeObj != nil
 					//       but in normal running, it is nil!!!
@@ -751,6 +789,16 @@ func fillUnsafePackage(unsafePPkg *packages.Package, builtinPPkg *packages.Packa
 					typeObj = types.NewTypeName(typeSpec.Pos(), types.Unsafe, typeSpec.Name.Name, nil)
 					unsafePPkg.Types.Scope().Insert(typeObj)
 					artitraryType = types.NewNamed(typeObj, intType.Underlying(), nil)
+
+					artitraryName = typeSpec.Name
+				case "IntegerType": // introduced in Go 1.17
+					intExpr2 = typeSpec.Type
+
+					// ToDo: see the ToDo above for ArbitraryType
+					typeObj = types.NewTypeName(typeSpec.Pos(), types.Unsafe, typeSpec.Name.Name, nil)
+					unsafePPkg.Types.Scope().Insert(typeObj)
+
+					integerName = typeSpec.Name
 				}
 
 				// new declared type (source type will be set below)
@@ -765,7 +813,7 @@ func fillUnsafePackage(unsafePPkg *packages.Package, builtinPPkg *packages.Packa
 		panic("artitraryExpr is nil")
 	}
 
-	if intExpr == nil {
+	if intExpr1 == nil {
 		panic("intExpr is nil")
 	}
 
@@ -774,6 +822,25 @@ func fillUnsafePackage(unsafePPkg *packages.Package, builtinPPkg *packages.Packa
 	}
 
 	// source types
-	unsafePPkg.TypesInfo.Types[intExpr] = types.TypeAndValue{Type: intType}
+	unsafePPkg.TypesInfo.Types[intExpr1] = types.TypeAndValue{Type: intType}
+	if intExpr2 != nil {
+		unsafePPkg.TypesInfo.Types[intExpr2] = types.TypeAndValue{Type: intType}
+	}
 	unsafePPkg.TypesInfo.Types[artitraryExpr] = types.TypeAndValue{Type: artitraryType}
+
+	//tn1 := unsafePPkg.TypesInfo.Defs[artitraryName].(*types.TypeName)
+	//tn2 := unsafePPkg.TypesInfo.Defs[integerName].(*types.TypeName)
+	//fmt.Printf("111111: %[1]T, %[1]v ===  %[2]T, %[2]v \n", unsafePPkg.TypesInfo.Defs[artitraryName], tn1.Type())
+	//fmt.Printf("222222: %[1]T, %[1]v ===  %[2]T, %[2]v \n", unsafePPkg.TypesInfo.Defs[integerName], tn2.Type())
+	_ = artitraryName
+
+	// ToDo: golang.org/x/tools might change implementation so that this handling is not essential now.
+	if tn, _ := unsafePPkg.TypesInfo.Defs[integerName].(*types.TypeName); tn != nil {
+		if tn.Type() == nil {
+			// :(, The type of types.TypeName is not modifiable now.
+			// tn.SetType(types.NewNamed(...))
+
+			// ToDo: now, in analyzing, when anObj.Type() == nil, treat as types.Invalid
+		}
+	}
 }

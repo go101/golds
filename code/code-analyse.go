@@ -1807,6 +1807,7 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 
 						var srcType = tv.Type
 						var objName = typeObj.Name()
+
 						// Exported names, such as Type and Type1 are fake types.
 						if isBuiltinPkg {
 							if token.IsExported(objName) {
@@ -1848,6 +1849,14 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 							//	),
 							//)
 						}
+
+						//if "ArbitraryType" == objName {
+						//	fmt.Println(">>>>>>>>>>>>>>>>>", objName, srcType, typeObj.Type())
+						//}
+
+						//if typeObj.Type() == nil {
+						//	fmt.Println("===================", objName, srcType)
+						//}
 
 						srcTypeInfo := d.RegisterType(srcType)
 						newTypeInfo := d.RegisterType(typeObj.Type())
@@ -2278,13 +2287,13 @@ func (d *CodeAnalyzer) analyzePackage_CollectSomeRuntimeFunctionPositions() {
 	// ...
 	if runtimePkg := d.packageTable["runtime"]; runtimePkg != nil {
 		fnames := []string{
-			"selectgo",      // for select blocks (except one-case-plus-default ones)
-			"selectnbsend",  // one-case-plus-default select blocks
-			"selectnbrecv",  // select {case v = <-c:; default:}
-			"selectnbrecv2", // select {case v, ok = <-c:; default:}
-			"chansend",      // c <- v
-			"chanrecv1",     // v = <- c
-			"chanrecv2",     // v, ok = <-c
+			"selectgo",     // for select blocks (except one-case-plus-default ones)
+			"selectnbsend", // one-case-plus-default select blocks
+			"selectnbrecv", // select {case v = <-c:; default:}
+			//"selectnbrecv2", // select {case v, ok = <-c:; default:} // removed since Go 1.17
+			"chansend",  // c <- v
+			"chanrecv1", // v = <- c
+			"chanrecv2", // v, ok = <-c
 			"makechan",
 			"closechan",
 			"gopanic",

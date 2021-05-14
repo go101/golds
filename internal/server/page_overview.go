@@ -68,7 +68,9 @@ func (ds *docServer) buildOverviewPage(w http.ResponseWriter, overview *Overview
 		ds.writeUpdateGoldBlock(page)
 	}
 
-	ds.writeSimpleStatsBlock(page, &overview.Stats)
+	if showStatistics {
+		ds.writeSimpleStatsBlock(page, &overview.Stats)
+	}
 
 	page.WriteString("<pre><code>")
 

@@ -17,6 +17,7 @@ type PageOutputOptions struct {
 
 	PreferredLang string
 
+	NoStatistics           bool
 	NoIdentifierUsesPages  bool
 	NotCollectUnexporteds  bool
 	AllowNetworkConnection bool
@@ -36,6 +37,7 @@ var (
 
 	goldsVersion string
 
+	showStatistics   = true
 	buildIdUsesPages = true // might be false in gen mode
 	//enableSoruceNavigation = true // false to disable method implementation pages and some code reading features
 	sourceReadingStyle = SourceReadingStyle_rich
@@ -56,6 +58,7 @@ var (
 // This function should be called at prgram startup phase once.
 func setPageOutputOptions(options PageOutputOptions, forTesting bool) {
 	goldsVersion = options.GoldsVersion
+	showStatistics = !options.NoStatistics || forTesting
 	buildIdUsesPages = !options.NoIdentifierUsesPages || forTesting
 	sourceReadingStyle = options.SourceReadingStyle
 	collectUnexporteds = !options.NotCollectUnexporteds || forTesting

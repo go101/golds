@@ -193,6 +193,7 @@ func Run() {
 	options := server.PageOutputOptions{
 		GoldsVersion:           Version,
 		PreferredLang:          *langFlag,
+		NoStatistics:           *nostats,
 		NoIdentifierUsesPages:  *nouses,
 		SourceReadingStyle:     srcReadingStyle,
 		AllowNetworkConnection: *allowNetworkConnection,
@@ -257,6 +258,8 @@ var sFlag = flag.Bool("s", false, "not open a browser automatically")
 var silentFlag = flag.Bool("silent", false, "not open a browser automatically")
 var moregcFlag = flag.Bool("moregc", false, "increase garbage collection frequency")
 var footerFlag = flag.String("footer", "verbose", "verbose | simple | none")
+
+var nostats = flag.Bool("nostats", false, "disable the statistics feature")
 var nouses = flag.Bool("nouses", false, "disable the identifier uses feature")
 var nounexporteds = flag.Bool("only-list-exporteds", false, "don't collect unexported package-level resources")
 var compact = flag.Bool("compact", false, "sacrifice some disk-consuming features in generation")
@@ -316,12 +319,12 @@ Options:
 		with a random name under the current directory
 		will be used if this option is not specified.
 		"memory" means not to save (for testing).
+	-nostats
+		Disable the statistics feature.
 	-nouses
 		Disable the identifier uses feature.
-		For HTML docs generation mode only.
 	-plainsrc (depreciated)
 		Disable the source navigation feature.
-		For HTML docs generation mode only.
 		Depreciated by "-source-code-reading=plain".
 	-source-code-reading=plain|highlight|rich|external
 		How and where to read source code
@@ -348,7 +351,6 @@ Options:
 	-emphasize-wdpkgs (depreciated)
 		List the packages under the current
 		directory before other pacakges.
-		For HTML docs generation mode only.
 		Depreciated by "-wdpkgs-listing=promoted".
 	-wdpkgs-listing=promoted|solo|general
 		Specify how to list the packages in the

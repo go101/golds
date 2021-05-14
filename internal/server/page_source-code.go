@@ -1101,17 +1101,18 @@ func (v *astVisitor) Visit(n ast.Node) (w ast.Visitor) {
 
 		f := "selectgo"
 		if numDefaults == 1 && numCases == 1 {
-			switch caseStmt := caseComm.(type) {
+			//switch caseStmt := caseComm.(type) {
+			switch caseComm.(type) {
 			case *ast.SendStmt:
 				f = "selectnbsend"
 			case *ast.ExprStmt: // <-c
 				f = "selectnbrecv"
 			case *ast.AssignStmt:
-				if len(caseStmt.Lhs) < 2 {
-					f = "selectnbrecv"
-				} else {
-					f = "selectnbrecv2"
-				}
+				//if len(caseStmt.Lhs) < 2 {
+				f = "selectnbrecv"
+				//} else {
+				//	f = "selectnbrecv2" // removed since Go 1.17
+				//}
 			}
 		}
 
