@@ -26,13 +26,15 @@ func init() {
 var (
 	pageHrefList   *list.List // elements are *string
 	resHrefs       map[pageResType]map[string]int
+	pageHrefs      map[pagePathInfo]string
 	pageHrefsMutex sync.Mutex // in fact, for the current implementation, the lock is not essential
 )
 
 func enabledHtmlGenerationMod() {
 	genDocsMode = true
 	pageHrefList = list.New()
-	resHrefs = make(map[pageResType]map[string]int, 8)
+	resHrefs = make(map[pageResType]map[string]int, 16)
+	pageHrefs = make(map[pagePathInfo]string, 65536)
 }
 
 //func disabledHtmlGenerationMod() {
@@ -60,6 +62,18 @@ func nextPageToLoad() (info *genPageInfo) {
 		pageHrefList.Remove(front)
 	}
 	return
+}
+
+func cachePageHref(pathInfo pagePathInfo, href string) {
+	pageHrefsMutex.Lock()
+	defer pageHrefsMutex.Unlock()
+	pageHrefs[pathInfo] = href
+}
+
+func cachedPageHref(pathInfo pagePathInfo) string {
+	pageHrefsMutex.Lock()
+	defer pageHrefsMutex.Unlock()
+	return pageHrefs[pathInfo]
 }
 
 // Return the id and whether or not the id is just registered.
@@ -298,7 +312,12 @@ Generate:
 		panic("method-implementation page (" + linkedPageInfo.resPath + ") should not be build")
 	}
 
-	var makeHref = func(pathInfo pagePathInfo) string {
+	var makeHref = func(pathInfo pagePathInfo) (href string) {
+		href = cachedPageHref(pathInfo)
+		if href != "" {
+			return
+		}
+
 		switch pathInfo.resType {
 		case ResTypeNone: // top-level pages
 			switch pathInfo.resPath {
@@ -311,7 +330,10 @@ Generate:
 			//pathInfo.resPath = strings.ReplaceAll(pathInfo.resPath, "..", "/") // no need to convert
 		}
 
-		return string(pathInfo.resType) + "/" + pathInfo.resPath + resType2ExtTable(pathInfo.resType)
+		// ToDo: cache the result?
+		href = string(pathInfo.resType) + "/" + pathInfo.resPath + resType2ExtTable(pathInfo.resType)
+		cachePageHref(pathInfo, href)
+		return
 	}
 
 	var _, needRegisterHref = resHrefID(linkedPageInfo.resType, linkedPageInfo.resPath)

@@ -1411,18 +1411,23 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 				// ToDo: need think more.
 
 				if buildIdUsesPages {
-					link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeReference, v.pkg.Path() + ".." + v.topLevelFuncInfo.RecvTypeName + "." + funcName}, nil, "")
+					if collectUnexporteds || token.IsExported(v.topLevelFuncInfo.RecvTypeName) && token.IsExported(funcName) || v.pkg.Path() == "builtin" {
+						link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeReference, v.pkg.Path() + ".." + v.topLevelFuncInfo.RecvTypeName + "." + funcName}, nil, "")
+					}
 				} else {
 					var methodPkgPath string
 					if !token.IsExported(funcName) {
 						methodPkgPath = v.pkg.Path()
 					}
 					if sourceReadingStyle == SourceReadingStyle_rich && v.dataAnalyzer.CheckTypeMethodContributingToTypeImplementations(v.pkg.Path(), v.topLevelFuncInfo.RecvTypeName, methodPkgPath, funcName) {
-						anchorName := funcName
-						if !token.IsExported(funcName) {
-							anchorName = methodPkgPath + "." + anchorName
+						methodIsExported := !token.IsExported(funcName)
+						if collectUnexporteds || methodIsExported && token.IsExported(v.topLevelFuncInfo.RecvTypeName) || v.pkg.Path() == "builtin" {
+							anchorName := funcName
+							if !methodIsExported {
+								anchorName = methodPkgPath + "." + anchorName
+							}
+							link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeImplementation, v.pkg.Path() + "." + v.topLevelFuncInfo.RecvTypeName}, nil, "", "name-", anchorName)
 						}
-						link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeImplementation, v.pkg.Path() + "." + v.topLevelFuncInfo.RecvTypeName}, nil, "", "name-", anchorName)
 					}
 				}
 			} else if collectUnexporteds || token.IsExported(funcName) {
@@ -1511,13 +1516,16 @@ GoOn:
 
 				if v.topLevelInterfaceTypeInfo != nil && v.topLevelInterfaceTypeInfo.TypeName != "_" && len(v.topLevelInterfaceTypeInfo.Methods) > 0 {
 					if sourceReadingStyle == SourceReadingStyle_rich && ident.Pos() == v.topLevelInterfaceTypeInfo.Methods[0].Pos() {
-						anchorName := obj.Name()
-						if !token.IsExported(anchorName) {
-							anchorName = objPkgPath + "." + anchorName
+						methodIsExported := token.IsExported(obj.Name())
+						if collectUnexporteds || methodIsExported && token.IsExported(v.topLevelInterfaceTypeInfo.TypeName) || objPkgPath == "builtin" {
+							anchorName := obj.Name()
+							if !methodIsExported {
+								anchorName = objPkgPath + "." + anchorName
+							}
+							v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeImplementation, objPkgPath + "." + v.topLevelInterfaceTypeInfo.TypeName}, nil, "")+"#name-"+anchorName, "")
+							v.topLevelInterfaceTypeInfo.Methods = v.topLevelInterfaceTypeInfo.Methods[1:]
+							return
 						}
-						v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeImplementation, objPkgPath + "." + v.topLevelInterfaceTypeInfo.TypeName}, nil, "")+"#name-"+anchorName, "")
-						v.topLevelInterfaceTypeInfo.Methods = v.topLevelInterfaceTypeInfo.Methods[1:]
-						return
 					}
 				}
 			case *types.Var: // struct field
@@ -1527,8 +1535,10 @@ GoOn:
 					enclosingTypeName := v.topLevelStructTypeSpec.Name.Name
 					fieldName := obj.Name()
 					if fieldName != "_" && buildIdUsesPages {
-						v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeReference, objPkgPath + ".." + enclosingTypeName + "." + obj.Name()}, nil, ""), "")
-						return
+						if collectUnexporteds || token.IsExported(enclosingTypeName) && token.IsExported(obj.Name()) || objPkgPath == "builtin" {
+							v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeReference, objPkgPath + ".." + enclosingTypeName + "." + obj.Name()}, nil, ""), "")
+							return
+						}
 					}
 				}
 				// ToDo: the above code works for the "bar" and "baz" fields, but not for the "X" field.
@@ -1569,14 +1579,19 @@ GoOn:
 						v.buildIdentifier(start, end, -1, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, objPkgPath}, nil, "")+"#name-"+obj.Name())
 						return
 					} else if buildIdUsesPages {
-						v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeReference, objPkgPath + ".." + obj.Name()}, nil, ""), "")
-						return
+						if collectUnexporteds || token.IsExported(obj.Name()) || objPkgPath == "builtin" {
+							v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeReference, objPkgPath + ".." + obj.Name()}, nil, ""), "")
+							return
+						}
 					}
 				case *types.Func, *types.Var, *types.Const:
 					if buildIdUsesPages {
-						v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeReference, objPkgPath + ".." + obj.Name()}, nil, ""), "")
-						return
+						if collectUnexporteds || token.IsExported(obj.Name()) || objPkgPath == "builtin" {
+							v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeReference, objPkgPath + ".." + obj.Name()}, nil, ""), "")
+							return
+						}
 					}
+
 				}
 
 				// ToDo: open reference list page

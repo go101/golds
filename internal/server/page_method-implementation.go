@@ -162,6 +162,10 @@ type MethodInfo struct {
 // ToDo: if typeName is like a (type T = *struct{...}, methods will not be listed.
 //       Because methods are registered on struct{...}.
 func (ds *docServer) buildImplementationData(analyzer *code.CodeAnalyzer, pkgPath, typeName string) (*MethodImplementationResult, error) {
+	if !collectUnexporteds && pkgPath != "builtin" && !token.IsExported(typeName) {
+		panic("should not go here (imp): " + pkgPath + "." + typeName)
+	}
+
 	pkg := analyzer.PackageByPath(pkgPath)
 	if pkg == nil {
 		return nil, errors.New("package not found")
@@ -206,12 +210,21 @@ func (ds *docServer) buildImplementationData(analyzer *code.CodeAnalyzer, pkgPat
 		}
 
 		for _, sel := range methodSelectors {
+			if !collectUnexporteds && !token.IsExported(sel.Name()) {
+				continue
+			}
 			impls := make([]MethodInfo, 0, len(typeInfo.ImplementedBys))
 			impBys, _ := buildTypeImplementedByList(analyzer, pkg, typeInfo, true, typeNameRes)
 			selNameIsUnexported := !token.IsExported(sel.Name())
 			for _, impBy := range impBys {
+				if !collectUnexporteds && impBy.TypeName.Package().Path() != "builtin" && !impBy.TypeName.Exported() {
+					continue
+				}
 				impByDenoting := impBy.TypeName.Denoting()
 				for _, m := range impByDenoting.AllMethods {
+					//if !collectUnexporteds && !token.IsExported(m.Name()) {
+					//	continue
+					//}
 					matched := sel.Name() == m.Name()
 					if matched && selNameIsUnexported {
 						matched = matched && m.Package().Path() == sel.Package().Path()

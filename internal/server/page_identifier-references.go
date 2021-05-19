@@ -147,7 +147,9 @@ func (ds *docServer) buildReferencesPage(w http.ResponseWriter, result *Referenc
 					anchorName = methodPkgPath + "." + anchorName
 				}
 				if sourceReadingStyle == SourceReadingStyle_rich { // enableSoruceNavigation {
-					link = buildPageHref(page.PathInfo, pagePathInfo{ResTypeImplementation, result.Package.Path() + "." + result.Resource.Name()}, nil, "", "name-", anchorName)
+					if collectUnexporteds || result.Resource.Exported() || result.Package.Path() == "builtin" {
+						link = buildPageHref(page.PathInfo, pagePathInfo{ResTypeImplementation, result.Package.Path() + "." + result.Resource.Name()}, nil, "", "name-", anchorName)
+					}
 				}
 			}
 
@@ -296,6 +298,10 @@ type ObjectReferences struct {
 }
 
 func (ds *docServer) buildReferencesData(pkgPath, identifier string) (*ReferencesResult, error) {
+	if !collectUnexporteds && pkgPath != "builtin" && !token.IsExported(identifier) {
+		panic("should not go here (use): " + pkgPath + "." + identifier)
+	}
+
 	pkg := ds.analyzer.PackageByPath(pkgPath)
 	if pkg == nil {
 		return nil, fmt.Errorf("package %s is not found", pkgPath)
