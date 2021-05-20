@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"go/ast"
+	"go/doc"
+	"go/format"
 	"go/token"
 	"go/types"
 	"io"
@@ -17,6 +19,7 @@ import (
 	"strings"
 
 	"go101.org/golds/code"
+	"go101.org/golds/internal/util"
 )
 
 var _ = log.Print
@@ -121,6 +124,8 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 			defer page.WriteString("</div>")
 			fmt.Fprint(page, `<span class="title">`, page.Translation().Text_InvolvedFiles(len(pkg.Files)), `</span>`)
 
+			page.WriteString("\n")
+
 			//writeLeadingSpaces := func() {
 			//	page.WriteString("\n\t")
 			//	page.WriteString("  ")
@@ -205,6 +210,44 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 					//},
 				)
 			}
+		}()
+	}
+
+	if len(pkg.Examples) > 0 {
+		func() {
+			page.WriteString("\n")
+			page.WriteString(`<div id="examples">`)
+			defer page.WriteString("</div>")
+			fmt.Fprint(page, `<span class="title">`, page.Translation().Text_Examples(len(pkg.Examples)), `</span>`)
+
+			page.WriteString("\n")
+
+			for i, ex := range pkg.Examples {
+				page.WriteString("\n\t")
+
+				fid := fmt.Sprintf("example-%d", i)
+				writeFoldingBlock(page, fid, "content", "items", false,
+					func() {
+						page.WriteString(ex.Name)
+					},
+					func() {
+						page.WriteString("\n")
+
+						// ToDo: need syntax hightlight writer.
+						//       It is best to merge the example code with main code
+						//       so that the exapmle code can be rendered as normal source code.
+						if ex.Play != nil {
+							format.Node(util.NewIndentWriter(page, []byte{'\t', '\t'}), pkg.ExampleFileSet, ex.Play)
+						} else {
+							format.Node(util.NewIndentWriter(page, []byte{'\t', ' ', ' '}), pkg.ExampleFileSet, ex.Code)
+						}
+						if i < len(pkg.Examples)-1 {
+							page.WriteString("\n")
+						}
+					},
+				)
+			}
+			page.WriteString("\n")
 		}()
 	}
 
@@ -778,6 +821,8 @@ type PackageDetails struct {
 
 	// ToDo: use go/doc
 	//IntroductionCode template.HTML
+	Examples       []*doc.Example
+	ExampleFileSet *token.FileSet
 }
 
 type TypeDetails struct {
@@ -1126,6 +1171,9 @@ func buildPackageDetailsData(analyzer *code.CodeAnalyzer, pkgPath string, alsoCo
 	pkgDetails.Variables = variables
 	pkgDetails.Constants = constants
 	pkgDetails.TypeNames = typeResources
+
+	pkgDetails.Examples = pkg.Examples
+	pkgDetails.ExampleFileSet = analyzer.ExampleFileSet()
 
 	return pkgDetails
 }
@@ -2208,8 +2256,6 @@ func (ds *docServer) writeInterfaceMethods(page *htmlPage, it *types.Interface, 
 		}
 	}
 }
-
-var tabs = bytes.Repeat([]byte{'\t'}, 64)
 
 var (
 	blankID          = []byte("_")

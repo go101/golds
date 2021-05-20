@@ -303,7 +303,7 @@ function initPackageDetailsPage() {
 			return;
 		}
 
-		var cbsFile = [], cbsTypes = [], cbsFuncs = [], cbsVars = [], cbsConsts = [];
+		var cbsFile = [], cbsExample = [], cbsTypes = [], cbsFuncs = [], cbsVars = [], cbsConsts = [];
 
 		var key = e.key || e.which || e.keyCode;
 		if (key == 'p' || key == 'a') {
@@ -311,6 +311,13 @@ function initPackageDetailsPage() {
 			if (files != null) {
 				if (key == 'p') {files.scrollIntoView();}
 				cbsFile = files.querySelectorAll("input[type='checkbox']");
+			}
+		}
+		if (key == 'e' || key == 'a') {
+			var examples = document.getElementById("examples");
+			if (examples != null) {
+				if (key == 'e') {examples.scrollIntoView();}
+				cbsExample = examples.querySelectorAll("input[type='checkbox']");
 			}
 		}
 		if (key == 't' || key == 'a') {
@@ -341,8 +348,9 @@ function initPackageDetailsPage() {
 				cbsConsts = consts.querySelectorAll(".value-res > input[type='checkbox']");
 			}
 		}
-		var cbsAll = new Array(cbsFile.length + cbsTypes.length + cbsFuncs.length + cbsVars.length + cbsConsts.length).slice(0, 0);
+		var cbsAll = new Array(cbsFile.length + cbsExample.length + cbsTypes.length + cbsFuncs.length + cbsVars.length + cbsConsts.length).slice(0, 0);
 		cbsAll.push(...cbsFile);
+		cbsAll.push(...cbsExample);
 		cbsAll.push(...cbsTypes);
 		cbsAll.push(...cbsFuncs);
 		cbsAll.push(...cbsVars);

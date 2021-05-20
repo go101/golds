@@ -375,5 +375,8 @@ func (d *CodeAnalyzer) collectCodeExamples() {
 			pkg.ExampleFiles = append(pkg.ExampleFiles, astFile)
 		}
 		pkg.Examples = doc.Examples(pkg.ExampleFiles...)
+		//if !d.IsStandardPackage(pkg) && len(pkg.Examples) > 0 {
+		//	log.Println("======= has examples:", pkg.Path())
+		//}
 	}
 }

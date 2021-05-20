@@ -34,11 +34,12 @@ please visit [this page on Go101.org](https://go101.org/article/tool-golds.html)
     If the name represents a method, in the uses page, click the _(method)_ text to show which interface methods the method implements.
   * Click the name of a method specified in an interface type declaration to show the methods implementing it (only for package-level named interface types now).
     In the method-implementation page, click each the name of an interface method to show the uses of the interface method.
+  * In ppackage details pages, press `p` (package), `e` (examples), `t` (types), `f` (functions), `v` (variables), `c` (constants), and `a` (all) to toggle doc expand/collapse statuses (only available when JavaScript is on). 
 * Shows code statistics ([demo](https://docs.go101.org/std/statistics.html)).
   * Click some of the SVG pictures to show corresponding toppest list.
 * Supports generating static HTML docs pages, to avoid rebuilding the docs later.
   This is good for package developers to host docs of their own packages.
-  (The docs of standard packages are generated within about 7 seconds, and the docs of the kubernetes project packages are generated within about one minute.)
+  (The docs of standard packages are generated within about 10 seconds, and the docs of the kubernetes project packages are generated within about 100 seconds.)
 * All functionalities are implemented locally, no external websites are needed (except explicitly required by you).
 * Just fell free to open any number of pages in new browser windows as needed.
 
@@ -56,8 +57,6 @@ All packages must compile okay to get their docs shown.
 Only a code snapshot is analyzed. When code changes, a new analyzation is needed from scratch.
 
 Testing packages are excluded currently.
-
-Code examples in docs are not shown currently.
 
 ### Analyzation Cases
 
