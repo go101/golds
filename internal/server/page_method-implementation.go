@@ -29,6 +29,11 @@ func (ds *docServer) methodImplementationPage(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	if genDocsMode {
+		pkgPath = deHashScope(pkgPath)
+		typeName = deHashIdentifier(typeName)
+	}
+
 	//pageKey := implPageKey{pkg: pkgPath, typ: typeName}
 	//if ds.implPages[pageKey] == nil {
 	//	result, err := ds.buildImplementationData(ds.analyzer, pkgPath, typeName)
@@ -64,12 +69,11 @@ func (ds *docServer) buildImplementationPage(w http.ResponseWriter, result *Meth
 	// some methods are born by embedding other types.
 	// Use the same design for local id: click such methods to highlight all same-origin ones.
 
-	qualifiedTypeName := result.Package.Path() + "." + result.TypeName.Name()
-	title := ds.currentTranslation.Text_MethodImplementations() + ds.currentTranslation.Text_Colon(false) + qualifiedTypeName
-	page := NewHtmlPage(goldsVersion, title, ds.currentTheme, ds.currentTranslation, pagePathInfo{ResTypeImplementation, qualifiedTypeName})
+	title := ds.currentTranslation.Text_MethodImplementations() + ds.currentTranslation.Text_Colon(false) + result.Package.Path() + "." + result.TypeName.Name()
+	page := NewHtmlPage(goldsVersion, title, ds.currentTheme, ds.currentTranslation, createPagePathInfo2(ResTypeImplementation, result.Package.Path(), ".", result.TypeName.Name()))
 
 	fmt.Fprintf(page, `<pre><code><span style="font-size:x-large;">type <a href="%s">%s</a>.`,
-		buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, result.Package.Path()}, nil, ""),
+		buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, result.Package.Path()), nil, ""),
 		result.Package.Path(),
 	)
 	page.WriteString("<b>")
@@ -109,7 +113,7 @@ func (ds *docServer) buildImplementationPage(w http.ResponseWriter, result *Meth
 		//       For some rare cases, two same unexported methods from two different packages ...
 		//
 		if buildIdUsesPages {
-			buildPageHref(page.PathInfo, pagePathInfo{ResTypeReference, result.Package.Path() + ".." + result.TypeName.Name() + "." + method.Method.Name()}, page, method.Method.Name())
+			buildPageHref(page.PathInfo, createPagePathInfo3(ResTypeReference, result.Package.Path(), "..", result.TypeName.Name(), method.Method.Name()), page, method.Method.Name())
 			ds.writeMethodType(page, result.Package, method.Method.Method, nil)
 		} else {
 			ds.writeMethodForListing(page, result.Package, method.Method, nil, false, false)

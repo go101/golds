@@ -46,6 +46,14 @@ func (ds *docServer) identifierReferencePage(w http.ResponseWriter, r *http.Requ
 	// Cache the ever searcheds is ok.
 	//    map[*ast.Ident][]token.Pos
 
+	tokens := strings.Split(identifier, ".")
+	if genDocsMode {
+		pkgPath = deHashScope(pkgPath)
+		for i, t := range tokens {
+			tokens[i] = deHashIdentifier(t)
+		}
+	}
+
 	ds.mutex.Lock()
 	defer ds.mutex.Unlock()
 
@@ -75,7 +83,7 @@ func (ds *docServer) identifierReferencePage(w http.ResponseWriter, r *http.Requ
 	}
 	data, ok := ds.cachedPage(pageKey)
 	if !ok {
-		result, err := ds.buildReferencesData(pkgPath, identifier)
+		result, err := ds.buildReferencesData(pkgPath, tokens...)
 		if err != nil {
 			w.WriteHeader(http.StatusNotFound)
 			fmt.Fprint(w, "error: ", err)
@@ -89,9 +97,8 @@ func (ds *docServer) identifierReferencePage(w http.ResponseWriter, r *http.Requ
 }
 
 func (ds *docServer) buildReferencesPage(w http.ResponseWriter, result *ReferencesResult) []byte {
-	qualifiedIdentifier := result.Package.Path() + "." + result.Identifier
-	title := ds.currentTranslation.Text_ReferenceList() + ds.currentTranslation.Text_Colon(false) + qualifiedIdentifier
-	page := NewHtmlPage(goldsVersion, title, ds.currentTheme, ds.currentTranslation, pagePathInfo{ResTypeReference, qualifiedIdentifier})
+	title := ds.currentTranslation.Text_ReferenceList() + ds.currentTranslation.Text_Colon(false) + result.Package.Path() + "." + result.Identifier
+	page := NewHtmlPage(goldsVersion, title, ds.currentTheme, ds.currentTranslation, createPagePathInfo2(ResTypeReference, result.Package.Path(), "..", result.Identifier))
 
 	var prefix string
 	if result.Selector == nil {
@@ -109,7 +116,7 @@ func (ds *docServer) buildReferencesPage(w http.ResponseWriter, result *Referenc
 	fmt.Fprintf(page, `
 <pre><code><span style="font-size:x-large;">%s<b><a href="%s">%s</a>.`,
 		prefix,
-		buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, result.Package.Path()}, nil, ""),
+		buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, result.Package.Path()), nil, ""),
 		result.Package.Path(),
 	)
 
@@ -148,7 +155,7 @@ func (ds *docServer) buildReferencesPage(w http.ResponseWriter, result *Referenc
 				}
 				if sourceReadingStyle == SourceReadingStyle_rich { // enableSoruceNavigation {
 					if collectUnexporteds || result.Resource.Exported() || result.Package.Path() == "builtin" {
-						link = buildPageHref(page.PathInfo, pagePathInfo{ResTypeImplementation, result.Package.Path() + "." + result.Resource.Name()}, nil, "", "name-", anchorName)
+						link = buildPageHref(page.PathInfo, createPagePathInfo2(ResTypeImplementation, result.Package.Path(), ".", result.Resource.Name()), nil, "", "name-", anchorName)
 					}
 				}
 			}
@@ -214,7 +221,7 @@ func (ds *docServer) buildReferencesPage(w http.ResponseWriter, result *Referenc
 			page.WriteString(refGroup.Pkg.Path())
 			page.WriteString(page.Translation().Text_CurrentPackage())
 		} else {
-			buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, refGroup.Pkg.Path()}, page, refGroup.Pkg.Path())
+			buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, refGroup.Pkg.Path()), page, refGroup.Pkg.Path())
 		}
 		page.WriteByte('\n')
 
@@ -297,29 +304,36 @@ type ObjectReferences struct {
 	Identifiers  []code.Identifier
 }
 
-func (ds *docServer) buildReferencesData(pkgPath, identifier string) (*ReferencesResult, error) {
-	if !collectUnexporteds && pkgPath != "builtin" && !token.IsExported(identifier) {
-		panic("should not go here (use): " + pkgPath + "." + identifier)
-	}
-
+func (ds *docServer) buildReferencesData(pkgPath string, tokens ...string) (*ReferencesResult, error) {
 	pkg := ds.analyzer.PackageByPath(pkgPath)
 	if pkg == nil {
 		return nil, fmt.Errorf("package %s is not found", pkgPath)
 	}
 
-	if len(identifier) == 0 {
-		return nil, errors.New("identifier is not specified")
-	}
+	isBuiltin := pkgPath == "builtin"
 
-	tokens := strings.Split(identifier, ".")
+	//if len(identifier) == 0 {
+	//	return nil, errors.New("identifier is not specified")
+	//}
+	//
+	//tokens := strings.Split(identifier, ".")
 	if len(tokens) > 2 {
 		return nil, errors.New("invalid identifier (must be a pure identifer or a selector).")
 	}
 
+	var identifier string
 	var res code.Resource
 	var sel *code.Selector
 	var obj types.Object
 	if len(tokens) == 1 {
+		if tokens[0] == "" {
+			return nil, errors.New("identifier is not specified")
+		}
+		if !collectUnexporteds && !isBuiltin && !token.IsExported(tokens[0]) {
+			panic("should not go here (use): " + pkgPath + "." + tokens[0])
+		}
+		identifier = tokens[0]
+
 		for _, tn := range pkg.AllTypeNames {
 			if tn.Name() == tokens[0] {
 				res, obj = tn, tn.TypeName
@@ -356,6 +370,14 @@ func (ds *docServer) buildReferencesData(pkgPath, identifier string) (*Reference
 
 		return nil, fmt.Errorf("type %s is not found in package %s", tokens[0], pkgPath)
 	} else { // len(tokens) == 2
+		if !collectUnexporteds && !isBuiltin && !token.IsExported(tokens[0]) {
+			panic("should not go here (use): " + pkgPath + "." + tokens[0])
+		}
+		if !collectUnexporteds && !token.IsExported(tokens[1]) {
+			panic("should not go here (use): " + pkgPath + "." + tokens[1])
+		}
+		identifier = tokens[0] + "." + tokens[1]
+
 		for _, tn := range pkg.AllTypeNames {
 			if tn.Name() == tokens[0] {
 				t := tn.Denoting()

@@ -189,11 +189,6 @@ func (page *htmlPage) Translation() Translation {
 	return page.translation
 }
 
-type pagePathInfo struct {
-	resType pageResType
-	resPath string
-}
-
 func NewHtmlPage(goldsVersion, title string, theme Theme, translation Translation, currentPageInfo pagePathInfo) *htmlPage {
 	page := htmlPage{
 		PathInfo: currentPageInfo,
@@ -216,8 +211,8 @@ func NewHtmlPage(goldsVersion, title string, theme Theme, translation Translatio
 <body onload="onPageLoad()"><div>
 `,
 			title,
-			buildPageHref(currentPageInfo, pagePathInfo{ResTypeCSS, addVersionToFilename(theme.Name(), goldsVersion)}, nil, ""),
-			buildPageHref(currentPageInfo, pagePathInfo{ResTypeJS, addVersionToFilename("golds", goldsVersion)}, nil, ""),
+			buildPageHref(currentPageInfo, createPagePathInfo(ResTypeCSS, addVersionToFilename(theme.Name(), goldsVersion)), nil, ""),
+			buildPageHref(currentPageInfo, createPagePathInfo(ResTypeJS, addVersionToFilename("golds", goldsVersion)), nil, ""),
 		)
 	}
 
@@ -241,9 +236,9 @@ func (page *htmlPage) Done(w io.Writer) []byte {
 				if footerShowingManner == FooterShowingManner_verbose_and_qrcode {
 					switch page.translation.(type) {
 					case *translations.Chinese:
-						qrImgLink = buildPageHref(page.PathInfo, pagePathInfo{ResTypePNG, "go101-wechat"}, nil, "")
+						qrImgLink = buildPageHref(page.PathInfo, createPagePathInfo(ResTypePNG, "go101-wechat"), nil, "")
 					case *translations.English:
-						qrImgLink = buildPageHref(page.PathInfo, pagePathInfo{ResTypePNG, "go101-twitter"}, nil, "")
+						qrImgLink = buildPageHref(page.PathInfo, createPagePathInfo(ResTypePNG, "go101-twitter"), nil, "")
 					}
 				}
 				footer = page.translation.Text_GeneratedPageFooter(goldsVersion, qrImgLink, build.Default.GOOS, build.Default.GOARCH)
@@ -366,6 +361,55 @@ func (page *htmlPage) WriteByte(c byte) error {
 //		page.WriteString(`</a>`)
 //	}
 //}
+
+type pagePathInfo struct {
+	resType pageResType
+	resPath string
+}
+
+func createPagePathInfo(resType pageResType, resPath string) pagePathInfo {
+	return pagePathInfo{resType, resPath}
+}
+
+// scope should be an import path.
+func createPagePathInfo1(resType pageResType, scope string) pagePathInfo {
+	if genDocsMode {
+		scope = hashedScope(scope)
+	}
+
+	return pagePathInfo{resType, scope}
+}
+
+// scope should be an import path.
+func createPagePathInfo2(resType pageResType, scope, sep, resPath string) pagePathInfo {
+	if genDocsMode {
+		scope = hashedScope(scope)
+		resPath = hashedIdentifier(resPath)
+	}
+
+	return pagePathInfo{resType, scope + sep + resPath}
+}
+
+// scope should be an import path.
+func createPagePathInfo2b(resType pageResType, scope, sep, resPath string) pagePathInfo {
+	if genDocsMode {
+		scope = hashedScope(scope)
+		resPath = hashedFilename(resPath)
+	}
+
+	return pagePathInfo{resType, scope + sep + resPath}
+}
+
+// scope should be an import path.
+func createPagePathInfo3(resType pageResType, scope, sep, resPath, selector string) pagePathInfo {
+	if genDocsMode {
+		scope = hashedScope(scope)
+		resPath = hashedIdentifier(resPath)
+		selector = hashedIdentifier(selector)
+	}
+
+	return pagePathInfo{resType, scope + sep + resPath + "." + selector}
+}
 
 type writer interface {
 	Write([]byte) (int, error)

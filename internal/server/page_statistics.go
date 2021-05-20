@@ -39,7 +39,7 @@ func (ds *docServer) statisticsPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ds *docServer) buildStatisticsPage(w http.ResponseWriter) []byte {
-	page := NewHtmlPage(goldsVersion, ds.currentTranslation.Text_Statistics(), ds.currentTheme, ds.currentTranslation, pagePathInfo{ResTypeNone, "statistics"})
+	page := NewHtmlPage(goldsVersion, ds.currentTranslation.Text_Statistics(), ds.currentTheme, ds.currentTranslation, createPagePathInfo(ResTypeNone, "statistics"))
 	fmt.Fprintf(page, `
 <pre><code><span style="font-size:xx-large;">%s</span></code></pre>
 `,
@@ -77,7 +77,7 @@ func (ds *docServer) buildStatisticsPage(w http.ResponseWriter) []byte {
 
 	fmt.Fprintf(page, `<pre><code><span class="title">%s</span></code>`, page.Translation().Text_StatisticsTitle("packages"))
 	textSegments := page.Translation().Text_PackageStatistics(map[string]interface{}{
-		"overviewPageURL":                  buildPageHref(page.PathInfo, pagePathInfo{ResTypeNone, ""}, nil, ""),
+		"overviewPageURL":                  buildPageHref(page.PathInfo, createPagePathInfo(ResTypeNone, ""), nil, ""),
 		"packageCount":                     stats.Packages,
 		"standardPackageCount":             stats.StdPackages,
 		"sourceFileCount":                  stats.FilesWithoutGenerateds,
@@ -89,8 +89,8 @@ func (ds *docServer) buildStatisticsPage(w http.ResponseWriter) []byte {
 		"averageSourceFileCountPerPackage": float64(stats.FilesWithGenerateds) / float64(stats.Packages),
 		"averageCodeLineCountPerPackage":   math.Round(float64(stats.CodeLinesWithBlankLines) / float64(stats.Packages)),
 
-		//"gosourcefilesByImportsChartURL": buildPageHref(page.PathInfo, pagePathInfo{ResTypeSVG, "gosourcefiles-by-imports"}, nil, ""),
-		//"packagesByDependenciesChartURL": buildPageHref(page.PathInfo, pagePathInfo{ResTypeSVG, "packages-by-dependencies"}, nil, ""),
+		//"gosourcefilesByImportsChartURL": buildPageHref(page.PathInfo, createPagePathInfo(ResTypeSVG, "gosourcefiles-by-imports"), nil, ""),
+		//"packagesByDependenciesChartURL": buildPageHref(page.PathInfo, createPagePathInfo(ResTypeSVG, "packages-by-dependencies"), nil, ""),
 		//"gosourcefilesByImportsChartSVG": svgData("gosourcefiles-by-imports"),
 		//"packagesByDependenciesChartSVG": svgData("packages-by-dependencies"),
 	})
@@ -128,7 +128,7 @@ func (ds *docServer) buildStatisticsPage(w http.ResponseWriter) []byte {
 				defer page.WriteString("\n")
 				fmt.Fprintf(page,
 					`<a href="%s">%s</a>`,
-					buildPageHref(page.PathInfo, pagePathInfo{ResTypeDependency, *pkgPath}, nil, ""),
+					buildPageHref(page.PathInfo, createPagePathInfo1(ResTypeDependency, *pkgPath), nil, ""),
 					*pkgPath,
 				)
 			}()
@@ -144,14 +144,14 @@ func (ds *docServer) buildStatisticsPage(w http.ResponseWriter) []byte {
 		"exportedIntergerTypeNames":  stats.ExportedIntergerTypeNames,
 		"exportedUnsignedTypeNames":  stats.ExportedUnsignedTypeNames,
 
-		//"exportedtypenamesByKindsChartURL": buildPageHref(page.PathInfo, pagePathInfo{ResTypeSVG, "exportedtypenames-by-kinds"}, nil, ""),
+		//"exportedtypenamesByKindsChartURL": buildPageHref(page.PathInfo, createPagePathInfo(ResTypeSVG, "exportedtypenames-by-kinds"), nil, ""),
 		//"exportedtypenamesByKindsChartSVG": svgData("exportedtypenames-by-kinds"),
 
 		"exportedStructTypeNames":                     stats.ExportedTypeNamesByKind[reflect.Struct],
 		"exportedNamedStructTypesWithEmbeddingFields": stats.ExportedNamedStructTypesWithEmbeddingFields,
 		"exportedNamedStructTypesWithPromotedFields":  stats.ExportedNamedStructTypesWithPromotedFields,
 
-		//"exportedstructtypesByEmbeddingfieldsChartURL": buildPageHref(page.PathInfo, pagePathInfo{ResTypeSVG, "exportedstructtypes-by-embeddingfields"}, nil, ""),
+		//"exportedstructtypesByEmbeddingfieldsChartURL": buildPageHref(page.PathInfo, createPagePathInfo(ResTypeSVG, "exportedstructtypes-by-embeddingfields"), nil, ""),
 		//"exportedstructtypesByEmbeddingfieldsChartSVG": svgData("exportedstructtypes-by-embeddingfields"),
 
 		"exportedNamedStructTypeFieldsPerExportedStruct":                 float64(stats.ExportedNamedStructTypeFields) / float64(stats.ExportedTypeNamesByKind[reflect.Struct]),
@@ -159,10 +159,10 @@ func (ds *docServer) buildStatisticsPage(w http.ResponseWriter) []byte {
 		"exportedNamedStructTypeExportedFieldsPerExportedStruct":         float64(stats.ExportedNamedStructTypeExportedFields) / float64(stats.ExportedTypeNamesByKind[reflect.Struct]),
 		"exportedNamedStructTypeExportedExplicitFieldsPerExportedStruct": float64(stats.ExportedNamedStructTypeExportedExplicitFields) / float64(stats.ExportedTypeNamesByKind[reflect.Struct]),
 
-		//"exportedstructtypesByExplicitfieldsChartURL":         buildPageHref(page.PathInfo, pagePathInfo{ResTypeSVG, "exportedstructtypes-by-explicitfields"}, nil, ""),
-		//"exportedstructtypesByExportedexplicitfieldsChartURL": buildPageHref(page.PathInfo, pagePathInfo{ResTypeSVG, "exportedstructtypes-by-exportedexplicitfields"}, nil, ""),
-		////"exportedstructtypesByExportedfieldsChartURL":         buildPageHref(page.PathInfo, pagePathInfo{ResTypeSVG, "exportedstructtypes-by-exportedfields"}, nil, ""),
-		//"exportedstructtypesByExportedpromotedfieldsChartURL": buildPageHref(page.PathInfo, pagePathInfo{ResTypeSVG, "exportedstructtypes-by-exportedpromotedfields"}, nil, ""),
+		//"exportedstructtypesByExplicitfieldsChartURL":         buildPageHref(page.PathInfo, createPagePathInfo(ResTypeSVG, "exportedstructtypes-by-explicitfields"), nil, ""),
+		//"exportedstructtypesByExportedexplicitfieldsChartURL": buildPageHref(page.PathInfo, createPagePathInfo(ResTypeSVG, "exportedstructtypes-by-exportedexplicitfields"), nil, ""),
+		////"exportedstructtypesByExportedfieldsChartURL":         buildPageHref(page.PathInfo, createPagePathInfo(ResTypeSVG, "exportedstructtypes-by-exportedfields"), nil, ""),
+		//"exportedstructtypesByExportedpromotedfieldsChartURL": buildPageHref(page.PathInfo, createPagePathInfo(ResTypeSVG, "exportedstructtypes-by-exportedpromotedfields"), nil, ""),
 		//"exportedstructtypesByExplicitfieldsChartSVG":         svgData("exportedstructtypes-by-explicitfields"),
 		//"exportedstructtypesByExportedexplicitfieldsChartSVG": svgData("exportedstructtypes-by-exportedexplicitfields"),
 		////"exportedstructtypesByExportedfieldsChartSVG":         svgData("exportedstructtypes-by-exportedfields"),
@@ -171,8 +171,8 @@ func (ds *docServer) buildStatisticsPage(w http.ResponseWriter) []byte {
 		"exportedNamedNonInterfacesExportedMethodsPerExportedNonInterfaceType": float64(stats.ExportedNamedNonInterfacesExportedMethods) / float64(stats.ExportedNamedNonInterfacesWithExportedMethods),
 		"exportedNamedInterfacesExportedMethodsPerExportedInterfaceType":       float64(stats.ExportedNamedInterfacesExportedMethods) / float64(stats.ExportedTypeNamesByKind[reflect.Interface]),
 
-		//"exportednoninterfacetypesByExportedmethodsChartURL": buildPageHref(page.PathInfo, pagePathInfo{ResTypeSVG, "exportednoninterfacetypes-by-exportedmethods"}, nil, ""),
-		//"exportedinterfacetypesByExportedmethodsChartURL":    buildPageHref(page.PathInfo, pagePathInfo{ResTypeSVG, "exportedinterfacetypes-by-exportedmethods"}, nil, ""),
+		//"exportednoninterfacetypesByExportedmethodsChartURL": buildPageHref(page.PathInfo, createPagePathInfo(ResTypeSVG, "exportednoninterfacetypes-by-exportedmethods"), nil, ""),
+		//"exportedinterfacetypesByExportedmethodsChartURL":    buildPageHref(page.PathInfo, createPagePathInfo(ResTypeSVG, "exportedinterfacetypes-by-exportedmethods"), nil, ""),
 		//"exportednoninterfacetypesByExportedmethodsChartSVG": svgData("exportednoninterfacetypes-by-exportedmethods"),
 		//"exportedinterfacetypesByExportedmethodsChartSVG":    svgData("exportedinterfacetypes-by-exportedmethods"),
 	})
@@ -191,7 +191,7 @@ func (ds *docServer) buildStatisticsPage(w http.ResponseWriter) []byte {
 					defer page.WriteString("\n")
 					page.WriteString(tn.Package().Path())
 					page.WriteByte('.')
-					buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, tn.Package().Path()}, page, tn.Name(), "name-", tn.Name())
+					buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, tn.Package().Path()), page, tn.Name(), "name-", tn.Name())
 				}()
 			}
 		}
@@ -232,8 +232,8 @@ func (ds *docServer) buildStatisticsPage(w http.ResponseWriter) []byte {
 		"exportedVariables": stats.ExportedVariables,
 		"exportedConstants": stats.ExportedConstants,
 
-		//"exportedvariablesByTypekindsChartURL": buildPageHref(page.PathInfo, pagePathInfo{ResTypeSVG, "exportedvariables-by-typekinds"}, nil, ""),
-		//"exportedconstantsByTypekindsChartURL": buildPageHref(page.PathInfo, pagePathInfo{ResTypeSVG, "exportedconstants-by-typekinds"}, nil, ""),
+		//"exportedvariablesByTypekindsChartURL": buildPageHref(page.PathInfo, createPagePathInfo(ResTypeSVG, "exportedvariables-by-typekinds"), nil, ""),
+		//"exportedconstantsByTypekindsChartURL": buildPageHref(page.PathInfo, createPagePathInfo(ResTypeSVG, "exportedconstants-by-typekinds"), nil, ""),
 		//"exportedvariablesByTypekindsChartSVG": svgData("exportedvariables-by-typekinds"),
 		//"exportedconstantsByTypekindsChartSVG": svgData("exportedconstants-by-typekinds"),
 
@@ -244,8 +244,8 @@ func (ds *docServer) buildStatisticsPage(w http.ResponseWriter) []byte {
 		"exportedFunctionWithLastErrorResult":           stats.ExportedFunctionWithLastErrorResult,
 		"exportedFunctionWithLastErrorResultPercentage": int(math.Round(100 * float64(stats.ExportedFunctionWithLastErrorResult) / float64(stats.ExportedFunctions+stats.ExportedMethods))),
 
-		//"exportedfunctionsByParametersChartURL": buildPageHref(page.PathInfo, pagePathInfo{ResTypeSVG, "exportedfunctions-by-parameters"}, nil, ""),
-		//"exportedfunctionsByResultsChartURL":    buildPageHref(page.PathInfo, pagePathInfo{ResTypeSVG, "exportedfunctions-by-results"}, nil, ""),
+		//"exportedfunctionsByParametersChartURL": buildPageHref(page.PathInfo, createPagePathInfo(ResTypeSVG, "exportedfunctions-by-parameters"), nil, ""),
+		//"exportedfunctionsByResultsChartURL":    buildPageHref(page.PathInfo, createPagePathInfo(ResTypeSVG, "exportedfunctions-by-results"), nil, ""),
 		//"exportedfunctionsByParametersChartSVG": svgData("exportedfunctions-by-parameters"),
 		//"exportedfunctionsByResultsChartSVG":    svgData("exportedfunctions-by-results"),
 	})
@@ -283,7 +283,7 @@ func (ds *docServer) buildStatisticsPage(w http.ResponseWriter) []byte {
 	textSegments = page.Translation().Text_Othertatistics(map[string]interface{}{
 		"averageIdentiferLength": float64(stats.ExportedIdentifersSumLength) / float64(stats.ExportedIdentifers),
 
-		//"exportedidentifiersByLengthsChartURL": buildPageHref(page.PathInfo, pagePathInfo{ResTypeSVG, "exportedidentifiers-by-lengths"}, nil, ""),
+		//"exportedidentifiersByLengthsChartURL": buildPageHref(page.PathInfo, createPagePathInfo(ResTypeSVG, "exportedidentifiers-by-lengths"), nil, ""),
 		//"exportedidentifiersByLengthsChartSVG": svgData("exportedidentifiers-by-lengths"),
 	})
 	page.WriteString(textSegments[0])

@@ -75,6 +75,7 @@ type Translation interface {
 	Text_ImportPath() string
 	Text_ImportStat(numImports, numImportedBys int, depPageURL string) string
 	Text_InvolvedFiles(num int) string
+	Text_Examples(num int) string
 	Text_PackageLevelTypeNames() string
 	//Text_AllPackageLevelValues(num int) string
 	Text_PackageLevelFunctions() string

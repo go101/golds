@@ -35,6 +35,10 @@ func (ds *docServer) packageDetailsPage(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 
+	if genDocsMode {
+		pkgPath = deHashScope(pkgPath)
+	}
+
 	pageKey := pageCacheKey{
 		resType: ResTypePackage,
 		res:     pkgPath,
@@ -57,7 +61,7 @@ func (ds *docServer) packageDetailsPage(w http.ResponseWriter, r *http.Request, 
 }
 
 func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *PackageDetails) []byte {
-	page := NewHtmlPage(goldsVersion, ds.currentTranslation.Text_Package(pkg.ImportPath), ds.currentTheme, ds.currentTranslation, pagePathInfo{ResTypePackage, pkg.ImportPath})
+	page := NewHtmlPage(goldsVersion, ds.currentTranslation.Text_Package(pkg.ImportPath), ds.currentTheme, ds.currentTranslation, createPagePathInfo1(ResTypePackage, pkg.ImportPath))
 
 	fmt.Fprintf(page, `
 <pre id="package-details"><code><span style="font-size:xx-large;">package <b>%s</b></span>
@@ -69,7 +73,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 <span class="title">%s</span>
 	<a href="%s#pkg-%s">%s</a>%s`,
 		page.Translation().Text_ImportPath(),
-		buildPageHref(page.PathInfo, pagePathInfo{ResTypeNone, ""}, nil, ""),
+		buildPageHref(page.PathInfo, createPagePathInfo(ResTypeNone, ""), nil, ""),
 		pkg.ImportPath,
 		pkg.ImportPath,
 		page.Translation().Text_PackageDocsLinksOnOtherWebsites(pkg.ImportPath, pkg.IsStandard),
@@ -83,17 +87,17 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 	%s`,
 			page.Translation().Text_DependencyRelations(""),
 			//page.Translation().Text_ImportStat(int(pkg.NumDeps), int(pkg.NumDepedBys), "/dep:"+pkg.ImportPath),
-			page.Translation().Text_ImportStat(int(pkg.NumDeps), int(pkg.NumDepedBys), buildPageHref(page.PathInfo, pagePathInfo{ResTypeDependency, pkg.ImportPath}, nil, "")),
+			page.Translation().Text_ImportStat(int(pkg.NumDeps), int(pkg.NumDepedBys), buildPageHref(page.PathInfo, createPagePathInfo1(ResTypeDependency, pkg.ImportPath), nil, "")),
 		)
 	}
+	page.WriteString("\n")
 
 	var isMainPackage = pkg.Package.PPkg.Name == "main"
 
 	const classHiddenItem = "hidden"
 
-	page.WriteString("\n")
-
 	if len(pkg.Files) > 0 {
+
 		writeFileTitle := func(info FileInfo) {
 			if info.MainPosition != nil && info.DocText != "" {
 				writeMainFunctionArrow(page, pkg.Package, *info.MainPosition)
@@ -252,7 +256,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 					ds.writeResourceIndexHTML(page, pkg.Package, v, true, true, true)
 					page.WriteString(`</span>`)
 				} else {
-					writeFoldingBlock(page, v.Name(), "content", "docs", true,
+					writeFoldingBlock(page, v.Name(), "content", "docs", false,
 						func() {
 							ds.writeResourceIndexHTML(page, pkg.Package, v, true, true, true)
 						},
@@ -364,7 +368,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 			ds.writeResourceIndexHTML(page, pkg.Package, td.TypeName, true, true, false)
 			page.WriteString(`</span>`)
 		} else {
-			writeFoldingBlock(page, td.TypeName.Name(), "content", "docs", true,
+			writeFoldingBlock(page, td.TypeName.Name(), "content", "docs", false,
 				func() {
 					ds.writeResourceIndexHTML(page, pkg.Package, td.TypeName, true, true, false)
 				},
@@ -402,7 +406,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 											ds.writeFieldForListing(page, pkg.Package, fld, td.TypeName)
 											page.WriteString(`</span>`)
 										} else {
-											writeFoldingBlock(page, td.TypeName.Name(), "field-"+fld.Name(), "docs", true,
+											writeFoldingBlock(page, td.TypeName.Name(), "field-"+fld.Name(), "docs", false,
 												func() {
 													ds.writeFieldForListing(page, pkg.Package, fld, td.TypeName)
 												},
@@ -456,7 +460,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 											ds.writeMethodForListing(page, pkg.Package, mthd, td.TypeName, true, false)
 											page.WriteString(`</span>`)
 										} else {
-											writeFoldingBlock(page, td.TypeName.Name(), "method-"+mthd.Name(), "docs", true,
+											writeFoldingBlock(page, td.TypeName.Name(), "method-"+mthd.Name(), "docs", false,
 												func() {
 													ds.writeMethodForListing(page, pkg.Package, mthd, td.TypeName, true, false)
 												},
@@ -1470,7 +1474,7 @@ func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pk
 			fmt.Fprintf(page, `<a href="`)
 			//page.WriteString("/pkg:")
 			//page.WriteString(v.Package().Path())
-			buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, v.Package().Path()}, page, "")
+			buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, v.Package().Path()), page, "")
 		} else {
 			fmt.Fprintf(page, `<a href="`)
 		}
@@ -1509,7 +1513,7 @@ func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pk
 				if v.Package() != pkg {
 					//fmt.Fprintf(page, `(*<a href="/pkg:%[1]s#name-%[2]s">%[2]s</a>).`, v.Package().Path(), tn.Name())
 					page.WriteString("(*")
-					buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, v.Package().Path()}, page, tn.Name(), "name-", tn.Name())
+					buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, v.Package().Path()), page, tn.Name(), "name-", tn.Name())
 					page.WriteString(").")
 				} else {
 					// ToDo: faster way: ds.analyzer.TryRegisteringType(tn.Type()) == forTypeName.Denoting()?
@@ -1523,7 +1527,7 @@ func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pk
 			} else {
 				if v.Package() != pkg {
 					//fmt.Fprintf(page, `<a href="/pkg:%[1]s#name-%[2]s">%[2]s</a>.`, v.Package().Path(), tn.Name())
-					buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, v.Package().Path()}, page, tn.Name(), "name-", tn.Name())
+					buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, v.Package().Path()), page, tn.Name(), "name-", tn.Name())
 					page.WriteString(".")
 				} else {
 					// ToDo: faster way: ds.analyzer.TryRegisteringType(tn.Type()) == forTypeName.Denoting()?
@@ -1545,7 +1549,7 @@ func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pk
 		} else {
 			if v.Package() != pkg {
 				//fmt.Fprintf(page, `<a href="/pkg:%[1]s#name-%[2]s">%[2]s</a>`, v.Package().Path(), v.Name())
-				buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, v.Package().Path()}, page, v.Name(), "name-", v.Name())
+				buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, v.Package().Path()), page, v.Name(), "name-", v.Name())
 			} else {
 				fmt.Fprintf(page, `<a href="#name-%[1]s">%[1]s</a>`, v.Name())
 			}
@@ -1633,7 +1637,7 @@ func (ds *docServer) writeTypeForListing(page *htmlPage, t *TypeForListing, pkg 
 		fmt.Fprintf(page, `<a href="`)
 		//page.WriteString("/pkg:")
 		//page.WriteString(t.Pkg.Path())
-		buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, t.Pkg.Path()}, page, "")
+		buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, t.Pkg.Path()), page, "")
 	} else {
 		fmt.Fprintf(page, `<a href="`)
 	}
@@ -1719,7 +1723,7 @@ func (ds *docServer) writeMethodForListing(page *htmlPage, docPkg *code.Package,
 		} else {
 			// error.Error
 			// ToDo: If later, there is other builtin methods, the function prototype needs to be changed.
-			buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, "builtin"}, page, method.Name, "name-error")
+			buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, "builtin"), page, method.Name, "name-error")
 		}
 	} else {
 		pos := sel.Position()
@@ -1803,7 +1807,7 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Pac
 		var fPosition token.Position
 		if isBuiltin {
 			if currentPkg != res.Package() || page.PathInfo.resType != ResTypePackage {
-				buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, "builtin"}, page, res.Name(), "name-", res.Name())
+				buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, "builtin"), page, res.Name(), "name-", res.Name())
 				return
 			}
 
@@ -1835,7 +1839,7 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Pac
 		if writeKeyword {
 			if buildIdUsesPages && !isBuiltin {
 				page.WriteByte(' ')
-				buildPageHref(page.PathInfo, pagePathInfo{ResTypeReference, res.Package().Path() + ".." + res.Name()}, page, "type")
+				buildPageHref(page.PathInfo, createPagePathInfo2(ResTypeReference, res.Package().Path(), "..", res.Name()), page, "type")
 				page.WriteByte(' ')
 			} else {
 				page.WriteString(" type ")
@@ -1892,7 +1896,7 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Pac
 	case *code.Constant:
 		if writeKeyword {
 			if buildIdUsesPages && !isBuiltin {
-				buildPageHref(page.PathInfo, pagePathInfo{ResTypeReference, res.Package().Path() + ".." + res.Name()}, page, "const")
+				buildPageHref(page.PathInfo, createPagePathInfo2(ResTypeReference, res.Package().Path(), "..", res.Name()), page, "const")
 				page.WriteByte(' ')
 			} else {
 				page.WriteString("const ")
@@ -1925,7 +1929,7 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Pac
 			if buildIdUsesPages && !isBuiltin {
 				page.WriteByte(' ')
 				page.WriteByte(' ')
-				buildPageHref(page.PathInfo, pagePathInfo{ResTypeReference, res.Package().Path() + ".." + res.Name()}, page, "var")
+				buildPageHref(page.PathInfo, createPagePathInfo2(ResTypeReference, res.Package().Path(), "..", res.Name()), page, "var")
 				page.WriteByte(' ')
 			} else {
 				page.WriteString("  var ")
@@ -1948,7 +1952,7 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Pac
 		if writeKeyword {
 			if buildIdUsesPages && !isBuiltin {
 				page.WriteByte(' ')
-				buildPageHref(page.PathInfo, pagePathInfo{ResTypeReference, res.Package().Path() + ".." + res.Name()}, page, "func")
+				buildPageHref(page.PathInfo, createPagePathInfo2(ResTypeReference, res.Package().Path(), "..", res.Name()), page, "func")
 				page.WriteByte(' ')
 			} else {
 				page.WriteString(" func ")
@@ -2015,7 +2019,7 @@ func (ds *docServer) writeTypeName(page *htmlPage, tt *types.Named, docPkg *code
 	if isBuiltin {
 		objpkg = ds.analyzer.BuiltinPackge().PPkg.Types
 	} else if objpkg != docPkg.PPkg.Types {
-		buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, objpkg.Path()}, page, objpkg.Name())
+		buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, objpkg.Path()), page, objpkg.Name())
 		page.Write(period)
 	}
 	ttName := alternativeTypeName
@@ -2024,7 +2028,7 @@ func (ds *docServer) writeTypeName(page *htmlPage, tt *types.Named, docPkg *code
 	}
 	//page.WriteString(tt.Obj().Name())
 	if isBuiltin || collectUnexporteds || tt.Obj().Exported() {
-		buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, objpkg.Path()}, page, ttName, "name-", tt.Obj().Name())
+		buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, objpkg.Path()), page, ttName, "name-", tt.Obj().Name())
 	} else {
 		p := ds.analyzer.PackageByPath(objpkg.Path())
 		if p == nil {
@@ -2051,7 +2055,7 @@ func (ds *docServer) writeValueTType(page *htmlPage, tt types.Type, docPkg *code
 		if forTypeName != nil && tt == forTypeName.Denoting().TT {
 			page.WriteString(tt.Name())
 		} else {
-			buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, "builtin"}, page, tt.Name(), "name-", tt.Name())
+			buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, "builtin"), page, tt.Name(), "name-", tt.Name())
 		}
 	case *types.Pointer:
 		page.Write(star)
@@ -2205,6 +2209,8 @@ func (ds *docServer) writeInterfaceMethods(page *htmlPage, it *types.Interface, 
 	}
 }
 
+var tabs = bytes.Repeat([]byte{'\t'}, 64)
+
 var (
 	blankID          = []byte("_")
 	space            = []byte(" ")
@@ -2269,7 +2275,7 @@ func (ds *docServer) WriteAstType(w *htmlPage, typeLit ast.Expr, codePkg, docPkg
 		if isBuiltin {
 			objpkg = ds.analyzer.BuiltinPackge().PPkg.Types
 		} else if objpkg != docPkg.PPkg.Types {
-			buildPageHref(w.PathInfo, pagePathInfo{ResTypePackage, objpkg.Path()}, w, objpkg.Name())
+			buildPageHref(w.PathInfo, createPagePathInfo1(ResTypePackage, objpkg.Path()), w, objpkg.Name())
 			w.Write(period)
 		}
 
@@ -2285,10 +2291,10 @@ func (ds *docServer) WriteAstType(w *htmlPage, typeLit ast.Expr, codePkg, docPkg
 			if obj.Exported() { // like Type
 				w.WriteString(node.Name)
 			} else { // like int
-				buildPageHref(w.PathInfo, pagePathInfo{ResTypePackage, objpkg.Path()}, w, node.Name, "name-", node.Name)
+				buildPageHref(w.PathInfo, createPagePathInfo1(ResTypePackage, objpkg.Path()), w, node.Name, "name-", node.Name)
 			}
 		} else if isBuiltin || collectUnexporteds || obj.Exported() {
-			buildPageHref(w.PathInfo, pagePathInfo{ResTypePackage, objpkg.Path()}, w, node.Name, "name-", node.Name)
+			buildPageHref(w.PathInfo, createPagePathInfo1(ResTypePackage, objpkg.Path()), w, node.Name, "name-", node.Name)
 		} else {
 			p := ds.analyzer.PackageByPath(objpkg.Path())
 			if p == nil {
@@ -2317,7 +2323,7 @@ func (ds *docServer) WriteAstType(w *htmlPage, typeLit ast.Expr, codePkg, docPkg
 		}
 		if pkgpkg != docPkg.PPkg.Types {
 			//w.WriteString(pkgpkg.Name())
-			buildPageHref(w.PathInfo, pagePathInfo{ResTypePackage, pkgpkg.Path()}, w, pkgId.Name)
+			buildPageHref(w.PathInfo, createPagePathInfo1(ResTypePackage, pkgpkg.Path()), w, pkgId.Name)
 			w.Write(period)
 		}
 
@@ -2345,7 +2351,7 @@ func (ds *docServer) WriteAstType(w *htmlPage, typeLit ast.Expr, codePkg, docPkg
 		if pkgpkg == docPkg.PPkg.Types && forTypeName != nil && node.Sel.Name == forTypeName.Name() {
 			w.WriteString(node.Sel.Name)
 		} else if collectUnexporteds || obj.Exported() { // || isBuiltin { // must not be builtin
-			buildPageHref(w.PathInfo, pagePathInfo{ResTypePackage, pkgpkg.Path()}, w, node.Sel.Name, "name-", node.Sel.Name)
+			buildPageHref(w.PathInfo, createPagePathInfo1(ResTypePackage, pkgpkg.Path()), w, node.Sel.Name, "name-", node.Sel.Name)
 		} else {
 			//w.WriteString(node.Sel.Name)
 			p := ds.analyzer.PackageByPath(pkgpkg.Path())

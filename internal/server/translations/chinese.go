@@ -257,6 +257,8 @@ func (*Chinese) Text_ImportStat(numImports, numImportedBys int, depPageURL strin
 
 func (*Chinese) Text_InvolvedFiles(num int) string { return "相关源文件" }
 
+func (*Chinese) Text_Examples(num int) string { return "代码示例" }
+
 func (*Chinese) Text_PackageLevelTypeNames() string {
 	return "包级类型名"
 }

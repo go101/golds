@@ -18,6 +18,10 @@ func (ds *docServer) packageDependenciesPage(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	if genDocsMode {
+		pkgPath = deHashScope(pkgPath)
+	}
+
 	//if ds.dependencyPages[pkgPath] == nil {
 	//	// ToDo: not found
 	//
@@ -112,7 +116,7 @@ func (ds *docServer) buildPackageDependenciesData(pkgPath string) *PackageDepend
 }
 
 func (ds *docServer) buildPackageDependenciesPage(w http.ResponseWriter, depInfo *PackageDependencyInfo) []byte {
-	page := NewHtmlPage(goldsVersion, ds.currentTranslation.Text_DependencyRelations(depInfo.ImportPath), ds.currentTheme, ds.currentTranslation, pagePathInfo{ResTypeDependency, depInfo.ImportPath})
+	page := NewHtmlPage(goldsVersion, ds.currentTranslation.Text_DependencyRelations(depInfo.ImportPath), ds.currentTheme, ds.currentTranslation, createPagePathInfo1(ResTypeDependency, depInfo.ImportPath))
 
 	fmt.Fprintf(page, `
 <pre><code><span style="font-size:xx-large;">package <b>%s</b></span>
@@ -124,7 +128,7 @@ func (ds *docServer) buildPackageDependenciesPage(w http.ResponseWriter, depInfo
 <span class="title">%s</span>
 	<a href="%s">%s</a>`,
 		page.Translation().Text_ImportPath(),
-		buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, depInfo.ImportPath}, nil, ""),
+		buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, depInfo.ImportPath), nil, ""),
 		depInfo.ImportPath,
 	)
 

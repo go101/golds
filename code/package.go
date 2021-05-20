@@ -85,6 +85,7 @@ type Package struct {
 	*PackageAnalyzeResult // ToDo: not as pointer?
 	SourceFiles           []SourceFileInfo
 	ExampleFiles          []*ast.File
+	Examples              []*doc.Example
 
 	Directory  string
 	Module     *Module

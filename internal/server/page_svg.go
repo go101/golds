@@ -23,6 +23,10 @@ func (ds *docServer) svgFile(w http.ResponseWriter, r *http.Request, svgFile str
 	}
 	w.Header().Set("Content-Type", "image/svg+xml")
 
+	if genDocsMode {
+		svgFile = deHashFilename(svgFile)
+	}
+
 	pageKey := pageCacheKey{
 		resType: ResTypeSVG,
 		res:     svgFile,
@@ -31,7 +35,7 @@ func (ds *docServer) svgFile(w http.ResponseWriter, r *http.Request, svgFile str
 	if !ok {
 
 		// For docs generation.
-		page := NewHtmlPage(goldsVersion, "", nil, ds.currentTranslation, pagePathInfo{ResTypeSVG, svgFile})
+		page := NewHtmlPage(goldsVersion, "", nil, ds.currentTranslation, createPagePathInfo(ResTypeSVG, svgFile))
 
 		data = ds.buildSVG(svgFile, page.Translation().Text_ChartTitle(svgFile))
 		ds.cachePage(pageKey, data)

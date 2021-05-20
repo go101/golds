@@ -4,17 +4,21 @@ import (
 	"net/http"
 )
 
-func (ds *docServer) javascriptFile(w http.ResponseWriter, r *http.Request, themeName string) {
+func (ds *docServer) javascriptFile(w http.ResponseWriter, r *http.Request, filename string) {
 	w.Header().Set("Content-Type", "application/javascript")
 	if !genDocsMode {
 		w.Write(jsFile)
 		return
 	}
 
+	if genDocsMode {
+		filename = deHashFilename(filename) // not used now
+	}
+
 	ds.mutex.Lock()
 	defer ds.mutex.Unlock()
 
-	page := NewHtmlPage(goldsVersion, "", nil, ds.currentTranslation, pagePathInfo{ResTypeJS, "golds"})
+	page := NewHtmlPage(goldsVersion, "", nil, ds.currentTranslation, createPagePathInfo(ResTypeJS, "golds"))
 	page.Write(jsFile)
 	_ = page.Done(w)
 }

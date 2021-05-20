@@ -2,7 +2,10 @@ package server
 
 import (
 	"container/list"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
+	"go/token"
 	"io"
 	"log"
 	"net/http"
@@ -24,17 +27,25 @@ func init() {
 }
 
 var (
-	pageHrefList   *list.List // elements are *string
-	resHrefs       map[pageResType]map[string]int
-	pageHrefs      map[pagePathInfo]string
+	pageHrefList *list.List // elements are *string
+	resHrefs     map[pageResType]map[string]int
+	pageHrefs    map[pagePathInfo]string
+
+	hashedScopes map[string]string
+	hashedTokens map[string]string
+
 	pageHrefsMutex sync.Mutex // in fact, for the current implementation, the lock is not essential
 )
 
 func enabledHtmlGenerationMod() {
 	genDocsMode = true
+
 	pageHrefList = list.New()
 	resHrefs = make(map[pageResType]map[string]int, 16)
 	pageHrefs = make(map[pagePathInfo]string, 65536)
+
+	hashedScopes = make(map[string]string, 128)
+	hashedTokens = make(map[string]string, 128*1024)
 }
 
 //func disabledHtmlGenerationMod() {
@@ -42,6 +53,97 @@ func enabledHtmlGenerationMod() {
 //	pageHrefList = nil
 //	resHrefs = nil
 //}
+
+func hashedScope(scope string) string {
+	if strings.ToLower(scope) == scope {
+		return scope
+	}
+
+	pageHrefsMutex.Lock()
+	defer pageHrefsMutex.Unlock()
+
+	if hs := hashedScopes[scope]; hs != "" {
+		return hs
+	}
+
+	var b strings.Builder
+	b.Grow(len(scope))
+	tokens := strings.Split(scope, "/")
+	for i, t := range tokens {
+		tokens[i] = hashedFilename(t)
+	}
+	hs := strings.Join(tokens, "/")
+	hashedScopes[scope] = hs
+	return hs
+}
+
+func deHashScope(scope string) string {
+	if strings.ToLower(scope) == scope {
+		return scope
+	}
+
+	tokens := strings.Split(scope, "/")
+	for i, t := range tokens {
+		tokens[i] = deHashFilename(t)
+	}
+	return strings.Join(tokens, "/")
+}
+
+func hashedFilename(t string) string {
+	if strings.ToLower(t) == t {
+		return t
+	}
+	return t + "*" + string(hashHexHead([]byte(t)))
+}
+
+func deHashFilename(t string) string {
+	for i := len(t) - 1; i >= 0; i-- {
+		if t[i] == '*' {
+			return t[:i]
+		}
+		if '0' <= t[i] && t[i] <= '9' {
+			continue
+		}
+		if 'a' <= t[i] && t[i] <= 'f' {
+			continue
+		}
+		break
+	}
+	return t
+}
+
+func hashedIdentifier(t string) string {
+	pageHrefsMutex.Lock()
+	defer pageHrefsMutex.Unlock()
+
+	if token.IsExported(t) {
+		lt := strings.ToLower(t)
+		if et := hashedTokens[lt]; et == "" {
+			hashedTokens[lt] = t
+			return t
+		} else if et == t {
+			return t
+		}
+	}
+
+	return t + "*" + string(hashHexHead([]byte(t)))
+}
+
+func deHashIdentifier(t string) string {
+	if i := strings.LastIndexByte(t, '*'); i >= 0 {
+		return t[:i]
+	}
+	return t
+}
+
+func hashHexHead(data []byte) []byte {
+	sum := sha256.Sum256([]byte(data)) // [32]byte
+	hexes := sum[10:30]
+	hex.Encode(hexes, sum[:10])
+
+	const abbrLen = 5 // max is 20, recommended min is 4
+	return hexes[:abbrLen]
+}
 
 type genPageInfo struct {
 	HrefPath string
@@ -318,20 +420,15 @@ Generate:
 			return
 		}
 
-		switch pathInfo.resType {
-		case ResTypeNone: // top-level pages
-			switch pathInfo.resPath {
-			case "":
-				return "index" + resType2ExtTable(pathInfo.resType)
-			default:
-				return pathInfo.resPath + resType2ExtTable(pathInfo.resType)
+		if pathInfo.resType == ResTypeNone {
+			if pathInfo.resPath == "" {
+				href = "index" + resType2ExtTable(pathInfo.resType)
+			} else {
+				href = pathInfo.resPath + resType2ExtTable(pathInfo.resType)
 			}
-		case ResTypeReference:
-			//pathInfo.resPath = strings.ReplaceAll(pathInfo.resPath, "..", "/") // no need to convert
+		} else {
+			href = string(pathInfo.resType) + "/" + pathInfo.resPath + resType2ExtTable(pathInfo.resType)
 		}
-
-		// ToDo: cache the result?
-		href = string(pathInfo.resType) + "/" + pathInfo.resPath + resType2ExtTable(pathInfo.resType)
 		cachePageHref(pathInfo, href)
 		return
 	}
@@ -455,7 +552,7 @@ func GenDocs(options PageOutputOptions, args []string, outputDir string, silentM
 
 	var pages = make(chan Page, 8)
 
-	buildPageHref(pagePathInfo{ResTypeNone, ""}, pagePathInfo{ResTypeNone, ""}, nil, "") // the overview page
+	buildPageHref(createPagePathInfo(ResTypeNone, ""), createPagePathInfo(ResTypeNone, ""), nil, "") // the overview page
 
 	// page loader
 	go func() {

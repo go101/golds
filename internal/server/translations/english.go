@@ -289,6 +289,8 @@ func (*English) Text_ImportStat(numImports, numImportedBys int, depPageURL strin
 
 func (*English) Text_InvolvedFiles(num int) string { return "Involved Source Files" }
 
+func (*English) Text_Examples(num int) string { return "Code Examples" }
+
 func (*English) Text_PackageLevelTypeNames() string {
 	return "Package-Level Type Names"
 }

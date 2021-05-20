@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"go/ast"
+	"go/doc"
 	"go/parser"
 	"go/token"
 	"go/types"
@@ -373,16 +374,6 @@ func (d *CodeAnalyzer) collectCodeExamples() {
 			}
 			pkg.ExampleFiles = append(pkg.ExampleFiles, astFile)
 		}
-
-		//log.Println(len(pkg.ExampleFiles), pkg.Path(), pkg.Directory)
+		pkg.Examples = doc.Examples(pkg.ExampleFiles...)
 	}
-
-	// ToDo: load tests and
-	//examples := doc.Examples(pkg.ExampleFiles...)
-	//for i, e := range examples {
-	//	log.Println("==================", i)
-	//	//format.Node(os.Stdout, analyzer.ExampleFileSet(), e.Play)
-	//	log.Println(analyzer.ExampleFileSet().PositionFor(e.Code.Pos(), false))
-	//	log.Println(analyzer.ExampleFileSet().PositionFor(e.Code.End(), false))
-	//}
 }

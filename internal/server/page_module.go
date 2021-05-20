@@ -10,4 +10,8 @@ func (ds *docServer) modulePage(w http.ResponseWriter, r *http.Request, rootVers
 
 	w.Header().Set("Content-Type", "text/html")
 	fmt.Fprint(w, "Module page is not implemented yet")
+
+	if genDocsMode {
+		//pkgPath = deHashScope(pkgPath)
+	}
 }

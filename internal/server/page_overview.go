@@ -57,7 +57,7 @@ func (ds *docServer) overviewPage(w http.ResponseWriter, r *http.Request) {
 }
 
 func (ds *docServer) buildOverviewPage(w http.ResponseWriter, overview *Overview) []byte {
-	page := NewHtmlPage(goldsVersion, ds.currentTranslation.Text_Overview(), ds.currentTheme, ds.currentTranslation, pagePathInfo{ResTypeNone, ""})
+	page := NewHtmlPage(goldsVersion, ds.currentTranslation.Text_Overview(), ds.currentTheme, ds.currentTranslation, createPagePathInfo(ResTypeNone, ""))
 	fmt.Fprintf(page, `
 <pre id="overview"><code><span style="font-size:xx-large;">%s</span></code></pre>
 `,
@@ -175,21 +175,21 @@ func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*Package
 			// a hidden one as :target will be shown.
 			fmt.Fprintf(page,
 				`<a href="%s">%s</a>`,
-				buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, pkg.Path}, nil, ""),
+				buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, pkg.Path), nil, ""),
 				pkg.Path,
 			)
 		} else {
 			if pkg.Prefix != "" {
 				fmt.Fprintf(page,
 					`<a href="%s" class="path-duplicate">%s</a>`,
-					buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, pkg.Path}, nil, ""),
+					buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, pkg.Path), nil, ""),
 					pkg.Prefix,
 				)
 			}
 			if pkg.Remaining != "" {
 				fmt.Fprintf(page,
 					`<a href="%s">%s</a>`,
-					buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, pkg.Path}, nil, ""),
+					buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, pkg.Path), nil, ""),
 					pkg.Remaining,
 				)
 			}
@@ -200,7 +200,7 @@ func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*Package
 				func() {
 					page.WriteString(`<i class="importedbys"> (`)
 					defer page.WriteString(`)</i>`)
-					buildPageHref(page.PathInfo, pagePathInfo{ResTypeDependency, pkg.Path}, page, strconv.Itoa(int(pkg.NumImportedBys)), "imported-by")
+					buildPageHref(page.PathInfo, createPagePathInfo1(ResTypeDependency, pkg.Path), page, strconv.Itoa(int(pkg.NumImportedBys)), "imported-by")
 				}()
 			} else {
 				fmt.Fprintf(page, `<i class="importedbys"> (%d)</i>`, pkg.NumImportedBys)
@@ -298,7 +298,7 @@ func (ds *docServer) writeUpdateGoldBlock(page *htmlPage) {
 func (ds *docServer) writeSimpleStatsBlock(page *htmlPage, stats *code.Stats) {
 	text := page.Translation().Text_SimpleStats(stats)
 	text = strings.Replace(text, "\n", "\n\t", -1)
-	moreLink := buildPageHref(page.PathInfo, pagePathInfo{ResTypeNone, "statistics"}, nil, "")
+	moreLink := buildPageHref(page.PathInfo, createPagePathInfo(ResTypeNone, "statistics"), nil, "")
 	fmt.Fprintf(page, `
 <pre><code><span class="title">%s</span></code>
 	%s

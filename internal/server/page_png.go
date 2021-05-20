@@ -14,6 +14,10 @@ func (ds *docServer) pngFile(w http.ResponseWriter, r *http.Request, pngFilename
 	ds.mutex.Lock()
 	defer ds.mutex.Unlock()
 
+	if genDocsMode {
+		pngFilename = deHashFilename(pngFilename)
+	}
+
 	pageKey := pageCacheKey{
 		resType: ResTypePNG,
 		res:     pngFilename,
@@ -24,7 +28,7 @@ func (ds *docServer) pngFile(w http.ResponseWriter, r *http.Request, pngFilename
 		ds.cachePage(pageKey, data)
 
 		// For docs generation.
-		page := NewHtmlPage(goldsVersion, "", nil, ds.currentTranslation, pagePathInfo{ResTypePNG, pngFilename})
+		page := NewHtmlPage(goldsVersion, "", nil, ds.currentTranslation, createPagePathInfo(ResTypePNG, pngFilename))
 		page.Write(data)
 		_ = page.Done(w)
 	}

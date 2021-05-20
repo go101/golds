@@ -17,6 +17,10 @@ func (ds *docServer) cssFile(w http.ResponseWriter, r *http.Request, themeName s
 	ds.mutex.Lock()
 	defer ds.mutex.Unlock()
 
+	if genDocsMode {
+		themeName = deHashFilename(themeName)
+	}
+
 	options := struct {
 		Colon string
 		Fonts string
@@ -51,7 +55,7 @@ func (ds *docServer) cssFile(w http.ResponseWriter, r *http.Request, themeName s
 	}
 	data, ok := ds.cachedPage(pageKey)
 	if !ok {
-		page := NewHtmlPage(goldsVersion, "", nil, ds.currentTranslation, pagePathInfo{ResTypeCSS, themeName})
+		page := NewHtmlPage(goldsVersion, "", nil, ds.currentTranslation, createPagePathInfo(ResTypeCSS, themeName))
 
 		theme := ds.themeByName(themeName)
 		css := theme.CSS() + commonCSS

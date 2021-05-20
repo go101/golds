@@ -35,6 +35,11 @@ func (ds *docServer) sourceCodePage(w http.ResponseWriter, r *http.Request, pkgP
 		return
 	}
 
+	if genDocsMode {
+		pkgPath = deHashScope(pkgPath)
+		bareFilename = deHashFilename(bareFilename)
+	}
+
 	// Browers will replace all \ in url to / automatically, so we need convert them back.
 	// Otherwise, the file will not be found on Windows.
 	//srcPath = strings.Replace(srcPath, "/", string(filepath.Separator), -1)
@@ -81,7 +86,7 @@ func (ds *docServer) sourceCodePage(w http.ResponseWriter, r *http.Request, pkgP
 }
 
 func (ds *docServer) buildSourceCodePage(w http.ResponseWriter, result *SourceFileAnalyzeResult) []byte {
-	page := NewHtmlPage(goldsVersion, ds.currentTranslation.Text_SourceCode(result.PkgPath, result.BareFilename), ds.currentTheme, ds.currentTranslation, pagePathInfo{ResTypeSource, result.PkgPath + "/" + result.BareFilename})
+	page := NewHtmlPage(goldsVersion, ds.currentTranslation.Text_SourceCode(result.PkgPath, result.BareFilename), ds.currentTheme, ds.currentTranslation, createPagePathInfo2b(ResTypeSource, result.PkgPath, "/", result.BareFilename))
 
 	realFilePath := result.OriginalPath
 	if result.GeneratedPath != "" {
@@ -121,7 +126,7 @@ func (ds *docServer) buildSourceCodePage(w http.ResponseWriter, result *SourceFi
 </code></pre>
 `,
 		page.Translation().Text_BelongingPackage(),
-		buildPageHref(page.PathInfo, pagePathInfo{ResTypePackage, result.PkgPath}, nil, ""),
+		buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, result.PkgPath), nil, ""),
 		result.PkgPath,
 	)
 
@@ -1321,8 +1326,8 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 		//v.buildIdentifier(start, end, -1, "/pkg:"+pkgName.Imported().Path())
 		importRatioId := v.pkgPath2RatioID[pkgName.Imported().Path()]
 		importClass := fmt.Sprintf("i%d", importRatioId)
-		//v.buildIdentifier(start, end, -1, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, pkgName.Imported().Path()}, nil, ""))
-		v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, pkgName.Imported().Path()}, nil, ""), importClass)
+		//v.buildIdentifier(start, end, -1, buildPageHref(v.currentPathInfo, createPagePathInfo1(ResTypePackage, pkgName.Imported().Path()), nil, ""))
+		v.buildLink(start, end, buildPageHref(v.currentPathInfo, createPagePathInfo1(ResTypePackage, pkgName.Imported().Path()), nil, ""), importClass)
 		return
 	}
 
@@ -1352,7 +1357,7 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 
 			//log.Println(fmt.Sprintf("ppkg for identifier %s (%v) is not found", ident.Name, obj))
 			//v.buildIdentifier(start, end, -1, "/pkg:builtin#name-"+obj.Name())
-			v.buildIdentifier(start, end, -1, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, "builtin"}, nil, "")+"#name-"+obj.Name())
+			v.buildIdentifier(start, end, -1, buildPageHref(v.currentPathInfo, createPagePathInfo1(ResTypePackage, "builtin"), nil, "")+"#name-"+obj.Name())
 
 			// ToDo: link to runtime.panic/recover/...
 			return
@@ -1371,7 +1376,7 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 	// Yes, it is ok to check "unsafe" only here.
 	if objPkgPath == "unsafe" {
 		//v.buildIdentifier(start, end, -1, "/pkg:"+objPkgPath+"#name-"+obj.Name())
-		v.buildIdentifier(start, end, -1, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, objPkgPath}, nil, "")+"#name-"+obj.Name())
+		v.buildIdentifier(start, end, -1, buildPageHref(v.currentPathInfo, createPagePathInfo1(ResTypePackage, objPkgPath), nil, "")+"#name-"+obj.Name())
 		return
 	}
 
@@ -1412,7 +1417,7 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 
 				if buildIdUsesPages {
 					if collectUnexporteds || token.IsExported(v.topLevelFuncInfo.RecvTypeName) && token.IsExported(funcName) || v.pkg.Path() == "builtin" {
-						link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeReference, v.pkg.Path() + ".." + v.topLevelFuncInfo.RecvTypeName + "." + funcName}, nil, "")
+						link = buildPageHref(v.currentPathInfo, createPagePathInfo3(ResTypeReference, v.pkg.Path(), "..", v.topLevelFuncInfo.RecvTypeName, funcName), nil, "")
 					}
 				} else {
 					var methodPkgPath string
@@ -1426,12 +1431,12 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 							if !methodIsExported {
 								anchorName = methodPkgPath + "." + anchorName
 							}
-							link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeImplementation, v.pkg.Path() + "." + v.topLevelFuncInfo.RecvTypeName}, nil, "", "name-", anchorName)
+							link = buildPageHref(v.currentPathInfo, createPagePathInfo2(ResTypeImplementation, v.pkg.Path(), ".", v.topLevelFuncInfo.RecvTypeName), nil, "", "name-", anchorName)
 						}
 					}
 				}
 			} else if collectUnexporteds || token.IsExported(funcName) {
-				link = buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, v.pkg.Path()}, nil, "", "name-", funcName)
+				link = buildPageHref(v.currentPathInfo, createPagePathInfo1(ResTypePackage, v.pkg.Path()), nil, "", "name-", funcName)
 			} else {
 				goto GoOn // see below "case scp.Parent() == types.Universe:"
 			}
@@ -1522,7 +1527,7 @@ GoOn:
 							if !methodIsExported {
 								anchorName = objPkgPath + "." + anchorName
 							}
-							v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeImplementation, objPkgPath + "." + v.topLevelInterfaceTypeInfo.TypeName}, nil, "")+"#name-"+anchorName, "")
+							v.buildLink(start, end, buildPageHref(v.currentPathInfo, createPagePathInfo2(ResTypeImplementation, objPkgPath, ".", v.topLevelInterfaceTypeInfo.TypeName), nil, "")+"#name-"+anchorName, "")
 							v.topLevelInterfaceTypeInfo.Methods = v.topLevelInterfaceTypeInfo.Methods[1:]
 							return
 						}
@@ -1536,7 +1541,7 @@ GoOn:
 					fieldName := obj.Name()
 					if fieldName != "_" && buildIdUsesPages {
 						if collectUnexporteds || token.IsExported(enclosingTypeName) && token.IsExported(obj.Name()) || objPkgPath == "builtin" {
-							v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeReference, objPkgPath + ".." + enclosingTypeName + "." + obj.Name()}, nil, ""), "")
+							v.buildLink(start, end, buildPageHref(v.currentPathInfo, createPagePathInfo3(ResTypeReference, objPkgPath, "..", enclosingTypeName, obj.Name()), nil, ""), "")
 							return
 						}
 					}
@@ -1562,32 +1567,32 @@ GoOn:
 			// * CTRL to pkg details page.
 			// * Click + click to show reference list.
 
-			//v.buildIdentifier(start, end, -1, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, objPkgPath}, nil, "")+"#name-"+obj.Name())
+			//v.buildIdentifier(start, end, -1, buildPageHref(v.currentPathInfo, createPagePathInfo1(ResTypePackage, objPkgPath), nil, "")+"#name-"+obj.Name())
 			// now all unexporteds are listed in package details pages (?show=all is depreciated).
 			// All id-ref pages are entered from package details pages now.
 			//return
 
 			if collectUnexporteds || obj.Exported() {
 				//v.buildIdentifier(start, end, -1, "/pkg:"+objPkgPath+"#name-"+obj.Name())
-				v.buildIdentifier(start, end, -1, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, objPkgPath}, nil, "")+"#name-"+obj.Name())
+				v.buildIdentifier(start, end, -1, buildPageHref(v.currentPathInfo, createPagePathInfo1(ResTypePackage, objPkgPath), nil, "")+"#name-"+obj.Name())
 				return
 			} else {
 				switch obj.(type) {
 				case *types.TypeName:
 					if collectUnexporteds {
-						//v.buildIdentifier(start, end, -1, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, objPkgPath}, nil, "")+"?show=all#name-"+obj.Name())
-						v.buildIdentifier(start, end, -1, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypePackage, objPkgPath}, nil, "")+"#name-"+obj.Name())
+						//v.buildIdentifier(start, end, -1, buildPageHref(v.currentPathInfo, createPagePathInfo1(ResTypePackage, objPkgPath), nil, "")+"?show=all#name-"+obj.Name())
+						v.buildIdentifier(start, end, -1, buildPageHref(v.currentPathInfo, createPagePathInfo1(ResTypePackage, objPkgPath), nil, "")+"#name-"+obj.Name())
 						return
 					} else if buildIdUsesPages {
 						if collectUnexporteds || token.IsExported(obj.Name()) || objPkgPath == "builtin" {
-							v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeReference, objPkgPath + ".." + obj.Name()}, nil, ""), "")
+							v.buildLink(start, end, buildPageHref(v.currentPathInfo, createPagePathInfo2(ResTypeReference, objPkgPath, "..", obj.Name()), nil, ""), "")
 							return
 						}
 					}
 				case *types.Func, *types.Var, *types.Const:
 					if buildIdUsesPages {
 						if collectUnexporteds || token.IsExported(obj.Name()) || objPkgPath == "builtin" {
-							v.buildLink(start, end, buildPageHref(v.currentPathInfo, pagePathInfo{ResTypeReference, objPkgPath + ".." + obj.Name()}, nil, ""), "")
+							v.buildLink(start, end, buildPageHref(v.currentPathInfo, createPagePathInfo2(ResTypeReference, objPkgPath, "..", obj.Name()), nil, ""), "")
 							return
 						}
 					}
@@ -1633,7 +1638,7 @@ func buildSrouceCodeLineLink(currentPathInfo pagePathInfo, analyzer *code.CodeAn
 		sourceFilename = fileInfo.AstBareFileName()
 	}
 
-	return buildPageHref(currentPathInfo, pagePathInfo{ResTypeSource, pkg.Path() + "/" + sourceFilename}, nil, "", "line-", strconv.Itoa(p.Line))
+	return buildPageHref(currentPathInfo, createPagePathInfo2b(ResTypeSource, pkg.Path(), "/", sourceFilename), nil, "", "line-", strconv.Itoa(p.Line))
 }
 
 func writeSrouceCodeLineLink(page *htmlPage, pkg *code.Package, p token.Position, text, class string) {
@@ -1654,25 +1659,25 @@ func writeSrouceCodeLineLink(page *htmlPage, pkg *code.Package, p token.Position
 	}
 
 	fmt.Fprintf(page, `<a href="`)
-	buildPageHref(page.PathInfo, pagePathInfo{ResTypeSource, pkg.Path() + "/" + sourceFilename}, page, "", "line-", strconv.Itoa(p.Line))
+	buildPageHref(page.PathInfo, createPagePathInfo2b(ResTypeSource, pkg.Path(), "/", sourceFilename), page, "", "line-", strconv.Itoa(p.Line))
 	fmt.Fprintf(page, `"%s>%s</a>`, class, text)
 }
 
 func writeSrouceCodeFileLink(page *htmlPage, pkg *code.Package, sourceFilename string) {
-	buildPageHref(page.PathInfo, pagePathInfo{ResTypeSource, pkg.Path() + "/" + sourceFilename}, page, sourceFilename)
+	buildPageHref(page.PathInfo, createPagePathInfo2b(ResTypeSource, pkg.Path(), "/", sourceFilename), page, sourceFilename)
 }
 
 func writeSourceCodeDocLink(page *htmlPage, pkg *code.Package, sourceFilename string, startLine, endLine int32) {
 	if sourceReadingStyle == SourceReadingStyle_external {
 		start, end := strconv.Itoa(int(startLine)), ""
 		if endLine == startLine {
-			buildPageHref(page.PathInfo, pagePathInfo{ResTypeSource, pkg.Path() + "/" + sourceFilename}, page, "d➜", "doc", "line-", start)
+			buildPageHref(page.PathInfo, createPagePathInfo2b(ResTypeSource, pkg.Path(), "/", sourceFilename), page, "d➜", "doc", "line-", start)
 		} else {
 			end = strconv.Itoa(int(endLine))
-			buildPageHref(page.PathInfo, pagePathInfo{ResTypeSource, pkg.Path() + "/" + sourceFilename}, page, "d➜", "doc", "line-", start, ":", end)
+			buildPageHref(page.PathInfo, createPagePathInfo2b(ResTypeSource, pkg.Path(), "/", sourceFilename), page, "d➜", "doc", "line-", start, ":", end)
 		}
 	} else {
-		buildPageHref(page.PathInfo, pagePathInfo{ResTypeSource, pkg.Path() + "/" + sourceFilename}, page, "d➜", "doc")
+		buildPageHref(page.PathInfo, createPagePathInfo2b(ResTypeSource, pkg.Path(), "/", sourceFilename), page, "d➜", "doc")
 	}
 	page.WriteByte(' ')
 }
@@ -1830,7 +1835,7 @@ func (ds *docServer) analyzeSoureCode(pkgPath, bareFilename string) (*SourceFile
 		}
 
 		av := &astVisitor{
-			currentPathInfo: pagePathInfo{ResTypeSource, pkg.Path() + "/" + bareFilename},
+			currentPathInfo: createPagePathInfo2b(ResTypeSource, pkg.Path(), "/", bareFilename),
 
 			dataAnalyzer: ds.analyzer,
 			pkg:          pkg,
