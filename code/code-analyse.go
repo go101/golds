@@ -1711,7 +1711,7 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 	}()
 
 	//for i, file := range pkg.PPkg.Syntax {
-	for _, fileInfo := range pkg.SourceFiles {
+	for i, fileInfo := range pkg.SourceFiles {
 		file := fileInfo.AstFile
 		if file == nil {
 			continue
@@ -1721,7 +1721,7 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 		//incSliceStat(d.stats.FilesByImportCount[:], len(file.Imports))
 		//d.stats.CodeLinesWithBlankLines += int32(pkg.PPkg.Fset.PositionFor(pkg.PPkg.Syntax[i].End(), false).Line)
 		loc := pkg.PPkg.Fset.PositionFor(file.End(), false).Line
-		//d.stat_OnNewAstFile(len(file.Imports), loc, filepath.Base(pkg.PPkg.CompiledGoFiles[i]), pkg)
+		d.stat_OnNewAstFile(len(file.Imports), loc, filepath.Base(pkg.PPkg.CompiledGoFiles[i]), pkg)
 		_ = filepath.Base
 		locOfPkg += loc
 

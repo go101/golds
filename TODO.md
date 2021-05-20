@@ -8,11 +8,15 @@
     * collectionDeclarations ranges sourceFiles
     * load all example source codes in memory
     * render examples code in package details pages
+  * https://blog.golang.org/examples
 
 * module page. Containing Module: xxxx/xxxx
   * sort by requiredBys / line of codes
   * wait https://github.com/golang/go/issues/45649 to be fixed
   * show project links
+
+* https://golang.org/pkg/go/doc/#Package
+  bugs and notes, Examples
 
 * tests only work for Linux now.
 

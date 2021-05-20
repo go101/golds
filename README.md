@@ -27,6 +27,7 @@ please visit [this page on Go101.org](https://go101.org/article/tool-golds.html)
   * Shows as-parameters-of and as-results-of function/method lists (including interface methods).
   * Shows the package-level value list of a package-level type.
   * Shows uses of package-level declared types/constants/variables/functions (by clicking the `type`/`const`/`var`/`func` keywords).
+  * Press `p` (package), `e` (examples), `t` (types), `f` (functions), `v` (variables), `c` (constants), and `a` (all) to toggle doc expand/collapse statuses (only available when JavaScript is on).
 * Smooth code view experiences (good for studying Go projects without opening IDEs):
   * Click a local identifier to highlight all the occurrences of the identifier.
   * Click a use of a non-local identifier to jump to the declaration of the non-local identifier.
@@ -34,7 +35,6 @@ please visit [this page on Go101.org](https://go101.org/article/tool-golds.html)
     If the name represents a method, in the uses page, click the _(method)_ text to show which interface methods the method implements.
   * Click the name of a method specified in an interface type declaration to show the methods implementing it (only for package-level named interface types now).
     In the method-implementation page, click each the name of an interface method to show the uses of the interface method.
-  * In ppackage details pages, press `p` (package), `e` (examples), `t` (types), `f` (functions), `v` (variables), `c` (constants), and `a` (all) to toggle doc expand/collapse statuses (only available when JavaScript is on). 
 * Shows code statistics ([demo](https://docs.go101.org/std/statistics.html)).
   * Click some of the SVG pictures to show corresponding toppest list.
 * Supports generating static HTML docs pages, to avoid rebuilding the docs later.

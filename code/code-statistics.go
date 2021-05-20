@@ -184,8 +184,6 @@ func (d *CodeAnalyzer) stat_OnNewAstFile(numImports, linesWithBlanks int, bareFi
 	d.stats.FilesImportCountTopList.Push(numImports, pkgFile)
 
 	// ...
-	pkg.CodeLinesWithBlankLines += int32(linesWithBlanks)
-	d.stats.CodeLinesWithBlankLines += int32(linesWithBlanks)
 	numHundreds := linesWithBlanks / 100
 	incSliceStat(d.stats.FilesByCodeLinesWithBlankLines[:], numHundreds)
 	d.stats.FilesCodeLineTopList.TryToInit(20) // 2,000 lines
@@ -193,6 +191,8 @@ func (d *CodeAnalyzer) stat_OnNewAstFile(numImports, linesWithBlanks int, bareFi
 }
 
 func (d *CodeAnalyzer) stat_OnPackageCodeLineCount(linesWithBlanks int, pkg *Package) {
+	pkg.CodeLinesWithBlankLines += int32(linesWithBlanks)
+	d.stats.CodeLinesWithBlankLines += int32(linesWithBlanks)
 	numThousands := linesWithBlanks / 1000
 	incSliceStat(d.stats.PackagesByCodeLinesWithBlankLines[:], numThousands)
 	d.stats.PackagesCodeLineTopList.TryToInit(20) // 20,000 lines
