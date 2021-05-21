@@ -310,7 +310,7 @@ func (ds *docServer) buildReferencesData(pkgPath string, tokens ...string) (*Ref
 		return nil, fmt.Errorf("package %s is not found", pkgPath)
 	}
 
-	isBuiltin := pkgPath == "builtin"
+	//isBuiltin := pkgPath == "builtin"
 
 	//if len(identifier) == 0 {
 	//	return nil, errors.New("identifier is not specified")
@@ -329,9 +329,9 @@ func (ds *docServer) buildReferencesData(pkgPath string, tokens ...string) (*Ref
 		if tokens[0] == "" {
 			return nil, errors.New("identifier is not specified")
 		}
-		if !collectUnexporteds && !isBuiltin && !token.IsExported(tokens[0]) {
-			panic("should not go here (use): " + pkgPath + "." + tokens[0])
-		}
+		//if !collectUnexporteds && !isBuiltin && !token.IsExported(tokens[0]) {
+		//	panic("should not go here (use): " + pkgPath + "." + tokens[0])
+		//}
 		identifier = tokens[0]
 
 		for _, tn := range pkg.AllTypeNames {
@@ -370,12 +370,12 @@ func (ds *docServer) buildReferencesData(pkgPath string, tokens ...string) (*Ref
 
 		return nil, fmt.Errorf("type %s is not found in package %s", tokens[0], pkgPath)
 	} else { // len(tokens) == 2
-		if !collectUnexporteds && !isBuiltin && !token.IsExported(tokens[0]) {
-			panic("should not go here (use): " + pkgPath + ".." + tokens[0])
-		}
-		if !collectUnexporteds && !token.IsExported(tokens[1]) {
-			panic("should not go here (use): " + pkgPath + ".." + tokens[0] + "." + tokens[1])
-		}
+		//if !collectUnexporteds && !isBuiltin && !token.IsExported(tokens[0]) {
+		//	panic("should not go here (use): " + pkgPath + ".." + tokens[0])
+		//}
+		//if !collectUnexporteds && !token.IsExported(tokens[1]) {
+		//	panic("should not go here (use): " + pkgPath + ".." + tokens[0] + "." + tokens[1])
+		//}
 		identifier = tokens[0] + "." + tokens[1]
 
 		for _, tn := range pkg.AllTypeNames {

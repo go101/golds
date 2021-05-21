@@ -1416,9 +1416,9 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 				// ToDo: need think more.
 
 				if buildIdUsesPages {
-					if collectUnexporteds || token.IsExported(v.topLevelFuncInfo.RecvTypeName) && token.IsExported(funcName) || v.pkg.Path() == "builtin" {
-						link = buildPageHref(v.currentPathInfo, createPagePathInfo3(ResTypeReference, v.pkg.Path(), "..", v.topLevelFuncInfo.RecvTypeName, funcName), nil, "")
-					}
+					//if collectUnexporteds || token.IsExported(v.topLevelFuncInfo.RecvTypeName) && token.IsExported(funcName) || v.pkg.Path() == "builtin" {
+					link = buildPageHref(v.currentPathInfo, createPagePathInfo3(ResTypeReference, v.pkg.Path(), "..", v.topLevelFuncInfo.RecvTypeName, funcName), nil, "")
+					//}
 				} else {
 					var methodPkgPath string
 					if !token.IsExported(funcName) {
@@ -1540,10 +1540,10 @@ GoOn:
 					enclosingTypeName := v.topLevelStructTypeSpec.Name.Name
 					fieldName := obj.Name()
 					if fieldName != "_" && buildIdUsesPages {
-						if collectUnexporteds || token.IsExported(enclosingTypeName) && token.IsExported(obj.Name()) || objPkgPath == "builtin" {
-							v.buildLink(start, end, buildPageHref(v.currentPathInfo, createPagePathInfo3(ResTypeReference, objPkgPath, "..", enclosingTypeName, obj.Name()), nil, ""), "")
-							return
-						}
+						//if collectUnexporteds || token.IsExported(enclosingTypeName) && token.IsExported(obj.Name()) || objPkgPath == "builtin" {
+						v.buildLink(start, end, buildPageHref(v.currentPathInfo, createPagePathInfo3(ResTypeReference, objPkgPath, "..", enclosingTypeName, obj.Name()), nil, ""), "")
+						return
+						//}
 					}
 				}
 				// ToDo: the above code works for the "bar" and "baz" fields, but not for the "X" field.
@@ -1584,17 +1584,17 @@ GoOn:
 						v.buildIdentifier(start, end, -1, buildPageHref(v.currentPathInfo, createPagePathInfo1(ResTypePackage, objPkgPath), nil, "")+"#name-"+obj.Name())
 						return
 					} else if buildIdUsesPages {
-						if collectUnexporteds || token.IsExported(obj.Name()) || objPkgPath == "builtin" {
-							v.buildLink(start, end, buildPageHref(v.currentPathInfo, createPagePathInfo2(ResTypeReference, objPkgPath, "..", obj.Name()), nil, ""), "")
-							return
-						}
+						//if collectUnexporteds || token.IsExported(obj.Name()) || objPkgPath == "builtin" {
+						v.buildLink(start, end, buildPageHref(v.currentPathInfo, createPagePathInfo2(ResTypeReference, objPkgPath, "..", obj.Name()), nil, ""), "")
+						return
+						//}
 					}
 				case *types.Func, *types.Var, *types.Const:
 					if buildIdUsesPages {
-						if collectUnexporteds || token.IsExported(obj.Name()) || objPkgPath == "builtin" {
-							v.buildLink(start, end, buildPageHref(v.currentPathInfo, createPagePathInfo2(ResTypeReference, objPkgPath, "..", obj.Name()), nil, ""), "")
-							return
-						}
+						//if collectUnexporteds || token.IsExported(obj.Name()) || objPkgPath == "builtin" {
+						v.buildLink(start, end, buildPageHref(v.currentPathInfo, createPagePathInfo2(ResTypeReference, objPkgPath, "..", obj.Name()), nil, ""), "")
+						return
+						//}
 					}
 
 				}
