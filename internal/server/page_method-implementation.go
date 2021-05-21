@@ -226,9 +226,9 @@ func (ds *docServer) buildImplementationData(analyzer *code.CodeAnalyzer, pkgPat
 				}
 				impByDenoting := impBy.TypeName.Denoting()
 				for _, m := range impByDenoting.AllMethods {
-					//if !collectUnexporteds && !token.IsExported(m.Name()) {
-					//	continue
-					//}
+					if !collectUnexporteds && !token.IsExported(m.Name()) {
+						continue
+					}
 					matched := sel.Name() == m.Name()
 					if matched && selNameIsUnexported {
 						matched = matched && m.Package().Path() == sel.Package().Path()
@@ -257,12 +257,21 @@ func (ds *docServer) buildImplementationData(analyzer *code.CodeAnalyzer, pkgPat
 		}
 
 		for _, sel := range methodSelectors {
+			if !collectUnexporteds && !token.IsExported(sel.Name()) {
+				continue
+			}
 			impls := make([]MethodInfo, 0, len(typeInfo.Implements))
 			imps, _ := buildTypeImplementsList(analyzer, pkg, typeInfo, true)
 			selNameIsUnexported := !token.IsExported(sel.Name())
 			for _, imp := range imps {
+				if !collectUnexporteds && imp.TypeName.Package().Path() != "builtin" && !imp.TypeName.Exported() {
+					continue
+				}
 				impDenoting := imp.TypeName.Denoting()
 				for _, m := range impDenoting.AllMethods {
+					if !collectUnexporteds && !token.IsExported(m.Name()) {
+						continue
+					}
 					matched := sel.Name() == m.Name()
 					if matched && selNameIsUnexported {
 						matched = matched && m.Package().Path() == sel.Package().Path()

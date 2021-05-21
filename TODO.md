@@ -2,6 +2,12 @@
 
 ### Soon to do
 
+* TestGenerateDocsOfStandardPackages doesn't detect https://github.com/go101/golds/issues/20#issuecomment-845944950.
+
+* options
+    //	-package-docs-showing-initially=collapse|simple|expand
+    //	-identifier-docs-showing-initially=collapse|oneline|expand
+
 * show/run examples/tests/banchmarks 
   (Tests==true, cause reflect.EmbedWithUnexpMeth not found in analyzePackage_ConfirmTypeSources/registerDirectFields now)
   * use custom implementation? Ast load example_xxx_test.go file only, ...
@@ -38,9 +44,7 @@
 * type alias and same-underlyings list
   * https://github.com/golang/go/issues/44905
 
-* options
-    //	-package-docs-showing-initially=collapse|simple|expand
-    //	-identifier-docs-showing-initially=collapse|oneline|expand
+
 
 * stat: keyword use count: most implemented interface.
 

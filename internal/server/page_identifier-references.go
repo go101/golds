@@ -371,10 +371,10 @@ func (ds *docServer) buildReferencesData(pkgPath string, tokens ...string) (*Ref
 		return nil, fmt.Errorf("type %s is not found in package %s", tokens[0], pkgPath)
 	} else { // len(tokens) == 2
 		if !collectUnexporteds && !isBuiltin && !token.IsExported(tokens[0]) {
-			panic("should not go here (use): " + pkgPath + "." + tokens[0])
+			panic("should not go here (use): " + pkgPath + ".." + tokens[0])
 		}
 		if !collectUnexporteds && !token.IsExported(tokens[1]) {
-			panic("should not go here (use): " + pkgPath + "." + tokens[1])
+			panic("should not go here (use): " + pkgPath + ".." + tokens[0] + "." + tokens[1])
 		}
 		identifier = tokens[0] + "." + tokens[1]
 
