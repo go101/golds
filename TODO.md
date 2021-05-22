@@ -2,8 +2,6 @@
 
 ### Soon to do
 
-* TestGenerateDocsOfStandardPackages doesn't detect https://github.com/go101/golds/issues/20#issuecomment-845944950.
-
 * options
     //	-package-docs-showing-initially=collapse|simple|expand
     //	-identifier-docs-showing-initially=collapse|oneline|expand
