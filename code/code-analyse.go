@@ -497,294 +497,294 @@ func (d *CodeAnalyzer) analyzePackages_FindImplementations() { // (resultMethodC
 // then get the overlapping for consequencing method slices.
 // However, it looks the current implementation is fast enough.
 
-func (d *CodeAnalyzer) analyzePackages_FindImplementations_Old() (resultMethodCache *typeutil.MethodSetCache) {
-	// step 1: register all method signatures of underlying interface types.
-	//         create a type list for each signature.
-	// step 2: iteration all types, calculate their method signatures,
-	//         (interface types can use their underlying cache calculated in step 1)
-	//         ignore signatures which are note recorded in step 1.
-	//         register the type into the type lists of method signatures.
-	// step 3: iterate all underlying interfaces, iterate all method signatures,
-	//         iterate the type list of a signature, TypeInfo.counter++
-	//         ...
-
-	type UnderlyingInterfaceInfo struct {
-		t             *TypeInfo
-		methodIndexes []uint32
-		underlieds    []*TypeInfo // including the underlying itself
-	}
-
-	// ToDo: use map[InterfaceTypeIndex]*TypeInfo?
-	var interfaceUnderlyings typeutil.Map
-
-	//var interfaceUnderlyingTypes = make([]*TypeInfo, 0, 1024)
-	//for _, t := range d.allTypeInfos {
-	// New types might be registered in this loop,
-	// so traditional for-loop is used here.
-	for i := 0; i < len(d.allTypeInfos); i++ {
-		t := d.allTypeInfos[i]
-
-		// ToDo: auto register underlying type in RegisterType.
-		underlying := t.TT.Underlying()
-		underlyingTypeInfo := d.RegisterType(underlying) // underlying must have been already registered
-		t.Underlying = underlyingTypeInfo
-		underlyingTypeInfo.Underlying = underlyingTypeInfo
-
-		if i, ok := underlying.(*types.Interface); ok && i.NumMethods() > 0 {
-			var uiInfo *UnderlyingInterfaceInfo
-			info := interfaceUnderlyings.At(i)
-			if interfaceUnderlyings.At(i) == nil {
-				//interfaceUnderlyingTypes = append(interfaceUnderlyingTypes, underlyingTypeInfo)
-				uiInfo = &UnderlyingInterfaceInfo{t: underlyingTypeInfo, underlieds: make([]*TypeInfo, 0, 3)}
-				interfaceUnderlyings.Set(i, uiInfo)
-				//log.Printf("!!! %T\n", uiInfo.t.TT)
-			} else {
-				uiInfo, _ = info.(*UnderlyingInterfaceInfo)
-			}
-			uiInfo.underlieds = append(uiInfo.underlieds, t)
-		}
-	}
-
-	log.Println("number of underlying interfaces:", interfaceUnderlyings.Len())
-	//interfaceUnderlyings.Iterate(func(_ types.Type, info interface{}) {
-	//	uiInfo := info.(*UnderlyingInterfaceInfo)
-	//	log.Println("     ", uiInfo.t.TT)
-	//	for _, t := range uiInfo.underlieds {
-	//		log.Println("           ", t.TT)
-	//	}
-	//})
-
-	var lastMethodIndex uint32
-	var allInterfaceMethods = make(map[MethodSignature]uint32, 8196)
-	var method2TypeIndexes = make([][]uint32, 0, 8196)
-	var cache typeutil.MethodSetCache
-	resultMethodCache = &cache
-
-	// 0 is an in valid method index
-	allInterfaceMethods[MethodSignature{}] = 0
-	method2TypeIndexes = append(method2TypeIndexes, nil)
-	lastMethodIndex++
-
-	// ...
-	interfaceUnderlyings.Iterate(func(_ types.Type, info interface{}) {
-		uiInfo := info.(*UnderlyingInterfaceInfo)
-		//log.Printf("### %d %T\n", uiInfo.t.index, uiInfo.t.TT)
-		methodSet := cache.MethodSet(uiInfo.t.TT)
-		uiInfo.methodIndexes = make([]uint32, methodSet.Len())
-
-		for i := methodSet.Len() - 1; i >= 0; i-- {
-			sel := methodSet.At(i)
-			funcObj, ok := sel.Obj().(*types.Func)
-			if !ok {
-				panic("not a types.Func")
-			}
-			x := d.lastTypeIndex
-			sig := d.BuildMethodSignatureFromFuncObject(funcObj) // will not produce new type registrations for sure
-			if d.lastTypeIndex > x {
-				log.Println("       > ", uiInfo.t.TT)
-				log.Println("             >> ", sel)
-			}
-
-			methodIndex, ok := allInterfaceMethods[sig]
-			if ok {
-				method2TypeIndexes[methodIndex] = append(method2TypeIndexes[methodIndex], uiInfo.t.index)
-			} else {
-				methodIndex = lastMethodIndex
-				lastMethodIndex++
-				allInterfaceMethods[sig] = methodIndex
-
-				typeIndexes := make([]uint32, 0, 8)
-				typeIndexes = append(typeIndexes, uiInfo.t.index)
-
-				//log.Printf("   $$$ %d %T\n", uiInfo.t.index, d.allTypeInfos[uiInfo.t.index].TT)
-
-				// method2TypeIndexes[methodIndex] = typeIndexes
-				method2TypeIndexes = append(method2TypeIndexes, typeIndexes)
-			}
-			uiInfo.methodIndexes[i] = methodIndex
-		}
-	})
-
-	//log.Println("number of method signatures:", lastMethodIndex, len(allInterfaceMethods), len(method2TypeIndexes))
-	//for methodIndex, typeIndexes := range method2TypeIndexes {
-	//	log.Println("     method#", methodIndex)
-	//	for _, typeIndex := range typeIndexes {
-	//		t := d.allTypeInfos[typeIndex]
-	//		log.Printf("          %v : %T", t.TT, t.TT)
-	//	}
-	//}
-
-	// log.Println("method2TypeIndexes = \n", method2TypeIndexes)
-
-	for _, t := range d.allTypeInfos {
-		//log.Println("111>>>", t.TT)
-		if _, ok := t.TT.Underlying().(*types.Interface); ok {
-			continue
-		}
-
-		methodSet := cache.MethodSet(t.TT)
-		//log.Println("222>>>", t.TT, methodSet.Len())
-		for i := methodSet.Len() - 1; i >= 0; i-- {
-			sel := methodSet.At(i)
-			funcObj, ok := sel.Obj().(*types.Func)
-			if !ok {
-				panic("not a types.Func")
-			}
-
-			sig := d.BuildMethodSignatureFromFuncObject(funcObj) // will not produce new type registrations for sure
-
-			methodIndex, ok := allInterfaceMethods[sig]
-			//log.Println("333>>>", methodIndex, ok)
-			if ok {
-				method2TypeIndexes[methodIndex] = append(method2TypeIndexes[methodIndex], t.index)
-			}
-		}
-	}
-
-	log.Println("number of interface method signatures:", lastMethodIndex, len(allInterfaceMethods), len(method2TypeIndexes))
-	//for methodIndex, typeIndexes := range method2TypeIndexes {
-	//	log.Println("     method#", methodIndex)
-	//	for _, typeIndex := range typeIndexes {
-	//		t := d.allTypeInfos[typeIndex]
-	//		log.Println("          ", t.TT)
-	//	}
-	//}
-
-	typeLookupTable := d.tempTypeLookupTable()
-	defer d.resetTempTypeLookupTable()
-
-	var searchRound uint32 = 0
-	interfaceUnderlyings.Iterate(func(_ types.Type, info interface{}) {
-		uiInfo := info.(*UnderlyingInterfaceInfo)
-
-		typeIndexes := method2TypeIndexes[uiInfo.methodIndexes[0]]
-		for _, typeIndex := range typeIndexes {
-			t := d.allTypeInfos[typeIndex]
-			t.counter = searchRound + 1
-		}
-		searchRound++
-
-		if len(uiInfo.methodIndexes) == 1 {
-			sel := uiInfo.t.AllMethods[0]
-			if sel.Name() == "Error" {
-				log.Println("======================================= uiInfo.t: ", uiInfo.t)
-				log.Println("=== typeIndexes:", typeIndexes)
-			}
-		}
-
-		for _, methodIndex := range uiInfo.methodIndexes[1:] {
-			typeIndexes = method2TypeIndexes[methodIndex]
-			for _, typeIndex := range typeIndexes {
-				t := d.allTypeInfos[typeIndex]
-				if t.counter == searchRound {
-					t.counter = searchRound + 1
-				}
-			}
-			searchRound++
-		}
-
-		count := 0
-		//typeIndexes = method2TypeIndexes[uiInfo.methodIndexes[len(uiInfo.methodIndexes)-1]]
-		for _, typeIndex := range typeIndexes {
-			t := d.allTypeInfos[typeIndex]
-			if t.counter == searchRound {
-				////t.Implements = append(t.Implements, uiInfo.t)
-				//t.Implements = append(t.Implements, uiInfo.underlieds...)
-				for _, it := range uiInfo.underlieds {
-					t.Implements = append(t.Implements, Implementation{Impler: t, Interface: it})
-				}
-				count++
-			}
-		}
-
-		// Register non-pointer ones firstly, then
-		// register pointer ones whose bases have not been registered.
-		d.resetTempTypeLookupTable()
-		impBy := make([]*TypeInfo, 0, count)
-		for _, typeIndex := range typeIndexes {
-			t := d.allTypeInfos[typeIndex]
-			if t.counter == searchRound {
-				if _, ok := t.TT.(*types.Pointer); !ok {
-					if itt, ok := t.TT.Underlying().(*types.Interface); ok {
-						ittInfo := interfaceUnderlyings.At(itt).(*UnderlyingInterfaceInfo)
-						for _, it := range ittInfo.underlieds {
-							impBy = append(impBy, it)
-							typeLookupTable[it.index] = struct{}{}
-						}
-					} else {
-						impBy = append(impBy, t)
-						typeLookupTable[typeIndex] = struct{}{}
-					}
-				}
-			}
-		}
-		for _, typeIndex := range typeIndexes {
-			t := d.allTypeInfos[typeIndex]
-			if t.counter == searchRound {
-				if ptt, ok := t.TT.(*types.Pointer); ok {
-					bt := d.RegisterType(ptt.Elem())
-					if _, reged := typeLookupTable[bt.index]; !reged {
-						impBy = append(impBy, t)
-					}
-				}
-			}
-		}
-		uiInfo.t.ImplementedBys = impBy
-
-		//log.Println("111 @@@", uiInfo.t.TT, ", uiInfo.methodIndexes:", uiInfo.methodIndexes)
-		//for _, impBy := range impBy {
-		//	log.Println("     ", impBy.TT)
-		//}
-	})
-
-	interfaceUnderlyings.Iterate(func(_ types.Type, info interface{}) {
-		uiInfo := info.(*UnderlyingInterfaceInfo)
-		for _, t := range uiInfo.underlieds {
-			t.Implements = uiInfo.t.Implements
-			t.ImplementedBys = uiInfo.t.ImplementedBys
-		}
-	})
-
-	//for _, t := range d.allTypeInfos {
-	//	if len(t.Implements) > 0 {
-	//		log.Println(t.TT, "implements:")
-	//		for _, it := range t.Implements {
-	//			log.Println("     ", it.TT)
-	//		}
-	//	}
-	//}
-
-	for _, t := range d.allTypeInfos {
-		if len(t.Implements) == 0 {
-			continue
-		}
-
-		if ptt, ok := t.TT.(*types.Pointer); ok {
-			bt := d.RegisterType(ptt.Elem()) // 333 b: here to check why new types are registered
-			//bt.StarImplements = t.Implements
-
-			// merge non-pointer and pointer implements.
-			d.resetTempTypeLookupTable()
-			for _, impl := range bt.Implements {
-				typeLookupTable[impl.Interface.index] = struct{}{}
-			}
-			for _, impl := range t.Implements {
-				if _, ok := typeLookupTable[impl.Interface.index]; ok {
-					continue
-				}
-				//impl := impl // not needed, for the .Implements slice element is not pointer.
-				bt.Implements = append(bt.Implements, impl)
-			}
-			t.Implements = nil
-
-			// remove unnamed interfaces whose have named underlieds.
-			// ToDo: avoid removing aliases to unnamed ones.
-			// (The work is moved to package datail page generation.)
-		}
-	}
-
-	return
-}
+//func (d *CodeAnalyzer) analyzePackages_FindImplementations_Old() (resultMethodCache *typeutil.MethodSetCache) {
+//	// step 1: register all method signatures of underlying interface types.
+//	//         create a type list for each signature.
+//	// step 2: iteration all types, calculate their method signatures,
+//	//         (interface types can use their underlying cache calculated in step 1)
+//	//         ignore signatures which are note recorded in step 1.
+//	//         register the type into the type lists of method signatures.
+//	// step 3: iterate all underlying interfaces, iterate all method signatures,
+//	//         iterate the type list of a signature, TypeInfo.counter++
+//	//         ...
+//
+//	type UnderlyingInterfaceInfo struct {
+//		t             *TypeInfo
+//		methodIndexes []uint32
+//		underlieds    []*TypeInfo // including the underlying itself
+//	}
+//
+//	// ToDo: use map[InterfaceTypeIndex]*TypeInfo?
+//	var interfaceUnderlyings typeutil.Map
+//
+//	//var interfaceUnderlyingTypes = make([]*TypeInfo, 0, 1024)
+//	//for _, t := range d.allTypeInfos {
+//	// New types might be registered in this loop,
+//	// so traditional for-loop is used here.
+//	for i := 0; i < len(d.allTypeInfos); i++ {
+//		t := d.allTypeInfos[i]
+//
+//		// ToDo: auto register underlying type in RegisterType.
+//		underlying := t.TT.Underlying()
+//		underlyingTypeInfo := d.RegisterType(underlying) // underlying must have been already registered
+//		t.Underlying = underlyingTypeInfo
+//		underlyingTypeInfo.Underlying = underlyingTypeInfo
+//
+//		if i, ok := underlying.(*types.Interface); ok && i.NumMethods() > 0 {
+//			var uiInfo *UnderlyingInterfaceInfo
+//			info := interfaceUnderlyings.At(i)
+//			if interfaceUnderlyings.At(i) == nil {
+//				//interfaceUnderlyingTypes = append(interfaceUnderlyingTypes, underlyingTypeInfo)
+//				uiInfo = &UnderlyingInterfaceInfo{t: underlyingTypeInfo, underlieds: make([]*TypeInfo, 0, 3)}
+//				interfaceUnderlyings.Set(i, uiInfo)
+//				//log.Printf("!!! %T\n", uiInfo.t.TT)
+//			} else {
+//				uiInfo, _ = info.(*UnderlyingInterfaceInfo)
+//			}
+//			uiInfo.underlieds = append(uiInfo.underlieds, t)
+//		}
+//	}
+//
+//	log.Println("number of underlying interfaces:", interfaceUnderlyings.Len())
+//	//interfaceUnderlyings.Iterate(func(_ types.Type, info interface{}) {
+//	//	uiInfo := info.(*UnderlyingInterfaceInfo)
+//	//	log.Println("     ", uiInfo.t.TT)
+//	//	for _, t := range uiInfo.underlieds {
+//	//		log.Println("           ", t.TT)
+//	//	}
+//	//})
+//
+//	var lastMethodIndex uint32
+//	var allInterfaceMethods = make(map[MethodSignature]uint32, 8196)
+//	var method2TypeIndexes = make([][]uint32, 0, 8196)
+//	var cache typeutil.MethodSetCache
+//	resultMethodCache = &cache
+//
+//	// 0 is an in valid method index
+//	allInterfaceMethods[MethodSignature{}] = 0
+//	method2TypeIndexes = append(method2TypeIndexes, nil)
+//	lastMethodIndex++
+//
+//	// ...
+//	interfaceUnderlyings.Iterate(func(_ types.Type, info interface{}) {
+//		uiInfo := info.(*UnderlyingInterfaceInfo)
+//		//log.Printf("### %d %T\n", uiInfo.t.index, uiInfo.t.TT)
+//		methodSet := cache.MethodSet(uiInfo.t.TT)
+//		uiInfo.methodIndexes = make([]uint32, methodSet.Len())
+//
+//		for i := methodSet.Len() - 1; i >= 0; i-- {
+//			sel := methodSet.At(i)
+//			funcObj, ok := sel.Obj().(*types.Func)
+//			if !ok {
+//				panic("not a types.Func")
+//			}
+//			x := d.lastTypeIndex
+//			sig := d.BuildMethodSignatureFromFuncObject(funcObj) // will not produce new type registrations for sure
+//			if d.lastTypeIndex > x {
+//				log.Println("       > ", uiInfo.t.TT)
+//				log.Println("             >> ", sel)
+//			}
+//
+//			methodIndex, ok := allInterfaceMethods[sig]
+//			if ok {
+//				method2TypeIndexes[methodIndex] = append(method2TypeIndexes[methodIndex], uiInfo.t.index)
+//			} else {
+//				methodIndex = lastMethodIndex
+//				lastMethodIndex++
+//				allInterfaceMethods[sig] = methodIndex
+//
+//				typeIndexes := make([]uint32, 0, 8)
+//				typeIndexes = append(typeIndexes, uiInfo.t.index)
+//
+//				//log.Printf("   $$$ %d %T\n", uiInfo.t.index, d.allTypeInfos[uiInfo.t.index].TT)
+//
+//				// method2TypeIndexes[methodIndex] = typeIndexes
+//				method2TypeIndexes = append(method2TypeIndexes, typeIndexes)
+//			}
+//			uiInfo.methodIndexes[i] = methodIndex
+//		}
+//	})
+//
+//	//log.Println("number of method signatures:", lastMethodIndex, len(allInterfaceMethods), len(method2TypeIndexes))
+//	//for methodIndex, typeIndexes := range method2TypeIndexes {
+//	//	log.Println("     method#", methodIndex)
+//	//	for _, typeIndex := range typeIndexes {
+//	//		t := d.allTypeInfos[typeIndex]
+//	//		log.Printf("          %v : %T", t.TT, t.TT)
+//	//	}
+//	//}
+//
+//	// log.Println("method2TypeIndexes = \n", method2TypeIndexes)
+//
+//	for _, t := range d.allTypeInfos {
+//		//log.Println("111>>>", t.TT)
+//		if _, ok := t.TT.Underlying().(*types.Interface); ok {
+//			continue
+//		}
+//
+//		methodSet := cache.MethodSet(t.TT)
+//		//log.Println("222>>>", t.TT, methodSet.Len())
+//		for i := methodSet.Len() - 1; i >= 0; i-- {
+//			sel := methodSet.At(i)
+//			funcObj, ok := sel.Obj().(*types.Func)
+//			if !ok {
+//				panic("not a types.Func")
+//			}
+//
+//			sig := d.BuildMethodSignatureFromFuncObject(funcObj) // will not produce new type registrations for sure
+//
+//			methodIndex, ok := allInterfaceMethods[sig]
+//			//log.Println("333>>>", methodIndex, ok)
+//			if ok {
+//				method2TypeIndexes[methodIndex] = append(method2TypeIndexes[methodIndex], t.index)
+//			}
+//		}
+//	}
+//
+//	log.Println("number of interface method signatures:", lastMethodIndex, len(allInterfaceMethods), len(method2TypeIndexes))
+//	//for methodIndex, typeIndexes := range method2TypeIndexes {
+//	//	log.Println("     method#", methodIndex)
+//	//	for _, typeIndex := range typeIndexes {
+//	//		t := d.allTypeInfos[typeIndex]
+//	//		log.Println("          ", t.TT)
+//	//	}
+//	//}
+//
+//	typeLookupTable := d.tempTypeLookupTable()
+//	defer d.resetTempTypeLookupTable()
+//
+//	var searchRound uint32 = 0
+//	interfaceUnderlyings.Iterate(func(_ types.Type, info interface{}) {
+//		uiInfo := info.(*UnderlyingInterfaceInfo)
+//
+//		typeIndexes := method2TypeIndexes[uiInfo.methodIndexes[0]]
+//		for _, typeIndex := range typeIndexes {
+//			t := d.allTypeInfos[typeIndex]
+//			t.counter = searchRound + 1
+//		}
+//		searchRound++
+//
+//		if len(uiInfo.methodIndexes) == 1 {
+//			sel := uiInfo.t.AllMethods[0]
+//			if sel.Name() == "Error" {
+//				log.Println("======================================= uiInfo.t: ", uiInfo.t)
+//				log.Println("=== typeIndexes:", typeIndexes)
+//			}
+//		}
+//
+//		for _, methodIndex := range uiInfo.methodIndexes[1:] {
+//			typeIndexes = method2TypeIndexes[methodIndex]
+//			for _, typeIndex := range typeIndexes {
+//				t := d.allTypeInfos[typeIndex]
+//				if t.counter == searchRound {
+//					t.counter = searchRound + 1
+//				}
+//			}
+//			searchRound++
+//		}
+//
+//		count := 0
+//		//typeIndexes = method2TypeIndexes[uiInfo.methodIndexes[len(uiInfo.methodIndexes)-1]]
+//		for _, typeIndex := range typeIndexes {
+//			t := d.allTypeInfos[typeIndex]
+//			if t.counter == searchRound {
+//				////t.Implements = append(t.Implements, uiInfo.t)
+//				//t.Implements = append(t.Implements, uiInfo.underlieds...)
+//				for _, it := range uiInfo.underlieds {
+//					t.Implements = append(t.Implements, Implementation{Impler: t, Interface: it})
+//				}
+//				count++
+//			}
+//		}
+//
+//		// Register non-pointer ones firstly, then
+//		// register pointer ones whose bases have not been registered.
+//		d.resetTempTypeLookupTable()
+//		impBy := make([]*TypeInfo, 0, count)
+//		for _, typeIndex := range typeIndexes {
+//			t := d.allTypeInfos[typeIndex]
+//			if t.counter == searchRound {
+//				if _, ok := t.TT.(*types.Pointer); !ok {
+//					if itt, ok := t.TT.Underlying().(*types.Interface); ok {
+//						ittInfo := interfaceUnderlyings.At(itt).(*UnderlyingInterfaceInfo)
+//						for _, it := range ittInfo.underlieds {
+//							impBy = append(impBy, it)
+//							typeLookupTable[it.index] = struct{}{}
+//						}
+//					} else {
+//						impBy = append(impBy, t)
+//						typeLookupTable[typeIndex] = struct{}{}
+//					}
+//				}
+//			}
+//		}
+//		for _, typeIndex := range typeIndexes {
+//			t := d.allTypeInfos[typeIndex]
+//			if t.counter == searchRound {
+//				if ptt, ok := t.TT.(*types.Pointer); ok {
+//					bt := d.RegisterType(ptt.Elem())
+//					if _, reged := typeLookupTable[bt.index]; !reged {
+//						impBy = append(impBy, t)
+//					}
+//				}
+//			}
+//		}
+//		uiInfo.t.ImplementedBys = impBy
+//
+//		//log.Println("111 @@@", uiInfo.t.TT, ", uiInfo.methodIndexes:", uiInfo.methodIndexes)
+//		//for _, impBy := range impBy {
+//		//	log.Println("     ", impBy.TT)
+//		//}
+//	})
+//
+//	interfaceUnderlyings.Iterate(func(_ types.Type, info interface{}) {
+//		uiInfo := info.(*UnderlyingInterfaceInfo)
+//		for _, t := range uiInfo.underlieds {
+//			t.Implements = uiInfo.t.Implements
+//			t.ImplementedBys = uiInfo.t.ImplementedBys
+//		}
+//	})
+//
+//	//for _, t := range d.allTypeInfos {
+//	//	if len(t.Implements) > 0 {
+//	//		log.Println(t.TT, "implements:")
+//	//		for _, it := range t.Implements {
+//	//			log.Println("     ", it.TT)
+//	//		}
+//	//	}
+//	//}
+//
+//	for _, t := range d.allTypeInfos {
+//		if len(t.Implements) == 0 {
+//			continue
+//		}
+//
+//		if ptt, ok := t.TT.(*types.Pointer); ok {
+//			bt := d.RegisterType(ptt.Elem()) // 333 b: here to check why new types are registered
+//			//bt.StarImplements = t.Implements
+//
+//			// merge non-pointer and pointer implements.
+//			d.resetTempTypeLookupTable()
+//			for _, impl := range bt.Implements {
+//				typeLookupTable[impl.Interface.index] = struct{}{}
+//			}
+//			for _, impl := range t.Implements {
+//				if _, ok := typeLookupTable[impl.Interface.index]; ok {
+//					continue
+//				}
+//				//impl := impl // not needed, for the .Implements slice element is not pointer.
+//				bt.Implements = append(bt.Implements, impl)
+//			}
+//			t.Implements = nil
+//
+//			// remove unnamed interfaces whose have named underlieds.
+//			// ToDo: avoid removing aliases to unnamed ones.
+//			// (The work is moved to package datail page generation.)
+//		}
+//	}
+//
+//	return
+//}
 
 // This method should only be called when all selectors are confirmed.
 func (d *CodeAnalyzer) registerNamedInterfaceMethodsForInvolvedTypeNames(pkg *Package) {

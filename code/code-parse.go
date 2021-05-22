@@ -117,7 +117,11 @@ func validateArgumentsAndSetOptions(args []string, toolchainPath string) ([]stri
 		for _, p := range oldArgs {
 			if p == "std" {
 				args = append(args, p)
-			} else if p == "toolchain" {
+			} else if strings.HasPrefix(p, "cmd/") || p == "cmd" || p == "toolchain" {
+				if p == "toolchain" {
+					p = "cmd"
+				}
+
 				hasToolchain = true
 				if _, err := os.Stat(toolchainPath); errors.Is(err, os.ErrNotExist) {
 					log.Printf("the toolchain argument is ignored for the assumed source directory (%s) doesn not exist", toolchainPath)
@@ -125,7 +129,8 @@ func validateArgumentsAndSetOptions(args []string, toolchainPath string) ([]stri
 				}
 				// looks both are ok.
 				//args = append(args, toolchainPath + string(filepath.Separator) + "..."
-				args = append(args, "./...")
+				//args = append(args, "./...")
+				args = append(args, p)
 			} else {
 				if !hasMatchedPackages(p) {
 					log.Printf("argument %s does not match any package, so it is discarded", p)
@@ -138,14 +143,15 @@ func validateArgumentsAndSetOptions(args []string, toolchainPath string) ([]stri
 				args = append(args, p)
 			}
 		}
-		if hasToolchain {
-			if hasOthers {
-				return nil, hasToolchain, fmt.Errorf("the toolchain pseudo module name can only be used solely or alongside with the std pseudo module name\n")
-			}
-			if err := os.Chdir(toolchainPath); err != nil {
-				return nil, hasToolchain, fmt.Errorf("change dir to toolchain path error: %w", err)
-			}
-		}
+		_ = hasOthers
+		//if hasToolchain {
+		//	if hasOthers {
+		//		return nil, hasToolchain, fmt.Errorf("the toolchain pseudo module name can only be used solely or alongside with the std pseudo module name\n")
+		//	}
+		//	if err := os.Chdir(toolchainPath); err != nil {
+		//		return nil, hasToolchain, fmt.Errorf("change dir to toolchain path error: %w", err)
+		//	}
+		//}
 	}
 
 	return args, hasToolchain, nil

@@ -1083,19 +1083,19 @@ func (d *CodeAnalyzer) registerValueForItsTypeName(res ValueResource) {
 }
 
 // BuildMethodSignatureFromFuncObject builds the signature for function object.
-func (d *CodeAnalyzer) BuildMethodSignatureFromFuncObject(funcObj *types.Func) MethodSignature {
-	funcSig, ok := funcObj.Type().(*types.Signature)
-	if !ok {
-		panic(funcObj.Id() + "'s type is not types.Signature")
-	}
-
-	methodName, pkgImportPath := funcObj.Id(), ""
-	if !token.IsExported(methodName) {
-		pkgImportPath = funcObj.Pkg().Path()
-	}
-
-	return d.BuildMethodSignatureFromFunctionSignature(funcSig, methodName, pkgImportPath)
-}
+//func (d *CodeAnalyzer) BuildMethodSignatureFromFuncObject(funcObj *types.Func) MethodSignature {
+//	funcSig, ok := funcObj.Type().(*types.Signature)
+//	if !ok {
+//		panic(funcObj.Id() + "'s type is not types.Signature")
+//	}
+//
+//	methodName, pkgImportPath := funcObj.Id(), ""
+//	if !token.IsExported(methodName) {
+//		pkgImportPath = funcObj.Pkg().Path()
+//	}
+//
+//	return d.BuildMethodSignatureFromFunctionSignature(funcSig, methodName, pkgImportPath)
+//}
 
 // BuildMethodSignatureFromFunctionSignature  builds the signature for method function object.
 // pkgImportPath should be only passed for unexported method names.
