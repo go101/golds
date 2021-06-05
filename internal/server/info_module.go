@@ -4,8 +4,12 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"go/build"
+	"io/ioutil"
 	"log"
+	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -696,6 +700,49 @@ func findSourceRepository(forModule string) (repoURL, extraPath string, err erro
 	}
 	if repoURL == "" {
 		return "", "", errors.New("failed to find out")
+	}
+	return
+}
+
+//======================================
+
+// devel go1.17-326a792517 Tue May 11 02:46:21 2021 +0000
+var findGoVersionRegexp = regexp.MustCompile(`devel go[.0-9]+-([0-9a-fA-F]{6,})\s`)
+
+func findGoToolchainVersionFromGoRoot(goroot string) (string, error) {
+	versionData, err := ioutil.ReadFile(filepath.Join(goroot, "VERSION"))
+	if err == nil {
+		return string(bytes.TrimSpace(versionData)), nil
+	} else {
+		//panic("failed to get Go toolchain version in GOROOT: " + goroot)
+	}
+	versionData, err = ioutil.ReadFile(filepath.Join(goroot, "VERSION.cache"))
+	if err != nil {
+		return "", fmt.Errorf("failed to get Go toolchain version in GOROOT (%s): %w", goroot, err)
+	}
+	matches := findGoVersionRegexp.FindStringSubmatch(string(versionData))
+	if len(matches) >= 2 {
+		return matches[1], nil
+	}
+	return "", fmt.Errorf("failed to get Go toolchain version in GOROOT (%s)", goroot)
+}
+
+func findToolchainInfo() (toolchain code.ToolchainInfo, err error) {
+	if _, err = os.Stat(build.Default.GOROOT); err != nil {
+		return
+	}
+	version, err := findGoToolchainVersionFromGoRoot(build.Default.GOROOT)
+	if err != nil {
+		return
+	}
+	cmdPath := filepath.Join(build.Default.GOROOT, "src", "cmd")
+	srcPath := filepath.Dir(cmdPath)
+	rootPath := filepath.Dir(srcPath)
+	toolchain = code.ToolchainInfo{
+		Root:    rootPath,
+		Src:     srcPath,
+		Cmd:     cmdPath,
+		Version: version,
 	}
 	return
 }

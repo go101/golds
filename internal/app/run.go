@@ -30,10 +30,6 @@ func Run() {
 	// This is used for updating Golds. It is invisible to users.
 	var roughBuildTimeFlag = flag.Bool("rough-build-time", false, "show rough build time")
 
-	flag.CommandLine.Usage = func() {
-		printUsage(os.Stdout)
-	}
-
 	flag.Parse()
 	if *roughBuildTimeFlag {
 		fmt.Print(RoughBuildTime)
@@ -43,9 +39,13 @@ func Run() {
 		printUsage(os.Stdout)
 		return
 	}
-	if *versionFlag {
+	if *versionFlag || flag.NArg() == 1 && flag.Arg(0) == "version" {
 		printVersion(os.Stdout)
 		return
+	}
+
+	flag.CommandLine.Usage = func() {
+		printUsage(os.Stdout)
 	}
 
 	var getRoughBuildTime = func() time.Time {

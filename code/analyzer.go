@@ -36,6 +36,15 @@ const (
 	SubTask_CacheSourceFiles
 )
 
+type ToolchainInfo struct {
+	// Three paths
+	Root, Src, Cmd string
+
+	// A commit hash or something like "go1.16".
+	// ToDo: now lso might be blank, but need some handling ...
+	Version string
+}
+
 // CodeAnalyzer holds all the analysis results and functionalities.
 type CodeAnalyzer struct {
 	modulesByPath       map[string]*Module // including stdModule

@@ -3,8 +3,13 @@
 ### Soon to do
 
 * options
-    //	-package-docs-showing-initially=collapse|simple|expand
-    //	-identifier-docs-showing-initially=collapse|oneline|expand
+    //	-package-docs-showing-initially=collapse|simple|expand (cancelled)
+    //	-identifier-docs-showing-initially=collapse|oneline|expand (cancelled, but show one line defaultly)
+
+* https://golang.org/pkg/go/doc/#Package
+  bugs and notes, Examples
+
+* use padding instead of indent tabs
 
 * show/run examples/tests/banchmarks 
   (Tests==true, cause reflect.EmbedWithUnexpMeth not found in analyzePackage_ConfirmTypeSources/registerDirectFields now)
@@ -19,10 +24,11 @@
   * wait https://github.com/golang/go/issues/45649 to be fixed
   * show project links
 
-* https://golang.org/pkg/go/doc/#Package
-  bugs and notes, Examples
-
 * tests only work for Linux now.
+
+* one-page doc for private packages: https://github.com/go101/golds/issues/19
+
+* seperate comment and code in reading: https://github.com/go101/golds/issues/21
 
 * pkg details page: show values by file/position order (only for javascript on)
 * search ids on pkg details/overview pages
@@ -38,6 +44,23 @@
     case T1: _ = expr
     case T2: _ = expr
     }
+* now, for "type T struct {m sync.Mutex}", "var t T", "t.m.Lock" will be registered to "sync.Mutex.Lock",
+  instead of "T.Lock()"
+* now, not collect uses for unnamed struct type fields.
+  In the following code, only collect for x1 and y1
+    var a struct {
+      x int
+      y struct {
+        m bool
+      }
+    }
+    type T struct {
+      x1 int
+      y1 struct {
+        m1 bool
+      }
+    }
+    use a fake type alias named with its hash.
 
 * type alias and same-underlyings list
   * https://github.com/golang/go/issues/44905

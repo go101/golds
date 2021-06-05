@@ -37,6 +37,8 @@ var (
 
 	goldsVersion string
 
+	enabledPageCache = true // for web serving mode only
+
 	showStatistics   = true
 	buildIdUsesPages = true // might be false in gen mode
 	//enableSoruceNavigation = true // false to disable method implementation pages and some code reading features
@@ -130,17 +132,17 @@ type pageCacheValue struct {
 }
 
 func (ds *docServer) cachePage(key pageCacheKey, data []byte) {
-	if genDocsMode {
-	} else if data == nil {
-		delete(ds.cachedPages, key)
-	} else {
-		ds.cachedPages[key] = data
+	if enabledPageCache {
+		if data == nil {
+			delete(ds.cachedPages, key)
+		} else {
+			ds.cachedPages[key] = data
+		}
 	}
 }
 
 func (ds *docServer) cachedPage(key pageCacheKey) (data []byte, ok bool) {
-	if genDocsMode {
-	} else {
+	if enabledPageCache {
 		data, ok = ds.cachedPages[key]
 	}
 	return

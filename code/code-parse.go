@@ -10,7 +10,6 @@ import (
 	"go/parser"
 	"go/token"
 	"go/types"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -62,7 +61,7 @@ func collectPPackages(ppkgs []*packages.Package) map[string]*packages.Package {
 }
 
 func getMatchedPackages(arg string) ([][]byte, error) {
-	output, err := util.RunShell(time.Second*15, "", nil, "go", "list", arg)
+	output, err := util.RunShell(time.Second*32, "", nil, "go", "list", arg)
 	if err != nil {
 		return nil, fmt.Errorf("go list %s error: %w", arg, err)
 	}
@@ -158,9 +157,8 @@ func validateArgumentsAndSetOptions(args []string, toolchainPath string) ([]stri
 }
 
 // ParsePackages parses input packages.
-func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...int32), completeModuleInfo func(*Module), args ...string) error {
-	toolchainPath := filepath.Join(build.Default.GOROOT, "src", "cmd")
-	args, hasToolchain, err := validateArgumentsAndSetOptions(args, toolchainPath)
+func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...int32), completeModuleInfo func(*Module), toolchain ToolchainInfo, args ...string) error {
+	args, hasToolchain, err := validateArgumentsAndSetOptions(args, toolchain.Cmd)
 	if err != nil {
 		return err
 	}
@@ -302,7 +300,10 @@ func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...i
 	// So we fill the info manually to simplify some implementations later.
 	if unsafePPkg, builtinPPkg := allPPkgs["unsafe"], allPPkgs["builtin"]; unsafePPkg != nil && builtinPPkg != nil {
 		//log.Println("====== 111", unsafePPkg.Fset.Base(), builtinPPkg.Fset.Base(), allPPkgs["bytes"].Fset.Base())
-		fillUnsafePackage(unsafePPkg, builtinPPkg)
+		err := fillUnsafePackage(unsafePPkg, builtinPPkg)
+		if err != nil {
+			return err
+		}
 	}
 
 	//var packageListChanged = false
@@ -377,7 +378,7 @@ func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...i
 	d.stdModule.Pkgs = append(d.stdModule.Pkgs, d.builtinPkg)
 
 	// ToDo: this is some slow. Try to parse go.mod files manually?
-	d.confirmPackageModules(args, hasToolchain, toolchainPath, completeModuleInfo)
+	d.confirmPackageModules(args, hasToolchain, toolchain, completeModuleInfo)
 
 	logProgress(true, SubTask_CollectModules, int32(len(d.modulesByPath)))
 
@@ -390,7 +391,7 @@ var newlineBrace = []byte{'\n', '{'}
 var newline = []byte{'\n'}
 var space = []byte{' '}
 
-func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, toolchainPath string, completeModuleInfo func(*Module)) {
+func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, toolchain ToolchainInfo, completeModuleInfo func(*Module)) {
 	// go list -deps -json [args]
 
 	// There is a bug https://github.com/golang/go/issues/45649
@@ -398,7 +399,7 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 
 	// In the output, packages under GOROOT have not .Module info.
 	cmdAndArgs := append([]string{"go", "list", "-deps", "-json"}, args...)
-	output, err := util.RunShell(time.Second*15, "", nil, cmdAndArgs...)
+	output, err := util.RunShell(time.Second*32, "", nil, cmdAndArgs...)
 	if err != nil {
 		log.Printf("unable to list packages and modules info: %s : %s. %s", strings.Join(cmdAndArgs, " "), output, err)
 		return
@@ -437,7 +438,7 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 		}
 		if p.Module.Path != "" { // must be not std or toolchain mobule
 			modulesNumPkgs[p.Module.Path]++
-		} else if strings.HasPrefix(p.Dir, toolchainPath) {
+		} else if strings.HasPrefix(p.Dir, toolchain.Cmd) {
 			numToolchainPkgs++
 		}
 		//log.Println("===", p.ImportPath, p.Module.Path)
@@ -461,7 +462,7 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 		d.wdModule = &Module{
 			Path:    "cmd", // "toolchain"
 			Version: "",
-			Dir:     toolchainPath,
+			Dir:     toolchain.Cmd,
 			Pkgs:    make([]*Package, 0, numToolchainPkgs),
 		}
 	}
@@ -505,7 +506,7 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 			}
 			pkg.Module = m // ToDo: use substrings of Dir and Path of pkg to save some memory.
 			m.Pkgs = append(m.Pkgs, pkg)
-		} else if strings.HasPrefix(p.Dir, toolchainPath) {
+		} else if strings.HasPrefix(p.Dir, toolchain.Cmd) {
 			if pkg.Module != nil {
 				log.Printf("!!! the module of toolchain package %s is already found, weird", p.ImportPath)
 			} else {
@@ -530,20 +531,16 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 	}
 
 	// confirm std and cmd module version, ...
-	goVersion, err := findGoToolchainVersionFromGoRoot(build.Default.GOROOT)
-	if err != nil {
-		panic(err)
-	}
-	d.stdModule.Version = goVersion
-	d.stdModule.Dir = filepath.Dir(toolchainPath) // filepath.Join(build.Default.GOROOT, "src")
-	d.stdModule.RepositoryCommit = goVersion
+	d.stdModule.Version = toolchain.Version
+	d.stdModule.Dir = filepath.Dir(toolchain.Src) // filepath.Join(build.Default.GOROOT, "src")
+	d.stdModule.RepositoryCommit = toolchain.Version
 	d.stdModule.RepositoryDir = build.Default.GOROOT
 	d.stdModule.RepositoryURL = "https://github.com/golang/go"
 	d.stdModule.ExtraPathInRepository = "/src/"
 	if hasToolchain {
-		d.wdModule.Version = goVersion
-		d.wdModule.Dir = toolchainPath
-		d.wdModule.RepositoryCommit = goVersion
+		d.wdModule.Version = toolchain.Version
+		d.wdModule.Dir = toolchain.Cmd
+		d.wdModule.RepositoryCommit = toolchain.Version
 		d.wdModule.RepositoryDir = build.Default.GOROOT
 		d.wdModule.RepositoryURL = "https://github.com/golang/go"
 		d.wdModule.ExtraPathInRepository = "/src/cmd"
@@ -649,28 +646,7 @@ func confirmModuleReposotoryCommit(m *Module) {
 	m.RepositoryCommit = version
 }
 
-// devel go1.17-326a792517 Tue May 11 02:46:21 2021 +0000
-var findGoVersionRegexp = regexp.MustCompile(`devel go[.0-9]+-([0-9a-fA-F]{6,})\s`)
-
-func findGoToolchainVersionFromGoRoot(goroot string) (string, error) {
-	versionData, err := ioutil.ReadFile(filepath.Join(goroot, "VERSION"))
-	if err == nil {
-		return string(bytes.TrimSpace(versionData)), nil
-	} else {
-		//panic("failed to get Go toolchain version in GOROOT: " + build.Default.GOROOT)
-	}
-	versionData, err = ioutil.ReadFile(filepath.Join(goroot, "VERSION.cache"))
-	if err != nil {
-		return "", fmt.Errorf("failed to get Go toolchain version in GOROOT (%s): %w", build.Default.GOROOT, err)
-	}
-	matches := findGoVersionRegexp.FindStringSubmatch(string(versionData))
-	if len(matches) >= 2 {
-		return matches[1], nil
-	}
-	return "", fmt.Errorf("failed to get Go toolchain version in GOROOT (%s)", build.Default.GOROOT)
-}
-
-func fillUnsafePackage(unsafePPkg *packages.Package, builtinPPkg *packages.Package) {
+func fillUnsafePackage(unsafePPkg *packages.Package, builtinPPkg *packages.Package) error {
 	intType := builtinPPkg.Types.Scope().Lookup("int").Type()
 
 	//log.Println("====== 000", unsafePPkg.PkgPath)
@@ -734,6 +710,9 @@ func fillUnsafePackage(unsafePPkg *packages.Package, builtinPPkg *packages.Packa
 
 				obj := types.Unsafe.Scope().Lookup(fd.Name.Name)
 				if obj == nil {
+					if fd.Name.Name == "Add" || fd.Name.Name == "Slice" {
+						return fmt.Errorf("unsafe.%s is introduced in Go 1.17. Please re-install Golds with Go toolchain v1.17+.", fd.Name.Name)
+					}
 					panic(fd.Name.Name + " is not found in unsafe scope")
 				}
 
@@ -849,4 +828,6 @@ func fillUnsafePackage(unsafePPkg *packages.Package, builtinPPkg *packages.Packa
 			// ToDo: now, in analyzing, when anObj.Type() == nil, treat as types.Invalid
 		}
 	}
+
+	return nil
 }

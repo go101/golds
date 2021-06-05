@@ -15,3 +15,13 @@ func (ds *docServer) modulePage(w http.ResponseWriter, r *http.Request, rootVers
 		//pkgPath = deHashScope(pkgPath)
 	}
 }
+
+/*
+
+module page
+* packages
+* requires
+* requiredBy
+* project link
+
+*/

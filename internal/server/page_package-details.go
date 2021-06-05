@@ -424,8 +424,10 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 					// ToDo: for alias, if its denoting type is an exported named type, then stop here.
 					//       (might be not a good idea. 1. such cases are rare. 2. if they happen, it does need to list ...)
 
-					page.WriteString("\n")
+					page.WriteByte('\n')
+					hasLists := false
 					if count, numExporteds := len(td.Fields), int(td.NumExportedFields); count > 0 {
+						hasLists = true
 						page.WriteString("\n\t\t")
 						writeFoldingBlock(page, td.TypeName.Name(), "fields", "items", false,
 							func() {
@@ -480,6 +482,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 						)
 					}
 					if count, numExporteds := len(td.Methods), int(td.NumExportedMethods); count > 0 {
+						hasLists = true
 						page.WriteString("\n\t\t")
 						writeFoldingBlock(page, td.TypeName.Name(), "methods", "items", isBuiltin,
 							func() {
@@ -535,6 +538,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 						)
 					}
 					if count, numExporteds := len(td.ImplementedBys), int(td.NumExportedImpedBys); count > 0 {
+						hasLists = true
 						page.WriteString("\n\t\t")
 						writeFoldingBlock(page, td.TypeName.Name(), "impledby", "items", false,
 							func() {
@@ -572,6 +576,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 						)
 					}
 					if count, numExporteds := len(td.Implements), int(td.NumExportedImpls); count > 0 {
+						hasLists = true
 						page.WriteString("\n\t\t")
 						writeFoldingBlock(page, td.TypeName.Name(), "impls", "items", false,
 							func() {
@@ -606,6 +611,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 						)
 					}
 					if count, numExporteds := len(td.AsOutputsOf), int(td.NumExportedAsOutputsOfs); count > 0 {
+						hasLists = true
 						page.WriteString("\n\t\t")
 						writeFoldingBlock(page, td.TypeName.Name(), "results", "items", false,
 							func() {
@@ -640,6 +646,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 						)
 					}
 					if count, numExporteds := len(td.AsInputsOf), int(td.NumExportedAsInputsOfs); count > 0 {
+						hasLists = true
 						page.WriteString("\n\t\t")
 						writeFoldingBlock(page, td.TypeName.Name(), "params", "items", false,
 							func() {
@@ -674,6 +681,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 						)
 					}
 					if count, numExporteds := len(td.Values), int(td.NumExportedValues); count > 0 {
+						hasLists = true
 						page.WriteString("\n\t\t")
 						writeFoldingBlock(page, td.TypeName.Name(), "values", "items", false,
 							func() {
@@ -707,7 +715,10 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 							},
 						)
 					}
-					page.WriteString("\n\n")
+					page.WriteByte('\n')
+					if hasLists {
+						page.WriteByte('\n')
+					}
 				})
 		}
 

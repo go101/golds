@@ -1320,7 +1320,7 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 		return
 	}
 
-	//log.Printf("=== %s: %T\n", ident.Name, obj)
+	//log.Printf("==== %s: %T\n", ident.Name, obj)
 
 	if pkgName, ok := obj.(*types.PkgName); ok {
 		//v.buildIdentifier(start, end, -1, "/pkg:"+pkgName.Imported().Path())
@@ -1757,6 +1757,10 @@ func (ds *docServer) analyzeSoureCode(pkgPath, bareFilename string) (*SourceFile
 	if filePath == generatedFilePath {
 		generatedFilePath = ""
 	}
+	astFilePath := generatedFilePath
+	if astFilePath == "" {
+		astFilePath = filePath
+	}
 
 	//content, err := ioutil.ReadFile(filePath)
 	//if err != nil {
@@ -1844,7 +1848,9 @@ func (ds *docServer) analyzeSoureCode(pkgPath, bareFilename string) (*SourceFile
 			info:         pkg.PPkg.TypesInfo,
 			content:      content,
 
-			goFilePath: filePath,
+			//goFilePath: filePath, // fileInfo.OriginalFile?
+			goFilePath: astFilePath,
+
 			//goFileContentOffset: fileInfo.GoFileContentOffset,
 			//goFileLineOffset:    fileInfo.GoFileLineOffset,
 

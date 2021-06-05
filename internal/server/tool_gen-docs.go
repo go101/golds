@@ -39,6 +39,7 @@ var (
 
 func enabledHtmlGenerationMod() {
 	genDocsMode = true
+	enabledPageCache = false
 
 	pageHrefList = list.New()
 	resHrefs = make(map[pageResType]map[string]int, 16)
@@ -487,6 +488,11 @@ Generate:
 }
 
 func GenDocs(options PageOutputOptions, args []string, outputDir string, silentMode bool, printUsage func(io.Writer), increaseGCFrequency bool, viewDocsCommand func(string) string) {
+	toolchain, err := findToolchainInfo()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	enabledHtmlGenerationMod()
 
 	forTesting := outputDir == ""
@@ -496,7 +502,7 @@ func GenDocs(options PageOutputOptions, args []string, outputDir string, silentM
 	}
 	// ...
 	ds := &docServer{}
-	ds.analyze(args, options, forTesting, printUsage)
+	ds.analyze(args, options, toolchain, forTesting, printUsage)
 
 	// ...
 	genOutputDir := outputDir

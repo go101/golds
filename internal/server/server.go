@@ -102,6 +102,11 @@ func Run(options PageOutputOptions, args []string, recommendedPort string, silen
 		options.PreferredLang = os.Getenv("LANG")
 	}
 
+	toolchain, err := findToolchainInfo()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	addr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf(":%v", recommendedPort))
 	if err != nil {
 		log.Fatal(err)
@@ -122,7 +127,7 @@ NextTry:
 	}
 
 	go func() {
-		ds.analyze(args, options, false, printUsage)
+		ds.analyze(args, options, toolchain, false, printUsage)
 		ds.analyzingLogger.SetPrefix("")
 		serverStarted := ds.currentTranslationSafely().Text_Server_Started()
 		ds.analyzingLogger.Printf("%s http://localhost:%v\n", serverStarted, addr.Port)
@@ -241,7 +246,7 @@ func (ds *docServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (ds *docServer) analyze(args []string, options PageOutputOptions, forTesting bool, printUsage func(io.Writer)) {
+func (ds *docServer) analyze(args []string, options PageOutputOptions, toolchain code.ToolchainInfo, forTesting bool, printUsage func(io.Writer)) {
 	setPageOutputOptions(options, forTesting)
 	ds.initSettings(options.PreferredLang)
 
@@ -282,10 +287,10 @@ func (ds *docServer) analyze(args []string, options PageOutputOptions, forTestin
 	})
 
 	// ...
-	if err := ds.analyzer.ParsePackages(ds.onAnalyzingSubTaskDone, ds.tryToCompleteModuleInfo, args...); err != nil {
+	if err := ds.analyzer.ParsePackages(ds.onAnalyzingSubTaskDone, ds.tryToCompleteModuleInfo, toolchain, args...); err != nil {
 		log.Println(err)
 		//if printUsage != nil {
-		printUsage(os.Stdout)
+		//printUsage(os.Stdout)
 		//}
 		os.Exit(1)
 	}
@@ -316,7 +321,7 @@ func (ds *docServer) analyze(args []string, options PageOutputOptions, forTestin
 		//ds.sourcePages = make(map[sourcePageKey][]byte, ds.analyzer.NumSourceFiles())
 		//ds.dependencyPages = make(map[string][]byte, ds.analyzer.NumPackages())
 
-		if !genDocsMode {
+		if enabledPageCache {
 			n := ds.analyzer.NumPackages() +
 				ds.analyzer.NumPackages() +
 				ds.analyzer.NumSourceFiles() +

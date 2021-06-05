@@ -1702,6 +1702,7 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 
 	var isBuiltinPkg = pkg.Path() == "builtin"
 	var isUnsafePkg = pkg.Path() == "unsafe"
+	//var isBuildinOrUnsafe = isBuiltinPkg || isUnsafePkg
 
 	// ToDo: use info.TypeOf, info.ObjectOf
 
@@ -1751,7 +1752,7 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 				obj := pkg.PPkg.TypesInfo.Defs[fd.Name]
 				switch funcObj := obj.(type) {
 				default:
-					panic("not a types.Func")
+					panic(pkg.Path() + "." + fd.Name.Name + " not a types.Func or types.Builtin, but " + fmt.Sprintf("%T", funcObj))
 				case *types.Func:
 					f = &Function{
 						Func: funcObj,

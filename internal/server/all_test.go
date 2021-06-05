@@ -261,5 +261,7 @@ func TestGenerateDocsOfStandardPackages(t *testing.T) {
 	GenDocs(opts, []string{"std"}, "", true, nil, false, nil)
 	opts = PageOutputOptions{GoldsVersion: "v0.0.0", PreferredLang: "en-US", SourceReadingStyle: SourceReadingStyle_rich, NotCollectUnexporteds: true}
 	GenDocs(opts, []string{"std"}, "", true, nil, false, nil)
+	opts = PageOutputOptions{GoldsVersion: "v0.0.0", PreferredLang: "en-US", SourceReadingStyle: SourceReadingStyle_external}
+	GenDocs(opts, []string{"std"}, "", true, nil, false, nil)
 	GenTestData([]string{"std"}, "", true, nil)
 }

@@ -154,7 +154,10 @@ func buildTestData_Package(details *PackageDetails) TestData_Package {
 
 func buildTestData(args []string, silent bool, printUsage func(io.Writer)) map[string]TestData_Package {
 	var analyzer code.CodeAnalyzer
-	analyzer.ParsePackages(nil, nil, "std")
+	if err := analyzer.ParsePackages(nil, nil, code.ToolchainInfo{}, "std"); err != nil {
+		log.Println(err)
+		os.Exit(1)
+	}
 	analyzer.AnalyzePackages(nil)
 
 	numPkgs := analyzer.NumPackages()
