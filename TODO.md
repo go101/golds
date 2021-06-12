@@ -24,6 +24,8 @@
   * wait https://github.com/golang/go/issues/45649 to be fixed
   * show project links
 
+* dep page: list the importing source files.
+
 * tests only work for Linux now.
 
 * one-page doc for private packages: https://github.com/go101/golds/issues/19

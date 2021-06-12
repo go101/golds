@@ -711,7 +711,10 @@ func fillUnsafePackage(unsafePPkg *packages.Package, builtinPPkg *packages.Packa
 				obj := types.Unsafe.Scope().Lookup(fd.Name.Name)
 				if obj == nil {
 					if fd.Name.Name == "Add" || fd.Name.Name == "Slice" {
-						return fmt.Errorf("unsafe.%s is introduced in Go 1.17. Please re-install Golds with Go toolchain v1.17+.", fd.Name.Name)
+						return fmt.Errorf(`unsafe.%s is introduced in Go 1.17.
+Please re-install Golds with Go toolchain v1.17+ with:
+	go install go101.org/golds@latest`,
+							fd.Name.Name)
 					}
 					panic(fd.Name.Name + " is not found in unsafe scope")
 				}

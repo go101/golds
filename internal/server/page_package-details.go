@@ -241,9 +241,9 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 						} else {
 							format.Node(util.NewIndentWriter(page, []byte{'\t', ' ', ' '}), pkg.ExampleFileSet, ex.Code)
 						}
-						if i < len(pkg.Examples)-1 {
-							page.WriteString("\n")
-						}
+						//if i < len(pkg.Examples)-1 {
+						//	page.WriteString("\n")
+						//}
 					},
 				)
 			}
