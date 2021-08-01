@@ -211,7 +211,10 @@
   * global.method2typesTable map[methodProtoId][]*type. All the []*type share a common big []*type slice.
     The length of the big slice is sum(type[i].methodCount)
 
+### 1.0 milestore must do
 
+* remove Golds version from footer to avoid modifying all pages when using a new golds version.
+* 
 
 ### More to do
 
