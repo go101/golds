@@ -214,7 +214,7 @@
 ### 1.0 milestore must do
 
 * remove Golds version from footer to avoid modifying all pages when using a new golds version.
-* 
+* custom styles and support godoc style
 
 ### More to do
 
