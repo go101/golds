@@ -246,6 +246,8 @@
     * https://godoc.org/github.com/cznic/cc#example-Statement
       https://pkg.go.dev/github.com/cznic/cc/v2?tab=doc
     * https://github.com/xlab/c-for-go
+    * https://gitlab.com/cznic/ccgo
+    * https://github.com/gotranspile/cxgo
     * port tinycc
     * https://github.com/DQNEO/8cc.go
     * is LSIF helpful?
