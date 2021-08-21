@@ -8,7 +8,7 @@ It tries to extract as much information as possible from Go code to help gophers
 
 ### Installation & Usages
 
-The module name of this project is `go101.org/golds` and the default Go program name is `golds`.
+The module path of this project is `go101.org/golds` and the default Go program name is `golds`.
 For more information about installation and usages,
 please visit [this page on Go101.org](https://go101.org/article/tool-golds.html).
 

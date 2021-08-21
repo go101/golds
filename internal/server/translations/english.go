@@ -254,11 +254,12 @@ func (*English) Text_Package(pkgPath string) string {
 func (*English) Text_BelongingPackage() string { return "Belonging Package" }
 
 func (*English) Text_PackageDocsLinksOnOtherWebsites(pkgPath string, isStdPkg bool) string {
-	if isStdPkg {
-		return fmt.Sprintf(`<i> (on <a href="https://golang.org/pkg/%[1]s/" target="_blank">golang.org</a> and <a href="https://pkg.go.dev/%[1]s" target="_blank">go.dev</a>)</i>`, pkgPath)
-	} else {
-		return fmt.Sprintf(`<i> (on <a href="https://pkg.go.dev/%s" target="_blank">go.dev</a>)</i>`, pkgPath)
-	}
+	// https://github.com/golang/go/issues/44356
+	//if isStdPkg {
+	//	return fmt.Sprintf(`<i> (on <a href="https://golang.org/pkg/%[1]s/" target="_blank">golang.org</a> and <a href="https://pkg.go.dev/%[1]s" target="_blank">go.dev</a>)</i>`, pkgPath)
+	//} else {
+	return fmt.Sprintf(`<i> (on <a href="https://pkg.go.dev/%s" target="_blank">go.dev</a>)</i>`, pkgPath)
+	//}
 }
 
 func (*English) Text_ImportPath() string { return "Import Path" }

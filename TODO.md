@@ -23,6 +23,15 @@
   * sort by requiredBys / line of codes
   * wait https://github.com/golang/go/issues/45649 to be fixed
   * show project links
+  * show which packages are used in each required modules
+  * package details page
+    basic information
+          import path: ...
+          parent package: 
+          belonging module:
+
+* link to pkg.go.dev: with query params
+  * GOOS, ....: https://github.com/golang/go/issues/44356
 
 * dep page: list the importing source files.
 
@@ -48,6 +57,7 @@
     }
 * now, for "type T struct {m sync.Mutex}", "var t T", "t.m.Lock" will be registered to "sync.Mutex.Lock",
   instead of "T.Lock()"
+* s = StructTypeFoo{} // unkeyed struct assignment should be viewed as full-keyed assignment: need recored in uses lists.
 * now, not collect uses for unnamed struct type fields.
   In the following code, only collect for x1 and y1
     var a struct {
@@ -73,7 +83,7 @@
 
 * also grey the same parts in asInputsOf/.... lists
 
-* uses page filter: declartions | value:writes | value:reads | type:field
+* uses page filter: declartions | value destination | value source
   * writes includes (v=x, field:x, and Struct{x}, ...)
   * as Type, as Field (for embedding field)
 
@@ -82,6 +92,11 @@
 
 * use "go.lds" config file for docs generation.
   * -use-config=true and -config=go.lds for -gen defaultly 
+  * or use comment lines in go.mod (not recommended):
+    // golds -nouses ./... # configX
+    // golds -only-list-exporteds -source-code-reading=external ./... # configY
+
+* some functions are called in .s files, ..., uses pages miss them
 
 * code page: each function enclosed in a span so that local id hightlighting needs less time.
 * reduce code page size

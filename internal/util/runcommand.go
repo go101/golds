@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 )
 
@@ -22,7 +23,7 @@ func RunShellCommand(timeout time.Duration, wd string, envs []string, cmd string
 	defer cancel()
 	command := exec.CommandContext(ctx, cmd, args...)
 	command.Dir = wd
-	command.Env = append(os.Environ(), envs...)
+	command.Env = removeGODEBUG(append(os.Environ(), envs...))
 	return command.CombinedOutput() // ToDo: maybe it is better not to combine.
 }
 
@@ -32,4 +33,14 @@ func RunShell(timeout time.Duration, wd string, envs []string, cmdAndArgs ...str
 	}
 
 	return RunShellCommand(timeout, wd, envs, cmdAndArgs[0], cmdAndArgs[1:]...)
+}
+
+func removeGODEBUG(envs []string) []string {
+	r := envs[:0]
+	for _, e := range envs {
+		if !strings.HasPrefix(e, "GODEBUG=") {
+			r = append(r, e)
+		}
+	}
+	return r
 }
