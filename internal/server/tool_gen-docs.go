@@ -94,12 +94,12 @@ func hashedFilename(t string) string {
 	if strings.ToLower(t) == t {
 		return t
 	}
-	return t + "*" + string(hashHexHead([]byte(t)))
+	return t + "^" + string(hashHexHead([]byte(t)))
 }
 
 func deHashFilename(t string) string {
 	for i := len(t) - 1; i >= 0; i-- {
-		if t[i] == '*' {
+		if t[i] == '^' {
 			return t[:i]
 		}
 		if '0' <= t[i] && t[i] <= '9' {
@@ -127,11 +127,11 @@ func hashedIdentifier(t string) string {
 		}
 	}
 
-	return t + "*" + string(hashHexHead([]byte(t)))
+	return t + "^" + string(hashHexHead([]byte(t)))
 }
 
 func deHashIdentifier(t string) string {
-	if i := strings.LastIndexByte(t, '*'); i >= 0 {
+	if i := strings.LastIndexByte(t, '^'); i >= 0 {
 		return t[:i]
 	}
 	return t
