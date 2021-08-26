@@ -61,7 +61,7 @@ func collectPPackages(ppkgs []*packages.Package) map[string]*packages.Package {
 }
 
 func getMatchedPackages(arg string) ([][]byte, error) {
-	output, err := util.RunShell(time.Second*32, "", nil, "go", "list", arg)
+	output, err := util.RunShell(time.Minute, "", nil, "go", "list", arg)
 	if err != nil {
 		return nil, fmt.Errorf("go list %s error: %w", arg, err)
 	}
@@ -399,7 +399,7 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 
 	// In the output, packages under GOROOT have not .Module info.
 	cmdAndArgs := append([]string{"go", "list", "-deps", "-json"}, args...)
-	output, err := util.RunShell(time.Second*32, "", nil, cmdAndArgs...)
+	output, err := util.RunShell(time.Minute, "", nil, cmdAndArgs...)
 	if err != nil {
 		log.Printf("unable to list packages and modules info: %s : %s. %s", strings.Join(cmdAndArgs, " "), output, err)
 		return
