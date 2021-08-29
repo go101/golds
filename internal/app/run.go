@@ -27,6 +27,15 @@ func init() {
 }
 
 func Run() {
+	const ballastSize = 64 << 20 // 76 MiB
+	ballast := make([]byte, ballastSize)
+
+	run() // never exit
+
+	runtime.KeepAlive(&ballast)
+}
+
+func run() {
 	// This is used for updating Golds. It is invisible to users.
 	var roughBuildTimeFlag = flag.Bool("rough-build-time", false, "show rough build time")
 
