@@ -441,9 +441,7 @@ func FindPackageCommonPrefixPaths(pa, pb string) string {
 // return true for pa <= pb.
 func ComparePackagePaths(pa, pb string, sep byte) bool {
 	true, false := true, false
-	var n = len(pa)
-	if n > len(pb) {
-		n = len(pb)
+	if len(pa) > len(pb) {
 		pa, pb = pb, pa
 		true, false = false, true
 	}

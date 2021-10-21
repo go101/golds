@@ -266,7 +266,7 @@ var portFlag = flag.String("port", "", "preferred server port [1024, 65536]. Def
 var sFlag = flag.Bool("s", false, "not open a browser automatically")
 var silentFlag = flag.Bool("silent", false, "not open a browser automatically")
 var moregcFlag = flag.Bool("moregc", false, "increase garbage collection frequency")
-var footerFlag = flag.String("footer", "verbose", "verbose | simple | none")
+
 
 var nostats = flag.Bool("nostats", false, "disable the statistics feature")
 var nouses = flag.Bool("nouses", false, "disable the identifier uses feature")
@@ -278,7 +278,7 @@ var srcReadingStyleFlag = flag.String("source-code-reading", "", "specify how an
 
 var allowNetworkConnection = flag.Bool("allow-network-connection", false, "specify whether or not network connections are allowed")
 
-var footerShowingMannerFlag = flag.String("footer-showing", "", "specify how page footers should be shown")
+var footerShowingMannerFlag = flag.String("footer", "verbose", "verbose | simple | none")
 
 // depreciated by "-wdpkgs-listing=promoted" since v0.1.8
 var emphasizeWdPackagesFlag = flag.Bool("emphasize-wdpkgs", false, "promote working directory packages")
