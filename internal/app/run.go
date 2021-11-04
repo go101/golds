@@ -26,8 +26,8 @@ func init() {
 	runtime.GOMAXPROCS(numProcessors)
 }
 
-func Run() {
-	const ballastSize = 64 << 20 // 76 MiB
+func Main() {
+	const ballastSize = 128 << 19
 	ballast := make([]byte, ballastSize)
 
 	run() // never exit
@@ -266,7 +266,6 @@ var portFlag = flag.String("port", "", "preferred server port [1024, 65536]. Def
 var sFlag = flag.Bool("s", false, "not open a browser automatically")
 var silentFlag = flag.Bool("silent", false, "not open a browser automatically")
 var moregcFlag = flag.Bool("moregc", false, "increase garbage collection frequency")
-
 
 var nostats = flag.Bool("nostats", false, "disable the statistics feature")
 var nouses = flag.Bool("nouses", false, "disable the identifier uses feature")

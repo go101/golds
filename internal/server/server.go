@@ -263,8 +263,13 @@ func (ds *docServer) analyze(args []string, options PageOutputOptions, toolchain
 	ds.analyzer = &code.CodeAnalyzer{}
 
 	// ...
+	var succeeded = false
 	var stopWatch = util.NewStopWatch()
 	defer func() {
+		if !succeeded {
+			return
+		}
+
 		d := stopWatch.Duration(false)
 		memUsed := util.MemoryUse()
 		ds.registerAnalyzingLogMessage(func() string {
@@ -332,4 +337,6 @@ func (ds *docServer) analyze(args []string, options PageOutputOptions, toolchain
 		}
 
 	}()
+
+	succeeded = true
 }

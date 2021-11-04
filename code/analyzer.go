@@ -853,7 +853,7 @@ func (d *CodeAnalyzer) registerExplicitlySpecifiedMethods(typeInfo *TypeInfo, as
 			var id string
 			switch expr := method.Type.(type) {
 			default:
-				panic("not a valid embedding interface type name")
+				panic(fmt.Sprintf("not a valid embedding interface type name: %#v", method))
 			case *ast.Ident:
 				ttn := pkg.PPkg.TypesInfo.Uses[expr]
 				id = d.Id2(ttn.Pkg(), ttn.Name())

@@ -132,7 +132,7 @@ func validateArgumentsAndSetOptions(args []string, toolchainPath string) ([]stri
 				args = append(args, p)
 			} else {
 				if !hasMatchedPackages(p) {
-					log.Printf("argument %s does not match any package, so it is discarded", p)
+					//log.Printf("argument %s does not match any package, so it is discarded", p)
 					continue
 				}
 				hasOthers = true
@@ -158,9 +158,45 @@ func validateArgumentsAndSetOptions(args []string, toolchainPath string) ([]stri
 
 // ParsePackages parses input packages.
 func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...int32), completeModuleInfo func(*Module), toolchain ToolchainInfo, args ...string) error {
+	// the length of the input args is not zero for sure.
+	oldArgs := args
+
 	args, hasToolchain, err := validateArgumentsAndSetOptions(args, toolchain.Cmd)
 	if err != nil {
 		return err
+	}
+
+	if len(args) == 0 {
+		if len(oldArgs) != 1 || strings.HasPrefix(oldArgs[0], ".") {
+			return errors.New("no packages matched")
+		}
+
+		// go mod init golds.app/tmp
+		// go get oldArgs[0]
+
+		tempDir, err := os.MkdirTemp("", "golds-temp-project-*")
+		if err != nil {
+			return fmt.Errorf("create temp dir error: %w", err)
+		}
+		defer os.RemoveAll(tempDir)
+		oldDir := util.WorkingDirectory()
+		err = os.Chdir(tempDir)
+		if err != nil {
+			return fmt.Errorf("enter temp dir error: %w", err)
+		}
+		defer os.Chdir(oldDir)
+		_, err = util.RunShell(time.Minute, "", nil, "go", "mod", "init", "golds.app/tmp")
+		if err != nil {
+			return fmt.Errorf("go mod init error: %w", err)
+		}
+		_, err = util.RunShell(time.Minute, "", nil, "go", "get", oldArgs[0])
+		if err != nil {
+			return fmt.Errorf("go get %s error: %w", oldArgs[0], err)
+		}
+		args = oldArgs
+
+		//log.Println("tempDir:", tempDir)
+		//log.Println("args:", args)
 	}
 
 	var stopWatch = util.NewStopWatch()

@@ -154,7 +154,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 					},
 					func() {
 						page.WriteString("\n")
-						writePageText(page, "\t\t", info.DocText, true)
+						writePageTextEx(page, "\t\t", info.DocText, true, true)
 						if i < len(pkg.Files)-1 {
 							page.WriteString("\n")
 						}
@@ -2647,6 +2647,10 @@ func writeFoldingBlock(page *htmlPage, resName, statName, contentKind string, ex
 }
 
 func writePageText(page *htmlPage, indent, text string, htmlEscape bool) {
+	writePageTextEx(page, indent, text, htmlEscape, false)
+}
+
+func writePageTextEx(page *htmlPage, indent, text string, htmlEscape, removeOriginalIdent bool) {
 	buffer := bytes.NewBufferString(text)
 	reader := bufio.NewReader(buffer)
 	notFirstLine, needAddMissingNewLine := false, false
@@ -2660,6 +2664,11 @@ func writePageText(page *htmlPage, indent, text string, htmlEscape bool) {
 				page.WriteByte('\n')
 			}
 			page.WriteString(indent)
+			if removeOriginalIdent {
+				if len(line) > 0 && line[0] == '\t' {
+					line = line[1:]
+				}
+			}
 			needAddMissingNewLine = false
 		} else {
 			needAddMissingNewLine = true

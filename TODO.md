@@ -9,6 +9,15 @@
 * https://golang.org/pkg/go/doc/#Package
   bugs and notes, Examples
 
+* static analysis
+  * mark unused variables (global, local, parameters, receiver)
+    * some unuseds should be skipped (ex. a method implementing an interface)
+  * ...
+
+* some stat list is blank, but title is still shown
+
+* show/warning Trojan Source https://news.ycombinator.com/item?id=29061987
+
 * use padding instead of indent tabs
 
 * show/run examples/tests/banchmarks 
