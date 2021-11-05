@@ -649,7 +649,7 @@ func findSourceRepository(forModule string) (repoURL, extraPath string, err erro
 	var importContnt, sourceContent string
 	var f func(*html.Node) bool
 	f = func(n *html.Node) bool {
-		if n.Type == html.ElementNode && strings.ToLower(n.Data) == "meta" {
+		if n.Type == html.ElementNode && strings.EqualFold(n.Data, "meta") {
 			name, content := "", ""
 			for _, a := range n.Attr {
 				if a.Key == "name" {

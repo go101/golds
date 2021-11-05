@@ -351,7 +351,7 @@ func buildPageHref(currentPageInfo, linkedPageInfo pagePathInfo, page *htmlPage,
 		var err error
 		var handled bool
 		writeHref := func(w writer) {
-			handled, err = writeExternalSourceCodeLink(w, deHashFilename(linkedPageInfo.resPath), line, endLine)
+			handled, err = writeExternalSourceCodeLink(w, deHashScope(linkedPageInfo.resPath), line, endLine)
 		}
 		link := buildString(writeHref)
 		if err != nil {

@@ -18,8 +18,6 @@
 
 * show/warning Trojan Source https://news.ycombinator.com/item?id=29061987
 
-* use strings.EqualFold(x, y) instead of strings.ToLower(x) == strings.ToLower(y)
-
 * use padding instead of indent tabs
 
 * show/run examples/tests/banchmarks 
