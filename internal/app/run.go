@@ -99,7 +99,7 @@ func run() {
 	verboseMode := *verboseFlag || *vFlag
 
 	// files serving mode
-	if flag.NArg() == 0 {
+	if flag.NArg() == 0 && !*genFlag {
 		log.SetFlags(0)
 
 		if *dirFlag == "" {
@@ -277,7 +277,7 @@ var srcReadingStyleFlag = flag.String("source-code-reading", "", "specify how an
 
 var allowNetworkConnection = flag.Bool("allow-network-connection", false, "specify whether or not network connections are allowed")
 
-var footerShowingMannerFlag = flag.String("footer", "verbose", "verbose | simple | none")
+var footerShowingMannerFlag = flag.String("footer", "verbose+qrcode", "verbose+qrcode | verbose | simple | none")
 
 // depreciated by "-wdpkgs-listing=promoted" since v0.1.8
 var emphasizeWdPackagesFlag = flag.Bool("emphasize-wdpkgs", false, "promote working directory packages")

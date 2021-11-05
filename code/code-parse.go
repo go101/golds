@@ -544,7 +544,9 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 			m.Pkgs = append(m.Pkgs, pkg)
 		} else if strings.HasPrefix(p.Dir, toolchain.Cmd) {
 			if pkg.Module != nil {
-				log.Printf("!!! the module of toolchain package %s is already found, weird", p.ImportPath)
+				if !d.IsStandardPackage(pkg) {
+					log.Printf("!!! the module of toolchain package %s is already found, weird", p.ImportPath)
+				}
 			} else {
 				pkg.Module = d.wdModule
 				d.wdModule.Pkgs = append(d.wdModule.Pkgs, pkg)

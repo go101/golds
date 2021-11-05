@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"path/filepath"
-	"strings"
 	"testing"
 
 	"go101.org/golds/internal/util"
@@ -195,7 +194,7 @@ func TestDocsForStandardPackages(t *testing.T) {
 
 	// ...
 	for pkgPath, pkgTestDataOld := range testdataOld {
-		if strings.HasPrefix(pkgPath, "vendor/") {
+		if isInformalPackage(pkgPath) {
 			continue
 		}
 		pkgTestDataNew, ok := testdataNew[pkgPath]

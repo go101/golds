@@ -94,6 +94,7 @@ func hashedFilename(t string) string {
 	if strings.ToLower(t) == t {
 		return t
 	}
+
 	return t + "^" + string(hashHexHead([]byte(t)))
 }
 
@@ -350,7 +351,7 @@ func buildPageHref(currentPageInfo, linkedPageInfo pagePathInfo, page *htmlPage,
 		var err error
 		var handled bool
 		writeHref := func(w writer) {
-			handled, err = writeExternalSourceCodeLink(w, linkedPageInfo.resPath, line, endLine)
+			handled, err = writeExternalSourceCodeLink(w, deHashFilename(linkedPageInfo.resPath), line, endLine)
 		}
 		link := buildString(writeHref)
 		if err != nil {

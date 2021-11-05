@@ -37,10 +37,16 @@ func isInformalPackage(pkgPath string) bool {
 	if strings.HasPrefix(pkgPath, "vendor/") {
 		return true
 	}
-	if strings.HasSuffix(pkgPath, "/internal") {
+	if strings.HasPrefix(pkgPath, "internal/") {
 		return true
 	}
 	if strings.Contains(pkgPath, "/internal/") {
+		return true
+	}
+	if strings.HasSuffix(pkgPath, "/internal") {
+		return true
+	}
+	if pkgPath == "internal" {
 		return true
 	}
 	return false
