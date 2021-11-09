@@ -59,6 +59,10 @@
 * embed playground
   * to run examples
 
+* The following function should be shown in the AsOutputOf lists of the Option and renderer.Option types.
+   func WithXHTML() interface{Option; renderer.Option}
+  * similarly for AsInputOf lists
+
 * implicit
   * switch expr := srcNode.(type) { // this expr might need to be enclosed in mutilple labels
     case T1: _ = expr

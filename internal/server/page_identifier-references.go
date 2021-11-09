@@ -210,7 +210,7 @@ func (ds *docServer) buildReferencesPage(w http.ResponseWriter, result *Referenc
 
 			start = endOffset
 		}
-		page.Write(fileInfo.Content[start:end])
+		WriteHtmlEscapedBytes(page, fileInfo.Content[start:end])
 		page.WriteByte('\n')
 		stack = stack[:0]
 	}
