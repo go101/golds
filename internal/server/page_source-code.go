@@ -8,12 +8,12 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
-	"io"
 	"log"
 	"net/http"
 	"strconv"
 
 	"go101.org/golds/code"
+	"go101.org/golds/internal/util"
 )
 
 //type sourcePageKey struct {
@@ -201,34 +201,6 @@ type SourceFileAnalyzeResult struct {
 	NumImportRatios int32
 	DocStartLine    int
 	DocEndLine      int
-}
-
-var (
-	andBytes     = []byte("&amp;")
-	smallerBytes = []byte("&lt;")
-	largerBytes  = []byte("&gt;")
-)
-
-// Please make sure w.Write never makes errors.
-func WriteHtmlEscapedBytes(w io.Writer, data []byte) {
-	last := 0
-	for i, b := range data {
-		switch b {
-		case '&':
-			w.Write(data[last:i])
-			w.Write(andBytes)
-			last = i + 1
-		case '<':
-			w.Write(data[last:i])
-			w.Write(smallerBytes)
-			last = i + 1
-		case '>':
-			w.Write(data[last:i])
-			w.Write(largerBytes)
-			last = i + 1
-		}
-	}
-	w.Write(data[last:])
 }
 
 /*
@@ -695,7 +667,7 @@ func (v *astVisitor) writeEscapedHTML(data []byte, class string) {
 	if class != "" {
 		fmt.Fprintf(&v.lineBuilder, `<span class="%s">`, class)
 	}
-	WriteHtmlEscapedBytes(&v.lineBuilder, data)
+	util.WriteHtmlEscapedBytes(&v.lineBuilder, data)
 	if class != "" {
 		v.lineBuilder.WriteString("</span>")
 	}
@@ -1810,7 +1782,7 @@ func (ds *docServer) analyzeSoureCode(pkgPath, bareFilename string) (*SourceFile
 			if k > 0 && data[k-1] == '\r' {
 				k--
 			}
-			WriteHtmlEscapedBytes(&buf, data[:k])
+			util.WriteHtmlEscapedBytes(&buf, data[:k])
 			result.Lines = append(result.Lines, buf.String())
 			buf.Reset()
 

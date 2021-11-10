@@ -228,7 +228,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 				fid := fmt.Sprintf("example-%d", i)
 				writeFoldingBlock(page, fid, "content", "items", false,
 					func() {
-						page.WriteString(ex.Name)
+						util.WriteHtmlEscapedString(page, ex.Name)
 					},
 					func() {
 						page.WriteString("\n")
@@ -237,9 +237,13 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 						//       It is best to merge the example code with main code
 						//       so that the exapmle code can be rendered as normal source code.
 						if ex.Play != nil {
-							format.Node(util.NewIndentWriter(page, []byte{'\t', '\t'}), pkg.ExampleFileSet, ex.Play)
+							format.Node(util.NewIndentWriter(
+								util.MakeHTMLEscapeWriter(page),
+								[]byte{'\t', '\t'}), pkg.ExampleFileSet, ex.Play)
 						} else {
-							format.Node(util.NewIndentWriter(page, []byte{'\t', ' ', ' '}), pkg.ExampleFileSet, ex.Code)
+							format.Node(util.NewIndentWriter(
+								util.MakeHTMLEscapeWriter(page),
+								[]byte{'\t', ' ', ' '}), pkg.ExampleFileSet, ex.Code)
 						}
 						//if i < len(pkg.Examples)-1 {
 						//	page.WriteString("\n")
@@ -2674,7 +2678,7 @@ func writePageTextEx(page *htmlPage, indent, text string, htmlEscape, removeOrig
 			needAddMissingNewLine = true
 		}
 		if htmlEscape {
-			WriteHtmlEscapedBytes(page, line)
+			util.WriteHtmlEscapedBytes(page, line)
 		} else {
 			page.Write(line)
 		}

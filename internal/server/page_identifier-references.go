@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"go101.org/golds/code"
+	"go101.org/golds/internal/util"
 )
 
 //type usePageKey struct {
@@ -202,15 +203,15 @@ func (ds *docServer) buildReferencesPage(w http.ResponseWriter, result *Referenc
 			endOffset := stack[i].pos.Offset + len(stack[i].id.Name)
 
 			//page.Write(fileInfo.Content[start:stack[i].pos.Offset])
-			WriteHtmlEscapedBytes(page, fileInfo.Content[start:stack[i].pos.Offset])
+			util.WriteHtmlEscapedBytes(page, fileInfo.Content[start:stack[i].pos.Offset])
 			page.WriteString("<b>")
 			//page.Write(fileInfo.Content[stack[i].pos.Offset:endOffset])
-			WriteHtmlEscapedBytes(page, fileInfo.Content[stack[i].pos.Offset:endOffset])
+			util.WriteHtmlEscapedBytes(page, fileInfo.Content[stack[i].pos.Offset:endOffset])
 			page.WriteString("</b>")
 
 			start = endOffset
 		}
-		WriteHtmlEscapedBytes(page, fileInfo.Content[start:end])
+		util.WriteHtmlEscapedBytes(page, fileInfo.Content[start:end])
 		page.WriteByte('\n')
 		stack = stack[:0]
 	}

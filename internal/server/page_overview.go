@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"go101.org/golds/code"
+	"go101.org/golds/internal/util"
 )
 
 func (ds *docServer) overviewPage(w http.ResponseWriter, r *http.Request) {
@@ -223,7 +224,7 @@ func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*Package
 		}
 		if len(d) > 0 {
 			page.WriteString(`<span class="pkg-summary"> - `)
-			WriteHtmlEscapedBytes(page, []byte(d))
+			util.WriteHtmlEscapedBytes(page, []byte(d))
 			defer page.WriteString(`</span>`)
 		}
 	}
