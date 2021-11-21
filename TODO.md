@@ -90,13 +90,17 @@
 * type alias and same-underlyings list
   * https://github.com/golang/go/issues/44905
 
-
+* show more values in type-of lists
+  * type F func(), then list all "func xxx()" for type F
+  * type S []T, then list all "[]T" values for type S (ex. image/color.Palette, list image/color.[]color.Color values)
+  * list all values of implementors of an interface type I for I
+  * ...
 
 * stat: keyword use count: most implemented interface.
 
 * also grey the same parts in asInputsOf/.... lists
 
-* uses page filter: declartions | value destination | value source
+* uses page filter: declartions | value destination | value source | in std | out of std
   * writes includes (v=x, field:x, and Struct{x}, ...)
   * as Type, as Field (for embedding field)
 
@@ -275,6 +279,7 @@
       https://pkg.go.dev/github.com/cznic/cc/v2?tab=doc
     * https://github.com/xlab/c-for-go
     * https://gitlab.com/cznic/ccgo
+    * https://github.com/elliotchance/c2go
     * https://github.com/gotranspile/cxgo
     * port tinycc
     * https://github.com/DQNEO/8cc.go

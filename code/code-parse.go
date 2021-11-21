@@ -60,18 +60,29 @@ func collectPPackages(ppkgs []*packages.Package) map[string]*packages.Package {
 	return allPPkgs
 }
 
-func getMatchedPackages(arg string) ([][]byte, error) {
-	output, err := util.RunShell(time.Minute, "", nil, "go", "list", arg)
+func getMatchedPackages(arg string, jsonFormat bool) ([][]byte, error) {
+	var output []byte
+	var err error
+	if jsonFormat {
+		output, err = util.RunShell(time.Minute, "", nil, "go", "list", "-json", arg)
+	} else {
+		output, err = util.RunShell(time.Minute, "", nil, "go", "list", arg)
+	}
 	if err != nil {
 		return nil, fmt.Errorf("go list %s error: %w", arg, err)
 	}
 	output = bytes.TrimSpace(output)
+	if jsonFormat {
+		if output[0] != '{' {
+			return nil, fmt.Errorf("go list %s error: %s", arg, output)
+		}
+	}
 
 	return bytes.Fields(output), nil
 }
 
 func hasMatchedPackages(arg string) bool {
-	out, err := getMatchedPackages(arg)
+	out, err := getMatchedPackages(arg, true)
 	return err == nil && len(out) > 0
 }
 
@@ -181,6 +192,7 @@ func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...i
 		defer os.RemoveAll(tempDir)
 		oldDir := util.WorkingDirectory()
 		err = os.Chdir(tempDir)
+
 		if err != nil {
 			return fmt.Errorf("enter temp dir error: %w", err)
 		}
@@ -189,7 +201,7 @@ func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...i
 		if err != nil {
 			return fmt.Errorf("go mod init error: %w", err)
 		}
-		_, err = util.RunShell(time.Minute, "", nil, "go", "get", oldArgs[0])
+		_, err = util.RunShell(time.Minute, "", nil, "go", "get", "-d", oldArgs[0])
 		if err != nil {
 			return fmt.Errorf("go get %s error: %w", oldArgs[0], err)
 		}
@@ -312,7 +324,7 @@ func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...i
 	//...
 
 	//stdPkgs, err := collectStdPackages()
-	stdPkgs, err := getMatchedPackages("std")
+	stdPkgs, err := getMatchedPackages("std", false)
 	if err != nil {
 		return fmt.Errorf("failed to collect std packages: %w", err)
 	}
