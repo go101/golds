@@ -304,7 +304,16 @@ func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...i
 		}
 	}
 	if hasErrors {
-		log.Fatal("exit for above errors")
+		//return errors.New("code parsing errors")
+		log.Fatal(`exit for above errors.
+
+If you are sure that the code should compile okay, and
+you just updated your Go toolchain to a new Go version,
+then please rebuild Golds with the following command.
+
+	go install go101.org/golds@latest
+
+`)
 	}
 
 	//if num := numParsedPackages; num&(num-1) != 0 {
@@ -704,7 +713,8 @@ func fillUnsafePackage(unsafePPkg *packages.Package, builtinPPkg *packages.Packa
 
 	buildPkg, err := build.Import("unsafe", "", build.FindOnly)
 	if err != nil {
-		log.Fatal(fmt.Errorf("build.Import: %w", err))
+		//log.Fatal(fmt.Errorf("build.Import: %w", err))
+		return fmt.Errorf("build.Import: %w", err)
 	}
 
 	filter := func(fi os.FileInfo) bool {
@@ -715,12 +725,14 @@ func fillUnsafePackage(unsafePPkg *packages.Package, builtinPPkg *packages.Packa
 	fset := token.NewFileSet()
 	astPkgs, err := parser.ParseDir(fset, buildPkg.Dir, filter, parser.ParseComments)
 	if err != nil {
-		log.Fatal(fmt.Errorf("parser.ParseDir: %w", err))
+		//log.Fatal(fmt.Errorf("parser.ParseDir: %w", err))
+		return fmt.Errorf("parser.ParseDir: %w", err)
 	}
 
 	astPkg := astPkgs["unsafe"]
 	if astPkg == nil {
-		log.Fatal("ast package for unsafe is not found")
+		//log.Fatal("ast package for unsafe is not found")
+		return errors.New("ast package for unsafe is not found")
 	}
 
 	//fset := token.NewFileSet()

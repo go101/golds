@@ -2,6 +2,11 @@
 
 ### Soon to do
 
+* show alias list for types, or identical tyoe list
+
+* use https://pkg.go.dev/golang.org/x/tools/go/buildutil to replace some go command runs.
+  * how to pass -tags "tag1 tag2" options in "go build"
+
 * options
     //	-package-docs-showing-initially=collapse|simple|expand (cancelled)
     //	-identifier-docs-showing-initially=collapse|oneline|expand (cancelled, but show one line defaultly)
