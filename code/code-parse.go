@@ -220,23 +220,14 @@ func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...i
 	}
 
 	// ...
-	var argsWithoutBuiltin = make([]string, 0, len(args))
-	for _, arg := range args {
+	args = args[:0:cap(args)]
+	for _, arg := range args[:cap(args)] {
 		if arg == "builtin" {
 			//goto Start
 		} else {
-			argsWithoutBuiltin = append(argsWithoutBuiltin, arg)
+			args = append(args, arg)
 		}
 	}
-	args = argsWithoutBuiltin
-
-	// "builtin" package is always needed.
-	// ToDo: remove this line, use a custom builtin page.
-	//args = append(args, "builtin")
-
-	//Start:
-
-	//log.Println("[parse packages ...], args:", args)
 
 	//
 
@@ -289,9 +280,11 @@ func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...i
 		return fmt.Errorf("packages.Load (parse packages): %w", err)
 	}
 
-	var hasErrors bool
+	var hasErrors, hasRuntime bool
 	for _, ppkg := range ppkgs {
 		switch ppkg.PkgPath {
+		case "runtime":
+			hasRuntime = true
 		case "builtin":
 			// skip "illegal cycle in declaration of int" alike errors.
 		//case "unsafe":
@@ -314,6 +307,19 @@ then please rebuild Golds with the following command.
 	go install go101.org/golds@latest
 
 `)
+	}
+
+	// For "golds main.go" cases.
+	if !hasRuntime {
+		runtimePPkgs, err := packages.Load(configForParsing, "runtime")
+		if err != nil {
+			return fmt.Errorf("packages.Load (parse runtime package): %w", err)
+		}
+		if len(runtimePPkgs) < 1 {
+			return errors.New("packages.Load: load runtime page error (unknown).")
+		}
+		numParsedPackages += int32(len(runtimePPkgs))
+		ppkgs = append(ppkgs, runtimePPkgs...)
 	}
 
 	//if num := numParsedPackages; num&(num-1) != 0 {
@@ -541,7 +547,7 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 		p := &pkgs[i]
 		pkg := d.packageTable[p.ImportPath]
 		if pkg == nil {
-			fmt.Printf("!!! package %s is not found, weird", p.ImportPath)
+			fmt.Printf("!!! package %s is not found, weird\n", p.ImportPath)
 			continue
 		}
 
@@ -666,7 +672,9 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 			continue
 		}
 		if !strings.HasPrefix(pkg.Path(), pkg.Module.Path) {
-			log.Println("!!! wrong prefix:", pkg.Path(), pkg.Module.Path)
+			if pkg.Path() != "command-line-arguments" { // sourced from golang.org/x/tools/go/packages
+				log.Println("!!! wrong prefix:", pkg.Path(), pkg.Module.Path)
+			}
 		}
 	}
 

@@ -422,7 +422,7 @@ type TypeAlias struct {
 //	return tc.Kind&(Ptr|Interface) == 0
 //}
 
-// TypeInfo represent a type and records its analysis result.
+// TypeInfo represents a type and records its analysis result.
 type TypeInfo struct {
 	TT types.Type
 
@@ -438,7 +438,7 @@ type TypeInfo struct {
 	// For interface types.
 	ImplementedBys []*TypeInfo
 
-	// For builtin and unnamed types only.
+	//
 	Aliases []*TypeName
 
 	// ToDo: For unnamed and builtin basic types.

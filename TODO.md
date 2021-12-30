@@ -4,6 +4,10 @@
 
 * show alias list for types, or identical tyoe list
 
+* show id ref counts, and ref counts should affect populirities.
+
+* golds gopath
+
 * use https://pkg.go.dev/golang.org/x/tools/go/buildutil to replace some go command runs.
   * how to pass -tags "tag1 tag2" options in "go build"
 

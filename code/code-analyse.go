@@ -1021,6 +1021,13 @@ func (d *CodeAnalyzer) collectSelectorsForInterfaceType(t *TypeInfo, depth int, 
 		return
 	}
 
+	// ToDo: 1.18 *types.TypeParam
+	//>>
+	if _, ok := t.TT.(*types.TypeParam); ok {
+		return
+	}
+	//<<
+
 	if t.Underlying == nil {
 		// already set interface.Underlying in RegisterType now
 		panic(fmt.Sprint("should never happen:", t.TT))
@@ -1084,7 +1091,7 @@ func (d *CodeAnalyzer) collectSelectorsForInterfaceType(t *TypeInfo, depth int, 
 			//if depth == 0 {
 			//	return // ToDo: temp ignore field and parameter/result unnamed interface types
 			//}
-			log.Println("!!! t.index:", t.index, t.TT)
+			log.Printf("!!! %v, %#v:", t.TT, t.Underlying)
 			panic("unnamed interface should have collected direct selectors now. " + fmt.Sprintf("%#v", t))
 		}
 
@@ -2027,6 +2034,11 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 			var id *ast.Ident
 			switch expr := field.Type.(type) {
 			default:
+				// ToDo: 1.18, *ast.IndexExpr
+				//>>
+				continue
+				//panic(fmt.Sprintf("%T", expr))
+				//<<
 				panic("should not")
 			case *ast.Ident:
 				id = expr

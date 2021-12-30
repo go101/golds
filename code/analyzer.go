@@ -853,6 +853,11 @@ func (d *CodeAnalyzer) registerExplicitlySpecifiedMethods(typeInfo *TypeInfo, as
 			var id string
 			switch expr := method.Type.(type) {
 			default:
+				// ToDo: 1.18, *ast.BinaryExpr
+				//>>
+				continue
+				//<<
+
 				panic(fmt.Sprintf("not a valid embedding interface type name: %#v", method))
 			case *ast.Ident:
 				ttn := pkg.PPkg.TypesInfo.Uses[expr]
