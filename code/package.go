@@ -250,6 +250,8 @@ const (
 
 	// For methods.
 	StarReceiver Attribute = 1 << 9
+
+	// ToDo: use these attributes.
 )
 
 // A TypeSource represents the source type in a type specification.
@@ -285,7 +287,11 @@ type TypeName struct {
 	Alias *TypeAlias
 	Named *TypeInfo
 
-	//index uint32 // the global index
+	// ToDo: change the above two to:
+	// Denoting *TypeInfo
+	// IsAlias  bool
+
+	// ToDo: remove the two source fields ?
 
 	// ToDo: simplify the source definition.
 	// Four kinds of sources to affect promoted selectors:
@@ -295,6 +301,16 @@ type TypeName struct {
 	// 4. *unname type
 	Source     TypeSource
 	StarSource *TypeSource
+
+	//>> 1.18, ToDo
+	// Template == nil: neither a parameterized type or instantiated type
+	// Template == self: parameterized type
+	// Template != nil && Template != self: instantiated type
+	Template *TypeName // origin type name, origin's origin is self
+	// Arguments  []*TypeInfo // for instantiated type names only (needed? Note: argument list might be partial)
+	//Instances  []*TypeName // for template type names only (move to referenced pages?)
+	//Parameters // ToDo (maybe not needed)
+	//<<
 
 	//UsePositions []token.Position
 
@@ -401,7 +417,7 @@ type TypeAlias struct {
 	Denoting *TypeInfo
 
 	// For named and basic types.
-	TypeName *TypeName
+	TypeName *TypeName // ToDo: any difference from Denoting.TypeName?
 
 	// Builtin, Embeddable.
 	attributes Attribute
@@ -444,7 +460,7 @@ type TypeInfo struct {
 	// ToDo: For unnamed and builtin basic types.
 	Underlieds []*TypeName
 
-	// For unnamed types.
+	// For unnamed types (ToDo: need fake identifiers).
 	//UsePositions []token.Position
 
 	// For unnamed interfaces and structs, this field must be nil.
@@ -457,6 +473,13 @@ type TypeInfo struct {
 	// * For unnamed struct types, only direct fields. Only built for strct{...}, not for *struct{...}.
 	DirectSelectors []*Selector
 	EmbeddingFields int32 // for struct types only now. ToDo: also for interface types.
+
+	//>> 1.18, ToDo
+	ParameterizedMethods int32
+	// The following AllMethods list only inlcudes non-parameterized methods now.
+	// So the length of the list might be not equal to types.NumMethods().
+	// The impler list for an interface with parameterized methods will not get calculated.
+	//<<
 
 	// All methods, including extended/promoted ones.
 	AllMethods []*Selector
@@ -1038,6 +1061,10 @@ type Method struct {
 
 	PointerRecv         bool // duplicated info, for faster access
 	ImplementsSomething bool // false if the method is unimportant for its reveiver to implement some interface type
+
+	//>> 1.18, ToDo
+	Parameterized bool // Containing parameter types which are parameterized.
+	//<<
 
 	index uint32 // 0 means this method doesn;t contribute to any type implementations for sure.
 }

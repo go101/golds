@@ -8,6 +8,22 @@
 
 * golds gopath
 
+* id introduced in version: 1.15-, 1.16, 1.17, ...
+
+* generics
+  * click a type param, highlight all its refs in package details package
+    * id hightlight in source code optimization: enclose each function in a div
+      or each function is a hight scope unit: multiple highlighting
+      * Note: a function literal might be enclosed in a package-level type spec.
+  * for generic type/function, list its instances
+  * for generic type, list values of each its instance
+  * method implementation
+    * method prototypes without or with TypeParam:
+      whether or not list instanced methods
+  * type implementations
+    * types whose method prototypes without or with TypeParam:
+      whether or not list instanced types
+
 * use https://pkg.go.dev/golang.org/x/tools/go/buildutil to replace some go command runs.
   * how to pass -tags "tag1 tag2" options in "go build"
 
@@ -17,6 +33,8 @@
 
 * https://golang.org/pkg/go/doc/#Package
   bugs and notes, Examples
+
+* <a class="deplucated">xxx</a><a>yyy/a> should change to <a><span class="deplucated">xxx</span>yy</a>
 
 * static analysis
   * mark unused variables (global, local, parameters, receiver)

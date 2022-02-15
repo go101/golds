@@ -134,8 +134,22 @@ func (d *CodeAnalyzer) analyzePackages_FindImplementations() { // (resultMethodC
 
 	type UnderlyingInterfaceInfo struct {
 		t             *TypeInfo
-		methodIndexes []uint32
 		underlieds    []*TypeInfo // including the underlying itself
+		methodIndexes []uint32
+
+		//>> 1.18, ToDo
+		// Ignore methods with type parameters now.
+
+		typeIndexes []uint32 // specific types (sorted). The highest bit means tilde
+
+		// t == t.Underlying
+
+		// step 4: after reducing type set by checking method set, sort the types in the set:
+		//         * for non-interface types, sorted by type indexes
+		//         * for interface types, sorted by the first index in typeIndexes.
+		//         Calculate the intersection of the result sorted indexes and UnderlyingInterfaceInfo.typeIndexes.
+		//         Check tildes and "t == t.Underlying" in the intersection list, ...
+		//<<
 	}
 
 	// ToDo: use map[InterfaceTypeIndex]*TypeInfo?
@@ -154,16 +168,15 @@ func (d *CodeAnalyzer) analyzePackages_FindImplementations() { // (resultMethodC
 		t.Underlying = underlyingTypeInfo
 		underlyingTypeInfo.Underlying = underlyingTypeInfo
 
-		if i, ok := underlying.(*types.Interface); ok && i.NumMethods() > 0 {
+		if i, ok := underlying.(*types.Interface); ok && len(underlyingTypeInfo.AllMethods) > 0 { // i.NumMethods() > 0 {
 			var uiInfo *UnderlyingInterfaceInfo
-			info := interfaceUnderlyings.At(i)
-			if interfaceUnderlyings.At(i) == nil {
+			if info := interfaceUnderlyings.At(i); info == nil {
 				//interfaceUnderlyingTypes = append(interfaceUnderlyingTypes, underlyingTypeInfo)
 				uiInfo = &UnderlyingInterfaceInfo{t: underlyingTypeInfo, underlieds: make([]*TypeInfo, 0, 3)}
 				interfaceUnderlyings.Set(i, uiInfo)
 				//log.Printf("!!! %T\n", uiInfo.t.TT)
 			} else {
-				uiInfo, _ = info.(*UnderlyingInterfaceInfo)
+				uiInfo, _ = info.(*UnderlyingInterfaceInfo) // ToDo: remove _
 			}
 			uiInfo.underlieds = append(uiInfo.underlieds, t)
 		}
@@ -910,7 +923,7 @@ func (d *CodeAnalyzer) analyzePackages_CollectSelectors() {
 
 		//currentCounter++ // can't replace map
 
-		d.collectSelectorsFroNonInterfaceType(t, smm, checkedTypes)
+		d.collectSelectorsForNonInterfaceType(t, smm, checkedTypes)
 
 		// print selectors
 		//if len(t.AllMethods)+len(t.AllFields) > 0 {
@@ -1021,9 +1034,8 @@ func (d *CodeAnalyzer) collectSelectorsForInterfaceType(t *TypeInfo, depth int, 
 		return
 	}
 
-	// ToDo: 1.18 *types.TypeParam
-	//>>
-	if _, ok := t.TT.(*types.TypeParam); ok {
+	//>> 1.18
+	if isTypeParam(t.TT) {
 		return
 	}
 	//<<
@@ -1050,12 +1062,6 @@ func (d *CodeAnalyzer) collectSelectorsForInterfaceType(t *TypeInfo, depth int, 
 	//	log.Println("==== 111", depth, t)
 	//}
 	if t != t.Underlying {
-		//if t.TypeName.Name() == "TokenReviewInterface" || t.TypeName.Name() == "TokenReviewExpansion" {
-		//	debug = true
-		//	defer func() {
-		//		debug = false
-		//	}()
-		//}
 		// t is a named interface type.
 
 		//if debug {
@@ -1066,9 +1072,22 @@ func (d *CodeAnalyzer) collectSelectorsForInterfaceType(t *TypeInfo, depth int, 
 
 		//log.Println("222", depth)
 		if (t.Underlying.attributes & directSelectorsCollected) == 0 {
+
+			//>> 1.18
+			if isParameterizedType(t.TT) {
+				return
+			}
+			//<<
+
 			panic("unnamed interface should have collected direct selectors now. " +
 				fmt.Sprintf("underlying index: %v. index: %v. name: %#v. %#v. %v",
-					t.Underlying.index, t.index, t.TypeName.Name(), t.Underlying.TT, t.TT.Underlying()))
+					t.Underlying.index,
+					t.index,
+					t.TypeName.Name(),
+					t.Underlying.TT,
+					t.TT.Underlying(),
+				),
+			)
 		}
 		//if t.DirectSelectors != nil {
 		//	panic("Selectors of named interface should be blank now")
@@ -1091,7 +1110,8 @@ func (d *CodeAnalyzer) collectSelectorsForInterfaceType(t *TypeInfo, depth int, 
 			//if depth == 0 {
 			//	return // ToDo: temp ignore field and parameter/result unnamed interface types
 			//}
-			log.Printf("!!! %v, %#v:", t.TT, t.Underlying)
+			log.Printf("!!! %v:", t.TT)
+			log.Printf("!!! %v:", t.Underlying)
 			panic("unnamed interface should have collected direct selectors now. " + fmt.Sprintf("%#v", t))
 		}
 
@@ -1193,7 +1213,7 @@ func (d *CodeAnalyzer) collectSelectorsForInterfaceType(t *TypeInfo, depth int, 
 	return
 }
 
-func (d *CodeAnalyzer) collectSelectorsFroNonInterfaceType(t *TypeInfo, smm *SeleterMapManager, checkedTypes map[uint32]uint16) {
+func (d *CodeAnalyzer) collectSelectorsForNonInterfaceType(t *TypeInfo, smm *SeleterMapManager, checkedTypes map[uint32]uint16) {
 
 	if (t.attributes & promotedSelectorsCollected) != 0 {
 		return
@@ -1270,7 +1290,7 @@ func (d *CodeAnalyzer) collectSelectorsFroNonInterfaceType(t *TypeInfo, smm *Sel
 		// The simple case.
 		if numEmbeddeds == 0 {
 			t.AllFields = t.DirectSelectors
-			if namedType != nil {
+			if namedType != nil { // ToDo: always false?
 				t.AllMethods = t.DirectSelectors
 			}
 
@@ -1499,7 +1519,7 @@ func (d *CodeAnalyzer) collectSelectorsFroNonInterfaceType(t *TypeInfo, smm *Sel
 		return
 	}
 
-	d.collectSelectorsFroNonInterfaceType(structType, smm, checkedTypes)
+	d.collectSelectorsForNonInterfaceType(structType, smm, checkedTypes)
 
 	// This line is nonsense.
 	//namedType.counter = currentCounter // <=> t.counter = currentCounter
@@ -2032,14 +2052,11 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 
 			field := f.AstDecl.Recv.List[0]
 			var id *ast.Ident
-			switch expr := field.Type.(type) {
+			var tnNode ast.Expr = field.Type
+		Again:
+			switch expr := tnNode.(type) {
 			default:
-				// ToDo: 1.18, *ast.IndexExpr
-				//>>
-				continue
-				//panic(fmt.Sprintf("%T", expr))
-				//<<
-				panic("should not")
+				panic(fmt.Sprintf("should not: %T", expr))
 			case *ast.Ident:
 				id = expr
 			case *ast.StarExpr:
@@ -2049,6 +2066,17 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 				}
 				id = tid
 				f.attributes |= StarReceiver
+			case *ast.ParenExpr:
+				tnNode = expr.X
+				goto Again
+			//>> 1.18
+			case *astIndexExpr:
+				tnNode = expr.X
+				goto Again
+			case *astIndexListExpr:
+				tnNode = expr.X
+				goto Again
+				//<<
 			}
 			f.receiverTypeName = d.allTypeNameTable[d.Id2b(pkg, id.Name)]
 			if f.receiverTypeName == nil {
@@ -2119,6 +2147,12 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 		//}
 		return
 	}
+
+	//if !d.IsStandardPackage(pkg) {
+	//	d.debug = true
+	//	defer func() { d.debug = false }()
+	//}
+
 	for _, v := range pkg.PackageAnalyzeResult.AllVariables {
 		d.registerValueForItsTypeName(v)
 		//if d.debug {
@@ -2357,9 +2391,9 @@ func (d *CodeAnalyzer) analyzePackage_ConfirmTypeSources(pkg *Package) {
 					}
 
 					var findSource func(ast.Expr, bool)
-					findSource = func(srcNode ast.Expr, startSource bool) {
+					findSource = func(srcNode ast.Expr, starSource bool) {
 						var source *TypeSource
-						if startSource {
+						if starSource {
 							if newTypeName.StarSource == nil {
 								newTypeName.StarSource = &TypeSource{}
 							}
@@ -2396,7 +2430,7 @@ func (d *CodeAnalyzer) analyzePackage_ConfirmTypeSources(pkg *Package) {
 							}
 							source.TypeName = tn
 
-							//log.Println(startSource, "ident,", pkg.Path()+"."+typeSpec.Name.Name, "source is:", tn.Pkg.Path()+"."+expr.Name)
+							//log.Println(starSource, "ident,", pkg.Path()+"."+typeSpec.Name.Name, "source is:", tn.Pkg.Path()+"."+expr.Name)
 
 							return
 						case *ast.SelectorExpr:
@@ -2410,14 +2444,14 @@ func (d *CodeAnalyzer) analyzePackage_ConfirmTypeSources(pkg *Package) {
 							}
 							source.TypeName = tn
 
-							//log.Println(startSource, "selector,", pkg.Path()+"."+typeSpec.Name.Name, "source is:", tn.Pkg.Path()+"."+expr.Sel.Name)
+							//log.Println(starSource, "selector,", pkg.Path()+"."+typeSpec.Name.Name, "source is:", tn.Pkg.Path()+"."+expr.Sel.Name)
 							return
 						case *ast.ParenExpr:
 							//log.Println("paren,", pkg.Path()+"."+typeSpec.Name.Name, "source is:")
 							findSource(expr.X, false)
 							return
 						case *ast.StarExpr:
-							if !startSource {
+							if !starSource {
 								//log.Println("star,", pkg.Path()+"."+typeSpec.Name.Name, "source is:")
 								findSource(expr.X, true)
 								return
@@ -2437,7 +2471,7 @@ func (d *CodeAnalyzer) analyzePackage_ConfirmTypeSources(pkg *Package) {
 						tv := pkg.PPkg.TypesInfo.Types[srcNode]
 						srcTypeInfo := d.RegisterType(tv.Type)
 						source.UnnamedType = srcTypeInfo
-						//log.Println(startSource, "default,", pkg.Path()+"."+typeSpec.Name.Name, "source is:", tv.Type)
+						//log.Println(starSource, "default,", pkg.Path()+"."+typeSpec.Name.Name, "source is:", tv.Type)
 
 						if sttNode != nil {
 							d.registerDirectFields(srcTypeInfo, sttNode, pkg)

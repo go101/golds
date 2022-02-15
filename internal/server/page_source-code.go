@@ -481,6 +481,9 @@ type astVisitor struct {
 	topLevelFuncNodeDepth int32
 	topLevelFuncInfo      *astFunctionInfo
 
+	// ToDo: maybe these top-level things could be merged into one.
+	topLevelTypeSpecInfo *ast.TypeSpec
+
 	// ToDo: also support implementation page for local interface types (including unnamed ones).
 	//       Local interface types should get IDs like Name-1234.
 	topLevelInterfaceTypeNodeDepth int32
@@ -936,6 +939,9 @@ func (v *astVisitor) Visit(n ast.Node) (w ast.Visitor) {
 		if v.topLevelStructTypeSpec != nil && n.Pos() > v.topLevelStructTypeSpec.End() {
 			v.topLevelStructTypeSpec = nil
 		}
+		if v.topLevelTypeSpecInfo != nil && n.Pos() > v.topLevelTypeSpecInfo.End() {
+			v.topLevelTypeSpecInfo = nil
+		}
 	}
 
 	if v.topLevelFuncInfo == nil {
@@ -955,6 +961,12 @@ func (v *astVisitor) Visit(n ast.Node) (w ast.Visitor) {
 							typeExpr = e.X
 						case *ast.StarExpr:
 							typeExpr = e.X
+						//>> 1.18
+						case *astIndexExpr:
+							typeExpr = e.X
+						case *astIndexListExpr:
+							typeExpr = e.X
+						//<<
 						default:
 							panic(fmt.Sprintf("impossible type: %T", e))
 						}
@@ -975,24 +987,30 @@ func (v *astVisitor) Visit(n ast.Node) (w ast.Visitor) {
 		}
 	}
 
-	if ts, ok := n.(*ast.TypeSpec); ok {
-		if v.topLevelInterfaceTypeInfo == nil {
-			it, ok1 := ts.Type.(*ast.InterfaceType)
-			tn, ok2 := v.info.ObjectOf(ts.Name).(*types.TypeName)
-			if ok1 && ok2 && ts.Name.Name != "_" {
-				v.topLevelInterfaceTypeNodeDepth = v.astNodeDepth
-				v.topLevelInterfaceTypeInfo = &astInterfaceTypeInfo{
-					TypeName: tn.Name(),
-					Methods:  it.Methods.List,
+	if v.topLevelFuncInfo == nil {
+		if ts, ok := n.(*ast.TypeSpec); ok {
+			if v.topLevelInterfaceTypeInfo == nil {
+				it, ok1 := ts.Type.(*ast.InterfaceType)
+				tn, ok2 := v.info.ObjectOf(ts.Name).(*types.TypeName)
+				if ok1 && ok2 && ts.Name.Name != "_" {
+					v.topLevelInterfaceTypeNodeDepth = v.astNodeDepth
+					v.topLevelInterfaceTypeInfo = &astInterfaceTypeInfo{
+						TypeName: tn.Name(),
+						Methods:  it.Methods.List,
+					}
 				}
 			}
-		}
 
-		if v.topLevelStructTypeSpec == nil {
-			_, ok := ts.Type.(*ast.StructType)
-			if ok && ts.Name.Name != "_" {
-				v.topLevelStructTypeSpec = ts
-				v.topLevelStructTypeNodeDepth = v.astNodeDepth
+			if v.topLevelStructTypeSpec == nil {
+				_, ok := ts.Type.(*ast.StructType)
+				if ok && ts.Name.Name != "_" {
+					v.topLevelStructTypeSpec = ts
+					v.topLevelStructTypeNodeDepth = v.astNodeDepth
+				}
+			}
+
+			if v.topLevelTypeSpecInfo == nil {
+				v.topLevelTypeSpecInfo = ts
 			}
 		}
 	}
@@ -1359,12 +1377,16 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 
 	objPos := objPkg.PPkg.Fset.PositionFor(obj.Pos(), false)
 
-	var sameFileObjOrderId int32 = -1
-	if v.topLevelFuncInfo != nil &&
+	var inTopFuncRange = v.topLevelFuncInfo != nil &&
 		obj.Pos() > v.topLevelFuncInfo.Node.Pos() &&
-		obj.Pos() < v.topLevelFuncInfo.Node.End() &&
-		objPos.Filename == v.goFilePath {
+		obj.Pos() < v.topLevelFuncInfo.Node.End()
+	var inTopTypeSpecRange = v.topLevelTypeSpecInfo != nil &&
+		obj.Pos() > v.topLevelTypeSpecInfo.Pos() &&
+		obj.Pos() < v.topLevelTypeSpecInfo.End()
 
+	var sameFileObjOrderId int32 = -1
+
+	if (inTopFuncRange || inTopTypeSpecRange) && objPos.Filename == v.goFilePath {
 		n, ok := v.sameFileObjects[obj]
 		if ok {
 			sameFileObjOrderId = n
@@ -1379,7 +1401,7 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 	// The declaration of the id is locally, certainly for its uses.
 	if sameFileObjOrderId >= 0 {
 		var link string
-		if v.topLevelFuncInfo.Name == ident {
+		if inTopFuncRange && v.topLevelFuncInfo.Name == ident {
 			funcName := v.topLevelFuncInfo.Name.Name
 			if v.topLevelFuncInfo.RecvTypeName != "" {
 				// The handling for unexported fileds should be unnecessary here.
@@ -1507,13 +1529,13 @@ GoOn:
 				}
 			case *types.Var: // struct field
 				// ToDo: generate fake IDs for unnamed types.
-				// 5 depth distane from struct type spec to field ident.
+				// 5 depth distance from struct type spec to field ident.
 				if v.topLevelStructTypeSpec != nil && v.astNodeDepth-v.topLevelStructTypeNodeDepth == 5 {
 					enclosingTypeName := v.topLevelStructTypeSpec.Name.Name
 					fieldName := obj.Name()
 					if fieldName != "_" && buildIdUsesPages {
 						//if collectUnexporteds || token.IsExported(enclosingTypeName) && token.IsExported(obj.Name()) || objPkgPath == "builtin" {
-						v.buildLink(start, end, buildPageHref(v.currentPathInfo, createPagePathInfo3(ResTypeReference, objPkgPath, "..", enclosingTypeName, obj.Name()), nil, ""), "")
+						v.buildLink(start, end, buildPageHref(v.currentPathInfo, createPagePathInfo3(ResTypeReference, objPkgPath, "..", enclosingTypeName, fieldName), nil, ""), "")
 						return
 						//}
 					}
@@ -1529,7 +1551,7 @@ GoOn:
 				//
 				// There are two ways to solve this problem:
 				// 1. create a fake type name "unamed-12345" and use "unamed-12345.X" to denote the X field.
-				// 2. modify ref-user page implementation to support "Foo.baz.X" (not recommended, may have loop problem).
+				// 2. modify reference/use page implementation to support "Foo.baz.X" (not recommended, may have loop problem).
 			}
 
 			goto End

@@ -301,7 +301,7 @@ func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...i
 		log.Fatal(`exit for above errors.
 
 If you are sure that the code should compile okay, and
-you just updated your Go toolchain to a new Go version,
+you just upgraded your Go toolchain to a new Go version,
 then please rebuild Golds with the following command.
 
 	go install go101.org/golds@latest

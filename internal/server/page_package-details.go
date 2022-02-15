@@ -298,7 +298,14 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 				}
 				page.WriteString("\t")
 
-				if doc := v.Documentation(); doc == "" {
+				var writeFuncTypeParameters func()
+				//>> 1.18
+				if fv, ok := v.(*code.Function); ok {
+					writeFuncTypeParameters = ds.writeTypeParameterListCallbackForFunction(page, pkg.Package, fv)
+				}
+				//<<
+
+				if doc := v.Documentation(); doc == "" && writeFuncTypeParameters == nil {
 					page.WriteString(`<span class="nodocs">`)
 					ds.writeResourceIndexHTML(page, pkg.Package, v, true, true, true)
 					page.WriteString(`</span>`)
@@ -308,9 +315,18 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 							ds.writeResourceIndexHTML(page, pkg.Package, v, true, true, true)
 						},
 						func() {
+							if writeFuncTypeParameters != nil {
+								writeFuncTypeParameters()
+								page.WriteString("\n")
+							}
+
+							if doc != "" {
+								page.WriteString("\n")
+								writePageText(page, "\t\t", doc, true)
+								page.WriteString("\n")
+							}
+
 							page.WriteString("\n")
-							writePageText(page, "\t\t", doc, true)
-							page.WriteString("\n\n")
 						},
 					)
 				}
@@ -410,7 +426,11 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 		fmt.Fprintf(page, `<div class="anchor type-res%s" id="name-%s" data-popularity="%d">`, extraClass, td.TypeName.Name(), td.Popularity)
 		page.WriteString("\t")
 
-		if doc := td.TypeName.Documentation(); doc == "" && td.AllListsAreBlank {
+		//>> 1.18
+		var writeTypeTypeParameters = ds.writeTypeParameterListCallbackForTypeName(page, pkg.Package, td.TypeName)
+		//<<
+
+		if doc := td.TypeName.Documentation(); doc == "" && writeTypeTypeParameters == nil && td.AllListsAreBlank {
 			page.WriteString(`<span class="nodocs">`)
 			ds.writeResourceIndexHTML(page, pkg.Package, td.TypeName, true, true, false)
 			page.WriteString(`</span>`)
@@ -420,6 +440,13 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 					ds.writeResourceIndexHTML(page, pkg.Package, td.TypeName, true, true, false)
 				},
 				func() {
+					if writeTypeTypeParameters != nil {
+						writeTypeTypeParameters()
+						if doc != "" {
+							page.WriteString("\n")
+						}
+					}
+
 					if doc != "" {
 						page.WriteString("\n")
 						writePageText(page, "\t\t", doc, true)
@@ -1634,27 +1661,27 @@ func (ds *docServer) writeTypeForListing(page *htmlPage, t *TypeForListing, pkg 
 	if implerName == "" {
 	} else if dotMStyle == DotMStyle_NotShow {
 		if t.IsPointer {
-			page.WriteString("*T : ")
-			//fmt.Fprintf(page, "*%s : ", implerName)
+			//page.WriteString("*T : ")
+			fmt.Fprintf(page, "*%s : ", implerName)
 		} else {
-			page.WriteString(" T : ")
-			//fmt.Fprintf(page, " %s : ", implerName)
+			//page.WriteString(" T : ")
+			fmt.Fprintf(page, " %s : ", implerName)
 		}
 	} else if dotMStyle > 0 { // DotMStyle_Exported
 		if t.IsPointer {
-			page.WriteString("(*T).M : ")
-			//fmt.Fprintf(page, "*%s : ", implerName)
+			//page.WriteString("(*T).M : ")
+			fmt.Fprintf(page, "*%s.M : ", implerName)
 		} else {
-			page.WriteString("     M : ")
-			//fmt.Fprintf(page, " %s : ", implerName)
+			//page.WriteString("     M : ")
+			fmt.Fprintf(page, " %s.M : ", implerName)
 		}
 	} else { // DotMStyle_Unexported
 		if t.IsPointer {
-			page.WriteString("(*T).m : ")
-			//fmt.Fprintf(page, "*%s : ", implerName)
+			//page.WriteString("(*T).m : ")
+			fmt.Fprintf(page, "*%s.m : ", implerName)
 		} else {
-			page.WriteString("     m : ")
-			//fmt.Fprintf(page, " %s : ", implerName)
+			//page.WriteString("     m : ")
+			fmt.Fprintf(page, " %s.m : ", implerName)
 		}
 	}
 
@@ -1774,10 +1801,17 @@ func (ds *docServer) writeMethodForListing(page *htmlPage, docPkg *code.Package,
 
 	if writeReceiver {
 		if sel.PointerReceiverOnly() {
-			page.WriteString("(*T) ")
+			//page.WriteString("(*T) ")
+			page.WriteString("(*")
 		} else {
-			page.WriteString("( T) ")
+			//page.WriteString("( T) ")
+			page.WriteString("( ")
 		}
+		page.WriteString(forTypeName.Name())
+		//>> 1.18
+		writeTypeParamsForMethodReceiver(page, method, forTypeName)
+		//<<
+		page.WriteString(") ")
 	}
 
 	if method.Pkg.Path() == "builtin" {
@@ -1817,13 +1851,13 @@ func writeKindText(page *htmlPage, tt types.Type) {
 	case *types.Basic:
 		kind = page.Translation().Text_BasicType()
 	case *types.Pointer:
-		kind = "*T"
+		kind = "*"
 	case *types.Struct:
 		kind = reflect.Struct.String()
 	case *types.Array:
-		kind = "[...]T"
+		kind = "[...]"
 	case *types.Slice:
-		kind = "[]T"
+		kind = "[]"
 	case *types.Map:
 		kind = reflect.Map.String()
 	case *types.Chan:
@@ -1912,6 +1946,10 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Pac
 		writeResName()
 
 		if writeType {
+			//>> 1.18
+			writeTypeParamsOfTypeName(page, res)
+			//<<
+
 			showSource := false
 			if isBuiltin {
 				// builtin package source code are fake.
@@ -2061,6 +2099,10 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Pac
 		writeResName()
 
 		if writeType {
+			//>> 1.18
+			writeTypeParamsOfFunciton(page, res)
+			//<<
+
 			ds.WriteAstType(page, res.AstDecl.Type, res.Pkg, res.Pkg, false, nil, nil)
 			//ds.writeValueTType(page, res.TType(), res.Pkg, false)
 		}
@@ -2304,11 +2346,34 @@ var (
 func (ds *docServer) WriteAstType(w *htmlPage, typeLit ast.Expr, codePkg, docPkg *code.Package, funcKeywordNeeded bool, recvParam *ast.Field, forTypeName *code.TypeName) {
 	switch node := typeLit.(type) {
 	default:
-		panic(fmt.Sprint("WriteType, unknown node: ", node))
-	case *ast.ParenExpr:
-		w.Write(leftParen)
+		panic(fmt.Sprintf("WriteType, unknown node: %[1]T, %[1]v", node))
+	//>> 1.18
+	case *astUnaryExpr:
+		w.WriteString(node.Op.String())
 		ds.WriteAstType(w, node.X, codePkg, docPkg, true, nil, forTypeName)
-		w.Write(rightParen)
+	case *astBinaryExpr:
+		ds.WriteAstType(w, node.X, codePkg, docPkg, true, nil, forTypeName)
+		w.Write(space)
+		w.WriteString(node.Op.String())
+		w.Write(space)
+		ds.WriteAstType(w, node.Y, codePkg, docPkg, true, nil, forTypeName)
+	case *astIndexExpr:
+		// ast.Ident or ast.SelectorExpr
+		ds.WriteAstType(w, node.X, codePkg, docPkg, true, nil, forTypeName)
+		w.Write(leftSquare)
+		ds.WriteAstType(w, node.Index, codePkg, docPkg, true, nil, forTypeName)
+		w.Write(rightSquare)
+	case *astIndexListExpr:
+		ds.WriteAstType(w, node.X, codePkg, docPkg, true, nil, forTypeName)
+		w.Write(leftSquare)
+		for i := range node.Indices {
+			if i > 0 {
+				w.Write(comma)
+			}
+			ds.WriteAstType(w, node.Indices[i], codePkg, docPkg, true, nil, forTypeName)
+		}
+		w.Write(rightSquare)
+	//<<
 	case *ast.Ident:
 		// obj := codePkg.PPkg.TypesInfo.ObjectOf(node)
 		// The above one might return a *types.Var object for embedding field.
@@ -2423,6 +2488,10 @@ func (ds *docServer) WriteAstType(w *htmlPage, typeLit ast.Expr, codePkg, docPkg
 			//log.Printf("============ %v, %v, %v", tt, pkg.Path(), ttPos)
 			writeSrouceCodeLineLink(w, p, ttPos, node.Sel.Name, "")
 		}
+	case *ast.ParenExpr:
+		w.Write(leftParen)
+		ds.WriteAstType(w, node.X, codePkg, docPkg, true, nil, forTypeName)
+		w.Write(rightParen)
 	case *ast.StarExpr:
 		w.Write(star)
 		ds.WriteAstType(w, node.X, codePkg, docPkg, true, nil, forTypeName)

@@ -273,6 +273,8 @@ func (d *CodeAnalyzer) Id1b(pkg *Package, name string) string {
 	return d.Id1(pkg.PPkg.Types, name)
 }
 
+// ToDo: avoid string concating by using a struct{pkg; name} for Id and Id2 functions.
+
 // Id2 builds an id from the specified package and identifier name.
 func (d *CodeAnalyzer) Id2(p *types.Package, name string) string {
 	if p == nil {
@@ -334,7 +336,7 @@ func (d *CodeAnalyzer) registeringType(t types.Type, createOnNonexist bool) *Typ
 	typeInfo, _ := d.ttype2TypeInfoTable.At(t).(*TypeInfo)
 	if typeInfo == nil && createOnNonexist {
 		if d.forbidRegisterTypes {
-			log.Println("=================================", t)
+			log.Printf("================================= %v, %T", t, t)
 		}
 
 		//d.lastTypeIndex++ // the old design (1-based)
@@ -497,6 +499,44 @@ func (d *CodeAnalyzer) iterateTypenames(typeLiteral ast.Expr, pkg *Package, onTy
 	switch node := typeLiteral.(type) {
 	default:
 		panic(fmt.Sprintf("unexpected ast expression. %T : %v", node, node))
+	// 1.18, ToDo
+	//>> it is actually a fallthrough to the next branch.
+	case *astIndexExpr, *astIndexListExpr:
+		tt := pkg.PPkg.TypesInfo.TypeOf(node)
+		if tt == nil {
+			// ToDo: good?
+			if pkg.Path() == "unsafe" {
+				return
+			}
+			//log.Println("??? type of node is nil:", node.Name, pkg.Path())
+			return
+		}
+		switch t := tt.(type) {
+		default:
+			// not interested
+
+			// log.Printf("%T, %v", tt, tt)
+
+			// ToDo: it might be an alias to an unnamed type
+			//       To also collect functions for such aliases.
+
+			return // not interested
+		case *typesTypeParam: // 1.18
+			//log.Printf("%T, %v", tt, tt)
+			return // not interested
+		case *types.Basic:
+		case *types.Named:
+			//>> 1.18
+			tt = originType(t)
+			//<<
+		}
+		typeInfo := d.RegisterType(tt)
+		if typeInfo.TypeName == nil {
+			//panic("not a named type")
+			return
+		}
+		onTypeName(typeInfo)
+	//<<
 	case *ast.Ident:
 		tt := pkg.PPkg.TypesInfo.TypeOf(node)
 		if tt == nil {
@@ -507,15 +547,34 @@ func (d *CodeAnalyzer) iterateTypenames(typeLiteral ast.Expr, pkg *Package, onTy
 			log.Println("??? type of node is nil:", node.Name, pkg.Path())
 			return
 		}
+		switch t := tt.(type) {
+		default:
+			// not interested
+
+			// log.Printf("%T, %v", tt, tt)
+
+			// ToDo: it might be an alias to an unnamed type
+			//       To also collect functions for such aliases.
+
+			return // not interested
+		case *typesTypeParam: // 1.18
+			//log.Printf("%T, %v", tt, tt)
+			return // not interested
+		case *types.Basic:
+		case *types.Named:
+			//>> 1.18
+			tt = originType(t)
+			//<<
+		}
 		typeInfo := d.RegisterType(tt)
 		if typeInfo.TypeName == nil {
 			//panic("not a named type")
-			return // it might be an alias to an unnamed type
-			// ToDo: also collect functions for such aliases.
+			return
 		}
 		onTypeName(typeInfo)
-	case *ast.SelectorExpr:
+	case *ast.SelectorExpr: // ToDo: merge with *ast.IndexExpr, *ast.IndexListExpr branch?
 		d.iterateTypenames(node.Sel, pkg, onTypeName)
+
 	case *ast.ParenExpr:
 		d.iterateTypenames(node.X, pkg, onTypeName)
 	case *ast.StarExpr:
@@ -529,20 +588,79 @@ func (d *CodeAnalyzer) iterateTypenames(typeLiteral ast.Expr, pkg *Package, onTy
 		d.iterateTypenames(node.Value, pkg, onTypeName)
 	case *ast.ChanType:
 		d.iterateTypenames(node.Value, pkg, onTypeName)
-	// To avoid return too much weak-related results, the following types are ignored now.
+	// To avoid returning too much weak-related results, the following types are ignored now.
 	case *ast.FuncType:
 	case *ast.StructType:
 	case *ast.InterfaceType:
 	}
 }
 
+// I some forget the meaningfulness of this method.
+// It looks this method is to collect complete method lists for types,
+// which is important to calculate implementation relations.
+//
+// As Go 1.18 introduces custom generics, two new possible type exprssion nodes
+// (ast.IndexExpr and ast.IndexListExpr, both denote named types) are added,
+// so the "unnamed" word in the method name is not accurate now.
 func (d *CodeAnalyzer) lookForAndRegisterUnnamedInterfaceAndStructTypes(typeLiteral ast.Node, pkg *Package) {
+	// ToDo: move this func to package level?
 	var reg = func(n ast.Expr) *TypeInfo {
 		tv := pkg.PPkg.TypesInfo.Types[n]
 		return d.RegisterType(tv.Type)
 	}
 
 	switch node := typeLiteral.(type) {
+
+	//>> 1.18, ToDo
+	// If the underlying type of reg(node) is an interfae type,
+	// need to find a way to get the ast.Node for the interface type.
+	// Need an inverse-lookup from the IndexExpr/IndexListExpr to the generics declaration
+	// so that the ast.Node could be found.
+	// So, need one more pass:
+	// 1. collect all the instances of each generic type, (in a loop "for range allPkgs")
+	// 2. in another loop "for range allPkgs", handle all variable types:
+	//    "for range pkg.PackageAnalyzeResult.AllVariables"
+	// The WriteAstType function might also need some tweaks,
+	// by replace the type parameters with type arguments,
+	// but might also not (maybe WriteAstType doesn't require to do this).
+	//
+	// Maybe, at least for some situations,
+	// registerDirectFields and registerExplicitlySpecifiedMethods don't need
+	// set the ast.Node for Field and Method structs, but the need to handle the cases
+	// in which AstFunc or AstField is nil. The ast nodes are used in fields/method listing.
+
+	case *astIndexExpr:
+		//log.Printf("======== node = %v, %#v", node, node)
+		t := reg(node)
+		_ = t
+
+		//>> 1.18, ToDo
+		// How to get the instanced ast.Node, with the specified TypeParams?
+		//if t.Underlying is interface or struct {
+		//	d.registerDirectFields needs ast info
+		//    d.registerExplicitlySpecifiedMethods needs ast info
+		//}
+		//<<
+
+		d.lookForAndRegisterUnnamedInterfaceAndStructTypes(node.Index, pkg)
+		return
+	case *astIndexListExpr:
+		//log.Printf("======== node = %v, %#v", node, node)
+		t := reg(node)
+		_ = t
+
+		//>> 1.18, ToDo
+		// How to get the instanced ast.Node, with the specified TypeParams?
+		//if t.Underlying is interface or struct {
+		//	d.registerDirectFields needs ast info
+		//    d.registerExplicitlySpecifiedMethods needs ast info
+		//}
+		//<<
+
+		for _, index := range node.Indices {
+			d.lookForAndRegisterUnnamedInterfaceAndStructTypes(index, pkg)
+		}
+	//<<
 	default:
 		panic(fmt.Sprintf("unexpected ast expression. %T : %v", node, node))
 	case *ast.BadExpr:
@@ -763,7 +881,8 @@ func (d *CodeAnalyzer) registerUnnamedInterfaceAndStructTypesFromParametersAndRe
 	}
 }
 
-// ToDo: now interface{Error() string} and interface{error} will be viewed as one TypeInfo
+// ToDo: now interface{Error() string} and interface{error} will be viewed as one TypeInfo,
+//       which is true from Go senmatics view, but might be not good from code analysis view.
 func (d *CodeAnalyzer) registerExplicitlySpecifiedMethods(typeInfo *TypeInfo, astInterfaceNode *ast.InterfaceType, pkg *Package) {
 	//if (typeInfo.attributes & directSelectorsCollected) != 0 {
 	//	return
@@ -848,13 +967,19 @@ func (d *CodeAnalyzer) registerExplicitlySpecifiedMethods(typeInfo *TypeInfo, as
 	for _, method := range astInterfaceNode.Methods.List {
 		// method is a *ast.Field.
 
-		if len(method.Names) == 0 { // embed interface type (anonymous field)
-
+		if len(method.Names) == 0 {
 			var id string
 			switch expr := method.Type.(type) {
 			default:
-				// ToDo: 1.18, *ast.BinaryExpr
-				//>>
+				// embed interface type (anonymous field)
+
+				//>> 1.18
+				//
+				// Now, it is also possible
+				// * an unnamed type
+				// * an instantiated type
+				// * a type union (ast.BinaryExpr)
+				// * ~aType (ast.UnaryExpr)
 				continue
 				//<<
 
@@ -909,10 +1034,11 @@ func (d *CodeAnalyzer) registerExplicitlySpecifiedMethods(typeInfo *TypeInfo, as
 			if pkg == d.builtinPkg && ident.Name == "Error" {
 				// The special handling is to correctly find all implementations of the builtin "error" type.
 				errorUnderlyingType := types.Universe.Lookup("error").(*types.TypeName).Type().Underlying().(*types.Interface)
+				// ToDo: optimization: the result should be cached
 				methodTypeInfo = d.RegisterType(errorUnderlyingType.Method(0).Type())
 			}
 
-			registerMethod(&Method{
+			m := &Method{
 				Pkg:  pkg,
 				Name: ident.Name,
 				Type: methodTypeInfo,
@@ -921,7 +1047,12 @@ func (d *CodeAnalyzer) registerExplicitlySpecifiedMethods(typeInfo *TypeInfo, as
 
 				//AstInterface: astInterfaceNode,
 				AstField: method,
-			})
+			}
+			//>> 1.18, ToDo
+			//m.Parameterized = checkParameterized(m.Type)
+			//<<
+
+			registerMethod(m)
 
 			astFunc, ok := method.Type.(*ast.FuncType)
 			if !ok {
@@ -968,6 +1099,10 @@ func (d *CodeAnalyzer) registerExplicitlyDeclaredMethod(f *Function) {
 
 	// ToDo: using sig.Params() and sig.Results() instead of funcObj.Type()
 
+	//>> 1.18
+	baseTT = originType(baseTT)
+	//<<
+
 	typeInfo := d.RegisterType(baseTT)
 	if typeInfo.DirectSelectors == nil {
 		selectors := make([]*Selector, 0, 16)
@@ -980,6 +1115,9 @@ func (d *CodeAnalyzer) registerExplicitlyDeclaredMethod(f *Function) {
 		PointerRecv: ptrRecv,
 		AstFunc:     funcDecl,
 	}
+	//>> 1.18, ToDo
+	//method.Parameterized = checkParameterized(method.Type)
+	//<<
 	if !token.IsExported(funcName) {
 		method.Pkg = pkg
 		if pkg == d.builtinPkg {
@@ -1075,6 +1213,11 @@ func (d *CodeAnalyzer) registerFunctionForInvolvedTypeNames(f FunctionResource) 
 func (d *CodeAnalyzer) registerValueForItsTypeName(res ValueResource) {
 	t := res.TypeInfo(d)
 	toRegsiter := t.TypeName != nil
+
+	//if d.debug {
+	//	log.Printf("======= toRegsiter %v, === %v, === %v, ", toRegsiter, t.TypeName, res)
+	//}
+
 	if !toRegsiter {
 		// ToDo: also for []T, [N]T, chan T, etc.
 		switch tt := t.TT.(type) {
