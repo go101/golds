@@ -51,6 +51,10 @@
 
 * use padding instead of indent tabs
 
+* support https://github.com/go101/golds/issues/25
+  syupport "golds aModule@version"
+  * create a temp dir to process
+
 * show/run examples/tests/banchmarks 
   (Tests==true, cause reflect.EmbedWithUnexpMeth not found in analyzePackage_ConfirmTypeSources/registerDirectFields now)
   * use custom implementation? Ast load example_xxx_test.go file only, ...
