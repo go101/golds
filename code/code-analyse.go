@@ -1849,9 +1849,11 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 								continue
 							}
 
+							//>> 1.18
 							if objName == "any" {
 								d.blankInterface = srcTypeInfo
 							}
+							//<<
 
 							var ok bool
 							// It looks the parsed one are not the internal one.

@@ -296,6 +296,10 @@ func (*English) Text_PackageLevelTypeNames() string {
 	return "Package-Level Type Names"
 }
 
+func (*English) Text_TypeParameters() string {
+	return "Type Parameters"
+}
+
 //func (*English) Text_AllPackageLevelValues(num int) string {
 //	return "Package-Level Values"
 //}

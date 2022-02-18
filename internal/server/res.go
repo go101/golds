@@ -77,6 +77,7 @@ type Translation interface {
 	Text_InvolvedFiles(num int) string
 	Text_Examples(num int) string
 	Text_PackageLevelTypeNames() string
+	Text_TypeParameters() string
 	//Text_AllPackageLevelValues(num int) string
 	Text_PackageLevelFunctions() string
 	Text_PackageLevelVariables() string

@@ -73,12 +73,12 @@ func writeTypeParamsForMethodReceiver(page *htmlPage, method *code.Method, forTy
 
 func (ds *docServer) _writeTypeParameterList(page *htmlPage, pkg *code.Package, typePatams *ast.FieldList) {
 	page.WriteString("\n\n\t\t")
-	page.WriteString("Type Parameters:")
+	page.WriteString(page.Translation().Text_TypeParameters())
 	for _, fld := range typePatams.List {
 		for _, n := range fld.Names {
 			page.WriteString("\n\t\t\t")
 			page.WriteString(n.Name)
-			page.WriteString(": ")
+			page.WriteString(page.Translation().Text_Colon(true))
 			ds.WriteAstType(page, fld.Type, pkg, pkg, true, nil, nil)
 		}
 	}

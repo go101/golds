@@ -263,6 +263,10 @@ func (*Chinese) Text_PackageLevelTypeNames() string {
 	return "包级类型名"
 }
 
+func (*Chinese) Text_TypeParameters() string {
+	return "类型形参"
+}
+
 //func (*Chinese) Text_AllPackageLevelValues(num int) string {
 //	return "包级值"
 //}
