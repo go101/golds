@@ -38,6 +38,8 @@
 
 * <a class="deplucated">xxx</a><a>yyy/a> should change to <a><span class="deplucated">xxx</span>yy</a>
 
+* text searching
+
 * static analysis
   * mark unused variables (global, local, parameters, receiver)
     * some unuseds should be skipped (ex. a method implementing an interface)
