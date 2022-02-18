@@ -1590,10 +1590,15 @@ func (d *CodeAnalyzer) sortPackagesByDepHeight() {
 		calculatePackageDepHeight(pkg)
 	}
 
+	var old = d.builtinPkg.DepHeight
+	d.builtinPkg.DepHeight = 0
+
 	// The analyse order:
 	sort.Slice(d.packageList, func(i, j int) bool {
 		return d.packageList[i].DepHeight < d.packageList[j].DepHeight
 	})
+
+	d.builtinPkg.DepHeight = old
 
 	for i, pkg := range d.packageList {
 		pkg.Index = i
@@ -1727,7 +1732,7 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 		// function stats are moved to below
 	}
 
-	var isBuiltinPkg = pkg.Path() == "builtin"
+	var isBuiltinPkg = pkg == d.builtinPkg // pkg.Path() == "builtin"
 	var isUnsafePkg = pkg.Path() == "unsafe"
 	//var isBuildinOrUnsafe = isBuiltinPkg || isUnsafePkg
 
@@ -1834,12 +1839,18 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 						}
 
 						var srcType = tv.Type
+						srcTypeInfo := d.RegisterType(srcType)
+
 						var objName = typeObj.Name()
 
 						// Exported names, such as Type and Type1 are fake types.
 						if isBuiltinPkg {
 							if token.IsExported(objName) {
 								continue
+							}
+
+							if objName == "any" {
+								d.blankInterface = srcTypeInfo
 							}
 
 							var ok bool
@@ -1850,6 +1861,7 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 							if !ok {
 								panic("builtin " + objName + " not found")
 							}
+
 							//log.Println(srcType, srcType.Underlying(), srcType == srcType.Underlying()) // true
 
 							//srcType = typeObj.Type().Underlying() // why underlying here? error and its underlying is different.
@@ -1886,7 +1898,6 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 						//	fmt.Println("===================", objName, srcType)
 						//}
 
-						srcTypeInfo := d.RegisterType(srcType)
 						newTypeInfo := d.RegisterType(typeObj.Type())
 
 						//if isBuiltinPkg && !token.IsExported(objName) {
@@ -2177,7 +2188,7 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 		//
 		// An example: var reserved = new(struct{ types.Type })
 		//
-		// Currently, this is not bad, for we don't need calculate method set
+		// Currently, this is not bad, for we don't need to calculate method set
 		// for such types and the struct and interface types contained in it.
 		if v.AstSpec.Type != nil {
 			d.lookForAndRegisterUnnamedInterfaceAndStructTypes(v.AstSpec.Type, v.Pkg)
@@ -2203,7 +2214,7 @@ func (d *CodeAnalyzer) analyzePackage_CollectMoreStatistics(pkg *Package) {
 	if pkg.PackageAnalyzeResult == nil {
 		panic(pkg.Path() + " is not analyzed yet")
 	}
-	var isBuiltinPkg = pkg.Path() == "builtin"
+	var isBuiltinPkg = pkg == d.builtinPkg // pkg.Path() == "builtin"
 
 	for _, tn := range pkg.PackageAnalyzeResult.AllTypeNames {
 		d.stats.roughTypeNameCount++
@@ -2360,7 +2371,7 @@ func (d *CodeAnalyzer) analyzePackage_CollectSomeRuntimeFunctionPositions() {
 }
 
 func (d *CodeAnalyzer) analyzePackage_ConfirmTypeSources(pkg *Package) {
-	var isBuiltin = pkg.Path() == "builtin"
+	var isBuiltin = pkg == d.builtinPkg // pkg.Path() == "builtin"
 
 	//log.Println("[analyzing]", pkg.Path(), pkg.PPkg.Name)
 	for _, file := range pkg.PPkg.Syntax {
@@ -2406,6 +2417,9 @@ func (d *CodeAnalyzer) analyzePackage_ConfirmTypeSources(pkg *Package) {
 						var ittNode *ast.InterfaceType
 
 						switch expr := srcNode.(type) {
+						//>> 1.18, ToDo
+						// handle Index and IndexList?
+						//<<
 						case *ast.Ident:
 
 							//log.Println("???", d.Id(pkg.PPkg.Types, expr.Name))
@@ -2476,26 +2490,31 @@ func (d *CodeAnalyzer) analyzePackage_ConfirmTypeSources(pkg *Package) {
 						if sttNode != nil {
 							d.registerDirectFields(srcTypeInfo, sttNode, pkg)
 						} else if ittNode != nil {
-							if isBuiltin && typeSpec.Name.Name == "error" {
-								/*
-									//errorTN, _ := types.Universe.Lookup("error").(*types.TypeName)
-									//errotUT := d.RegisterType(errorTN.Type().Underlying())
-									//d.registerExplicitlySpecifiedMethods(errotUT, ittNode, pkg)
+							if isBuiltin {
+								if typeSpec.Name.Name == "error" {
+									/*
+										//errorTN, _ := types.Universe.Lookup("error").(*types.TypeName)
+										//errotUT := d.RegisterType(errorTN.Type().Underlying())
+										//d.registerExplicitlySpecifiedMethods(errotUT, ittNode, pkg)
 
-									//log.Println("=============== old:", srcTypeInfo.index)
-									// This one is the type shown in the builtin.go source code,
-									// not the one in type.Universal package. This one is only for docs purpose.
-									// ToDo: use custom builtin page, remove the special handling.
+										//log.Println("=============== old:", srcTypeInfo.index)
+										// This one is the type shown in the builtin.go source code,
+										// not the one in type.Universal package. This one is only for docs purpose.
+										// ToDo: use custom builtin page, remove the special handling.
+										d.registerExplicitlySpecifiedMethods(srcTypeInfo, ittNode, pkg)
+
+										// ToDo: load builtin.error != universal.error
+										srcTypeInfo = d.RegisterType(newTypeName.Named.TT.Underlying())
+
+										//log.Println("===============", errotUT.index, srcTypeInfo.index)
+									*/
+
 									d.registerExplicitlySpecifiedMethods(srcTypeInfo, ittNode, pkg)
-
-									// ToDo: load builtin.error != universal.error
-									srcTypeInfo = d.RegisterType(newTypeName.Named.TT.Underlying())
-
-									//log.Println("===============", errotUT.index, srcTypeInfo.index)
-								*/
-
-								d.registerExplicitlySpecifiedMethods(srcTypeInfo, ittNode, pkg)
-								srcTypeInfo = d.RegisterType(types.Universe.Lookup("error").(*types.TypeName).Type().Underlying())
+									srcTypeInfo = d.RegisterType(types.Universe.Lookup("error").(*types.TypeName).Type().Underlying())
+								} else if typeSpec.Name.Name == "comparable" {
+									d.registerExplicitlySpecifiedMethods(srcTypeInfo, ittNode, pkg)
+									srcTypeInfo = d.RegisterType(types.Universe.Lookup("comparable").(*types.TypeName).Type().Underlying())
+								}
 							}
 							d.registerExplicitlySpecifiedMethods(srcTypeInfo, ittNode, pkg)
 						}

@@ -11,6 +11,7 @@
 * id introduced in version: 1.15-, 1.16, 1.17, ...
 
 * generics
+  * use https://pkg.go.dev/golang.org/x/exp/typeparams ?
   * click a type param, highlight all its refs in package details package
     * id hightlight in source code optimization: enclose each function in a div
       or each function is a hight scope unit: multiple highlighting
@@ -23,6 +24,7 @@
   * type implementations
     * types whose method prototypes without or with TypeParam:
       whether or not list instanced types
+  * check d.forbidRegisterTypes voilations by generic code
 
 * use https://pkg.go.dev/golang.org/x/tools/go/buildutil to replace some go command runs.
   * how to pass -tags "tag1 tag2" options in "go build"

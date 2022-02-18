@@ -74,6 +74,8 @@ type CodeAnalyzer struct {
 	ttype2TypeInfoTable typeutil.Map
 	allTypeInfos        []*TypeInfo
 
+	blankInterface *TypeInfo // 1.18, fake underlying for instantiated types
+
 	// Package-level declared type names.
 	lastTypeNameIndex uint32
 	allTypeNameTable  map[string]*TypeName
@@ -336,7 +338,9 @@ func (d *CodeAnalyzer) registeringType(t types.Type, createOnNonexist bool) *Typ
 	typeInfo, _ := d.ttype2TypeInfoTable.At(t).(*TypeInfo)
 	if typeInfo == nil && createOnNonexist {
 		if d.forbidRegisterTypes {
-			log.Printf("================================= %v, %T", t, t)
+			if d.debug {
+				log.Printf("================================= %v, %T", t, t)
+			}
 		}
 
 		//d.lastTypeIndex++ // the old design (1-based)
@@ -370,6 +374,15 @@ func (d *CodeAnalyzer) registeringType(t types.Type, createOnNonexist bool) *Typ
 
 		switch t := t.(type) {
 		case *types.Named:
+			//>> 1.18, todo
+			// Fake underlying for instantiated types.
+			// A temp handling to avoid high code complexity.
+			if t.Origin() != t {
+				typeInfo.Underlying = d.blankInterface
+				break
+			}
+			//<<
+
 			//typeInfo.Name = t.Obj().Name()
 
 			underlying := d.RegisterType(t.Underlying())
@@ -1211,7 +1224,12 @@ func (d *CodeAnalyzer) registerFunctionForInvolvedTypeNames(f FunctionResource) 
 }
 
 func (d *CodeAnalyzer) registerValueForItsTypeName(res ValueResource) {
+	//>> 1.18, ToDo
+	// Now, for an instantiated type, t.TypeName is nil.
+	// ToDo: in d.registeringType, if t.TT is found a *types.Named,
+	//       then find the Origin type, and register the value on that origin type.
 	t := res.TypeInfo(d)
+	//<<
 	toRegsiter := t.TypeName != nil
 
 	//if d.debug {

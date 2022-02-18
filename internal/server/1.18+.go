@@ -5,6 +5,7 @@ package server
 
 import (
 	"go/ast"
+	"go/types"
 
 	"go101.org/golds/code"
 )
@@ -14,6 +15,8 @@ type (
 	astIndexListExpr = ast.IndexListExpr
 	astUnaryExpr     = ast.UnaryExpr
 	astBinaryExpr    = ast.BinaryExpr
+
+	typesTypeParam = types.TypeParam
 )
 
 func _writeTypeParams(page *htmlPage, fields []*ast.Field) {

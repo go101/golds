@@ -1383,6 +1383,15 @@ func (v *astVisitor) handleIdent(ident *ast.Ident) {
 	var inTopTypeSpecRange = v.topLevelTypeSpecInfo != nil &&
 		obj.Pos() > v.topLevelTypeSpecInfo.Pos() &&
 		obj.Pos() < v.topLevelTypeSpecInfo.End()
+	for inTopTypeSpecRange {
+		if tn, ok := obj.(*types.TypeName); ok {
+			if _, ok = tn.Type().(*typesTypeParam); ok {
+				break
+			}
+		}
+		inTopTypeSpecRange = false
+		break
+	}
 
 	var sameFileObjOrderId int32 = -1
 
