@@ -47,17 +47,29 @@ func writeTypeParamsOfFunciton(page *htmlPage, res *code.Function) {
 func writeTypeParamsForMethodReceiver(page *htmlPage, method *code.Method, forTypeName *code.TypeName) {
 	if method.AstFunc != nil {
 		var writeTypeNames func()
-		switch e := method.AstFunc.Recv.List[0].Type.(type) {
+
+		var expr = method.AstFunc.Recv.List[0].Type
+	GoOn:
+		switch e := expr.(type) {
 		case *ast.IndexExpr:
 			writeTypeNames = func() {
 				page.WriteString(e.Index.(*ast.Ident).Name)
 			}
 		case *ast.IndexListExpr:
 			writeTypeNames = func() {
-				for _, index := range e.Indices {
+				for i, index := range e.Indices {
+					if i > 0 {
+						page.WriteString(page.Translation().Text_Comma())
+					}
 					page.WriteString(index.(*ast.Ident).Name)
 				}
 			}
+		case *ast.ParenExpr:
+			expr = e.X
+			goto GoOn
+		case *ast.StarExpr:
+			expr = e.X
+			goto GoOn
 		}
 		if writeTypeNames != nil {
 			page.Write(leftSquare)
@@ -74,11 +86,12 @@ func writeTypeParamsForMethodReceiver(page *htmlPage, method *code.Method, forTy
 func (ds *docServer) _writeTypeParameterList(page *htmlPage, pkg *code.Package, typePatams *ast.FieldList) {
 	page.WriteString("\n\n\t\t")
 	page.WriteString(page.Translation().Text_TypeParameters())
+	page.WriteString(page.Translation().Text_Colon(true))
 	for _, fld := range typePatams.List {
 		for _, n := range fld.Names {
 			page.WriteString("\n\t\t\t")
 			page.WriteString(n.Name)
-			page.WriteString(page.Translation().Text_Colon(true))
+			page.WriteString(page.Translation().Text_Colon(false))
 			ds.WriteAstType(page, fld.Type, pkg, pkg, true, nil, nil)
 		}
 	}

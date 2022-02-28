@@ -1958,6 +1958,9 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Pac
 				allowStar := res.Alias != nil
 				for t, done := res.AstSpec.Type, false; !done; {
 					switch e := t.(type) {
+					//>> ToDo 1.18
+					// astIndexExpr, astIndexListExpr ?
+					//<<
 					case *ast.Ident, *ast.SelectorExpr:
 						showSource = true
 						done = true

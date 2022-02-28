@@ -2073,12 +2073,15 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 			case *ast.Ident:
 				id = expr
 			case *ast.StarExpr:
-				tid, ok := expr.X.(*ast.Ident)
-				if !ok {
-					panic("should not")
-				}
-				id = tid
+				//tid, ok := expr.X.(*ast.Ident)
+				//if !ok {
+				//	panic("should not")
+				//}
+				//id = tid
+
+				tnNode = expr.X
 				f.attributes |= StarReceiver
+				goto Again
 			case *ast.ParenExpr:
 				tnNode = expr.X
 				goto Again
@@ -2516,6 +2519,9 @@ func (d *CodeAnalyzer) analyzePackage_ConfirmTypeSources(pkg *Package) {
 								} else if typeSpec.Name.Name == "comparable" {
 									d.registerExplicitlySpecifiedMethods(srcTypeInfo, ittNode, pkg)
 									srcTypeInfo = d.RegisterType(types.Universe.Lookup("comparable").(*types.TypeName).Type().Underlying())
+								} else if typeSpec.Name.Name == "ordered" { // just a pure guess later versions will introduce this one
+									d.registerExplicitlySpecifiedMethods(srcTypeInfo, ittNode, pkg)
+									srcTypeInfo = d.RegisterType(types.Universe.Lookup("ordered").(*types.TypeName).Type().Underlying())
 								}
 							}
 							d.registerExplicitlySpecifiedMethods(srcTypeInfo, ittNode, pkg)
