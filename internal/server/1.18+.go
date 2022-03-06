@@ -44,11 +44,11 @@ func writeTypeParamsOfFunciton(page *htmlPage, res *code.Function) {
 	}
 }
 
-func writeTypeParamsForMethodReceiver(page *htmlPage, method *code.Method, forTypeName *code.TypeName) {
-	if method.AstFunc != nil {
+func writeTypeParamsForMethodReceiver(page *htmlPage, methodFunc *ast.FuncDecl, forTypeName *code.TypeName) {
+	if methodFunc != nil {
 		var writeTypeNames func()
 
-		var expr = method.AstFunc.Recv.List[0].Type
+		var expr = methodFunc.Recv.List[0].Type
 	GoOn:
 		switch e := expr.(type) {
 		case *ast.IndexExpr:

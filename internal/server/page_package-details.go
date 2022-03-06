@@ -1604,13 +1604,13 @@ func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pk
 					//fmt.Fprintf(page, `(*<a href="/pkg:%[1]s#name-%[2]s">%[2]s</a>).`, v.Package().Path(), tn.Name())
 					page.WriteString("(*")
 					buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, v.Package().Path()), page, tn.Name(), "name-", tn.Name())
-					page.WriteString(").")
+					page.WriteString(")")
 				} else {
 					// ToDo: faster way: ds.analyzer.TryRegisteringType(tn.Type()) == forTypeName.Denoting()?
 					if forTypeName != nil && types.Identical(tn.Type(), forTypeName.Denoting().TT) {
-						fmt.Fprintf(page, `(*%[1]s).`, tn.Name())
+						fmt.Fprintf(page, `(*%[1]s)`, tn.Name())
 					} else {
-						fmt.Fprintf(page, `(*<a href="#name-%[1]s">%[1]s</a>).`, tn.Name())
+						fmt.Fprintf(page, `(*<a href="#name-%[1]s">%[1]s</a>)`, tn.Name())
 					}
 				}
 				//fmt.Fprintf(page, "(*%s) ", tn.Name())
@@ -1618,17 +1618,25 @@ func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pk
 				if v.Package() != pkg {
 					//fmt.Fprintf(page, `<a href="/pkg:%[1]s#name-%[2]s">%[2]s</a>.`, v.Package().Path(), tn.Name())
 					buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, v.Package().Path()), page, tn.Name(), "name-", tn.Name())
-					page.WriteString(".")
 				} else {
 					// ToDo: faster way: ds.analyzer.TryRegisteringType(tn.Type()) == forTypeName.Denoting()?
 					if forTypeName != nil && types.Identical(tn.Type(), forTypeName.Denoting().TT) {
-						fmt.Fprintf(page, `%[1]s.`, tn.Name())
+						fmt.Fprintf(page, `%[1]s`, tn.Name())
 					} else {
-						fmt.Fprintf(page, `<a href="#name-%[1]s">%[1]s</a>.`, tn.Name())
+						fmt.Fprintf(page, `<a href="#name-%[1]s">%[1]s</a>`, tn.Name())
 					}
 				}
 				//fmt.Fprintf(page, "(%s) ", tn.Name())
 			}
+
+			//>> 1.18
+			var astFunc *ast.FuncDecl
+			if f, ok := res.(*code.Function); ok {
+				astFunc = f.AstDecl
+			}
+			writeTypeParamsForMethodReceiver(page, astFunc, forTypeName)
+			//<<
+			page.WriteString(".")
 
 			//writeSrouceCodeLineLink(page, v.Package(), pos, v.Name(), "")
 			writeSrouceCodeLineLink(page, res.AstPackage(), pos, v.Name(), "")
@@ -1809,7 +1817,7 @@ func (ds *docServer) writeMethodForListing(page *htmlPage, docPkg *code.Package,
 		}
 		page.WriteString(forTypeName.Name())
 		//>> 1.18
-		writeTypeParamsForMethodReceiver(page, method, forTypeName)
+		writeTypeParamsForMethodReceiver(page, method.AstFunc, forTypeName)
 		//<<
 		page.WriteString(") ")
 	}

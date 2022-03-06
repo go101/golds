@@ -28,7 +28,7 @@ func writeTypeParamsOfTypeName(page *htmlPage, res *code.TypeName) {
 func writeTypeParamsOfFunciton(page *htmlPage, res *code.Function) {
 }
 
-func writeTypeParamsForMethodReceiver(page *htmlPage, method *code.Method, forTypeName *code.TypeName) {
+func writeTypeParamsForMethodReceiver(page *htmlPage, methodFunc *ast.FuncDecl, forTypeName *code.TypeName) {
 }
 
 func (ds *docServer) writeTypeParameterListCallbackForTypeName(page *htmlPage, pkg *code.Package, tn *code.TypeName) func() {
