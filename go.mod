@@ -12,7 +12,7 @@ go 1.18
 //)
 
 require (
-	golang.org/x/net v0.0.0-20220127200216-cd36cc0744dd
+	golang.org/x/net v0.0.0-20220225172249-27dd8689420f
 	golang.org/x/text v0.3.7
 	golang.org/x/tools v0.1.9
 )

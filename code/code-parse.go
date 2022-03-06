@@ -60,13 +60,14 @@ func collectPPackages(ppkgs []*packages.Package) map[string]*packages.Package {
 	return allPPkgs
 }
 
+// ToDo: remove the jsonFormat parameter
 func getMatchedPackages(arg string, jsonFormat bool) ([][]byte, error) {
 	var output []byte
 	var err error
 	if jsonFormat {
-		output, err = util.RunShell(time.Minute, "", nil, "go", "list", "-json", arg)
+		output, err = util.RunShell(time.Minute*3, "", nil, "go", "list", "-e", "-find", "-json", arg)
 	} else {
-		output, err = util.RunShell(time.Minute, "", nil, "go", "list", arg)
+		output, err = util.RunShell(time.Minute*3, "", nil, "go", "list", "-e", "-find", arg)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("go list %s error: %w", arg, err)
@@ -82,7 +83,8 @@ func getMatchedPackages(arg string, jsonFormat bool) ([][]byte, error) {
 }
 
 func hasMatchedPackages(arg string) bool {
-	out, err := getMatchedPackages(arg, true)
+	//out, err := getMatchedPackages(arg, true)
+	out, err := getMatchedPackages(arg, false)
 	return err == nil && len(out) > 0
 }
 
@@ -197,11 +199,11 @@ func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...i
 			return fmt.Errorf("enter temp dir error: %w", err)
 		}
 		defer os.Chdir(oldDir)
-		_, err = util.RunShell(time.Minute, "", nil, "go", "mod", "init", "golds.app/tmp")
+		_, err = util.RunShell(time.Minute*3, "", nil, "go", "mod", "init", "golds.app/tmp")
 		if err != nil {
 			return fmt.Errorf("go mod init error: %w", err)
 		}
-		_, err = util.RunShell(time.Minute, "", nil, "go", "get", "-d", oldArgs[0])
+		_, err = util.RunShell(time.Minute*3, "", nil, "go", "get", "-d", oldArgs[0])
 		if err != nil {
 			return fmt.Errorf("go get %s error: %w", oldArgs[0], err)
 		}
@@ -461,8 +463,8 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 	// which makes the command return some incorrect modules for some packages.
 
 	// In the output, packages under GOROOT have not .Module info.
-	cmdAndArgs := append([]string{"go", "list", "-deps", "-json"}, args...)
-	output, err := util.RunShell(time.Minute, "", nil, cmdAndArgs...)
+	cmdAndArgs := append([]string{"go", "list", "-e", "-deps", "-json"}, args...)
+	output, err := util.RunShell(time.Minute*3, "", nil, cmdAndArgs...)
 	if err != nil {
 		log.Printf("unable to list packages and modules info: %s : %s. %s", strings.Join(cmdAndArgs, " "), output, err)
 		return

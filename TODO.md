@@ -6,6 +6,8 @@
 
 * show id ref counts, and ref counts should affect populirities.
 
+* add a debug flag, help users collect info
+
 * golds gopath
 
 * id introduced in version: 1.15-, 1.16, 1.17, ...
