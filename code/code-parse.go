@@ -65,16 +65,22 @@ func getMatchedPackages(arg string, jsonFormat bool) ([][]byte, error) {
 	var output []byte
 	var err error
 	if jsonFormat {
-		output, err = util.RunShell(time.Minute*3, "", nil, "go", "list", "-e", "-find", "-json", arg)
+		output, err = util.RunShell(time.Minute*3, "", nil, "go", "list", "-find", "-json", arg)
 	} else {
-		output, err = util.RunShell(time.Minute*3, "", nil, "go", "list", "-e", "-find", arg)
+		output, err = util.RunShell(time.Minute*3, "", nil, "go", "list", "-find", arg)
 	}
 	if err != nil {
 		return nil, fmt.Errorf("go list %s error: %w", arg, err)
 	}
 	output = bytes.TrimSpace(output)
+	if bytes.HasPrefix(output, []byte("go: ")) {
+		return nil, fmt.Errorf("go list %s error: %s", arg, output)
+	}
+	if bytes.HasPrefix(output, []byte("no required module provides package")) {
+		return nil, fmt.Errorf("go list %s error: %s", arg, output)
+	}
 	if jsonFormat {
-		if output[0] != '{' {
+		if !bytes.HasPrefix(output, []byte("{")) {
 			return nil, fmt.Errorf("go list %s error: %s", arg, output)
 		}
 	}
@@ -194,11 +200,11 @@ func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...i
 		defer os.RemoveAll(tempDir)
 		oldDir := util.WorkingDirectory()
 		err = os.Chdir(tempDir)
-
 		if err != nil {
 			return fmt.Errorf("enter temp dir error: %w", err)
 		}
 		defer os.Chdir(oldDir)
+
 		_, err = util.RunShell(time.Minute*3, "", nil, "go", "mod", "init", "golds.app/tmp")
 		if err != nil {
 			return fmt.Errorf("go mod init error: %w", err)
@@ -463,7 +469,7 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 	// which makes the command return some incorrect modules for some packages.
 
 	// In the output, packages under GOROOT have not .Module info.
-	cmdAndArgs := append([]string{"go", "list", "-e", "-deps", "-json"}, args...)
+	cmdAndArgs := append([]string{"go", "list", "-deps", "-json"}, args...)
 	output, err := util.RunShell(time.Minute*3, "", nil, cmdAndArgs...)
 	if err != nil {
 		log.Printf("unable to list packages and modules info: %s : %s. %s", strings.Join(cmdAndArgs, " "), output, err)
