@@ -1652,6 +1652,12 @@ func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pk
 				fmt.Fprintf(page, `<a href="#name-%[1]s">%[1]s</a>`, v.Name())
 			}
 
+			//>> 1.18
+			if fv, ok := res.(*code.Function); ok { // always ok
+				writeTypeParamsOfFunciton(page, fv)
+			}
+			//<<
+
 			ds.WriteAstType(page, res.AstFuncType(), res.AstPackage(), pkg, false, nil, forTypeName)
 		}
 	}
