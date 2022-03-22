@@ -132,7 +132,7 @@ type pageCacheValue struct {
 }
 
 func (ds *docServer) cachePage(key pageCacheKey, data []byte) {
-	if enabledPageCache {
+	if enabledPageCache && ds.cachedPages != nil {
 		if data == nil {
 			delete(ds.cachedPages, key)
 		} else {
@@ -142,7 +142,7 @@ func (ds *docServer) cachePage(key pageCacheKey, data []byte) {
 }
 
 func (ds *docServer) cachedPage(key pageCacheKey) (data []byte, ok bool) {
-	if enabledPageCache {
+	if enabledPageCache && ds.cachedPages != nil {
 		data, ok = ds.cachedPages[key]
 	}
 	return

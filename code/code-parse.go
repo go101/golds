@@ -228,7 +228,7 @@ func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...i
 	}
 
 	// ...
-	args = args[:0:cap(args)]
+	args = args[:0:len(args)]
 	for _, arg := range args[:cap(args)] {
 		if arg == "builtin" {
 			//goto Start
