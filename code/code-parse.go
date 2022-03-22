@@ -60,7 +60,6 @@ func collectPPackages(ppkgs []*packages.Package) map[string]*packages.Package {
 	return allPPkgs
 }
 
-// ToDo: remove the jsonFormat parameter
 func getMatchedPackages(arg string, jsonFormat bool) ([][]byte, error) {
 	var output []byte
 	var err error

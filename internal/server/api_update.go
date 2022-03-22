@@ -151,7 +151,7 @@ func (ds *docServer) updateGold() {
 			return errors.New("don't how to update Golds")
 		}
 		ds.updateLogger.Printf("Run: go %s", subCommand)
-		output, err := util.RunShellCommand(time.Minute*2, dir, []string{"GO111MODULE=on"}, "go", strings.SplitN(subCommand, " ", -1)...)
+		output, err := util.RunShellCommand(time.Minute*3, dir, []string{"GO111MODULE=on"}, "go", strings.SplitN(subCommand, " ", -1)...)
 		if len(output) > 0 {
 			ds.updateLogger.Printf("\n%s\n", output)
 		}
