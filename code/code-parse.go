@@ -148,6 +148,10 @@ func validateArgumentsAndSetOptions(args []string, toolchainPath string) ([]stri
 				//args = append(args, toolchainPath + string(filepath.Separator) + "..."
 				//args = append(args, "./...")
 				args = append(args, p)
+			} else if p == "." || strings.HasPrefix(p, "./") {
+				args = append(args, p)
+			} else if strings.HasPrefix(p, ".\\") {
+				args = append(args, strings.Replace(p, "\\", "/", -1))
 			} else {
 				if !hasMatchedPackages(p) {
 					//log.Printf("argument %s does not match any package, so it is discarded", p)
@@ -174,6 +178,14 @@ func validateArgumentsAndSetOptions(args []string, toolchainPath string) ([]stri
 	return args, hasToolchain, nil
 }
 
+type LoadError struct {
+	Errs []error
+}
+
+func (le *LoadError) Error() string { // just to implement error
+	return fmt.Sprintf("%d errors", len(le.Errs))
+}
+
 // ParsePackages parses input packages.
 func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...int32), completeModuleInfo func(*Module), toolchain ToolchainInfo, args ...string) error {
 	// the length of the input args is not zero for sure.
@@ -188,6 +200,8 @@ func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...i
 		if len(oldArgs) != 1 || strings.HasPrefix(oldArgs[0], ".") {
 			return errors.New("no packages matched")
 		}
+
+		// construct a temp project, ...
 
 		// go mod init golds.app/tmp
 		// go get oldArgs[0]
@@ -287,7 +301,8 @@ func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...i
 		return fmt.Errorf("packages.Load (parse packages): %w", err)
 	}
 
-	var hasErrors, hasRuntime bool
+	var hasRuntime bool
+	var loadErrs = make([]error, 0, len(ppkgs))
 	for _, ppkg := range ppkgs {
 		switch ppkg.PkgPath {
 		case "runtime":
@@ -296,24 +311,17 @@ func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...i
 			// skip "illegal cycle in declaration of int" alike errors.
 		//case "unsafe":
 		default:
-			// ToDo: how to judge "imported but not used" errors?
+			// ToDo: how to judge "imported but not used" errors to ignore them?
 
-			if packages.PrintErrors([]*packages.Package{ppkg}) > 0 {
-				hasErrors = true
+			for _, e := range ppkg.Errors {
+				loadErrs = append(loadErrs, e)
 			}
 		}
 	}
-	if hasErrors {
+
+	if len(loadErrs) > 0 {
 		//return errors.New("code parsing errors")
-		log.Fatal(`exit for above errors.
-
-If you are sure that the code should compile okay, and
-you just upgraded your Go toolchain to a new Go version,
-then please rebuild Golds with the following command.
-
-	go install go101.org/golds@latest
-
-`)
+		return &LoadError{Errs: loadErrs}
 	}
 
 	// For "golds main.go" cases.

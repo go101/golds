@@ -293,11 +293,31 @@ func (ds *docServer) analyze(args []string, options PageOutputOptions, toolchain
 
 	// ...
 	if err := ds.analyzer.ParsePackages(ds.onAnalyzingSubTaskDone, ds.tryToCompleteModuleInfo, toolchain, args...); err != nil {
-		log.Println(err)
-		//if printUsage != nil {
-		//printUsage(os.Stdout)
-		//}
-		os.Exit(1)
+		if loadErr, ok := err.(*code.LoadError); ok {
+			for _, e := range loadErr.Errs {
+				fmt.Fprintln(os.Stderr, e)
+			}
+
+			log.Println()
+			log.Fatal(`Exit for the above errors.
+
+If you are sure that the code should compile okay, and
+you just upgraded your Go toolchain to a new Go version,
+then please rebuild Golds with the following command.
+
+	go install go101.org/golds@latest
+
+`)
+
+		} else {
+			log.Println(err)
+
+			//if printUsage != nil {
+			//printUsage(os.Stdout)
+			//}
+
+			os.Exit(1)
+		}
 	}
 
 	// ...
