@@ -28,6 +28,11 @@
       whether or not list instanced types
   * check d.forbidRegisterTypes voilations by generic code
 
+* pure terminal mode
+  https://old.reddit.com/r/golang/comments/tueopt/how_to_get_a_list_of_types_conforming_to_a/i33dn64/?context=3
+  * interactive or not.
+  * non-interactive needs to cache analysis result.
+
 * use https://pkg.go.dev/golang.org/x/tools/go/buildutil to replace some go command runs.
   * how to pass -tags "tag1 tag2" options in "go build"
 
