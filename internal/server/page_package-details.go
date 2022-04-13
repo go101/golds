@@ -72,6 +72,10 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 		pkg.Name,
 	)
 
+	godevLink := pkg.ImportPath
+	//if pkg.IsStandard {
+	godevLink = strings.TrimPrefix(pkg.ImportPath, "vendor/")
+	//}
 	fmt.Fprintf(page, `
 <span class="title">%s</span>
 	<a href="%s#pkg-%s">%s</a>%s`,
@@ -79,7 +83,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 		buildPageHref(page.PathInfo, createPagePathInfo(ResTypeNone, ""), nil, ""),
 		pkg.ImportPath,
 		pkg.ImportPath,
-		page.Translation().Text_PackageDocsLinksOnOtherWebsites(pkg.ImportPath, pkg.IsStandard),
+		page.Translation().Text_PackageDocsLinksOnOtherWebsites(godevLink, pkg.IsStandard),
 	)
 
 	isBuiltin := pkg.ImportPath == "builtin"
