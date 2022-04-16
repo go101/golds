@@ -43,15 +43,6 @@
 * https://golang.org/pkg/go/doc/#Package
   bugs and notes, Examples
 
-* improve code
-
-  for dec := json.NewDecoder(buf); dec.More(); {
-		p := new(jsonPackage)
-		if err := dec.Decode(p); err != nil {
-			return nil, fmt.Errorf("JSON decoding failed: %v", err)
-		}
-
-
 * <a class="deplucated">xxx</a><a>yyy/a> should change to <a><span class="deplucated">xxx</span>yy</a>
 
 * text searching

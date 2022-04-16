@@ -40,6 +40,7 @@ func run() {
 	var roughBuildTimeFlag = flag.Bool("rough-build-time", false, "show rough build time")
 
 	flag.Parse()
+
 	if *roughBuildTimeFlag {
 		fmt.Print(RoughBuildTime)
 		return
@@ -50,6 +51,10 @@ func run() {
 	}
 	if *versionFlag || flag.NArg() == 1 && flag.Arg(0) == "version" {
 		printVersion(os.Stdout)
+		return
+	}
+	if flag.NArg() == 1 && flag.Arg(0) == "release" {
+		releaseGolds()
 		return
 	}
 

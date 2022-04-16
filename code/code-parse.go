@@ -472,9 +472,9 @@ func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...i
 	return nil
 }
 
-var newlineBrace = []byte{'\n', '{'}
-var newline = []byte{'\n'}
-var space = []byte{' '}
+//var newlineBrace = []byte{'\n', '{'}
+//var newline = []byte{'\n'}
+//var space = []byte{' '}
 
 func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, toolchain ToolchainInfo, completeModuleInfo func(*Module)) {
 	// go list -deps -json [args]
@@ -491,6 +491,7 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 	}
 	// Sometimes, "go list ./..." output "go: warning: "./..." matched no packages" without error code.
 	// So the ./... argument might be not filter off by hasMatchedPackages in validateArgumentsAndSetOptions.
+	// (ToDo: the above two line comment are invalid now, ...)
 	output = bytes.TrimSpace(output)
 	if i := bytes.IndexByte(output, '{'); i > 0 {
 		output = output[i:]
@@ -507,18 +508,43 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 		Standard bool // is this package part of the standard Go library?
 	}
 
+	//numToolchainPkgs, modulesNumPkgs := 0, make(map[string]int, 256)
+	//count := bytes.Count(output, newlineBrace) + 1
+	//pkgs := make([]pkg, count)
+	//
+	//for i := 0; i < count; i++ {
+	//	end := bytes.Index(output, newlineBrace)
+	//	if end < 0 {
+	//		end = len(output)
+	//	}
+	//	p := &pkgs[i]
+	//	err = json.Unmarshal(output[:end], p)
+	//	if err != nil {
+	//		log.Printf("Unmarshal package#%d: %s for %s", i, err, output[:end])
+	//		return
+	//	}
+	//	if p.Module.Path != "" { // must be not std or toolchain mobule
+	//		modulesNumPkgs[p.Module.Path]++
+	//	} else if strings.HasPrefix(p.Dir, toolchain.Cmd) {
+	//		numToolchainPkgs++
+	//	}
+	//	//log.Println("===", p.ImportPath, p.Module.Path)
+	//	if end == len(output) {
+	//		break
+	//	}
+	//	output = output[end+1:]
+	//}
+
 	numToolchainPkgs, modulesNumPkgs := 0, make(map[string]int, 256)
-	count := bytes.Count(output, newlineBrace) + 1
+	count := bytes.Count(output, []byte("ImportPath"))
 	pkgs := make([]pkg, count)
-	for i := 0; i < count; i++ {
-		end := bytes.Index(output, newlineBrace)
-		if end < 0 {
-			end = len(output)
-		}
+
+	var i = 0
+	for dec := json.NewDecoder(bytes.NewBuffer(output)); dec.More(); {
 		p := &pkgs[i]
-		err = json.Unmarshal(output[:end], p)
+		err = dec.Decode(p)
 		if err != nil {
-			log.Printf("Unmarshal package#%d: %s for %s", i, err, output[:end])
+			log.Printf("decode package#%d json error: %s", i, err)
 			return
 		}
 		if p.Module.Path != "" { // must be not std or toolchain mobule
@@ -526,11 +552,11 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 		} else if strings.HasPrefix(p.Dir, toolchain.Cmd) {
 			numToolchainPkgs++
 		}
-		//log.Println("===", p.ImportPath, p.Module.Path)
-		if end == len(output) {
-			break
-		}
-		output = output[end+1:]
+		i++
+	}
+	if i != count {
+		log.Printf("decoded package json count (%d) != result of bytes.Count (%d)", i, count)
+		return
 	}
 
 	if numToolchainPkgs == 0 {
