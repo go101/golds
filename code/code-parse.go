@@ -211,6 +211,7 @@ func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...i
 			return fmt.Errorf("create temp dir error: %w", err)
 		}
 		defer os.RemoveAll(tempDir)
+		// println(tempDir)
 		oldDir := util.WorkingDirectory()
 		err = os.Chdir(tempDir)
 		if err != nil {
@@ -226,6 +227,12 @@ func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...i
 		if err != nil {
 			return fmt.Errorf("go get %s error: %w", oldArgs[0], err)
 		}
+
+		atIndex := strings.IndexByte(oldArgs[0], '@')
+		if atIndex > 0 {
+			oldArgs[0] = oldArgs[0][0:atIndex]
+		}
+
 		args = oldArgs
 
 		//log.Println("tempDir:", tempDir)
