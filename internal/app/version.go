@@ -12,9 +12,9 @@ import (
 	"go101.org/golds/internal/util"
 )
 
-const RoughBuildTime = "2022-06-06"
+const RoughBuildTime = "2022-04-26"
 
-const Version = "v0.4.9-preview"
+const Version = "v0.4.9"
 
 func releaseGolds() {
 	const (
