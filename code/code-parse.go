@@ -72,9 +72,9 @@ func getMatchedPackages(arg string, jsonFormat bool) ([][]byte, error) {
 		return nil, fmt.Errorf("go list %s error: %w", arg, err)
 	}
 	output = bytes.TrimSpace(output)
-	if bytes.HasPrefix(output, []byte("go: ")) {
-		return nil, fmt.Errorf("go list %s error: %s", arg, output)
-	}
+	//if bytes.HasPrefix(output, []byte("go: ")) {
+	//	return nil, fmt.Errorf("go list %s error: %s", arg, output)
+	//}
 	if bytes.HasPrefix(output, []byte("no required module provides package")) {
 		return nil, fmt.Errorf("go list %s error: %s", arg, output)
 	}
@@ -463,7 +463,10 @@ func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...i
 	d.stdModule.Pkgs = append(d.stdModule.Pkgs, d.builtinPkg)
 
 	// ToDo: this is some slow. Try to parse go.mod files manually?
-	d.confirmPackageModules(args, hasToolchain, toolchain, completeModuleInfo)
+	err = d.confirmPackageModules(args, hasToolchain, toolchain, completeModuleInfo)
+	if err != nil {
+		return err
+	}
 
 	logProgress(true, SubTask_CollectModules, int32(len(d.modulesByPath)))
 
@@ -476,7 +479,7 @@ func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...i
 //var newline = []byte{'\n'}
 //var space = []byte{' '}
 
-func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, toolchain ToolchainInfo, completeModuleInfo func(*Module)) {
+func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, toolchain ToolchainInfo, completeModuleInfo func(*Module)) error {
 	// go list -deps -json [args]
 
 	// There is a bug https://github.com/golang/go/issues/45649
@@ -486,8 +489,7 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 	cmdAndArgs := append([]string{"go", "list", "-deps", "-json"}, args...)
 	output, err := util.RunShell(time.Minute*3, "", nil, cmdAndArgs...)
 	if err != nil {
-		log.Printf("unable to list packages and modules info: %s : %s. %s", strings.Join(cmdAndArgs, " "), output, err)
-		return
+		return fmt.Errorf("unable to list packages and modules info: %s : %s. %w", strings.Join(cmdAndArgs, " "), output, err)
 	}
 	// Sometimes, "go list ./..." output "go: warning: "./..." matched no packages" without error code.
 	// So the ./... argument might be not filter off by hasMatchedPackages in validateArgumentsAndSetOptions.
@@ -537,6 +539,10 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 
 	numToolchainPkgs, modulesNumPkgs := 0, make(map[string]int, 256)
 	count := bytes.Count(output, []byte("ImportPath"))
+	if count == 0 {
+		return fmt.Errorf("go list nothing: %s", output)
+	}
+
 	pkgs := make([]pkg, count)
 
 	var i = 0
@@ -544,8 +550,7 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 		p := &pkgs[i]
 		err = dec.Decode(p)
 		if err != nil {
-			log.Printf("decode package#%d json error: %s", i, err)
-			return
+			return fmt.Errorf("decode package#%d json error: %w", i, err)
 		}
 		if p.Module.Path != "" { // must be not std or toolchain mobule
 			modulesNumPkgs[p.Module.Path]++
@@ -555,8 +560,7 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 		i++
 	}
 	if i != count {
-		log.Printf("decoded package json count (%d) != result of bytes.Count (%d)", i, count)
-		return
+		return fmt.Errorf("decoded package json count (%d) != result of bytes.Count (%d)", i, count)
 	}
 
 	if numToolchainPkgs == 0 {
@@ -726,6 +730,7 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 		}
 	}
 
+	return nil
 }
 
 // v0.0.0-20180917221912-90fa682c2a6e

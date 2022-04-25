@@ -764,7 +764,7 @@ func (*English) Text_GeneratedPageFooter(goldsVersion, qrCodeLink, goOS, goArch 
 		tip = " (reachable from the left QR code)"
 	}
 	return fmt.Sprintf(`<table><tr><td>%s</td>
-<td>The pages are generated with <a href="https://go101.org/article/tool-golds.html"><b>Golds</b></a> <i>%s</i>. (GOOS=%s GOARCH=%s)
+<td>The pages are generated with <a href="https://go101.org/apps-and-libs/golds.html"><b>Golds</b></a> <i>%s</i>. (GOOS=%s GOARCH=%s)
 <b>Golds</b> is a <a href="https://go101.org">Go 101</a> project developed by <a href="https://tapirgames.com">Tapir Liu</a>.
 PR and bug reports are welcome and can be submitted to <a href="https://github.com/go101/golds">the issue list</a>.
 Please follow <a href="https://twitter.com/go100and1">@Go100and1</a>%s to get the latest news of <b>Golds</b>.</td></tr></table>`,
@@ -777,7 +777,7 @@ Please follow <a href="https://twitter.com/go100and1">@Go100and1</a>%s to get th
 }
 
 func (*English) Text_GeneratedPageFooterSimple(goldsVersion, goOS, goArch string) string {
-	return fmt.Sprintf(`The pages are generated with <a href="https://go101.org/article/tool-golds.html"><b>Golds</b></a> <i>%s</i>. (GOOS=%s GOARCH=%s)`,
+	return fmt.Sprintf(`The pages are generated with <a href="https://go101.org/apps-and-libs/golds.html"><b>Golds</b></a> <i>%s</i>. (GOOS=%s GOARCH=%s)`,
 		goldsVersion,
 		goOS,
 		goArch,

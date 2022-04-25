@@ -1,7 +1,9 @@
 package util
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"log"
 	"os"
 	"os/exec"
@@ -24,7 +26,23 @@ func RunShellCommand(timeout time.Duration, wd string, envs []string, cmd string
 	command := exec.CommandContext(ctx, cmd, args...)
 	command.Dir = wd
 	command.Env = removeGODEBUG(append(os.Environ(), envs...))
-	return command.CombinedOutput() // ToDo: maybe it is better not to combine.
+	//output, err := command.CombinedOutput() // ToDo: maybe it is better not to combine.
+	var erroutput bytes.Buffer
+	command.Stderr = &erroutput
+	output, err := command.Output() // ToDo: maybe it is better not to combine
+	if err != nil {
+		if erroutput.Len() > 0 {
+			err = fmt.Errorf("%w\n\n%s", err, erroutput.Bytes())
+		}
+	}
+
+	//log.Println(">>>", cmd, args)
+	//log.Printf("=== wd: %s", wd)
+	//log.Printf("=== envs: %s", envs)
+	//log.Printf("=== error: %s", err)
+	//log.Printf("=== output: %s", output)
+
+	return output, err
 }
 
 func RunShell(timeout time.Duration, wd string, envs []string, cmdAndArgs ...string) ([]byte, error) {
