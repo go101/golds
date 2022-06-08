@@ -12,9 +12,9 @@ import (
 	"go101.org/golds/internal/util"
 )
 
-const RoughBuildTime = "2022-04-26"
+const RoughBuildTime = "2022-06-15"
 
-const Version = "v0.4.9"
+const Version = "v0.5.0-preview"
 
 func releaseGolds() {
 	const (
@@ -88,9 +88,9 @@ func releaseGolds() {
 	}
 
 	var incVersion = func() {
-		patch++
+		patch = (patch + 1) % 10
 		if patch == 0 {
-			minor++
+			minor = (minor + 1) % 10
 			if minor == 0 {
 				major++
 			}

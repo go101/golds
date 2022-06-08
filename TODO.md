@@ -8,6 +8,41 @@
 
 * add a debug flag, help users collect info
 
+* add a "typ" page kind, for unnamed types, because unnamed types don't belong to any packages.
+  * now functions are not listed as values of
+    type NetworkProtocolFactory func(*Stack) NetworkProtocol
+    Maybe it is good to not list, but need a way to find these values.
+
+  * info on this page (same as a defined type)
+    * aliases of the type
+    * underlied types
+    * uses places
+    * ...
+
+* now, not collect uses for unnamed struct type fields.
+  In the following code, only collect for x1 and y1
+    var a struct {
+      x int
+      y struct {
+        m bool
+      }
+    }
+    use a fake type alias named with its hash for the struct type? 
+    So that the nested field could be used in ref page urls.
+    
+    example: golang.zx2c4.com/wireguard/device.Device
+    
+* trace nested field: aPkg.Device.net.port for ref pages.
+  Not a good solution! This problen should be the same as the last one.
+  We need to use a fake type alias to "struct{port uint16}"
+  and use "theAlias.port" to denote the ref id.
+  
+	type Device struct {
+		net struct {
+			port          uint16 // listening port
+		}
+	}
+
 * golds gopath
 
 * id introduced in version: 1.15-, 1.16, 1.17, ...
@@ -43,7 +78,7 @@
 * https://golang.org/pkg/go/doc/#Package
   bugs and notes, Examples
 
-* <a class="deplucated">xxx</a><a>yyy/a> should change to <a><span class="deplucated">xxx</span>yy</a>
+* <a class="deplucated">xxx</a><a>yyy</a> should change to <a><span class="deplucated">xxx</span>yy</a>
 
 * text searching
 
@@ -113,21 +148,7 @@
 * now, for "type T struct {m sync.Mutex}", "var t T", "t.m.Lock" will be registered to "sync.Mutex.Lock",
   instead of "T.Lock()"
 * s = StructTypeFoo{} // unkeyed struct assignment should be viewed as full-keyed assignment: need recored in uses lists.
-* now, not collect uses for unnamed struct type fields.
-  In the following code, only collect for x1 and y1
-    var a struct {
-      x int
-      y struct {
-        m bool
-      }
-    }
-    type T struct {
-      x1 int
-      y1 struct {
-        m1 bool
-      }
-    }
-    use a fake type alias named with its hash.
+
 
 * type alias and same-underlyings list
   * https://github.com/golang/go/issues/44905
