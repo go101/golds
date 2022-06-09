@@ -611,12 +611,19 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 				// log.Printf("!!! hasToolchain==true but package %s is not in toolchain directory, weird", p.ImportPath)
 				// Not weird. Toolchain depends on some golang.org/x/... packages.
 			}
-			m := d.modulesByPath[p.Module.Path]
+
+			var mPath = p.Module.Path
+			if mPath == "std" { // || mPath == "cmd" {
+				mPath += " (fake)"
+				// This case happens when pasred a non-current std package.
+			}
+
+			m := d.modulesByPath[mPath]
 			if m == nil {
 				d.nonToolchainModules = append(d.nonToolchainModules, p.Module)
 				m = &d.nonToolchainModules[len(d.nonToolchainModules)-1]
 				m.Index = len(d.modulesByPath)
-				d.modulesByPath[p.Module.Path] = m
+				d.modulesByPath[mPath] = m
 				m.Pkgs = make([]*Package, 0, modulesNumPkgs[m.Path])
 			}
 			pkg.Module = m // ToDo: use substrings of Dir and Path of pkg to save some memory.
@@ -640,6 +647,7 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 			// The reason why entring this branch might be the modules feature is off,
 		}
 	}
+
 	if len(d.nonToolchainModules) != len(modulesNumPkgs) {
 		panic(fmt.Sprintf("non-std moduels count wrong (%d : %d)", len(d.nonToolchainModules), len(modulesNumPkgs)))
 	}
