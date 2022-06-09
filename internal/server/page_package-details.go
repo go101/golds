@@ -2404,9 +2404,11 @@ func (ds *docServer) WriteAstType(w *htmlPage, typeLit ast.Expr, codePkg, docPkg
 
 		//>> ToDo: Go 1.18, obj might be a type parameter now!
 		obj := codePkg.PPkg.TypesInfo.ObjectOf(node)
-		if _, ok := obj.Type().(*types.TypeParam); ok {
-			w.WriteString(node.Name)
-			return
+		if obj != nil { // !!! The identifers in built package have not objects!
+			if _, ok := obj.Type().(*types.TypeParam); ok {
+				w.WriteString(node.Name)
+				return
+			}
 		}
 		//<<
 
