@@ -730,9 +730,12 @@ func (d *CodeAnalyzer) registerDirectFields(typeInfo *TypeInfo, astStructNode *a
 	typeInfo.attributes |= directSelectorsCollected
 
 	register := func(field *Field) {
-		if field.Name == "-" {
+		if field.Name == "-" { // ??? ToDo: forget what does this mean?
 			panic("impossible")
 		}
+		// ToDo, ToDo2: the handling of ".Pkg" here might be some problematic.
+		// 1. The ".Pkg" field is always set in the callers of this function.
+		// 2. Is the "sel.Id" calculation for builtinPkg+unexportedField right?
 		if !token.IsExported(field.Name) {
 			field.Pkg = pkg
 			if pkg == d.builtinPkg {
@@ -751,23 +754,33 @@ func (d *CodeAnalyzer) registerDirectFields(typeInfo *TypeInfo, astStructNode *a
 
 	for _, field := range astStructNode.Fields.List {
 		if len(field.Names) == 0 {
-			var id string
+			//var id string
+			var fieldName string
 
 			var isStar = false
 			for ok, node := true, field.Type; ok; ok = isStar {
 				switch expr := node.(type) {
 				default:
 					panic("not an embedded field but should be. type: " + fmt.Sprintf("%T", expr))
+				//>> ToDo: Go 1.18
+				case *astIndexExpr:
+					node = expr.X
+					continue
+				case *astIndexListExpr:
+					node = expr.X
+					continue
+				//<<
 				case *ast.Ident:
 					//id = d.Id1b(pkg, expr.Name) // incorrect for builtin typenames
 
-					tn := pkg.PPkg.TypesInfo.Uses[expr]
-					id = d.Id2(tn.Pkg(), expr.Name)
-
+					//tn := pkg.PPkg.TypesInfo.Uses[expr]
+					//id = d.Id2(tn.Pkg(), expr.Name)
+					fieldName = expr.Name
 				case *ast.SelectorExpr:
-					srcObj := pkg.PPkg.TypesInfo.ObjectOf(expr.X.(*ast.Ident))
-					srcPkg := srcObj.(*types.PkgName)
-					id = d.Id2(srcPkg.Imported(), expr.Sel.Name)
+					//srcObj := pkg.PPkg.TypesInfo.ObjectOf(expr.X.(*ast.Ident))
+					//srcPkg := srcObj.(*types.PkgName)
+					//id = d.Id2(srcPkg.Imported(), expr.Sel.Name)
+					fieldName = expr.Sel.Name
 				case *ast.StarExpr:
 					if isStar {
 						panic("bad embedded field **T.")
@@ -781,22 +794,28 @@ func (d *CodeAnalyzer) registerDirectFields(typeInfo *TypeInfo, astStructNode *a
 				break
 			}
 
-			tn := d.allTypeNameTable[id]
-			if tn == nil {
-				panic("TypeName for " + id + " not found")
-			}
-
-			//if tn.Name() == "_" {
-			//	continue
+			//tn := d.allTypeNameTable[id]
+			//if tn == nil {
+			//	panic("TypeName for " + id + " not found")
 			//}
+			//
+			//fieldTypeInfo := tn.Named
+			//if fieldTypeInfo == nil {
+			//	fieldTypeInfo = tn.Alias.Denoting
+			//}
+			//
+			// fieldName := tn.Name()
 
-			fieldTypeInfo := tn.Named
-			if fieldTypeInfo == nil {
-				fieldTypeInfo = tn.Alias.Denoting
-			}
+			tv := pkg.PPkg.TypesInfo.Types[field.Type]
+
+			// ToDo: if field.Type is an interface or struct, or pointer to interface or struct, collect direct selectors.
+			// or even disassemble any complex types and look for struct and interface types.
+
+			fieldTypeInfo := d.RegisterType(tv.Type)
+
 			embedMode := EmbedMode_Direct
 			if isStar {
-				fieldTypeInfo = d.RegisterType(types.NewPointer(fieldTypeInfo.TT))
+				//fieldTypeInfo = d.RegisterType(types.NewPointer(fieldTypeInfo.TT))
 				embedMode = EmbedMode_Indirect
 			}
 
@@ -809,7 +828,7 @@ func (d *CodeAnalyzer) registerDirectFields(typeInfo *TypeInfo, astStructNode *a
 
 			register(&Field{
 				Pkg:  pkg,
-				Name: tn.Name(),
+				Name: fieldName,
 				Type: fieldTypeInfo,
 				Mode: embedMode,
 				Tag:  tag,
@@ -825,10 +844,11 @@ func (d *CodeAnalyzer) registerDirectFields(typeInfo *TypeInfo, astStructNode *a
 
 		tv := pkg.PPkg.TypesInfo.Types[field.Type]
 
-		//todo: if field.Type is an interface or struct, or pointer to interface or struct, collect direct selectors.
-		//or even disassenble any complex types and look for struct and interface types.
+		// ToDo: if field.Type is an interface or struct, or pointer to interface or struct, collect direct selectors.
+		// or even disassemble any complex types and look for struct and interface types.
 
 		fieldTypeInfo := d.RegisterType(tv.Type)
+
 		var tag string
 		if field.Tag != nil {
 			tag = field.Tag.Value

@@ -2422,7 +2422,7 @@ func (d *CodeAnalyzer) analyzePackage_ConfirmTypeSources(pkg *Package) {
 						var ittNode *ast.InterfaceType
 
 						switch expr := srcNode.(type) {
-						//>> 1.18, ToDo
+						//>> 1.18, ToDo ToDo2
 						// handle Index and IndexList?
 						//<<
 						case *ast.Ident:

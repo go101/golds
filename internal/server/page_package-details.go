@@ -1784,6 +1784,8 @@ func (ds *docServer) writeFieldForListing(page *htmlPage, pkg *code.Package, sel
 		if i < sel.numDuplicatedMiddlesWithLast {
 			class = "path-duplicate"
 		}
+
+		// ToDo: the if-else blocks are identical now, so ...?
 		if token.IsExported(fld.Name) {
 			writeSrouceCodeLineLink(page, fld.Pkg, pos, fld.Name, class)
 		} else {
@@ -2399,7 +2401,16 @@ func (ds *docServer) WriteAstType(w *htmlPage, typeLit ast.Expr, codePkg, docPkg
 		// obj := codePkg.PPkg.TypesInfo.ObjectOf(node)
 		// The above one might return a *types.Var object for embedding field.
 		// So us the following one instead, to make sure it is a *types.TypeName.
-		obj := codePkg.PPkg.Types.Scope().Lookup(node.Name)
+
+		//>> ToDo: Go 1.18, obj might be a type parameter now!
+		obj := codePkg.PPkg.TypesInfo.ObjectOf(node)
+		if _, ok := obj.Type().(*types.TypeParam); ok {
+			w.WriteString(node.Name)
+			return
+		}
+		//<<
+
+		obj = codePkg.PPkg.Types.Scope().Lookup(node.Name)
 		if obj == nil {
 			obj = types.Universe.Lookup(node.Name)
 		}
@@ -2410,13 +2421,15 @@ func (ds *docServer) WriteAstType(w *htmlPage, typeLit ast.Expr, codePkg, docPkg
 			// It really should panic here, but to make it tolerable,
 
 			w.WriteString(node.Name)
-
 			return
 		}
+
 		tn, ok := obj.(*types.TypeName)
 		if !ok {
-			panic("object should be a TypeName")
+			panic(fmt.Sprintf("object should be a TypeName, but %T, %v.\nObject: %T", obj, obj, codePkg.PPkg.TypesInfo.ObjectOf(node)))
 		}
+		objType := tn.Type()
+
 		objpkg := obj.Pkg()
 		isBuiltin := objpkg == nil
 		if isBuiltin {
@@ -2426,8 +2439,8 @@ func (ds *docServer) WriteAstType(w *htmlPage, typeLit ast.Expr, codePkg, docPkg
 			w.Write(period)
 		}
 
-		// ToDo: faster way: ds.analyzer.TryRegisteringType(tn.Type()) == forTypeName.Denoting()?
-		if forTypeName != nil && types.Identical(tn.Type(), forTypeName.Denoting().TT) {
+		// ToDo: faster way: ds.analyzer.TryRegisteringType(objType) == forTypeName.Denoting()?
+		if forTypeName != nil && types.Identical(objType, forTypeName.Denoting().TT) {
 			w.Write(BoldTagStart)
 			defer w.Write(BoldTagEnd)
 		}
