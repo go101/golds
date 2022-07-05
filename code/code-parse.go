@@ -489,7 +489,8 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 	cmdAndArgs := append([]string{"go", "list", "-deps", "-json"}, args...)
 	output, err := util.RunShell(time.Minute*3, "", nil, cmdAndArgs...)
 	if err != nil {
-		return fmt.Errorf("unable to list packages and modules info: %s : %s. %w", strings.Join(cmdAndArgs, " "), output, err)
+		// log.Printf("%s", output) // debug(ToDo: need a debug verbose flag)
+		return fmt.Errorf("unable to list packages and modules info: %s: %w", strings.Join(cmdAndArgs, " "), err)
 	}
 	// Sometimes, "go list ./..." output "go: warning: "./..." matched no packages" without error code.
 	// So the ./... argument might be not filter off by hasMatchedPackages in validateArgumentsAndSetOptions.

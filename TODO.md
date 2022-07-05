@@ -2,11 +2,22 @@
 
 ### Soon to do
 
+* handle inks in comments: https://tip.golang.org/doc/comment, not support lists and headers
+  * not handle [otherModulePkg.Name]
+  * try to handle [sameModulePkg.Name] and [Name]
+  * handle [XYZ] + [XYZ]: link
+  * handle bare urls.
+
 * show alias list for types, or identical tyoe list
 
 * show id ref counts, and ref counts should affect populirities.
 
 * add a debug flag, help users collect info
+
+* details page: add a "+" before package, click it to show parent (and module root) packages
+  * if a package doesn't belongs the module, italic it.
+
+* use different default flag values for gocore, godoge and golds
 
 * add a "typ" page kind, for unnamed types, because unnamed types don't belong to any packages.
   * now functions are not listed as values of
@@ -31,6 +42,8 @@
     So that the nested field could be used in ref page urls.
     
     example: golang.zx2c4.com/wireguard/device.Device
+    
+    only do this when --source-code-reading=rich
     
 * trace nested field: aPkg.Device.net.port for ref pages.
   Not a good solution! This problen should be the same as the last one.
@@ -337,11 +350,11 @@
 * parse more source files
   * .s file syntax support
   * better cgo support, parse c code.
+    * https://gitlab.com/cznic/ccgo
     * use original Go files and parse c files
     * https://godoc.org/github.com/cznic/cc#example-Statement
       https://pkg.go.dev/github.com/cznic/cc/v2?tab=doc
     * https://github.com/xlab/c-for-go
-    * https://gitlab.com/cznic/ccgo
     * https://github.com/elliotchance/c2go
     * https://github.com/gotranspile/cxgo
     * port tinycc

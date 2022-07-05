@@ -97,6 +97,14 @@ func (p *Package) Path() string {
 	return p.PPkg.PkgPath // might be prefixed with "vendor/", which is different from import path.
 }
 
+// ModulePath returns the module path of a Package.
+func (p *Package) ModulePath() string {
+	if p.Module == nil {
+		return ""
+	}
+	return p.Module.Path
+}
+
 // PackageAnalyzeResult holds the analysis result of a Go package.
 type PackageAnalyzeResult struct {
 	AllTypeNames []*TypeName

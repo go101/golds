@@ -325,7 +325,6 @@ Options:
 		logs in docs generation mode.
 	-gen
 		Static HTML docs generation mode.
-		"memory" means not to save (for testing).
 	-dir=<ContentDirectory>|memory
 		Specify the docs generation or file
 		serving diretory. A new created subfolder
@@ -352,7 +351,7 @@ Options:
 		* source files of the packages which external
 		  host URLs couldn't be determined locally
 		  will be found out by sending a HTTPS query.
-		* (possible more cases needing net connection)
+		* Possible more cases needing net connections.
 	-only-list-exporteds
 		Not to list unexported resources
 		in package-details pages.
@@ -377,7 +376,7 @@ Options:
 		Available values (default is verbose+qrcode):
 		* none: show nothing.
 		* simple: show Golds version only.
-		* verbose: also show Golds author
+		* verbose: also show Golds author.
 		  promotion info.
 		* verbose+qrcode: include verbose content
 		  and a qr-code.

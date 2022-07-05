@@ -146,7 +146,7 @@ func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*Package
 			}
 			fmt.Fprintf(page, `<div class="anchor pkg alphabet%s" id="pkg-%s"`, extraClass, pkg.Path)
 			if writeDataAttrs {
-				fmt.Fprintf(page, ` data-loc="%d" data-importedbys="%d" data-depheight="%d" data-depdepth="%d"%s`, pkg.LOC, pkg.NumImportedBys, pkg.DepHeight, pkg.DepDepth, main)
+				fmt.Fprintf(page, ` data-module="%s" data-loc="%d" data-importedbys="%d" data-depheight="%d" data-depdepth="%d"%s`, pkg.Module, pkg.LOC, pkg.NumImportedBys, pkg.DepHeight, pkg.DepDepth, main)
 			}
 			page.WriteString(`>`)
 			defer page.WriteString(`</div>`)
@@ -325,6 +325,8 @@ type PackageForListing struct {
 	Remaining string // the part different from the last one in list
 	//Module    *code.Module
 
+	Module string // module path
+
 	OneLineDoc string
 
 	NumImportedBys int32
@@ -353,7 +355,8 @@ func (ds *docServer) buildOverviewData() *Overview {
 		pkg.Remaining = p.Path()
 		pkg.Name = p.PPkg.Name
 		pkg.Index = p.Index
-
+		
+		pkg.Module = p.ModulePath()
 		pkg.OneLineDoc = p.OneLineDoc
 
 		pkg.LOC = p.CodeLinesWithBlankLines
