@@ -172,12 +172,13 @@ var reposIdent = []byte(`//line `)
 // https://github.com/golang/go/issues/26207
 // https://github.com/golang/go/issues/36072
 // The function is not robust enough to handle all kinds of special cases.
-// 1. It doesn't consider /*line file:m:n*/ form.
-// 2. It doesn't handle multiple "//line ..." occurrences.
-// 3. It should ignore the general content enclosed in other comments.
-//    /*
-//    //line file:m:n
-//    */
+//  1. It doesn't consider /*line file:m:n*/ form.
+//  2. It doesn't handle multiple "//line ..." occurrences.
+//  3. It should ignore the general content enclosed in other comments.
+//     /*
+//     //line file:m:n
+//     */
+//
 // Maybe it is best to check the comments nodes in the already provided ast.File.
 func generatedFileInfo(pkg *Package, filename string, astFile *ast.File) SourceFileInfo {
 	var goFilename string
@@ -285,7 +286,8 @@ func (d *CodeAnalyzer) collectIdentiferFromFile(pkg *Package, fileInfo *SourceFi
 }
 
 // ToDo: can we get the content from the collected AST files?
-//       Need to hack the std packages?
+//
+//	Need to hack the std packages?
 func (d *CodeAnalyzer) cacheSourceFiles() {
 	n := runtime.GOMAXPROCS(-1)
 	sem := make(chan struct{}, n)

@@ -355,7 +355,7 @@ func (ds *docServer) buildOverviewData() *Overview {
 		pkg.Remaining = p.Path()
 		pkg.Name = p.PPkg.Name
 		pkg.Index = p.Index
-		
+
 		pkg.Module = p.ModulePath()
 		pkg.OneLineDoc = p.OneLineDoc
 

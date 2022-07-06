@@ -918,7 +918,8 @@ func (d *CodeAnalyzer) registerUnnamedInterfaceAndStructTypesFromParametersAndRe
 }
 
 // ToDo: now interface{Error() string} and interface{error} will be viewed as one TypeInfo,
-//       which is true from Go senmatics view, but might be not good from code analysis view.
+//
+//	which is true from Go senmatics view, but might be not good from code analysis view.
 func (d *CodeAnalyzer) registerExplicitlySpecifiedMethods(typeInfo *TypeInfo, astInterfaceNode *ast.InterfaceType, pkg *Package) {
 	//if (typeInfo.attributes & directSelectorsCollected) != 0 {
 	//	return
@@ -1169,7 +1170,7 @@ func (d *CodeAnalyzer) registerExplicitlyDeclaredMethod(f *Function) {
 
 // ToDo: also register function variables?
 // Return parameter and result counts.
-//func (d *CodeAnalyzer) registerFunctionForInvolvedTypeNames(f *Function) (ins, outs int, lastResultIsError bool) {
+// func (d *CodeAnalyzer) registerFunctionForInvolvedTypeNames(f *Function) (ins, outs int, lastResultIsError bool) {
 func (d *CodeAnalyzer) registerFunctionForInvolvedTypeNames(f FunctionResource) (ins, outs int, lastResultIsError bool) {
 	// ToDo: unepxorted function should also reged,
 	//       but then they should be filtered out when in listing.

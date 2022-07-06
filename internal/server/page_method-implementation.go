@@ -164,7 +164,8 @@ type MethodInfo struct {
 }
 
 // ToDo: if typeName is like a (type T = *struct{...}, methods will not be listed.
-//       Because methods are registered on struct{...}.
+//
+//	Because methods are registered on struct{...}.
 func (ds *docServer) buildImplementationData(analyzer *code.CodeAnalyzer, pkgPath, typeName string) (*MethodImplementationResult, error) {
 	if !collectUnexporteds && pkgPath != "builtin" && !token.IsExported(typeName) {
 		panic("should not go here (imp): " + pkgPath + "." + typeName)

@@ -943,7 +943,7 @@ func (td *TypeDetails) calculatePopularity() {
 }
 
 // ds should be locked before calling this method.
-//func (ds *docServer) buildPackageDetailsData(pkgPath string) *PackageDetails {
+// func (ds *docServer) buildPackageDetailsData(pkgPath string) *PackageDetails {
 func buildPackageDetailsData(analyzer *code.CodeAnalyzer, pkgPath string, alsoCollectNonExporteds bool) *PackageDetails {
 	pkg := analyzer.PackageByPath(pkgPath)
 	if pkg == nil {
@@ -1539,7 +1539,7 @@ func sortValueList(valueList []ValueForListing, pkg *code.Package) []*ValueForLi
 }
 
 // The function is some repeatitive with writeResourceIndexHTML.
-//func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pkg *code.Package, fileLineOffsets map[string][]int, forTypeName *code.TypeName) {
+// func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pkg *code.Package, fileLineOffsets map[string][]int, forTypeName *code.TypeName) {
 func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pkg *code.Package, forTypeName *code.TypeName) {
 	pos := v.Position()
 	//if lineOffsets, ok := fileLineOffsets[pos.Filename]; ok {
@@ -1896,7 +1896,7 @@ func writeKindText(page *htmlPage, tt types.Type) {
 	}
 }
 
-//func (ds *docServer) writeResourceIndexHTML(page *htmlPage, res code.Resource, fileLineOffsets map[string][]int, writeType, writeReceiver bool) {
+// func (ds *docServer) writeResourceIndexHTML(page *htmlPage, res code.Resource, fileLineOffsets map[string][]int, writeType, writeReceiver bool) {
 func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Package, res code.Resource, writeKeyword, writeType, writeComment bool) {
 	//pos := res.Position()
 	//if lineOffsets, ok := fileLineOffsets[pos.Filename]; ok {

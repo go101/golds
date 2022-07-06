@@ -763,7 +763,7 @@ func (v *astVisitor) buildLink(idStart, idEnd token.Position, link, extraClass s
 	v.offset = idEnd.Offset
 }
 
-//func (v *astVisitor) buildIdentifier(idStart, idEnd token.Position, ratioId int32, link, id string) {
+// func (v *astVisitor) buildIdentifier(idStart, idEnd token.Position, ratioId int32, link, id string) {
 func (v *astVisitor) buildIdentifier(idStart, idEnd token.Position, ratioId int32, link string) {
 	if idStart.Offset < v.offset {
 		//log.Printf("already handled: %s", v.content[litStart.Offset:litEnd.Offset])
