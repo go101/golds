@@ -26,10 +26,9 @@ func RunShellCommand(timeout time.Duration, wd string, envs []string, cmd string
 	command := exec.CommandContext(ctx, cmd, args...)
 	command.Dir = wd
 	command.Env = removeGODEBUG(append(os.Environ(), envs...))
-	//output, err := command.CombinedOutput() // ToDo: maybe it is better not to combine.
 	var erroutput bytes.Buffer
 	command.Stderr = &erroutput
-	output, err := command.Output() // ToDo: maybe it is better not to combine
+	output, err := command.Output()
 	if err != nil {
 		if erroutput.Len() > 0 {
 			err = fmt.Errorf("%w\n\n%s", err, erroutput.Bytes())

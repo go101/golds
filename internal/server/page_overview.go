@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"go101.org/golds/code"
-	"go101.org/golds/internal/util"
 )
 
 func (ds *docServer) overviewPage(w http.ResponseWriter, r *http.Request) {
@@ -224,7 +223,7 @@ func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*Package
 		}
 		if len(d) > 0 {
 			page.WriteString(`<span class="pkg-summary"> - `)
-			util.WriteHtmlEscapedBytes(page, []byte(d))
+			page.AsHTMLEscapeWriter().WriteString(d)
 			defer page.WriteString(`</span>`)
 		}
 	}
@@ -351,8 +350,8 @@ func (ds *docServer) buildOverviewData() *Overview {
 		//if p.Module != nil {
 		//	pkg.Module = p.Module
 		//}
-		pkg.Path = p.Path()
-		pkg.Remaining = p.Path()
+		pkg.Path = p.Path
+		pkg.Remaining = p.Path
 		pkg.Name = p.PPkg.Name
 		pkg.Index = p.Index
 
@@ -381,7 +380,7 @@ func (ds *docServer) buildOverviewData() *Overview {
 		// ...
 
 		//return result[a].Path < result[b].Path
-		return ComparePackagePaths(result[a].Path, result[b].Path, '/')
+		return code.ComparePackagePaths(result[a].Path, result[b].Path, '/')
 	})
 	ImprovePackagesForListing(result)
 
@@ -439,32 +438,4 @@ func FindPackageCommonPrefixPaths(pa, pb string) string {
 		}
 	}
 	return ""
-}
-
-// Should be faster than using strings.Split or Strings.Tokens
-// return true for pa <= pb.
-func ComparePackagePaths(pa, pb string, sep byte) bool {
-	true, false := true, false
-	if len(pa) > len(pb) {
-		pa, pb = pb, pa
-		true, false = false, true
-	}
-	if len(pa) <= len(pb) { // BCE hint
-		for i := 0; i < len(pa); i++ {
-			if pa[i] == sep {
-				if pb[i] == sep {
-					continue
-				}
-				return true
-			} else if pb[i] == sep {
-				return false
-			}
-			if pa[i] < pb[i] {
-				return true
-			} else if pa[i] > pb[i] {
-				return false
-			}
-		}
-	}
-	return true
 }

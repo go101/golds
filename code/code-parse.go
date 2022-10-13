@@ -393,17 +393,22 @@ func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...i
 
 	//var packageListChanged = false
 	for path, ppkg := range allPPkgs {
-		pkg := d.packageTable[ppkg.PkgPath]
+		if path != ppkg.PkgPath {
+			panic("path != ppkg.PkgPath")
+		}
+
+		pkg := d.packageTable[path]
 		if pkg == nil {
 			//packageListChanged = true
 
-			pkg := &Package{PPkg: ppkg}
+			pkg := &Package{PPkg: ppkg, Path: path}
 			d.packageTable[path] = pkg
 			d.packageList = append(d.packageList, pkg)
 
 			//log.Println("     [parsed]", path)
 		} else {
 			pkg.PPkg = ppkg
+			pkg.Path = path
 
 			log.Println("     [parsed]", path, "(duplicated?)")
 		}
@@ -455,17 +460,21 @@ func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...i
 	for _, path := range stdPkgs {
 		pkg := d.packageTable[string(path)]
 		if pkg != nil {
-			pkg.Module = d.stdModule
+			pkg.module = d.stdModule
 			d.stdModule.Pkgs = append(d.stdModule.Pkgs, pkg)
 		}
 	}
-	d.builtinPkg.Module = d.stdModule
+	d.builtinPkg.module = d.stdModule
 	d.stdModule.Pkgs = append(d.stdModule.Pkgs, d.builtinPkg)
 
 	// ToDo: this is some slow. Try to parse go.mod files manually?
 	err = d.confirmPackageModules(args, hasToolchain, toolchain, completeModuleInfo)
 	if err != nil {
 		return err
+	}
+
+	for _, m := range d.modulesByPath {
+		m.buildPackageHierarchy()
 	}
 
 	logProgress(true, SubTask_CollectModules, int32(len(d.modulesByPath)))
@@ -485,7 +494,7 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 	// There is a bug https://github.com/golang/go/issues/45649
 	// which makes the command return some incorrect modules for some packages.
 
-	// In the output, packages under GOROOT have not .Module info.
+	// In the output, packages under GOROOT have not .module info.
 	cmdAndArgs := append([]string{"go", "list", "-deps", "-json"}, args...)
 	output, err := util.RunShell(time.Minute*3, "", nil, cmdAndArgs...)
 	if err != nil {
@@ -526,12 +535,12 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 	//		log.Printf("Unmarshal package#%d: %s for %s", i, err, output[:end])
 	//		return
 	//	}
-	//	if p.Module.Path != "" { // must be not std or toolchain mobule
-	//		modulesNumPkgs[p.Module.Path]++
+	//	if p.module.Path != "" { // must be not std or toolchain mobule
+	//		modulesNumPkgs[p.module.Path]++
 	//	} else if strings.HasPrefix(p.Dir, toolchain.Cmd) {
 	//		numToolchainPkgs++
 	//	}
-	//	//log.Println("===", p.ImportPath, p.Module.Path)
+	//	//log.Println("===", p.ImportPath, p.module.Path)
 	//	if end == len(output) {
 	//		break
 	//	}
@@ -627,19 +636,19 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 				d.modulesByPath[mPath] = m
 				m.Pkgs = make([]*Package, 0, modulesNumPkgs[m.Path])
 			}
-			pkg.Module = m // ToDo: use substrings of Dir and Path of pkg to save some memory.
+			pkg.module = m // ToDo: use substrings of Dir and Path of pkg to save some memory.
 			m.Pkgs = append(m.Pkgs, pkg)
 		} else if strings.HasPrefix(p.Dir, toolchain.Cmd) {
-			if pkg.Module != nil {
+			if pkg.module != nil {
 				if !d.IsStandardPackage(pkg) {
 					log.Printf("!!! the module of toolchain package %s is already found, weird", p.ImportPath)
 				}
 			} else {
-				pkg.Module = d.wdModule
+				pkg.module = d.wdModule
 				d.wdModule.Pkgs = append(d.wdModule.Pkgs, pkg)
 			}
 		} else if p.Standard {
-			if pkg.Module != d.stdModule {
+			if pkg.module != d.stdModule {
 				log.Printf("!!! the module of standard package %s is still not confirmed, weird", p.ImportPath)
 			}
 		} else {
@@ -728,13 +737,15 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 		}
 	}
 	for _, pkg := range d.packageList {
-		if pkg.Module == nil || pkg.Module == d.stdModule {
-			//log.Printf("!!! the module of package %s is not confirmed, weird (or not)", pkg.Path())
+		if pkg.module == nil || pkg.module == d.stdModule {
+			//log.Printf("!!! the module of package %s is not confirmed, weird (or not)", pkg.Path)
 			continue
 		}
-		if !strings.HasPrefix(pkg.Path(), pkg.Module.Path) {
-			if pkg.Path() != "command-line-arguments" { // sourced from golang.org/x/tools/go/packages
-				log.Println("!!! wrong prefix:", pkg.Path(), pkg.Module.Path)
+		if !strings.HasPrefix(pkg.Path, pkg.module.Path) {
+			if pkg.Path != "command-line-arguments" { // sourced from golang.org/x/tools/go/packages
+				log.Println("!!! wrong prefix:", pkg.Path, pkg.module.Path)
+				pkg.wrongModule = true
+				pkg.module.hasWrongPkgs = true
 			}
 		}
 	}

@@ -1,16 +1,12 @@
 package server
 
 import (
-	"bufio"
-	"bytes"
-	"errors"
 	"fmt"
 	"go/ast"
 	"go/doc"
 	"go/format"
 	"go/token"
 	"go/types"
-	"io"
 	"log"
 	"net/http"
 	"path/filepath"
@@ -158,7 +154,8 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 					},
 					func() {
 						page.WriteString("\n")
-						writePageTextEx(page, "\t\t", info.DocText, true, true)
+						ds.renderDocComment(page, pkg.Package, "\t\t", info.DocText)
+
 						if i < len(pkg.Files)-1 {
 							page.WriteString("\n")
 						}
@@ -232,7 +229,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 				fid := fmt.Sprintf("example-%d", i)
 				writeFoldingBlock(page, fid, "content", "items", false,
 					func() {
-						util.WriteHtmlEscapedString(page, ex.Name)
+						page.AsHTMLEscapeWriter().WriteString(ex.Name)
 					},
 					func() {
 						page.WriteString("\n")
@@ -242,11 +239,11 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 						//       so that the exapmle code can be rendered as normal source code.
 						if ex.Play != nil {
 							format.Node(util.NewIndentWriter(
-								util.MakeHTMLEscapeWriter(page),
+								page.AsHTMLEscapeWriter(),
 								[]byte{'\t', '\t'}), pkg.ExampleFileSet, ex.Play)
 						} else {
 							format.Node(util.NewIndentWriter(
-								util.MakeHTMLEscapeWriter(page),
+								page.AsHTMLEscapeWriter(),
 								[]byte{'\t', ' ', ' '}), pkg.ExampleFileSet, ex.Code)
 						}
 						//if i < len(pkg.Examples)-1 {
@@ -326,7 +323,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 
 							if doc != "" {
 								page.WriteString("\n")
-								writePageText(page, "\t\t", doc, true)
+								ds.renderDocComment(page, pkg.Package, "\t\t", doc)
 								page.WriteString("\n")
 							}
 
@@ -453,7 +450,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 
 					if doc != "" {
 						page.WriteString("\n")
-						writePageText(page, "\t\t", doc, true)
+						ds.renderDocComment(page, pkg.Package, "\t\t", doc)
 					}
 
 					// ToDo: for alias, if its denoting type is an exported named type, then stop here.
@@ -493,11 +490,11 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 												func() {
 													if fldDoc != "" {
 														page.WriteString("\n")
-														writePageText(page, "\t\t\t\t", fldDoc, true)
+														ds.renderDocComment(page, pkg.Package, "\t\t\t\t", fldDoc)
 													}
 													if fldComment != "" {
 														page.WriteString("\n")
-														writePageText(page, "\t\t\t\t// ", fldComment, true)
+														ds.renderDocComment(page, pkg.Package, "\t\t\t\t// ", fldComment)
 													}
 													page.WriteString("\n")
 												})
@@ -548,11 +545,11 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 												func() {
 													if mthdDoc != "" {
 														page.WriteString("\n")
-														writePageText(page, "\t\t\t\t", mthdDoc, true)
+														ds.renderDocComment(page, pkg.Package, "\t\t\t\t", mthdDoc)
 													}
 													if mthdComment != "" {
 														page.WriteString("\n")
-														writePageText(page, "\t\t\t\t// ", mthdComment, true)
+														ds.renderDocComment(page, pkg.Package, "\t\t\t\t// ", mthdComment)
 													}
 													page.WriteString("\n")
 												},
@@ -1399,7 +1396,7 @@ func buildTypeImplementsList(analyzer *code.CodeAnalyzer, pkg *code.Package, den
 func sortTypeList(typeList []TypeForListing, pkg *code.Package) []*TypeForListing {
 	result := make([]*TypeForListing, len(typeList))
 
-	pkgPath := pkg.Path()
+	pkgPath := pkg.Path
 	for i := range typeList {
 		t := &typeList[i]
 		result[i] = t
@@ -1407,7 +1404,7 @@ func sortTypeList(typeList []TypeForListing, pkg *code.Package) []*TypeForListin
 		if t.InCurrentPkg {
 			t.CommonPath = pkgPath
 		} else {
-			t.CommonPath = FindPackageCommonPrefixPaths(t.Package().Path(), pkgPath)
+			t.CommonPath = FindPackageCommonPrefixPaths(t.Package().Path, pkgPath)
 		}
 	}
 
@@ -1434,7 +1431,7 @@ func sortTypeList(typeList []TypeForListing, pkg *code.Package) []*TypeForListin
 				return len(commonA) > len(commonB)
 			}
 		}
-		pathA, pathB := strings.ToLower(result[a].Pkg.Path()), strings.ToLower(result[b].Pkg.Path())
+		pathA, pathB := strings.ToLower(result[a].Pkg.Path), strings.ToLower(result[b].Pkg.Path)
 		r := strings.Compare(pathA, pathB)
 		if r == 0 {
 			return strings.ToLower(result[a].Name()) < strings.ToLower(result[b].Name())
@@ -1471,13 +1468,13 @@ func buildValueList(values []code.ValueResource, pkg *code.Package, showUnexport
 func sortValueList(valueList []ValueForListing, pkg *code.Package) []*ValueForListing {
 	result := make([]*ValueForListing, len(valueList))
 
-	pkgPath := pkg.Path()
+	pkgPath := pkg.Path
 	for i := range valueList {
 		v := &valueList[i]
 		result[i] = v
 		v.InCurrentPkg = v.Package() == pkg
 		if !v.InCurrentPkg {
-			v.CommonPath = FindPackageCommonPrefixPaths(v.Package().Path(), pkgPath)
+			v.CommonPath = FindPackageCommonPrefixPaths(v.Package().Path, pkgPath)
 		}
 	}
 
@@ -1522,14 +1519,14 @@ func sortValueList(valueList []ValueForListing, pkg *code.Package) []*ValueForLi
 				return len(commonA) > len(commonB)
 			}
 		}
-		r := strings.Compare(strings.ToLower(result[a].Package().Path()), strings.ToLower(result[b].Package().Path()))
+		r := strings.Compare(strings.ToLower(result[a].Package().Path), strings.ToLower(result[b].Package().Path))
 		if r == 0 {
 			return compareWithoutPackges(result[a], result[b])
 		}
-		if result[a].Package().Path() == "builtin" {
+		if result[a].Package().Path == "builtin" {
 			return true
 		}
-		if result[b].Package().Path() == "builtin" {
+		if result[b].Package().Path == "builtin" {
 			return false
 		}
 		return r < 0
@@ -1561,14 +1558,14 @@ func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pk
 		}
 
 		if v.Package() != pkg {
-			//if v.Package().Path() != "builtin" {
-			page.WriteString(v.Package().Path())
+			//if v.Package().Path != "builtin" {
+			page.WriteString(v.Package().Path)
 			page.WriteByte('.')
 			//}
 			fmt.Fprintf(page, `<a href="`)
 			//page.WriteString("/pkg:")
-			//page.WriteString(v.Package().Path())
-			buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, v.Package().Path()), page, "")
+			//page.WriteString(v.Package().Path)
+			buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, v.Package().Path), page, "")
 		} else {
 			fmt.Fprintf(page, `<a href="`)
 		}
@@ -1595,7 +1592,7 @@ func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pk
 		page.WriteString("func ")
 		if vpkg := v.Package(); vpkg != pkg {
 			if vpkg != nil {
-				page.WriteString(v.Package().Path())
+				page.WriteString(v.Package().Path)
 				page.WriteString(".")
 			}
 		}
@@ -1605,9 +1602,9 @@ func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pk
 			recvParam, tn, isStar := res.ReceiverTypeName()
 			if isStar {
 				if v.Package() != pkg {
-					//fmt.Fprintf(page, `(*<a href="/pkg:%[1]s#name-%[2]s">%[2]s</a>).`, v.Package().Path(), tn.Name())
+					//fmt.Fprintf(page, `(*<a href="/pkg:%[1]s#name-%[2]s">%[2]s</a>).`, v.Package().Path, tn.Name())
 					page.WriteString("(*")
-					buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, v.Package().Path()), page, tn.Name(), "name-", tn.Name())
+					buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, v.Package().Path), page, tn.Name(), "name-", tn.Name())
 					page.WriteString(")")
 				} else {
 					// ToDo: faster way: ds.analyzer.TryRegisteringType(tn.Type()) == forTypeName.Denoting()?
@@ -1620,8 +1617,8 @@ func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pk
 				//fmt.Fprintf(page, "(*%s) ", tn.Name())
 			} else {
 				if v.Package() != pkg {
-					//fmt.Fprintf(page, `<a href="/pkg:%[1]s#name-%[2]s">%[2]s</a>.`, v.Package().Path(), tn.Name())
-					buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, v.Package().Path()), page, tn.Name(), "name-", tn.Name())
+					//fmt.Fprintf(page, `<a href="/pkg:%[1]s#name-%[2]s">%[2]s</a>.`, v.Package().Path, tn.Name())
+					buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, v.Package().Path), page, tn.Name(), "name-", tn.Name())
 				} else {
 					// ToDo: faster way: ds.analyzer.TryRegisteringType(tn.Type()) == forTypeName.Denoting()?
 					if forTypeName != nil && types.Identical(tn.Type(), forTypeName.Denoting().TT) {
@@ -1650,8 +1647,8 @@ func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pk
 			_ = recvParam // might be nil for interface method.
 		} else {
 			if v.Package() != pkg {
-				//fmt.Fprintf(page, `<a href="/pkg:%[1]s#name-%[2]s">%[2]s</a>`, v.Package().Path(), v.Name())
-				buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, v.Package().Path()), page, v.Name(), "name-", v.Name())
+				//fmt.Fprintf(page, `<a href="/pkg:%[1]s#name-%[2]s">%[2]s</a>`, v.Package().Path, v.Name())
+				buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, v.Package().Path), page, v.Name(), "name-", v.Name())
 			} else {
 				fmt.Fprintf(page, `<a href="#name-%[1]s">%[1]s</a>`, v.Name())
 			}
@@ -1712,8 +1709,8 @@ func (ds *docServer) writeTypeForListing(page *htmlPage, t *TypeForListing, pkg 
 			}
 		}
 
-		if t.Pkg.Path() != "builtin" {
-			page.WriteString(t.Pkg.Path())
+		if t.Pkg.Path != "builtin" {
+			page.WriteString(t.Pkg.Path)
 			page.WriteByte('.')
 		}
 
@@ -1744,8 +1741,8 @@ func (ds *docServer) writeTypeForListing(page *htmlPage, t *TypeForListing, pkg 
 	if t.Package() != pkg || dotMStyle != DotMStyle_NotShow {
 		fmt.Fprintf(page, `<a href="`)
 		//page.WriteString("/pkg:")
-		//page.WriteString(t.Pkg.Path())
-		buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, t.Pkg.Path()), page, "")
+		//page.WriteString(t.Pkg.Path)
+		buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, t.Pkg.Path), page, "")
 	} else {
 		fmt.Fprintf(page, `<a href="`)
 	}
@@ -1834,7 +1831,7 @@ func (ds *docServer) writeMethodForListing(page *htmlPage, docPkg *code.Package,
 		page.WriteString(") ")
 	}
 
-	if method.Pkg.Path() == "builtin" {
+	if method.Pkg.Path == "builtin" {
 		if docPkg == method.Pkg {
 			page.WriteString(method.Name)
 		} else {
@@ -1898,26 +1895,9 @@ func writeKindText(page *htmlPage, tt types.Type) {
 
 // func (ds *docServer) writeResourceIndexHTML(page *htmlPage, res code.Resource, fileLineOffsets map[string][]int, writeType, writeReceiver bool) {
 func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Package, res code.Resource, writeKeyword, writeType, writeComment bool) {
-	//pos := res.Position()
-	//if lineOffsets, ok := fileLineOffsets[pos.Filename]; ok {
-	//	correctPosition(lineOffsets, &pos)
-	//} else {
-	//	// For many reasons, line offset tables for the files
-	//	// outside of the current package are not available at this time.
-	//	// * link to methods or fields which are obtained through embedding
-	//	// * link to items in asTypesOf/asInputsOf/asOutputsOf lists.
-	//	//
-	//	// The way might cause line number inaccuracy.
-	//	pos.Line += ds.analyzer.SourceFileLineOffset(pos.Filename)
-	//	// ToDo: maybe it is acceptable to eventually load involved files
-	//	//       and calculate/cache their line offset tables.
-	//	//       (It would be best if the std ast parser could support an option
-	//	//       to turn off line-repositions.)
-	//}
-
 	//log.Println("   :", pos)
 
-	isBuiltin := res.Package().Path() == "builtin"
+	isBuiltin := res.Package().Path == "builtin"
 
 	writeResName := func() {
 		var fPkg = res.Package()
@@ -1956,7 +1936,7 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Pac
 		if writeKeyword {
 			if buildIdUsesPages && !isBuiltin {
 				page.WriteByte(' ')
-				buildPageHref(page.PathInfo, createPagePathInfo2(ResTypeReference, res.Package().Path(), "..", res.Name()), page, "type")
+				buildPageHref(page.PathInfo, createPagePathInfo2(ResTypeReference, res.Package().Path, "..", res.Name()), page, "type")
 				page.WriteByte(' ')
 			} else {
 				page.WriteString(" type ")
@@ -2020,7 +2000,7 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Pac
 	case *code.Constant:
 		if writeKeyword {
 			if buildIdUsesPages && !isBuiltin {
-				buildPageHref(page.PathInfo, createPagePathInfo2(ResTypeReference, res.Package().Path(), "..", res.Name()), page, "const")
+				buildPageHref(page.PathInfo, createPagePathInfo2(ResTypeReference, res.Package().Path, "..", res.Name()), page, "const")
 				page.WriteByte(' ')
 			} else {
 				page.WriteString("const ")
@@ -2053,7 +2033,7 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Pac
 			if buildIdUsesPages && !isBuiltin {
 				page.WriteByte(' ')
 				page.WriteByte(' ')
-				buildPageHref(page.PathInfo, createPagePathInfo2(ResTypeReference, res.Package().Path(), "..", res.Name()), page, "var")
+				buildPageHref(page.PathInfo, createPagePathInfo2(ResTypeReference, res.Package().Path, "..", res.Name()), page, "var")
 				page.WriteByte(' ')
 			} else {
 				page.WriteString("  var ")
@@ -2076,7 +2056,7 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Pac
 		if writeKeyword {
 			if buildIdUsesPages && !isBuiltin {
 				page.WriteByte(' ')
-				buildPageHref(page.PathInfo, createPagePathInfo2(ResTypeReference, res.Package().Path(), "..", res.Name()), page, "func")
+				buildPageHref(page.PathInfo, createPagePathInfo2(ResTypeReference, res.Package().Path, "..", res.Name()), page, "func")
 				page.WriteByte(' ')
 			} else {
 				page.WriteString(" func ")
@@ -2134,7 +2114,7 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Pac
 	if writeComment {
 		if comment := res.Comment(); comment != "" {
 			page.WriteString(" // ")
-			writePageText(page, "", comment, true)
+			ds.renderDocComment(page, currentPkg, "", comment)
 		}
 	}
 
@@ -2163,7 +2143,7 @@ func (ds *docServer) writeTypeName(page *htmlPage, tt *types.Named, docPkg *code
 			panic("should not")
 		}
 		ttPos := p.PPkg.Fset.PositionFor(tt.Obj().Pos(), false)
-		//log.Printf("============ %v, %v, %v", tt, pkg.Path(), ttPos)
+		//log.Printf("============ %v, %v, %v", tt, pkg.Path, ttPos)
 		writeSrouceCodeLineLink(page, p, ttPos, ttName, "")
 	}
 
@@ -2449,7 +2429,7 @@ func (ds *docServer) WriteAstType(w *htmlPage, typeLit ast.Expr, codePkg, docPkg
 
 		if objpkg == docPkg.PPkg.Types && forTypeName != nil && node.Name == forTypeName.Name() {
 			w.WriteString(node.Name)
-		} else if docPkg.Path() == "builtin" {
+		} else if docPkg.Path == "builtin" {
 			if obj.Exported() { // like Type
 				w.WriteString(node.Name)
 			} else { // like int
@@ -2463,7 +2443,7 @@ func (ds *docServer) WriteAstType(w *htmlPage, typeLit ast.Expr, codePkg, docPkg
 				panic("should not")
 			}
 			ttPos := p.PPkg.Fset.PositionFor(obj.Pos(), false)
-			//log.Printf("============ %v, %v, %v", tt, pkg.Path(), ttPos)
+			//log.Printf("============ %v, %v, %v", tt, pkg.Path, ttPos)
 			writeSrouceCodeLineLink(w, p, ttPos, node.Name, "")
 		}
 	case *ast.SelectorExpr:
@@ -2521,7 +2501,7 @@ func (ds *docServer) WriteAstType(w *htmlPage, typeLit ast.Expr, codePkg, docPkg
 				panic("should not")
 			}
 			ttPos := p.PPkg.Fset.PositionFor(obj.Pos(), false)
-			//log.Printf("============ %v, %v, %v", tt, pkg.Path(), ttPos)
+			//log.Printf("============ %v, %v, %v", tt, pkg.Path, ttPos)
 			writeSrouceCodeLineLink(w, p, ttPos, node.Sel.Name, "")
 		}
 	case *ast.ParenExpr:
@@ -2755,43 +2735,217 @@ func writeFoldingBlock(page *htmlPage, resName, statName, contentKind string, ex
 	page.WriteString("</span>")
 }
 
-func writePageText(page *htmlPage, indent, text string, htmlEscape bool) {
-	writePageTextEx(page, indent, text, htmlEscape, false)
-}
+//func writePageText(page *htmlPage, indent, text string, htmlEscape bool) {
+//	writePageTextEx(page, indent, text, htmlEscape)
+//}
 
-func writePageTextEx(page *htmlPage, indent, text string, htmlEscape, removeOriginalIdent bool) {
-	buffer := bytes.NewBufferString(text)
-	reader := bufio.NewReader(buffer)
-	notFirstLine, needAddMissingNewLine := false, false
-	for {
-		if needAddMissingNewLine {
-			page.WriteByte('\n')
-		}
-		line, isPrefix, err := reader.ReadLine()
-		if len(line) > 0 {
-			if notFirstLine {
-				page.WriteByte('\n')
-			}
-			page.WriteString(indent)
-			if removeOriginalIdent {
-				if len(line) > 0 && line[0] == '\t' {
-					line = line[1:]
-				}
-			}
-			needAddMissingNewLine = false
-		} else {
-			needAddMissingNewLine = true
-		}
-		if htmlEscape {
-			util.WriteHtmlEscapedBytes(page, line)
-		} else {
-			page.Write(line)
-		}
-		if errors.Is(err, io.EOF) {
-			break
-		}
-		if !isPrefix {
-			notFirstLine = true
+//// func writePageTextEx(page *htmlPage, indent, text string, htmlEscape, removeOriginalIdent bool) {
+//func writePageTextEx(page *htmlPage, indent, text string, htmlEscape bool) {
+//	buffer := bytes.NewBufferString(text)
+//	reader := bufio.NewReader(buffer)
+//	notFirstLine, needAddMissingNewLine := false, false
+//	for {
+//		if needAddMissingNewLine {
+//			page.WriteByte('\n')
+//		}
+//		line, isPrefix, err := reader.ReadLine()
+//		if len(line) > 0 {
+//			if notFirstLine {
+//				page.WriteByte('\n')
+//			}
+//			page.WriteString(indent)
+//
+//			// ToDo: bug, Need to find the common prefix ident, then remove it for each line.
+//			//if removeOriginalIdent {
+//			//	if len(line) > 0 && line[0] == '\t' {
+//			//		line = line[1:]
+//			//	}
+//			//}
+//			needAddMissingNewLine = false
+//		} else {
+//			needAddMissingNewLine = true
+//		}
+//		if htmlEscape {
+//			page.AsHTMLEscapeWriter().Write(line)
+//		} else {
+//			page.Write(line)
+//		}
+//		if errors.Is(err, io.EOF) {
+//			break
+//		}
+//		if !isPrefix {
+//			notFirstLine = true
+//		}
+//	}
+//}
+
+//func (ds *docServer) writePageText(page *htmlPage, ident, text string) {
+//	ds.docRenderer.Render(page, text, ident, true, nil)
+//}
+
+var asciiCharTypes [128]byte
+
+func init() {
+	setRange := func(from, to rune, t byte) {
+		for i := from; i <= to; i++ {
+			asciiCharTypes[i] = t
 		}
 	}
+	setRange('0', '9', 1)
+	setRange('a', 'z', 2)
+	setRange('A', 'Z', 2)
+	setRange('_', '_', 2)
+}
+
+func (ds *docServer) renderDocComment(page *htmlPage, currentPkg *code.Package, ident, mdDoc string) {
+	var makeURL func(string) string
+	if renderDocLinks {
+		makeURL = func(bracketedText string) (r string) {
+			//defer func() {
+			//	if r != "" {
+			//		println("===", currentPkg.Path, bracketedText, r)
+			//	}
+			//}()
+
+			checkResNameRoughly := func(resName string) bool {
+				if len(resName) == 0 {
+					return false
+				}
+				var k = 0
+				if r := resName[0]; asciiCharTypes[r] != 2 {
+					return false
+				} else {
+					k++
+				}
+				for i, r := range resName[k:] {
+					if asciiCharTypes[r] == 0 {
+						return false
+					}
+					if i >= 16 {
+						break
+					}
+				}
+				return true
+			}
+
+			bracketedText = strings.TrimLeft(bracketedText, "*")
+
+			tokens := strings.Split(bracketedText, ".")
+			if len(tokens) == 0 {
+				return ""
+			}
+
+			buildPkgResLink := func(pkg *code.Package, res code.Resource) string {
+				if res.Exported() || collectUnexporteds {
+					return buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, pkg.Path), nil, "", "name-", res.Name())
+				}
+
+				return buildSrouceCodeLineLink(page.PathInfo, ds.analyzer, pkg, res.Position())
+			}
+
+			if len(tokens) == 1 {
+				if !checkResNameRoughly(tokens[0]) {
+					return ""
+				}
+
+				res := currentPkg.SearchResourceByName(tokens[0])
+				if res == nil {
+					return ""
+				}
+
+				return buildPkgResLink(currentPkg, res)
+			}
+
+			if !checkResNameRoughly(tokens[1]) {
+				return ""
+			}
+
+			var trySearchRes = func(pkgPath string) (*code.Package, code.Resource) {
+				pkg := currentPkg.Module().PackageByPath(pkgPath)
+				if pkg == nil {
+					return nil, nil
+				}
+				res := pkg.SearchResourceByName(tokens[1])
+				if res == nil {
+					return nil, nil
+				}
+				return pkg, res
+			}
+
+			var res code.Resource
+			var pkg = ds.analyzer.StandardPackage(tokens[0])
+			if pkg != nil {
+				res = pkg.SearchResourceByName(tokens[1])
+				if res == nil {
+					pkg = nil
+				}
+			}
+			if res == nil {
+				pkg, res = trySearchRes(currentPkg.Path + "/" + tokens[0])
+			}
+			if res == nil {
+				i := strings.LastIndexByte(currentPkg.Path, '/')
+				if i > 0 {
+					pkg, res = trySearchRes(currentPkg.Path[:i+1] + tokens[0])
+				}
+			}
+			if res == nil {
+				pkg, res = trySearchRes(currentPkg.ModulePath() + "/" + tokens[0])
+			}
+
+			if len(tokens) == 2 {
+				if res != nil {
+					return buildPkgResLink(pkg, res)
+				}
+
+				tn := currentPkg.TypeNameByName(tokens[0])
+				if tn == nil {
+					return ""
+				}
+
+				sel := tn.Denoting().SelectorByName(tokens[1])
+				if sel == nil {
+					return ""
+				}
+
+				pkg = sel.Package()
+				if pkg == nil {
+					pkg = currentPkg
+				}
+
+				return buildSrouceCodeLineLink(page.PathInfo, ds.analyzer, pkg, sel.Position())
+			}
+
+			// ToDo: more complex patter: StructType.Field.Field, pkg.StructType.Field.Field, ...
+			if len(tokens) > 3 {
+				return ""
+			}
+
+			// Now, only consider one case: pkg.Type.Selector
+
+			if res == nil {
+				return ""
+			}
+
+			tn, ok := res.(*code.TypeName)
+			if !ok {
+				return ""
+			}
+
+			sel := tn.Denoting().SelectorByName(tokens[2])
+			if sel == nil {
+				return ""
+			}
+
+			pkg = sel.Package()
+			if pkg == nil {
+				pkg = currentPkg
+			}
+
+			return buildSrouceCodeLineLink(page.PathInfo, ds.analyzer, pkg, sel.Position())
+		}
+	}
+	page.WriteString(`<span class="md-text">`)
+	ds.docRenderer.Render(page, mdDoc, ident, true, makeURL)
+	page.WriteString(`</span>`)
 }

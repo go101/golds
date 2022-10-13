@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"go101.org/golds/code"
-	"go101.org/golds/internal/util"
 )
 
 //type usePageKey struct {
@@ -98,8 +97,8 @@ func (ds *docServer) identifierReferencePage(w http.ResponseWriter, r *http.Requ
 }
 
 func (ds *docServer) buildReferencesPage(w http.ResponseWriter, result *ReferencesResult) []byte {
-	title := ds.currentTranslation.Text_ReferenceList() + ds.currentTranslation.Text_Colon(false) + result.Package.Path() + "." + result.Identifier
-	page := NewHtmlPage(goldsVersion, title, ds.currentTheme, ds.currentTranslation, createPagePathInfo2(ResTypeReference, result.Package.Path(), "..", result.Identifier))
+	title := ds.currentTranslation.Text_ReferenceList() + ds.currentTranslation.Text_Colon(false) + result.Package.Path + "." + result.Identifier
+	page := NewHtmlPage(goldsVersion, title, ds.currentTheme, ds.currentTranslation, createPagePathInfo2(ResTypeReference, result.Package.Path, "..", result.Identifier))
 
 	var prefix string
 	if result.Selector == nil {
@@ -117,8 +116,8 @@ func (ds *docServer) buildReferencesPage(w http.ResponseWriter, result *Referenc
 	fmt.Fprintf(page, `
 <pre><code><span style="font-size:x-large;">%s<b><a href="%s">%s</a>.`,
 		prefix,
-		buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, result.Package.Path()), nil, ""),
-		result.Package.Path(),
+		buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, result.Package.Path), nil, ""),
+		result.Package.Path,
 	)
 
 	ds.writeResourceIndexHTML(page, result.Package, result.Resource, false, false, false)
@@ -144,10 +143,10 @@ func (ds *docServer) buildReferencesPage(w http.ResponseWriter, result *Referenc
 			methodName := result.Selector.Method.Name
 			var methodPkgPath string
 			if !token.IsExported(methodName) {
-				methodPkgPath = result.Selector.Method.Pkg.Path()
+				methodPkgPath = result.Selector.Method.Pkg.Path
 			}
 			var link string
-			if ds.analyzer.CheckTypeMethodContributingToTypeImplementations(result.Package.Path(), result.Resource.Name(), methodPkgPath, methodName) {
+			if ds.analyzer.CheckTypeMethodContributingToTypeImplementations(result.Package.Path, result.Resource.Name(), methodPkgPath, methodName) {
 				// entering here meaning this must be a non-interface method.
 
 				anchorName := methodName
@@ -155,8 +154,8 @@ func (ds *docServer) buildReferencesPage(w http.ResponseWriter, result *Referenc
 					anchorName = methodPkgPath + "." + anchorName
 				}
 				if sourceReadingStyle == SourceReadingStyle_rich { // enableSoruceNavigation {
-					if collectUnexporteds || result.Resource.Exported() || result.Package.Path() == "builtin" {
-						link = buildPageHref(page.PathInfo, createPagePathInfo2(ResTypeImplementation, result.Package.Path(), ".", result.Resource.Name()), nil, "", "name-", anchorName)
+					if collectUnexporteds || result.Resource.Exported() || result.Package.Path == "builtin" {
+						link = buildPageHref(page.PathInfo, createPagePathInfo2(ResTypeImplementation, result.Package.Path, ".", result.Resource.Name()), nil, "", "name-", anchorName)
 					}
 				}
 			}
@@ -203,26 +202,26 @@ func (ds *docServer) buildReferencesPage(w http.ResponseWriter, result *Referenc
 			endOffset := stack[i].pos.Offset + len(stack[i].id.Name)
 
 			//page.Write(fileInfo.Content[start:stack[i].pos.Offset])
-			util.WriteHtmlEscapedBytes(page, fileInfo.Content[start:stack[i].pos.Offset])
+			page.AsHTMLEscapeWriter().Write(fileInfo.Content[start:stack[i].pos.Offset])
 			page.WriteString("<b>")
 			//page.Write(fileInfo.Content[stack[i].pos.Offset:endOffset])
-			util.WriteHtmlEscapedBytes(page, fileInfo.Content[stack[i].pos.Offset:endOffset])
+			page.AsHTMLEscapeWriter().Write(fileInfo.Content[stack[i].pos.Offset:endOffset])
 			page.WriteString("</b>")
 
 			start = endOffset
 		}
-		util.WriteHtmlEscapedBytes(page, fileInfo.Content[start:end])
+		page.AsHTMLEscapeWriter().Write(fileInfo.Content[start:end])
 		page.WriteByte('\n')
 		stack = stack[:0]
 	}
 
 	for _, refGroup := range result.References {
 		page.WriteString("\n\t")
-		if refGroup.Pkg.Path() == result.Package.Path() {
-			page.WriteString(refGroup.Pkg.Path())
+		if refGroup.Pkg.Path == result.Package.Path {
+			page.WriteString(refGroup.Pkg.Path)
 			page.WriteString(page.Translation().Text_CurrentPackage())
 		} else {
-			buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, refGroup.Pkg.Path()), page, refGroup.Pkg.Path())
+			buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, refGroup.Pkg.Path), page, refGroup.Pkg.Path)
 		}
 		page.WriteByte('\n')
 
@@ -431,11 +430,11 @@ ResFound:
 			refs[refIndex] = ref
 			ref.Identifiers = ids[startIndex : endIndex+1]
 			ref.Pkg = lastPkg
-			ref.InCurrentPkg = lastPkg.Path() == pkgPath
+			ref.InCurrentPkg = lastPkg.Path == pkgPath
 			if ref.InCurrentPkg {
 				ref.CommonPath = pkgPath
 			} else {
-				ref.CommonPath = FindPackageCommonPrefixPaths(lastPkg.Path(), pkgPath)
+				ref.CommonPath = FindPackageCommonPrefixPaths(lastPkg.Path, pkgPath)
 			}
 			refIndex--
 		}
@@ -468,11 +467,11 @@ ResFound:
 				refs[i] = &allocatedRefs[i]
 				refs[i].AstIdents = ids
 				refs[i].Pkg = pkg
-				refs[i].InCurrentPkg = pkg.Path() == pkgPath
+				refs[i].InCurrentPkg = pkg.Path == pkgPath
 				if refs[i].InCurrentPkg {
 					refs[i].CommonPath = pkgPath
 				} else {
-					refs[i].CommonPath = FindPackageCommonPrefixPaths(pkg.Path(), pkgPath)
+					refs[i].CommonPath = FindPackageCommonPrefixPaths(pkg.Path, pkgPath)
 				}
 				i++
 			}
@@ -491,7 +490,7 @@ ResFound:
 					return len(commonA) > len(commonB)
 				}
 			}
-			pathA, pathB := strings.ToLower(refs[a].Pkg.Path()), strings.ToLower(refs[b].Pkg.Path())
+			pathA, pathB := strings.ToLower(refs[a].Pkg.Path), strings.ToLower(refs[b].Pkg.Path)
 			r := strings.Compare(pathA, pathB)
 			if pathA == "builtin" {
 				return true

@@ -229,7 +229,7 @@ func (d *CodeAnalyzer) analyzePackages_FindImplementations() { // (resultMethodC
 			}
 			pkgImportPath := ""
 			if sel.Method.Pkg != nil {
-				pkgImportPath = sel.Method.Pkg.Path()
+				pkgImportPath = sel.Method.Pkg.Path
 			}
 
 			sig := d.BuildMethodSignatureFromFunctionSignature(funcSig, sel.Method.Name, pkgImportPath)
@@ -309,7 +309,7 @@ func (d *CodeAnalyzer) analyzePackages_FindImplementations() { // (resultMethodC
 			}
 			pkgImportPath := ""
 			if sel.Method.Pkg != nil {
-				pkgImportPath = sel.Method.Pkg.Path()
+				pkgImportPath = sel.Method.Pkg.Path
 			}
 
 			sig := d.BuildMethodSignatureFromFunctionSignature(funcSig, sel.Method.Name, pkgImportPath)
@@ -399,11 +399,11 @@ func (d *CodeAnalyzer) analyzePackages_FindImplementations() { // (resultMethodC
 				return
 			}
 
-			pathPath := ti.TypeName.Package().Path()
+			pathPath := ti.TypeName.Package().Path
 			for _, sel := range uiInfo.t.AllMethods {
 				var selPkg string
 				if !token.IsExported(sel.Name()) {
-					selPkg = sel.Package().Path()
+					selPkg = sel.Package().Path
 				}
 				d.registerTypeMethodContributingToTypeImplementations(pathPath, ti.TypeName.Name(), selPkg, sel.Name())
 			}
@@ -1271,9 +1271,9 @@ func (d *CodeAnalyzer) collectSelectorsForNonInterfaceType(t *TypeInfo, smm *Sel
 		//		sel.Field.Mode == EmbedMode_Direct &&
 		//		sel.Field.Type.TypeName != nil &&
 		//		sel.Field.Type.TypeName.Name() == "Type" &&
-		//		//sel.Field.Type.TypeName.Package().Path() == "go/types" &&
+		//		//sel.Field.Type.TypeName.Package().Path == "go/types" &&
 		//		true {
-		//			log.Println("=====================", sel.Field.Type.TypeName.Name(), sel.Field.Type.TypeName.Package().Path(), sel, "==========", sel.Field.Type.TypeName)
+		//			log.Println("=====================", sel.Field.Type.TypeName.Name(), sel.Field.Type.TypeName.Package().Path, sel, "==========", sel.Field.Type.TypeName)
 		//		}
 		//	}
 
@@ -1569,10 +1569,10 @@ func (d *CodeAnalyzer) sortPackagesByDepHeight() {
 	var seen = make(map[string]struct{}, len(d.packageList))
 	var calculatePackageDepHeight func(pkg *Package)
 	calculatePackageDepHeight = func(pkg *Package) {
-		if _, ok := seen[pkg.Path()]; ok {
+		if _, ok := seen[pkg.Path]; ok {
 			return
 		}
-		seen[pkg.Path()] = struct{}{}
+		seen[pkg.Path] = struct{}{}
 
 		var max = int32(0)
 		for _, dep := range pkg.Deps {
@@ -1605,7 +1605,7 @@ func (d *CodeAnalyzer) sortPackagesByDepHeight() {
 	}
 
 	//for _, pkg := range d.packageList {
-	//	log.Println(">>>>>>>>>>>>>>>>", pkg.DepHeight, pkg.Path())
+	//	log.Println(">>>>>>>>>>>>>>>>", pkg.DepHeight, pkg.Path)
 	//}
 }
 
@@ -1615,7 +1615,7 @@ func (d *CodeAnalyzer) calculatePackagesDepDepths() {
 	for _, pkg := range d.packageList {
 		if pkg.PPkg.Name == "main" {
 			pkg.DepDepth = 1
-			seen[pkg.Path()] = struct{}{}
+			seen[pkg.Path] = struct{}{}
 		}
 	}
 	var hasMain = len(seen) > 0
@@ -1624,10 +1624,10 @@ func (d *CodeAnalyzer) calculatePackagesDepDepths() {
 
 	var calculatePackageDepDepth func(pkg *Package)
 	calculatePackageDepDepth = func(pkg *Package) {
-		if _, ok := seen[pkg.Path()]; ok {
+		if _, ok := seen[pkg.Path]; ok {
 			return
 		}
-		seen[pkg.Path()] = struct{}{}
+		seen[pkg.Path] = struct{}{}
 
 		var min = MaxDepth
 		for _, dep := range pkg.DepedBys {
@@ -1686,7 +1686,7 @@ func (d *CodeAnalyzer) calculatePackagesDepDepths() {
 	//sort.Slice(pkgs, func(i, j int) bool {
 	//	if di, dj := pkgs[i].DepDepth, pkgs[j].DepDepth; di == dj {
 	//		if x, y := d.IsStandardPackage(pkgs[i]), d.IsStandardPackage(pkgs[j]); x == y {
-	//			return pkgs[i].Path() < pkgs[j].Path()
+	//			return pkgs[i].Path < pkgs[j].Path
 	//		} else {
 	//			return y
 	//		}
@@ -1695,18 +1695,21 @@ func (d *CodeAnalyzer) calculatePackagesDepDepths() {
 	//	}
 	//})
 	//for _, pkg := range pkgs {
-	//	log.Println(">>>>>>>>>>>>>>>>", pkg.Index, pkg.DepDepth, pkg.Path())
+	//	log.Println(">>>>>>>>>>>>>>>>", pkg.Index, pkg.DepDepth, pkg.Path)
 	//}
 }
 
 func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 	if pkg.PackageAnalyzeResult != nil {
-		panic(pkg.Path() + " already analyzed")
+		panic(pkg.Path + " already analyzed")
 	}
 
-	//log.Println("[analyzing]", pkg.Path(), pkg.PPkg.Name)
+	//log.Println("[analyzing]", pkg.Path, pkg.PPkg.Name)
 
 	pkg.PackageAnalyzeResult = NewPackageAnalyzeResult()
+	defer func() {
+		pkg.BuildResourceLookupTable()
+	}()
 
 	registerTypeName := func(tn *TypeName) {
 		pkg.PackageAnalyzeResult.AllTypeNames = append(pkg.PackageAnalyzeResult.AllTypeNames, tn)
@@ -1732,8 +1735,8 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 		// function stats are moved to below
 	}
 
-	var isBuiltinPkg = pkg == d.builtinPkg // pkg.Path() == "builtin"
-	var isUnsafePkg = pkg.Path() == "unsafe"
+	var isBuiltinPkg = pkg == d.builtinPkg // pkg.Path == "builtin"
+	var isUnsafePkg = pkg.Path == "unsafe"
 	//var isBuildinOrUnsafe = isBuiltinPkg || isUnsafePkg
 
 	// ToDo: use info.TypeOf, info.ObjectOf
@@ -1784,7 +1787,7 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 				obj := pkg.PPkg.TypesInfo.Defs[fd.Name]
 				switch funcObj := obj.(type) {
 				default:
-					panic(pkg.Path() + "." + fd.Name.Name + " not a types.Func or types.Builtin, but " + fmt.Sprintf("%T", funcObj))
+					panic(pkg.Path + "." + fd.Name.Name + " not a types.Func or types.Builtin, but " + fmt.Sprintf("%T", funcObj))
 				case *types.Func:
 					f = &Function{
 						Func: funcObj,
@@ -1825,7 +1828,7 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 
 						tv := pkg.PPkg.TypesInfo.Types[typeSpec.Type]
 						if !tv.IsType() {
-							if pkg.Path() != "unsafe" {
+							if pkg.Path != "unsafe" {
 								panic(typeSpec.Name.Name + ": not type")
 							}
 
@@ -2217,9 +2220,9 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 
 func (d *CodeAnalyzer) analyzePackage_CollectMoreStatistics(pkg *Package) {
 	if pkg.PackageAnalyzeResult == nil {
-		panic(pkg.Path() + " is not analyzed yet")
+		panic(pkg.Path + " is not analyzed yet")
 	}
-	var isBuiltinPkg = pkg == d.builtinPkg // pkg.Path() == "builtin"
+	var isBuiltinPkg = pkg == d.builtinPkg // pkg.Path == "builtin"
 
 	for _, tn := range pkg.PackageAnalyzeResult.AllTypeNames {
 		d.stats.roughTypeNameCount++
@@ -2340,7 +2343,7 @@ func (d *CodeAnalyzer) analyzePackage_CollectMoreStatisticsFinal() {
 	//	//d.stats.FilesWithGenerateds += int32(len(pkg.SourceFiles))
 	//	//d.stats.AllPackageDeps += int32(len(pkg.Deps))
 	//	//incSliceStat(d.stats.PackagesByDeps[:], len(pkg.Deps))
-	//	//d.stat_OnNewPackage(d.IsStandardPackage(pkg), len(pkg.SourceFiles), len(pkg.Deps), pkg.Path())
+	//	//d.stat_OnNewPackage(d.IsStandardPackage(pkg), len(pkg.SourceFiles), len(pkg.Deps), pkg.Path)
 	//}
 
 	d.stats.roughExportedIdentifierCount += d.stats.ExportedIdentifers
@@ -2376,9 +2379,9 @@ func (d *CodeAnalyzer) analyzePackage_CollectSomeRuntimeFunctionPositions() {
 }
 
 func (d *CodeAnalyzer) analyzePackage_ConfirmTypeSources(pkg *Package) {
-	var isBuiltin = pkg == d.builtinPkg // pkg.Path() == "builtin"
+	var isBuiltin = pkg == d.builtinPkg // pkg.Path == "builtin"
 
-	//log.Println("[analyzing]", pkg.Path(), pkg.PPkg.Name)
+	//log.Println("[analyzing]", pkg.Path, pkg.PPkg.Name)
 	for _, file := range pkg.PPkg.Syntax {
 
 		//ast.Inspect(file, func(n ast.Node) bool {
@@ -2433,7 +2436,7 @@ func (d *CodeAnalyzer) analyzePackage_ConfirmTypeSources(pkg *Package) {
 
 							srcObj := pkg.PPkg.TypesInfo.ObjectOf(expr)
 							if srcObj == nil {
-								if pkg.Path() != "unsafe" {
+								if pkg.Path != "unsafe" {
 									panic("srcObj is nil but package is not unsafe")
 								}
 								return
@@ -2449,11 +2452,11 @@ func (d *CodeAnalyzer) analyzePackage_ConfirmTypeSources(pkg *Package) {
 							}
 							source.TypeName = tn
 
-							//log.Println(starSource, "ident,", pkg.Path()+"."+typeSpec.Name.Name, "source is:", tn.Pkg.Path()+"."+expr.Name)
+							//log.Println(starSource, "ident,", pkg.Path+"."+typeSpec.Name.Name, "source is:", tn.Pkg.Path+"."+expr.Name)
 
 							return
 						case *ast.SelectorExpr:
-							//log.Println("selector,", pkg.Path()+"."+typeSpec.Name.Name, "source is:")
+							//log.Println("selector,", pkg.Path+"."+typeSpec.Name.Name, "source is:")
 							srcObj := pkg.PPkg.TypesInfo.ObjectOf(expr.X.(*ast.Ident))
 							srcPkg := srcObj.(*types.PkgName)
 
@@ -2463,15 +2466,15 @@ func (d *CodeAnalyzer) analyzePackage_ConfirmTypeSources(pkg *Package) {
 							}
 							source.TypeName = tn
 
-							//log.Println(starSource, "selector,", pkg.Path()+"."+typeSpec.Name.Name, "source is:", tn.Pkg.Path()+"."+expr.Sel.Name)
+							//log.Println(starSource, "selector,", pkg.Path+"."+typeSpec.Name.Name, "source is:", tn.Pkg.Path+"."+expr.Sel.Name)
 							return
 						case *ast.ParenExpr:
-							//log.Println("paren,", pkg.Path()+"."+typeSpec.Name.Name, "source is:")
+							//log.Println("paren,", pkg.Path+"."+typeSpec.Name.Name, "source is:")
 							findSource(expr.X, false)
 							return
 						case *ast.StarExpr:
 							if !starSource {
-								//log.Println("star,", pkg.Path()+"."+typeSpec.Name.Name, "source is:")
+								//log.Println("star,", pkg.Path+"."+typeSpec.Name.Name, "source is:")
 								findSource(expr.X, true)
 								return
 							}
@@ -2490,7 +2493,7 @@ func (d *CodeAnalyzer) analyzePackage_ConfirmTypeSources(pkg *Package) {
 						tv := pkg.PPkg.TypesInfo.Types[srcNode]
 						srcTypeInfo := d.RegisterType(tv.Type)
 						source.UnnamedType = srcTypeInfo
-						//log.Println(starSource, "default,", pkg.Path()+"."+typeSpec.Name.Name, "source is:", tv.Type)
+						//log.Println(starSource, "default,", pkg.Path+"."+typeSpec.Name.Name, "source is:", tv.Type)
 
 						if sttNode != nil {
 							d.registerDirectFields(srcTypeInfo, sttNode, pkg)

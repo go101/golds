@@ -83,8 +83,8 @@ func (ds *docServer) buildPackageDependenciesData(pkgPath string) *PackageDepend
 		result.Imports[i] = &imports[i]
 
 		result.Imports[i].Package = pkg
-		result.Imports[i].Path = pkg.Path()
-		result.Imports[i].Remaining = pkg.Path()
+		result.Imports[i].Path = pkg.Path
+		result.Imports[i].Remaining = pkg.Path
 		result.Imports[i].Name = pkg.PPkg.Name
 		result.Imports[i].Index = pkg.Index
 	}
@@ -95,8 +95,8 @@ func (ds *docServer) buildPackageDependenciesData(pkgPath string) *PackageDepend
 		result.ImportedBys[i] = &importedBys[i]
 
 		result.ImportedBys[i].Package = pkg
-		result.ImportedBys[i].Path = pkg.Path()
-		result.ImportedBys[i].Remaining = pkg.Path()
+		result.ImportedBys[i].Path = pkg.Path
+		result.ImportedBys[i].Remaining = pkg.Path
 		result.ImportedBys[i].Name = pkg.PPkg.Name
 		result.ImportedBys[i].Index = pkg.Index
 	}

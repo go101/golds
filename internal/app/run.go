@@ -214,6 +214,7 @@ func run() {
 		NotCollectUnexporteds:  *nounexporteds,
 		WdPkgsListingManner:    wdPkgsListingManner,
 		FooterShowingManner:    footerShowingManner,
+		RenderDocLinks:         *renderDocLinksFlag,
 		VerboseLogs:            verboseMode,
 	}
 
@@ -283,6 +284,8 @@ var srcReadingStyleFlag = flag.String("source-code-reading", "", "specify how an
 var allowNetworkConnection = flag.Bool("allow-network-connection", false, "specify whether or not network connections are allowed")
 
 var footerShowingMannerFlag = flag.String("footer", "verbose+qrcode", "verbose+qrcode | verbose | simple | none")
+
+var renderDocLinksFlag = flag.Bool("render-doclinks", false, "render links in doc comments")
 
 // depreciated by "-wdpkgs-listing=promoted" since v0.1.8
 var emphasizeWdPackagesFlag = flag.Bool("emphasize-wdpkgs", false, "promote working directory packages")

@@ -75,7 +75,7 @@ func buildTestData_Package(details *PackageDetails) TestData_Package {
 		// ...
 		var implementedByCount int
 		for _, impedBy := range t.ImplementedBys {
-			if isInformalPackage(impedBy.Package().Path()) {
+			if isInformalPackage(impedBy.Package().Path) {
 				continue
 			}
 			implementedByCount++
@@ -83,7 +83,7 @@ func buildTestData_Package(details *PackageDetails) TestData_Package {
 
 		var implementsCount int
 		for _, impl := range t.Implements {
-			if isInformalPackage(impl.Package().Path()) {
+			if isInformalPackage(impl.Package().Path) {
 				continue
 			}
 			implementsCount++
@@ -91,7 +91,7 @@ func buildTestData_Package(details *PackageDetails) TestData_Package {
 
 		var valueCount int
 		for _, v := range t.Values {
-			if isInformalPackage(v.Package().Path()) {
+			if isInformalPackage(v.Package().Path) {
 				continue
 			}
 			valueCount++
@@ -99,7 +99,7 @@ func buildTestData_Package(details *PackageDetails) TestData_Package {
 
 		var asInputCount int
 		for _, v := range t.AsInputsOf {
-			if isInformalPackage(v.Package().Path()) {
+			if isInformalPackage(v.Package().Path) {
 				continue
 			}
 			asInputCount++
@@ -107,7 +107,7 @@ func buildTestData_Package(details *PackageDetails) TestData_Package {
 
 		var asOutputCount int
 		for _, v := range t.AsOutputsOf {
-			if isInformalPackage(v.Package().Path()) {
+			if isInformalPackage(v.Package().Path) {
 				continue
 			}
 			asOutputCount++
@@ -170,15 +170,15 @@ func buildTestData(args []string, silent bool, printUsage func(io.Writer)) map[s
 	pkgTestDatas := make(map[string]TestData_Package, numPkgs)
 	for i := 0; i < numPkgs; i++ {
 		pkg := analyzer.PackageAt(i)
-		if isInformalPackage(pkg.Path()) {
+		if isInformalPackage(pkg.Path) {
 			continue
 		}
 
-		details := buildPackageDetailsData(&analyzer, pkg.Path(), false)
-		pkgTestDatas[pkg.Path()] = buildTestData_Package(details)
+		details := buildPackageDetailsData(&analyzer, pkg.Path, false)
+		pkgTestDatas[pkg.Path] = buildTestData_Package(details)
 
 		if !silent {
-			log.Printf("%s", pkg.Path())
+			log.Printf("%s", pkg.Path)
 		}
 	}
 	return pkgTestDatas

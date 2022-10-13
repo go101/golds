@@ -348,6 +348,8 @@ func (e *English) Text_PackageLevelResourceSimpleStat(statsAreExact bool, num, n
 				} else {
 					exporteds = "none are exported"
 				}
+			} else if numExporteds == 1 {
+				exporteds = "in which 1 is exported"
 			} else if numExporteds == num {
 				if num == 2 {
 					exporteds = "both are exported"

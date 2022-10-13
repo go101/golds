@@ -7,6 +7,7 @@ import (
 	"go/types"
 	"log"
 	"reflect"
+	"sort"
 	"strings"
 
 	"golang.org/x/tools/go/packages"
@@ -39,6 +40,13 @@ type Module struct {
 	ExtraPathInRepository string
 
 	Pkgs []*Package // seen packages
+
+	// The package hierarchy.
+	// In a package hierarchy, there are some fake nonexisting packages.
+	// For a fake package, only its name is important.
+	// A fake package directory contains no source files.
+	rootPkg      *Package
+	hasWrongPkgs bool
 }
 
 // Note, for a module m with replacement r,
@@ -70,10 +78,273 @@ func (m *Module) ActualDir() string {
 	return m.Dir
 }
 
+func (m *Module) buildPackageHierarchy() {
+	sort.Slice(m.Pkgs, func(a, b int) bool {
+		return ComparePackagePaths(m.Pkgs[a].Path, m.Pkgs[b].Path, '/')
+	})
+
+	// "go list" result might be not reliable: https://github.com/golang/go/issues/45649
+	var start, end int
+	for i, pkg := range m.Pkgs {
+		if !pkg.wrongModule {
+			start = i
+			break
+		}
+	}
+	for i := len(m.Pkgs) - 1; i >= 0; i-- {
+		if !m.Pkgs[i].wrongModule {
+			end = i
+			break
+		}
+	}
+	if start > end {
+		log.Printf("start (%d) > end (%d), something wrong!", start, end)
+		m.rootPkg = &Package{Path: m.Path}
+		return
+	}
+
+	// The paths of all pkgs should start with m.Path.
+	var pkgs = m.Pkgs[start : end+1]
+	if pkg := pkgs[0]; len(pkg.Path) == len(m.Path) {
+		m.rootPkg = pkg
+		pkgs = pkgs[1:]
+	} else {
+		m.rootPkg = &Package{Path: m.Path} // a fake package
+	}
+
+	if len(pkgs) == 0 {
+		return
+	}
+
+	// buildPhase == false means count phase.
+	// buildPhase == true means build phase.
+	var build func(forPkg *Package, pkgs []*Package, buildPhase bool) int
+	build = func(forPkg *Package, pkgs []*Package, buildPhase bool) (numChildren int) {
+		//println("  222", buildPhase, forPkg.Path, len(pkgs))
+		if len(pkgs) == 0 {
+			return
+		}
+		if buildPhase {
+			forPkg.children = make([]*Package, 0, build(forPkg, pkgs, false))
+		}
+
+		var prefixLen = 0 // for std module, which path is blank
+		if len(forPkg.Path) > 0 {
+			prefixLen = len(forPkg.Path) + 1
+		}
+		var lastToken = ""
+		var startIndex int
+		var startPkg *Package
+
+		var addChild func(chidChildren []*Package)
+		if buildPhase {
+			addChild = func(chidChildren []*Package) {
+				forPkg.children = append(forPkg.children, startPkg)
+
+				if !startPkg.IsFake() {
+					chidChildren = chidChildren[1:]
+				}
+				build(startPkg, chidChildren, true)
+			}
+		}
+
+		for i, pkg := range pkgs {
+			//println("    33", buildPhase, pkg.Path)
+			//if pkg.Path[len(forPkg.Path)] != '/' { // not true for std packages
+			//	panic("should not")
+			//}
+			relPath := pkg.Path[prefixLen:]
+			k := strings.IndexByte(relPath, '/')
+			end := k < 0
+			if end {
+				k = len(relPath)
+			} else if k == 0 {
+				panic("should not")
+			}
+			token := relPath[:k]
+			if token == "" {
+				panic("should not")
+			}
+			//println("    44", buildPhase, token, ",", lastToken)
+			if token != lastToken {
+				if buildPhase {
+					if startPkg != nil {
+						addChild(pkgs[startIndex:i])
+					}
+
+					if end {
+						startPkg = pkg
+					} else {
+						startPkg = &Package{Path: pkg.Path[:prefixLen+k]}
+					}
+					startPkg.parent = forPkg
+				}
+				//println("      55", buildPhase, startPkg)
+
+				numChildren++
+				lastToken = token
+				startIndex = i
+			}
+		}
+
+		if buildPhase {
+			if startPkg == nil {
+				panic("should not")
+			}
+
+			//println("    66", buildPhase, startPkg, startIndex, len(pkgs))
+			addChild(pkgs[startIndex:])
+
+			if cap(forPkg.children) != len(forPkg.children) {
+				panic("should not")
+			}
+		}
+
+		return
+	}
+
+	//println("111", m.rootPkg.Path)
+	build(m.rootPkg, pkgs, true)
+
+	// m.printPackageHierarchy()
+}
+
+func (m *Module) printPackageHierarchy() {
+	// Print
+	var printPkg func(pkg *Package, nIdents int)
+	printPkg = func(pkg *Package, nIdents int) {
+		var n = nIdents
+		for n > 0 {
+			n--
+			print("  ")
+		}
+		print(nIdents, " ", pkg.Path)
+		if pkg.IsFake() {
+			println(" (fake)")
+		} else {
+			println()
+		}
+		for _, child := range pkg.children {
+			printPkg(child, nIdents+1)
+		}
+	}
+	printPkg(m.rootPkg, 0)
+
+}
+
+// ToDo: build a trie to run faster?
+func (m *Module) PackageByPath(path string) (r *Package) {
+	if !strings.HasPrefix(path, m.Path) {
+		return nil
+	}
+
+	defer func() {
+		if r != nil && r.IsFake() {
+			r = nil
+		}
+	}()
+
+	if len(path) == len(m.Path) {
+		return m.rootPkg
+	}
+
+	// m.Path == "" means std module.
+	if m.Path == "" {
+		return m.rootPkg.ChildByPath(path)
+	} else {
+		if path[len(m.Path)] != '/' {
+			return nil
+		}
+
+		return m.rootPkg.ChildByPath(path[len(m.Path)+1:])
+	}
+}
+
+func (d *CodeAnalyzer) StandardPackage(path string) *Package {
+	return d.stdModule.PackageByPath(path)
+}
+
+func (p *Package) ChildByPath(path string) *Package {
+	var end = false
+	i := strings.IndexByte(path, '/')
+	if i < 0 {
+		i = len(path)
+		end = true
+	}
+
+	pkg := searchPackage(p.Path, path[:i], p.children)
+	if pkg == nil {
+		return nil
+	}
+
+	if end {
+		if pkg.IsFake() {
+			return nil
+		}
+		return pkg
+	}
+
+	return pkg.ChildByPath(path[i+1:])
+}
+
+// All paths of sortedPkgs must be prefixed with pathPrefix.
+func searchPackage(pathPrefix, relPath string, sortedPkgs []*Package) *Package {
+	var n = len(pathPrefix)
+	if pathPrefix != "" { // not std root package
+		n++
+	}
+	var a, b = 0, len(sortedPkgs) - 1
+	for a <= b {
+		k := a + (b-a)/2
+		p := sortedPkgs[k]
+		switch strings.Compare(relPath, p.Path[n:]) {
+		case 0:
+			return p
+		case 1:
+			a = k + 1
+		case -1:
+			b = k - 1
+		}
+	}
+	return nil
+}
+
+// Should be faster than using strings.Split or Strings.Tokens
+// Return true for pa <= pb.
+func ComparePackagePaths(pa, pb string, sep byte) bool {
+	true, false := true, false
+	if len(pa) > len(pb) {
+		pa, pb = pb, pa
+		true, false = false, true
+	}
+	if len(pa) <= len(pb) { // BCE hint
+		for i := 0; i < len(pa); i++ {
+			if pa[i] == sep {
+				if pb[i] == sep {
+					continue
+				}
+				return true
+			} else if pb[i] == sep {
+				return false
+			}
+			if pa[i] < pb[i] {
+				return true
+			} else if pa[i] > pb[i] {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 // Package holds the information and the analysis result of a Go package.
 type Package struct {
 	Index int               // ToDo: use this to do some optimizations
 	PPkg  *packages.Package // ToDo: renamed to PP to be consistent with TypeInfo.TT?
+	Path  string
+
+	parent   *Package
+	children []*Package
 
 	Deps      []*Package
 	DepedBys  []*Package
@@ -82,27 +353,49 @@ type Package struct {
 
 	// This field might be shared with PackageForDisplay
 	// for concurrent reads.
-	*PackageAnalyzeResult // ToDo: not as pointer?
+	*PackageAnalyzeResult                     // ToDo: not as pointer?
+	AllResources          map[string]Resource // ToDo: use a slice to save memory
 	SourceFiles           []SourceFileInfo
 	ExampleFiles          []*ast.File
 	Examples              []*doc.Example
 
-	Directory  string
-	Module     *Module
-	OneLineDoc string
+	OneLineDoc  string
+	Directory   string
+	module      *Module
+	wrongModule bool // whether or not Package.Path is prefixed by module path
 }
 
 // Path returns the import path of a Package.
-func (p *Package) Path() string {
-	return p.PPkg.PkgPath // might be prefixed with "vendor/", which is different from import path.
-}
+//func (p *Package) Path() string {
+//	return p.PPkg.PkgPath // might be prefixed with "vendor/", which is different from import path.
+//}
 
 // ModulePath returns the module path of a Package.
 func (p *Package) ModulePath() string {
-	if p.Module == nil {
+	if p.module == nil {
 		return ""
 	}
-	return p.Module.Path
+	return p.module.Path
+}
+
+// ModulePath returns the module path of a Package.
+func (p *Package) Module() *Module {
+	return p.module
+}
+
+func (p *Package) RelPathInModule() string {
+	if p.module == nil || p.wrongModule {
+		return p.Path
+	}
+	return p.Path[len(p.module.Path):]
+}
+
+func (p *Package) IsFake() bool {
+	return p.PPkg == nil
+}
+
+func (p *Package) ParentPackage() *Package {
+	return p.parent
 }
 
 // PackageAnalyzeResult holds the analysis result of a Go package.
@@ -114,6 +407,7 @@ type PackageAnalyzeResult struct {
 	AllImports   []*Import
 
 	CodeLinesWithBlankLines int32
+	typesAreSorted          bool
 }
 
 // NewPackageAnalyzeResult returns a new initialized PackageAnalyzeResult.
@@ -127,6 +421,56 @@ func NewPackageAnalyzeResult() *PackageAnalyzeResult {
 		AllConstants: make([]*Constant, 0, 64),
 		AllImports:   make([]*Import, 0, 64),
 	}
+}
+
+func (pr *PackageAnalyzeResult) TypeNameByName(name string) *TypeName {
+	if !pr.typesAreSorted {
+		pr.typesAreSorted = true
+		sort.Slice(pr.AllTypeNames, func(a, b int) bool {
+			return pr.AllTypeNames[a].Name() < pr.AllTypeNames[b].Name()
+		})
+	}
+
+	var a, b = 0, len(pr.AllTypeNames) - 1
+	for a <= b {
+		k := a + (b-a)/2
+		tn := pr.AllTypeNames[k]
+		switch strings.Compare(name, tn.Name()) {
+		case 0:
+			return tn
+		case 1:
+			a = k + 1
+		case -1:
+			b = k - 1
+		}
+	}
+	return nil
+}
+
+// ToDo: build a trie to run faster
+func (pkg *Package) BuildResourceLookupTable() {
+	var n = len(pkg.AllTypeNames) + len(pkg.AllFunctions) + len(pkg.AllVariables) + len(pkg.AllConstants)
+	pkg.AllResources = make(map[string]Resource, n)
+
+	for _, res := range pkg.AllTypeNames {
+		pkg.AllResources[res.Name()] = res
+	}
+
+	for _, res := range pkg.AllFunctions {
+		pkg.AllResources[res.Name()] = res
+	}
+
+	for _, res := range pkg.AllVariables {
+		pkg.AllResources[res.Name()] = res
+	}
+
+	for _, res := range pkg.AllConstants {
+		pkg.AllResources[res.Name()] = res
+	}
+}
+
+func (pkg *Package) SearchResourceByName(name string) Resource {
+	return pkg.AllResources[name]
 }
 
 // SourceFileInfoByBareFilename returns the SourceFileInfo corresponding the specified bare filename.
@@ -353,7 +697,7 @@ type TypeName struct {
 
 // Exported returns whether or not a TypeName is exported.
 func (tn *TypeName) Exported() bool {
-	if tn.Pkg.Path() == "builtin" {
+	if tn.Pkg.Path == "builtin" {
 		return !token.IsExported(tn.Name())
 	}
 	return tn.TypeName.Exported()
@@ -483,11 +827,19 @@ type TypeInfo struct {
 	EmbeddingFields int32 // for struct types only now. ToDo: also for interface types.
 
 	//>> 1.18, ToDo
-	ParameterizedMethods int32
+	//ParameterizedMethods int32
 	// The following AllMethods list only inlcudes non-parameterized methods now.
 	// So the length of the list might be not equal to types.NumMethods().
 	// The impler list for an interface with parameterized methods will not get calculated.
 	//<<
+
+	// ToDo:
+	// The sorting rules are different from the rules in package details.
+	// For most types, the twp are not needed to be sorted.
+	// ToDo: put the two in attributes?
+	//MethodsAreSorted bool
+	//FieldsAreSorted bool
+	AllSelectors map[string]*Selector // built as needed for links in doc comments.
 
 	// All methods, including extended/promoted ones.
 	AllMethods []*Selector
@@ -519,6 +871,23 @@ type TypeInfo struct {
 // Kind returns the kinds (as reflect.Kind) of a type.
 func (t *TypeInfo) Kind() reflect.Kind {
 	return Kind(t.TT)
+}
+
+func (t *TypeInfo) SelectorByName(name string) *Selector {
+	var n = len(t.AllMethods) + len(t.AllFields)
+	if n == 0 {
+		return nil
+	}
+	if t.AllSelectors == nil {
+		t.AllSelectors = make(map[string]*Selector, n)
+		for _, sel := range t.AllMethods {
+			t.AllSelectors[sel.Name()] = sel
+		}
+		for _, sel := range t.AllFields {
+			t.AllSelectors[sel.Name()] = sel
+		}
+	}
+	return t.AllSelectors[name]
 }
 
 // Kind rerurns the kinds (as reflect.Kind) for a go/types.Type.
@@ -647,7 +1016,7 @@ func (c *Constant) Package() *Package {
 
 // Exported returns whether or not a Constant is exported.
 func (c *Constant) Exported() bool {
-	if c.Pkg.Path() == "builtin" {
+	if c.Pkg.Path == "builtin" {
 		return !token.IsExported(c.Name())
 	}
 	return c.Const.Exported()
@@ -734,7 +1103,7 @@ func (v *Variable) Package() *Package {
 
 // Exported returns whether or not a Variable is exported.
 func (v *Variable) Exported() bool {
-	if v.Pkg.Path() == "builtin" {
+	if v.Pkg.Path == "builtin" {
 		return !token.IsExported(v.Name())
 	}
 	return v.Var.Exported()
@@ -807,7 +1176,7 @@ func (f *Function) Exported() bool {
 	if f.Builtin != nil {
 		return true
 	}
-	if f.Pkg.Path() == "builtin" {
+	if f.Pkg.Path == "builtin" {
 		return !token.IsExported(f.Name())
 	}
 	return f.Func.Exported()

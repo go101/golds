@@ -69,12 +69,12 @@ func (ds *docServer) buildImplementationPage(w http.ResponseWriter, result *Meth
 	// some methods are born by embedding other types.
 	// Use the same design for local id: click such methods to highlight all same-origin ones.
 
-	title := ds.currentTranslation.Text_MethodImplementations() + ds.currentTranslation.Text_Colon(false) + result.Package.Path() + "." + result.TypeName.Name()
-	page := NewHtmlPage(goldsVersion, title, ds.currentTheme, ds.currentTranslation, createPagePathInfo2(ResTypeImplementation, result.Package.Path(), ".", result.TypeName.Name()))
+	title := ds.currentTranslation.Text_MethodImplementations() + ds.currentTranslation.Text_Colon(false) + result.Package.Path + "." + result.TypeName.Name()
+	page := NewHtmlPage(goldsVersion, title, ds.currentTheme, ds.currentTranslation, createPagePathInfo2(ResTypeImplementation, result.Package.Path, ".", result.TypeName.Name()))
 
 	fmt.Fprintf(page, `<pre><code><span style="font-size:x-large;">type <a href="%s">%s</a>.`,
-		buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, result.Package.Path()), nil, ""),
-		result.Package.Path(),
+		buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, result.Package.Path), nil, ""),
+		result.Package.Path,
 	)
 	page.WriteString("<b>")
 	//writeSrouceCodeLineLink(page, result.TypeName.Package(), result.TypeName.Position(), result.TypeName.Name(), "")
@@ -105,7 +105,7 @@ func (ds *docServer) buildImplementationPage(w http.ResponseWriter, result *Meth
 		anchorName := methodName
 		isExported := !token.IsExported(methodName)
 		if isExported {
-			anchorName = method.Method.Package().Path() + "." + methodName
+			anchorName = method.Method.Package().Path + "." + methodName
 		}
 		fmt.Fprintf(page, `<div class="anchor" id="name-%s">`, anchorName)
 		page.WriteByte('\t')
@@ -113,7 +113,7 @@ func (ds *docServer) buildImplementationPage(w http.ResponseWriter, result *Meth
 		//       For some rare cases, two same unexported methods from two different packages ...
 		//
 		if buildIdUsesPages {
-			buildPageHref(page.PathInfo, createPagePathInfo3(ResTypeReference, result.Package.Path(), "..", result.TypeName.Name(), method.Method.Name()), page, method.Method.Name())
+			buildPageHref(page.PathInfo, createPagePathInfo3(ResTypeReference, result.Package.Path, "..", result.TypeName.Name(), method.Method.Name()), page, method.Method.Name())
 			ds.writeMethodType(page, result.Package, method.Method.Method, nil)
 		} else {
 			ds.writeMethodForListing(page, result.Package, method.Method, nil, false, false)
@@ -188,10 +188,10 @@ func (ds *docServer) buildImplementationData(analyzer *code.CodeAnalyzer, pkgPat
 				if typeInfo.TypeName.Pkg == pkg {
 					return nil, fmt.Errorf("%s.%s is an alias of %s", pkgPath, typeName, typeInfo.TypeName.Name())
 				} else {
-					return nil, fmt.Errorf("%s.%s is an alias of %s.%s", pkgPath, typeName, typeInfo.TypeName.Pkg.Path(), typeInfo.TypeName.Name())
+					return nil, fmt.Errorf("%s.%s is an alias of %s.%s", pkgPath, typeName, typeInfo.TypeName.Pkg.Path, typeInfo.TypeName.Name())
 				}
 				//denotingTypeName = typeInfo.TypeName.Name()
-				//denotingTypeNamePkgPath = typeInfo.TypeName.Pkg.Path()
+				//denotingTypeNamePkgPath = typeInfo.TypeName.Pkg.Path
 			}
 			break
 		}
@@ -222,7 +222,7 @@ func (ds *docServer) buildImplementationData(analyzer *code.CodeAnalyzer, pkgPat
 			impBys, _ := buildTypeImplementedByList(analyzer, pkg, typeInfo, true, typeNameRes)
 			selNameIsUnexported := !token.IsExported(sel.Name())
 			for _, impBy := range impBys {
-				if !collectUnexporteds && impBy.TypeName.Package().Path() != "builtin" && !impBy.TypeName.Exported() {
+				if !collectUnexporteds && impBy.TypeName.Package().Path != "builtin" && !impBy.TypeName.Exported() {
 					continue
 				}
 				impByDenoting := impBy.TypeName.Denoting()
@@ -232,7 +232,7 @@ func (ds *docServer) buildImplementationData(analyzer *code.CodeAnalyzer, pkgPat
 					}
 					matched := sel.Name() == m.Name()
 					if matched && selNameIsUnexported {
-						matched = matched && m.Package().Path() == sel.Package().Path()
+						matched = matched && m.Package().Path == sel.Package().Path
 					}
 					if matched {
 						explicit := sel.EmbeddingChain == nil
@@ -265,7 +265,7 @@ func (ds *docServer) buildImplementationData(analyzer *code.CodeAnalyzer, pkgPat
 			imps, _ := buildTypeImplementsList(analyzer, pkg, typeInfo, true)
 			selNameIsUnexported := !token.IsExported(sel.Name())
 			for _, imp := range imps {
-				if !collectUnexporteds && imp.TypeName.Package().Path() != "builtin" && !imp.TypeName.Exported() {
+				if !collectUnexporteds && imp.TypeName.Package().Path != "builtin" && !imp.TypeName.Exported() {
 					continue
 				}
 				impDenoting := imp.TypeName.Denoting()
@@ -275,7 +275,7 @@ func (ds *docServer) buildImplementationData(analyzer *code.CodeAnalyzer, pkgPat
 					}
 					matched := sel.Name() == m.Name()
 					if matched && selNameIsUnexported {
-						matched = matched && m.Package().Path() == sel.Package().Path()
+						matched = matched && m.Package().Path == sel.Package().Path
 					}
 					if matched {
 						explicit := sel.EmbeddingChain == nil

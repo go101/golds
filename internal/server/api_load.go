@@ -222,7 +222,9 @@ func (ds *docServer) registerAnalyzingLogMessage(getMsg func() string) {
 
 	msg = getMsg()
 	ds.analyzingLogs = append(ds.analyzingLogs, LoadingLogMessage{len(ds.analyzingLogs), msg})
-	l = ds.analyzingLogger
+	if msg != "" && ds.analyzingLogger != nil {
+		ds.analyzingLogger.Println(msg)
+	}
 	return
 
 }

@@ -109,7 +109,7 @@ func (ds *docServer) buildStatisticsPage(w http.ResponseWriter) []byte {
 			func() {
 				page.WriteString("\t\t\t")
 				defer page.WriteString("\n")
-				page.WriteString(v.Package.Path())
+				page.WriteString(v.Package.Path)
 				page.WriteByte('/')
 				writeSrouceCodeFileLink(page, v.Package, v.Filename)
 			}()
@@ -189,9 +189,9 @@ func (ds *docServer) buildStatisticsPage(w http.ResponseWriter) []byte {
 				func() {
 					page.WriteString("\t\t\t")
 					defer page.WriteString("\n")
-					page.WriteString(tn.Package().Path())
+					page.WriteString(tn.Package().Path)
 					page.WriteByte('.')
-					buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, tn.Package().Path()), page, tn.Name(), "name-", tn.Name())
+					buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, tn.Package().Path), page, tn.Name(), "name-", tn.Name())
 				}()
 			}
 		}
@@ -263,7 +263,7 @@ func (ds *docServer) buildStatisticsPage(w http.ResponseWriter) []byte {
 				func() {
 					page.WriteString("\t\t\t")
 					defer page.WriteString("\n")
-					page.WriteString(f.Package().Path())
+					page.WriteString(f.Package().Path)
 					page.WriteByte('.')
 					ds.writeResourceIndexHTML(page, f.Package(), f, false, false, false)
 				}()
@@ -300,7 +300,7 @@ func (ds *docServer) buildStatisticsPage(w http.ResponseWriter) []byte {
 					*code.TypeName
 					*code.Selector
 				}:
-					page.WriteString(t.TypeName.Package().Path())
+					page.WriteString(t.TypeName.Package().Path)
 					page.WriteByte('.')
 					page.WriteString(t.TypeName.Name())
 					page.WriteByte('.')
@@ -308,7 +308,7 @@ func (ds *docServer) buildStatisticsPage(w http.ResponseWriter) []byte {
 					return
 				case *code.TypeName, *code.Function, *code.Constant, *code.Variable:
 					res := t.(code.Resource)
-					page.WriteString(res.Package().Path())
+					page.WriteString(res.Package().Path)
 					page.WriteByte('.')
 					ds.writeResourceIndexHTML(page, res.Package(), res, false, false, false)
 				}

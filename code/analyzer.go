@@ -191,7 +191,7 @@ func (d *CodeAnalyzer) PackageByPath(path string) *Package {
 
 // IsStandardPackage returns whether or not the given package is a standard package.
 func (d *CodeAnalyzer) IsStandardPackage(pkg *Package) bool {
-	return pkg.Module == d.stdModule
+	return pkg.module == d.stdModule
 }
 
 // IsStandardPackageByPath returns whether or not the package specified by the path is a standard package.
@@ -217,7 +217,7 @@ func (d *CodeAnalyzer) buildSourceFileTable() {
 	for _, pkg := range d.packageList {
 		for i := range pkg.SourceFiles {
 			f := &pkg.SourceFiles[i]
-			d.allSourceFiles[pkg.Path()+"/"+f.AstBareFileName()] = f
+			d.allSourceFiles[pkg.Path+"/"+f.AstBareFileName()] = f
 		}
 	}
 }
@@ -521,10 +521,10 @@ func (d *CodeAnalyzer) iterateTypenames(typeLiteral ast.Expr, pkg *Package, onTy
 		tt := pkg.PPkg.TypesInfo.TypeOf(node)
 		if tt == nil {
 			// ToDo: good?
-			if pkg.Path() == "unsafe" {
+			if pkg.Path == "unsafe" {
 				return
 			}
-			//log.Println("??? type of node is nil:", node.Name, pkg.Path())
+			//log.Println("??? type of node is nil:", node.Name, pkg.Path)
 			return
 		}
 		switch t := tt.(type) {
@@ -557,10 +557,10 @@ func (d *CodeAnalyzer) iterateTypenames(typeLiteral ast.Expr, pkg *Package, onTy
 		tt := pkg.PPkg.TypesInfo.TypeOf(node)
 		if tt == nil {
 			// ToDo: good?
-			if pkg.Path() == "unsafe" {
+			if pkg.Path == "unsafe" {
 				return
 			}
-			log.Println("??? type of node is nil:", node.Name, pkg.Path())
+			log.Println("??? type of node is nil:", node.Name, pkg.Path)
 			return
 		}
 		switch t := tt.(type) {
@@ -874,7 +874,7 @@ func (d *CodeAnalyzer) registerDirectFields(typeInfo *TypeInfo, astStructNode *a
 }
 
 func (d *CodeAnalyzer) registerParameterAndResultTypes(astFunc *ast.FuncType, pkg *Package) {
-	//log.Println("=========================", f.Pkg.Path(), f.Name())
+	//log.Println("=========================", f.Pkg.Path, f.Name())
 
 	if astFunc.Params != nil {
 		for _, fld := range astFunc.Params.List {
@@ -902,7 +902,7 @@ func (d *CodeAnalyzer) registerParameterAndResultTypes(astFunc *ast.FuncType, pk
 // ToDo: also register function variables?
 // This function is to ensure that the selectors of unnamed types are all confirmed before comfirming selectors for all types.
 func (d *CodeAnalyzer) registerUnnamedInterfaceAndStructTypesFromParametersAndResults(astFunc *ast.FuncType, pkg *Package) {
-	//log.Println("=========================", f.Pkg.Path(), f.Name())
+	//log.Println("=========================", f.Pkg.Path, f.Name())
 
 	if astFunc.Params != nil {
 		for _, fld := range astFunc.Params.List {
@@ -1020,7 +1020,7 @@ func (d *CodeAnalyzer) registerExplicitlySpecifiedMethods(typeInfo *TypeInfo, as
 				continue
 				//<<
 
-				panic(fmt.Sprintf("not a valid embedding interface type name: %#v", method))
+				//panic(fmt.Sprintf("not a valid embedding interface type name: %#v", method))
 			case *ast.Ident:
 				ttn := pkg.PPkg.TypesInfo.Uses[expr]
 				id = d.Id2(ttn.Pkg(), ttn.Name())
@@ -1179,7 +1179,7 @@ func (d *CodeAnalyzer) registerFunctionForInvolvedTypeNames(f FunctionResource) 
 	//fType := f.AstDecl.Type
 	fType := f.AstFuncType()
 
-	//log.Println("=========================", f.Pkg.Path(), f.Name())
+	//log.Println("=========================", f.Pkg.Path, f.Name())
 
 	if fType.Params != nil {
 		for _, fld := range fType.Params.List {
@@ -1197,9 +1197,9 @@ func (d *CodeAnalyzer) registerFunctionForInvolvedTypeNames(f FunctionResource) 
 					panic("shoud not")
 				}
 				//if t.Pkg == nil {
-				//	log.Println("================", f.Pkg.Path(), t.TT)
+				//	log.Println("================", f.Pkg.Path, t.TT)
 				//}
-				if t.TypeName.Pkg.Path() == "builtin" {
+				if t.TypeName.Pkg.Path == "builtin" {
 					return
 				}
 				if t.AsInputsOf == nil {
@@ -1228,9 +1228,9 @@ func (d *CodeAnalyzer) registerFunctionForInvolvedTypeNames(f FunctionResource) 
 					panic("shoud not")
 				}
 				//if t.Pkg == nil {
-				//	log.Println("================", f.Pkg.Path(), t.TT)
+				//	log.Println("================", f.Pkg.Path, t.TT)
 				//}
-				if t.TypeName.Pkg.Path() == "builtin" {
+				if t.TypeName.Pkg.Path == "builtin" {
 					if t.TypeName.Name() == "error" {
 						lastResultIsError = true
 					}
@@ -1323,7 +1323,7 @@ Done:
 //
 //	methodName, pkgImportPath := funcObj.Id(), ""
 //	if !token.IsExported(methodName) {
-//		pkgImportPath = funcObj.Pkg().Path()
+//		pkgImportPath = funcObj.Pkg().Path
 //	}
 //
 //	return d.BuildMethodSignatureFromFunctionSignature(funcSig, methodName, pkgImportPath)

@@ -61,8 +61,8 @@ func (d *CodeAnalyzer) collectSourceFiles() {
 	//d.generatedFile2OriginalFileTable = make(map[string]string, 128)
 	//d.sourceFileLineOffsetTable = make(map[string]int32, 256)
 	for _, pkg := range d.packageList {
-		//log.Println("====== ", pkg.Path())
-		//if pkg.Path() == "unsafe" {
+		//log.Println("====== ", pkg.Path)
+		//if pkg.Path == "unsafe" {
 		//	//log.Println("///============== ", pkg.PPkg.GoFiles)
 		//	//ast.Print(pkg.PPkg.Fset, pkg.PPkg.Syntax[0])
 		//
@@ -81,7 +81,7 @@ func (d *CodeAnalyzer) collectSourceFiles() {
 		//}
 
 		if len(pkg.PPkg.CompiledGoFiles) != len(pkg.PPkg.Syntax) {
-			panic(fmt.Sprintf("!!! len(pkg.PPkg.CompiledGoFiles) != len(pkg.PPkg.Syntax), %d:%d, %s", len(pkg.PPkg.CompiledGoFiles), len(pkg.PPkg.Syntax), pkg.Path()))
+			panic(fmt.Sprintf("!!! len(pkg.PPkg.CompiledGoFiles) != len(pkg.PPkg.Syntax), %d:%d, %s", len(pkg.PPkg.CompiledGoFiles), len(pkg.PPkg.Syntax), pkg.Path))
 		}
 
 		//for range pkg.PPkg.OtherFiles {
@@ -157,8 +157,8 @@ func (d *CodeAnalyzer) collectSourceFiles() {
 		}()
 
 		////d.stats.Files += int32(len(pkg.SourceFiles))
-		//d.stat_OnNewPackage(d.IsStandardPackage(pkg), len(pkg.SourceFiles), len(pkg.Deps), pkg.Path())
-		d.stat_OnNewPackage(d.IsStandardPackage(pkg), len(pkg.PPkg.CompiledGoFiles), len(pkg.Deps), pkg.Path())
+		//d.stat_OnNewPackage(d.IsStandardPackage(pkg), len(pkg.SourceFiles), len(pkg.Deps), pkg.Path)
+		d.stat_OnNewPackage(d.IsStandardPackage(pkg), len(pkg.PPkg.CompiledGoFiles), len(pkg.Deps), pkg.Path)
 	}
 }
 
@@ -295,7 +295,7 @@ func (d *CodeAnalyzer) cacheSourceFiles() {
 	defer wg.Wait()
 
 	for _, pkg := range d.packageList {
-		//isUnsafe := pkg.Path() == "unsafe"
+		//isUnsafe := pkg.Path == "unsafe"
 		for i := range pkg.SourceFiles {
 			info := &pkg.SourceFiles[i]
 			if info.Content != nil {
@@ -355,7 +355,7 @@ func (d *CodeAnalyzer) collectCodeExamples() {
 			}
 			return nil
 		}); err != nil {
-			log.Printf("walk package %s dir %s error: %s", pkg.Path(), pkg.Directory, err)
+			log.Printf("walk package %s dir %s error: %s", pkg.Path, pkg.Directory, err)
 		}
 		return filenames
 	}
@@ -378,7 +378,7 @@ func (d *CodeAnalyzer) collectCodeExamples() {
 		}
 		pkg.Examples = doc.Examples(pkg.ExampleFiles...)
 		//if !d.IsStandardPackage(pkg) && len(pkg.Examples) > 0 {
-		//	log.Println("======= has examples:", pkg.Path())
+		//	log.Println("======= has examples:", pkg.Path)
 		//}
 	}
 }

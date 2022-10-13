@@ -13,6 +13,11 @@ a {color: #079;}
 ol.package-list {line-height: 139%;}
 h3 {background: #ddd;}
 
+.md-text a {color: #333;}
+.md-text a:hover {color: black;}
+.md-text a:visited {color: #666;}
+.md-text a:visited:hover {color: black;}
+
 .b {font-weight: bold;}
 
 .title {font-size: 110%; font-wieght: bold;}
@@ -33,6 +38,8 @@ h3 {background: #ddd;}
 	color: #555;
 	border-top: 1px solid #888;
 }
+
+
 
 /* overview page */
 

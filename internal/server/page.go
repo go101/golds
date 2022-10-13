@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"go101.org/golds/internal/server/translations"
+	"go101.org/golds/internal/util"
 )
 
 type PageOutputOptions struct {
@@ -22,6 +23,7 @@ type PageOutputOptions struct {
 	NotCollectUnexporteds  bool
 	AllowNetworkConnection bool
 	VerboseLogs            bool
+	RenderDocLinks         bool
 	SourceReadingStyle     string
 	WdPkgsListingManner    string
 	FooterShowingManner    string
@@ -49,6 +51,8 @@ var (
 	wdPkgsListingManner    = WdPkgsListingManner_general
 	footerShowingManner    = FooterShowingManner_none
 
+	renderDocLinks = false
+
 	verboseLogs = false
 
 	// ToDo: use this one to replace the above ones, and put it in docServer (good or bad?).
@@ -65,6 +69,7 @@ func setPageOutputOptions(options PageOutputOptions, forTesting bool) {
 	sourceReadingStyle = options.SourceReadingStyle
 	collectUnexporteds = !options.NotCollectUnexporteds || forTesting
 	allowNetworkConnection = options.AllowNetworkConnection && !forTesting
+	renderDocLinks = options.RenderDocLinks || forTesting
 	wdPkgsListingManner = options.WdPkgsListingManner
 	footerShowingManner = options.FooterShowingManner
 	verboseLogs = options.VerboseLogs
@@ -185,6 +190,8 @@ type htmlPage struct {
 	translation Translation
 
 	isHTML bool
+
+	htmlEscapeWriter *util.HTMLEscapeWriter
 }
 
 func (page *htmlPage) Translation() Translation {
@@ -199,6 +206,8 @@ func NewHtmlPage(goldsVersion, title string, theme Theme, translation Translatio
 		isHTML:      isHTMLPage(currentPageInfo.resType),
 	}
 	//page.Grow(4 * 1024 * 1024)
+
+	page.htmlEscapeWriter = util.NewHTMLEscapeWriter(&page)
 
 	if page.isHTML {
 		fmt.Fprintf(&page, `<!DOCTYPE html>
@@ -344,6 +353,10 @@ func (page *htmlPage) WriteByte(c byte) error {
 	bs[n] = c
 	page.content[len(page.content)-1] = bs
 	return nil
+}
+
+func (page *htmlPage) AsHTMLEscapeWriter() *util.HTMLEscapeWriter {
+	return page.htmlEscapeWriter
 }
 
 //func (page *htmlPage) writePageLink(writeHref func(), linkText string, fragments ...string) {

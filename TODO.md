@@ -19,6 +19,8 @@
 
 * use different default flag values for gocore, godoge and golds
 
+* js: auto link "golang.org/x/..." etc.
+
 * add a "typ" page kind, for unnamed types, because unnamed types don't belong to any packages.
   * now functions are not listed as values of
     type NetworkProtocolFactory func(*Stack) NetworkProtocol
@@ -56,9 +58,12 @@
 		}
 	}
 
+* the handling of "removeOriginalIdent" in output docs is not very reasonable
+
 * golds gopath
 
 * id introduced in version: 1.15-, 1.16, 1.17, ...
+* check "Deprecated: " in comments
 
 * generics
   * use https://pkg.go.dev/golang.org/x/exp/typeparams ?

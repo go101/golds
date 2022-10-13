@@ -21,6 +21,14 @@ func releaseGolds() {
 		log.Println(err)
 		return
 	}
+	if _, err := util.RunShell(time.Minute*3, "", nil, "go", "fmt", "./..."); err != nil {
+		log.Println(err)
+		return
+	}
+	if _, err := util.RunShell(time.Minute*3, "", nil, "go", "mod", "tidy"); err != nil {
+		log.Println(err)
+		return
+	}
 
 	const (
 		TimeConstPrefix    = `const RoughBuildTime = "`
@@ -145,7 +153,7 @@ func releaseGolds() {
 
 	var gitTag = fmt.Sprintf("v%s", newVersion)
 	if output, err := util.RunShellCommand(time.Second*5, "", nil,
-		"git", "commit", "-am", gitTag); err != nil {
+		"git", "commit", "-a", "-m", gitTag); err != nil {
 		log.Printf("git commit error: %s\n%s", err, output)
 	}
 	if output, err := util.RunShellCommand(time.Second*5, "", nil,

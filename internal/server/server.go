@@ -66,6 +66,8 @@ type docServer struct {
 	cachedPages map[pageCacheKey][]byte
 	//cachedPagesOptions map[pageCacheKey]interface{} // key.options must be nil in this map
 
+	docRenderer util.MarkdownRenderer
+
 	//
 	currentTheme       Theme
 	currentTranslation Translation

@@ -804,7 +804,7 @@ func (ds *docServer) buildExternelSourceLink(w writer, pkgFile, line, endLine st
 		return
 	}
 
-	module := srcFile.Pkg.Module
+	module := srcFile.Pkg.Module()
 	if module == nil {
 		return
 	}

@@ -34,7 +34,7 @@ func (iw *IndentWriter) Write(s []byte) (int, error) {
 
 			n, err := iw.w.Write(s[last : i+1])
 			if err != nil {
-				panic(err)
+				//panic(err)
 				return last + n, err
 			}
 			last = i + 1
@@ -49,7 +49,7 @@ func (iw *IndentWriter) Write(s []byte) (int, error) {
 		}
 		n, err := iw.w.Write(s[last:])
 		if err != nil {
-			panic(err)
+			//panic(err)
 			return last + n, err
 		}
 	}
