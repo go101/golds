@@ -2812,12 +2812,17 @@ func (ds *docServer) renderDocComment(page *htmlPage, currentPkg *code.Package, 
 					return false
 				}
 				var k = 0
-				if r := resName[0]; asciiCharTypes[r] != 2 {
-					return false
-				} else {
-					k++
+				if resName[0] <= 128 {
+					if asciiCharTypes[resName[0]] != 2 {
+						return false
+					} else {
+						k = 1
+					}
 				}
 				for i, r := range resName[k:] {
+					if r >= 128 {
+						continue
+					}
 					if asciiCharTypes[r] == 0 {
 						return false
 					}
