@@ -79,6 +79,10 @@ func (m *Module) ActualDir() string {
 }
 
 func (m *Module) buildPackageHierarchy() {
+	if len(m.Pkgs) == 0 {
+		return
+	}
+
 	sort.Slice(m.Pkgs, func(a, b int) bool {
 		return ComparePackagePaths(m.Pkgs[a].Path, m.Pkgs[b].Path, '/')
 	})
@@ -627,7 +631,7 @@ type EmbedInfo struct {
 
 // A TypeName represents a type name.
 type TypeName struct {
-	Examples []*Example
+	//Examples []*Example // better to maintain a table in package
 
 	Pkg     *Package // some duplicated with types.TypeName.Pkg(), except builtin types
 	AstDecl *ast.GenDecl
@@ -975,7 +979,7 @@ type Import struct {
 
 // Constant represents a constant.
 type Constant struct {
-	Examples []*Example
+	// Examples []*Example // better to maintain a table in package
 
 	*types.Const
 
@@ -1062,7 +1066,7 @@ func (c *Constant) AstValueSpec() *ast.ValueSpec {
 
 // Variable represents a variable.
 type Variable struct {
-	Examples []*Example
+	// Examples []*Example // better to maintain a table in package
 
 	*types.Var
 
@@ -1141,7 +1145,7 @@ func (v *Variable) AstValueSpec() *ast.ValueSpec {
 
 // Function represents a function, including non-interface methods.
 type Function struct {
-	Examples []*Example
+	// Examples []*Example // better to maintain a table in package
 
 	*types.Func
 	*types.Builtin // for builtin functions
@@ -1283,7 +1287,7 @@ func (f *Function) AstPackage() *Package {
 
 // InterfaceMethod represents an interface function.
 type InterfaceMethod struct {
-	Examples []*Example
+	// Examples []*Example // better to maintain a table in package
 
 	InterfaceTypeName *TypeName
 	Method            *Method // .AstFunc == nil, .AstInterface != nil
@@ -1391,7 +1395,7 @@ const (
 
 // Field represents a struct field.
 type Field struct {
-	Examples []*Example
+	// Examples []*Example // better to maintain a table in package
 
 	astStruct *ast.StructType
 	AstField  *ast.Field
@@ -1428,6 +1432,8 @@ func (fld *Field) Comment() string {
 
 // Method represent a method.
 type Method struct {
+	// Examples []*Example // better to maintain a table in package
+
 	AstFunc *ast.FuncDecl // for concrete methods
 	//AstInterface *ast.InterfaceType // for interface methods (the owner interface)
 	AstField *ast.Field // for interface methods

@@ -18,15 +18,15 @@ const Version = "v0.5.3-preview"
 
 func releaseGolds() {
 	if _, err := util.RunShell(time.Minute*3, "", nil, "go", "test", "./..."); err != nil {
-		log.Println(err)
+		log.Printf("go test error: %s", err)
 		return
 	}
 	if _, err := util.RunShell(time.Minute*3, "", nil, "go", "fmt", "./..."); err != nil {
-		log.Println(err)
+		log.Printf("go fmt error: %s", err)
 		return
 	}
 	if _, err := util.RunShell(time.Minute*3, "", nil, "go", "mod", "tidy"); err != nil {
-		log.Println(err)
+		log.Printf("go mod tidy error: %s", err)
 		return
 	}
 

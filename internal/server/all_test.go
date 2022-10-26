@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"go101.org/golds/code"
 	"go101.org/golds/internal/util"
 )
 
@@ -71,7 +72,7 @@ func TestComparePackagePaths(t *testing.T) {
 	}
 
 	for _, v := range vs {
-		if ComparePackagePaths(v.x, v.y, '/') != v.b1 {
+		if code.ComparePackagePaths(v.x, v.y, '/') != v.b1 {
 			t.Errorf("ComparePackagePaths(%s, %s) != %v", v.x, v.y, v.b1)
 		}
 		if v.x <= v.y != v.b2 {

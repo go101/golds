@@ -384,7 +384,7 @@ Options:
 		* verbose+qrcode: include verbose content
 		  and a qr-code.
 	-render-doclinks
-		Whether or not to render the links in docs.
+		Whether or not to render links in docs.
 
 Examples:
 	%[1]v std
