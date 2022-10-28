@@ -2717,7 +2717,7 @@ func writeHiddenItemsHeader(page *htmlPage, resName, itemsCategory string, hideI
 
 func writeFoldingBlock(page *htmlPage, resName, statName, contentKind string, expandInitially bool, writeTitleContent, listStatContent func()) {
 	checked := ""
-	if expandInitially || unfoldAllByDefault {
+	if expandInitially || unfoldAllInitially {
 		checked = " checked"
 	}
 	labelClass := ""

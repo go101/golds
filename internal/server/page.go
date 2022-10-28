@@ -24,7 +24,7 @@ type PageOutputOptions struct {
 	AllowNetworkConnection bool
 	VerboseLogs            bool
 	RenderDocLinks         bool
-	UnfoldAllByDefault     bool
+	UnfoldAllInitially     bool
 	SourceReadingStyle     string
 	WdPkgsListingManner    string
 	FooterShowingManner    string
@@ -53,7 +53,7 @@ var (
 	footerShowingManner    = FooterShowingManner_none
 
 	renderDocLinks     = false
-	unfoldAllByDefault = false
+	unfoldAllInitially = false
 
 	verboseLogs = false
 
@@ -72,7 +72,7 @@ func setPageOutputOptions(options PageOutputOptions, forTesting bool) {
 	collectUnexporteds = !options.NotCollectUnexporteds || forTesting
 	allowNetworkConnection = options.AllowNetworkConnection && !forTesting
 	renderDocLinks = options.RenderDocLinks || forTesting
-	unfoldAllByDefault = options.UnfoldAllByDefault && !forTesting
+	unfoldAllInitially = options.UnfoldAllInitially && !forTesting
 	wdPkgsListingManner = options.WdPkgsListingManner
 	footerShowingManner = options.FooterShowingManner
 	verboseLogs = options.VerboseLogs

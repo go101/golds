@@ -215,7 +215,7 @@ func run() {
 		WdPkgsListingManner:    wdPkgsListingManner,
 		FooterShowingManner:    footerShowingManner,
 		RenderDocLinks:         *renderDocLinksFlag,
-		UnfoldAllByDefault:     *unfoldAllByDefaultFlag,
+		UnfoldAllInitially:     *unfoldAllInitiallyFlag,
 		VerboseLogs:            verboseMode,
 	}
 
@@ -287,7 +287,7 @@ var allowNetworkConnection = flag.Bool("allow-network-connection", false, "speci
 var footerShowingMannerFlag = flag.String("footer", "verbose+qrcode", "verbose+qrcode | verbose | simple | none")
 
 var renderDocLinksFlag = flag.Bool("render-doclinks", false, "render links in doc comments")
-var unfoldAllByDefaultFlag = flag.Bool("unfold-all-by-default", false, "unfold all foldables by default")
+var unfoldAllInitiallyFlag = flag.Bool("unfold-all-initially", false, "unfold all foldables initially")
 
 // depreciated by "-wdpkgs-listing=promoted" since v0.1.8
 var emphasizeWdPackagesFlag = flag.Bool("emphasize-wdpkgs", false, "promote working directory packages")
@@ -387,8 +387,8 @@ Options:
 		  and a qr-code.
 	-render-doclinks
 		Whether or not to render the links in docs.
-	-unfold-all-by-default
-	  Unfold all foldables by default.
+	-unfold-all-initially
+		Unfold all foldables initially.
 
 Examples:
 	%[1]v std
