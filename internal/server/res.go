@@ -46,7 +46,7 @@ type Translation interface {
 	Text_Analyzing_SortPackagesByDependencies(d time.Duration) string
 	Text_Analyzing_CollectDeclarations(d time.Duration) string
 	Text_Analyzing_CollectRuntimeFunctionPositions(d time.Duration) string
-	Text_Analyzing_ConfirmTypeSources(d time.Duration) string
+	//Text_Analyzing_ConfirmTypeSources(d time.Duration) string
 	Text_Analyzing_CollectSelectors(d time.Duration) string
 	Text_Analyzing_FindImplementations(d time.Duration) string
 	Text_Analyzing_RegisterInterfaceMethodsForTypes(d time.Duration) string

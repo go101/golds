@@ -33,80 +33,62 @@ func (d *CodeAnalyzer) AnalyzePackages(onSubTaskDone func(int, time.Duration, ..
 
 	d.sortPackagesByDepHeight()
 	d.calculatePackagesDepDepths()
-
 	logProgress(SubTask_SortPackagesByDependencies)
 
-	d.collectSourceFiles()
-
+	for _, pkg := range d.packageList {
+		d.analyzePackage_collectSourceFiles(pkg)
+	}
 	logProgress(SubTask_CollectSourceFiles)
 
 	for _, pkg := range d.packageList {
 		d.analyzePackage_CollectDeclarations(pkg)
 	}
-
 	logProgress(SubTask_CollectDeclarations)
 
 	//log.Println("=== recorded type count:", len(d.allTypeInfos))
 
-	//log.Println("[analyze packages 2...]")
+	//for _, pkg := range d.packageList {
+	//	d.analyzePackage_ConfirmTypeSources(pkg) // need collect source files firstly
+	//}
+	//logProgress(SubTask_ConfirmTypeSources)
 
 	for _, pkg := range d.packageList {
-		d.analyzePackage_ConfirmTypeSources(pkg) // need collect source files firstly
+		d.analyzePackage_CollectDirectSelectors(pkg)
 	}
-
-	logProgress(SubTask_ConfirmTypeSources)
-
-	//log.Println("[analyze packages 4...]")
-
-	d.analyzePackages_CollectSelectors()
-
+	d.collectSelectors()
 	logProgress(SubTask_CollectSelectors)
 
 	// ToDo: it might be best to not use the NewMethodSet function in std.
 	//       Same for NewFieldSet
 
-	//log.Println("[analyze packages 4...]")
-
 	d.forbidRegisterTypes = true
-
-	//methodCache := d.analyzePackages_FindImplementations_Old()
-	d.analyzePackages_FindImplementations()
+	//methodCache := d.findImplementations_Old()
+	d.findImplementations()
 	methodCache := &typeutil.MethodSetCache{}
-
 	d.forbidRegisterTypes = false
-
 	logProgress(SubTask_FindImplementations)
 
-	for _, pkg := range d.packageList {
-		d.registerNamedInterfaceMethodsForInvolvedTypeNames(pkg)
-	}
-
+	d.registerNamedInterfaceMethodsForInvolvedTypeNames()
 	logProgress(SubTask_RegisterInterfaceMethodsForTypes)
 
 	d.collectObjectReferences()
-
 	logProgress(SubTask_CollectObjectReferences)
 
 	d.collectCodeExamples() // need the pkg.Directory confirmed in the last step
-
 	logProgress(SubTask_CollectExamples)
 
 	d.cacheSourceFiles()
-
+	d.buildSourceFileTable()
 	logProgress(SubTask_CacheSourceFiles)
 
-	d.analyzePackage_CollectSomeRuntimeFunctionPositions()
-
+	d.collectSomeRuntimeFunctionPositions()
 	logProgress(SubTask_CollectRuntimeFunctionPositions)
 
 	for _, pkg := range d.packageList {
 		d.analyzePackage_CollectMoreStatistics(pkg)
 	}
-	d.analyzePackage_CollectMoreStatisticsFinal()
-
+	d.collectMoreStatisticsFinal()
 	logProgress(SubTask_MakeStatistics)
-
-	d.buildSourceFileTable()
 
 	// ...
 
@@ -121,7 +103,7 @@ func (d *CodeAnalyzer) AnalyzePackages(onSubTaskDone func(int, time.Duration, ..
 	//log.Println(numNamedInterfaces, numNameds)
 }
 
-func (d *CodeAnalyzer) analyzePackages_FindImplementations() { // (resultMethodCache *typeutil.MethodSetCache) {
+func (d *CodeAnalyzer) findImplementations() { // (resultMethodCache *typeutil.MethodSetCache) {
 	// step 1: register all method signatures of underlying interface types.
 	//         create a type list for each signature.
 	// step 2: iteration all types, calculate their method signatures,
@@ -393,7 +375,7 @@ func (d *CodeAnalyzer) analyzePackages_FindImplementations() { // (resultMethodC
 			}
 		}
 
-		// ToDo: also apply this for analyzePackages_FindImplementations_Old
+		// ToDo: also apply this for findImplementations_Old
 		registerTypeMethod := func(ti *TypeInfo) {
 			if ti.TypeName == nil {
 				return
@@ -510,7 +492,7 @@ func (d *CodeAnalyzer) analyzePackages_FindImplementations() { // (resultMethodC
 // then get the overlapping for consequencing method slices.
 // However, it looks the current implementation is fast enough.
 
-//func (d *CodeAnalyzer) analyzePackages_FindImplementations_Old() (resultMethodCache *typeutil.MethodSetCache) {
+//func (d *CodeAnalyzer) findImplementations_Old() (resultMethodCache *typeutil.MethodSetCache) {
 //	// step 1: register all method signatures of underlying interface types.
 //	//         create a type list for each signature.
 //	// step 2: iteration all types, calculate their method signatures,
@@ -800,57 +782,61 @@ func (d *CodeAnalyzer) analyzePackages_FindImplementations() { // (resultMethodC
 //}
 
 // This method should only be called when all selectors are confirmed.
-func (d *CodeAnalyzer) registerNamedInterfaceMethodsForInvolvedTypeNames(pkg *Package) {
-	// ToDo:
-	// sometime situations are much complicated.
-	// An interface method might have several origins.
-	// A glocal method table (key is method signature) is needed. Each method in the table
-	// * might have several source postions/comments/documents.
-	// (A global function table might be also needed. Method signature = func sig + method name)
-	for _, tn := range pkg.AllTypeNames {
-		// ToDo: in fact, some unexported interface names might also export methods.
-		if !tn.Exported() {
-			continue
-		}
-
-		t := tn.Denoting()
-		if _, ok := t.TT.Underlying().(*types.Interface); !ok {
-			continue
-		}
-
-		for _, sel := range t.AllMethods {
-			// need? registerFunctionForInvolvedTypeNames will also check it.
-			if !token.IsExported(sel.Name()) {
+func (d *CodeAnalyzer) registerNamedInterfaceMethodsForInvolvedTypeNames() {
+	
+	for _, pkg := range d.packageList {
+	
+		// ToDo:
+		// sometime situations are much complicated.
+		// An interface method might have several origins.
+		// A global method table (key is method signature) is needed. Each method in the table
+		// * might have several source postions/comments/documents.
+		// (A global function table might be also needed. Method signature = func sig + method name)
+		for _, tn := range pkg.AllTypeNames {
+			// ToDo: in fact, some unexported interface names might also export methods.
+			if !tn.Exported() {
 				continue
 			}
 
-			sig, ok := sel.Method.Type.TT.(*types.Signature)
-			if !ok {
-				panic("impossible")
-			}
-
-			params, results := sig.Params(), sig.Results()
-			m, n := 0, 0
-			if params != nil {
-				m = params.Len()
-			}
-			if results != nil {
-				n = results.Len()
-			}
-			if m == 0 && n == 0 {
+			t := tn.Denoting
+			if _, ok := t.TT.Underlying().(*types.Interface); !ok {
 				continue
 			}
 
-			im := &InterfaceMethod{
-				InterfaceTypeName: tn,
-				Method:            sel.Method,
+			for _, sel := range t.AllMethods {
+				// need? registerFunctionForInvolvedTypeNames will also check it.
+				if !token.IsExported(sel.Name()) {
+					continue
+				}
+
+				sig, ok := sel.Method.Type.TT.(*types.Signature)
+				if !ok {
+					panic("impossible")
+				}
+
+				params, results := sig.Params(), sig.Results()
+				m, n := 0, 0
+				if params != nil {
+					m = params.Len()
+				}
+				if results != nil {
+					n = results.Len()
+				}
+				if m == 0 && n == 0 {
+					continue
+				}
+
+				im := &InterfaceMethod{
+					InterfaceTypeName: tn,
+					Method:            sel.Method,
+				}
+				_, _, _ = d.registerFunctionForInvolvedTypeNames(im)
 			}
-			_, _, _ = d.registerFunctionForInvolvedTypeNames(im)
 		}
 	}
 }
 
-func (d *CodeAnalyzer) analyzePackages_CollectSelectors() {
+func (d *CodeAnalyzer) collectSelectors() {
 	//log.Println("=== analyze struct promoted fields/methods ...")
 
 	// The method set returned by types.NewMethodSet loses much info.
@@ -1223,8 +1209,8 @@ func (d *CodeAnalyzer) collectSelectorsForNonInterfaceType(t *TypeInfo, smm *Sel
 		t.attributes |= promotedSelectorsCollected
 	}()
 
-	var namedType *TypeInfo
-	var structType *TypeInfo
+	var namedType *TypeInfo // which DirectSelectors are all explicit methods now.
+	var structType *TypeInfo // which DirectSelectors are all direct fields now.
 
 	switch t.TT.(type) {
 	case *types.Named:
@@ -1284,6 +1270,7 @@ func (d *CodeAnalyzer) collectSelectorsForNonInterfaceType(t *TypeInfo, smm *Sel
 			}
 			if sel.Field.Mode != EmbedMode_None {
 				numEmbeddeds++
+				// ToDo: may break here?
 			}
 		}
 
@@ -1318,7 +1305,7 @@ func (d *CodeAnalyzer) collectSelectorsForNonInterfaceType(t *TypeInfo, smm *Sel
 					//t.AllFields = append(t.AllFields, sel)
 					if sel.Field != nil {
 						numFields++
-					} else {
+					} else { // sel.Method != nil
 						numMethods++
 					}
 				}
@@ -1332,7 +1319,7 @@ func (d *CodeAnalyzer) collectSelectorsForNonInterfaceType(t *TypeInfo, smm *Sel
 				if sel.cond != SelectorCond_Hidden {
 					if sel.Field != nil {
 						t.AllFields = append(t.AllFields, sel)
-					} else { // if sel.Method != nil
+					} else { // sel.Method != nil
 						t.AllMethods = append(t.AllMethods, sel)
 					}
 				}
@@ -1429,9 +1416,23 @@ func (d *CodeAnalyzer) collectSelectorsForNonInterfaceType(t *TypeInfo, smm *Sel
 				}
 			}
 
-			//log.Println("       000")
+			//log.Println("       000", embeddedField.Field.Type)
 			switch t := embeddedField.Field.Type; tt := t.TT.(type) {
 			case *types.Named:
+				// ToDo: since Go 1.18, this might be an instantiated type of a generic type.
+				//       See: types.Info.Instances, should be handled in the collect phase.
+				
+				// ToDo: Note: the underlying is an interface if t is a generic type.
+
+				//>> 1.18 (temp handling, need more handling. bug#33)
+				//<<
+
+				//log.Println(tt)
+				//if s := tt.String(); strings.HasSuffix(s, "SSS[int]") {
+				//	log.Printf("=== %[1]T, %[1]v", t.Underlying.TT)
+				//	log.Printf("=== %[1]T, %[1]v", tt.Underlying())
+				//}
+
 				switch t.Underlying.TT.(type) {
 				case *types.Struct:
 					//log.Println("       111 aaa")
@@ -1444,7 +1445,7 @@ func (d *CodeAnalyzer) collectSelectorsForNonInterfaceType(t *TypeInfo, smm *Sel
 					// Collect all methods
 					collect(t, t.AllMethods, false) // <=> t.Underlying.AllMethods
 				case *types.Pointer:
-					//log.Println("       111 ccc")
+					log.Println("       111 ccc")
 					// named pointer types have no selectors.
 				default:
 					//log.Println("       111 ddd")
@@ -1518,6 +1519,8 @@ func (d *CodeAnalyzer) collectSelectorsForNonInterfaceType(t *TypeInfo, smm *Sel
 
 		return
 	}
+
+	// The following is for named types.
 
 	d.collectSelectorsForNonInterfaceType(structType, smm, checkedTypes)
 
@@ -1841,8 +1844,8 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 							}
 						}
 
-						var srcType = tv.Type
-						srcTypeInfo := d.RegisterType(srcType)
+						var srcTypeExpr = tv.Type
+						srcTypeInfo := d.RegisterType(srcTypeExpr)
 
 						var objName = typeObj.Name()
 
@@ -1853,9 +1856,12 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 							}
 
 							//>> 1.18
-							if objName == "any" {
-								d.blankInterface = srcTypeInfo
-							}
+							//if objName == "any" {
+							//	d.blankInterface = srcTypeInfo
+							//	// ToDo: maybe should be assigned with
+							//	//       d.RegisterType(types.Universe.Lookup("any").(*types.TypeName).Type()).
+							//	//       And move this if-block before the loop.
+							//}
 							//<<
 
 							var ok bool
@@ -1883,7 +1889,8 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 							// ByteType:  types.Universe.Lookup("byte").(*types.TypeName).Type()
 							// Uint8Type: types.Universe.Lookup("uint8").(*types.TypeName).Type()
 							//
-							// The type of a custom aliase is the type it denotes.
+							// The type of a custom aliase == the type it denotes. So this is an inconsistency.
+							// But it is not a bug. We should use "types.Identical" to compare types.Type values.
 							//
 							// // true true
 							//log.Println("==================",
@@ -1905,6 +1912,10 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 
 						newTypeInfo := d.RegisterType(typeObj.Type())
 
+						if isBuiltinPkg {
+							srcTypeInfo = newTypeInfo
+						}
+
 						//if isBuiltinPkg && !token.IsExported(objName) {
 						//log.Println(typeSpec.Name.Name, srcTypeInfo == newTypeInfo)
 						//}
@@ -1917,37 +1928,45 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 							AstSpec: typeSpec,
 						}
 						if typeObj.IsAlias() {
-							if isBuiltinPkg {
+							//if isBuiltinPkg {
 								// byte != uint8
 								// rune != int32
-							} else {
+							//} else {
 								if srcTypeInfo != newTypeInfo {
 									panic(fmt.Sprintf("srcTypeInfo != newTypeInfo, %v, %v", srcTypeInfo, newTypeInfo))
 								}
 								//if !types.Identical(srcTypeInfo.TT, newTypeInfo.TT) {
 								//	panic(fmt.Sprintf("srcTypeInfo != newTypeInfo, %v, %v", srcTypeInfo.TT, newTypeInfo.TT))
 								//}
-							}
+							//}
 
-							tn.Alias = &TypeAlias{
-								Denoting: srcTypeInfo,
-								TypeName: tn,
-							}
+							//tn.Alias = &TypeAlias{
+							//	Denoting: srcTypeInfo,
+							//	//TypeName: tn,
+							//}
+							tn.Denoting = srcTypeInfo
+							tn.attributes |= Alias
 							srcTypeInfo.Aliases = append(srcTypeInfo.Aliases, tn)
 
 							if isBuiltinPkg || isUnsafePkg {
-								tn.Alias.attributes |= Builtin
+								//tn.Alias.attributes |= Builtin
+								tn.attributes |= Builtin
 							}
-
-							// ToDo: check embeddable
-
 						} else {
-							tn.Named = newTypeInfo
+							//tn.Named = newTypeInfo
+							tn.Denoting = newTypeInfo
 							newTypeInfo.TypeName = tn
 							if isBuiltinPkg || isUnsafePkg {
-								tn.Named.attributes |= Builtin
+								//tn.Named.attributes |= Builtin
+								newTypeInfo.attributes |= Builtin
 							}
 						}
+
+						//>> 1.18
+						tn.Source.Expr = typeSpec.Type
+						tn.Source.Type = srcTypeInfo
+						tn.TypeArgs = d.astFieldListToTypeArgs(pkg, typeSpec.TypeParams)
+						//<<
 
 						registerTypeName(tn)
 					}
@@ -2039,183 +2058,6 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 			}
 		}
 	}
-
-	// We must do this after the methods of all interface types are collected.
-	//
-	// We must do the collection work after all types are collected.
-	//for _, t := range pkg.PackageAnalyzeResult.AllTypeNames {
-	//	itt, ok := t.Denoting().TT.Underlying().(*types.Interface)
-	//	if !ok {
-	//		continue
-	//	}
-	//
-	//	// ...
-	//}
-
-	//  We must do the collection work after all types are collected.
-	for _, f := range pkg.PackageAnalyzeResult.AllFunctions {
-		if f.Func != nil {
-			d.registerExplicitlyDeclaredMethod(f)
-		}
-
-		if f.IsMethod() {
-			if f.AstDecl.Recv == nil {
-				panic("should not")
-			}
-			if len(f.AstDecl.Recv.List) != 1 {
-				panic("should not")
-			}
-
-			field := f.AstDecl.Recv.List[0]
-			var id *ast.Ident
-			var tnNode ast.Expr = field.Type
-		Again:
-			switch expr := tnNode.(type) {
-			default:
-				panic(fmt.Sprintf("should not: %T", expr))
-			case *ast.Ident:
-				id = expr
-			case *ast.StarExpr:
-				//tid, ok := expr.X.(*ast.Ident)
-				//if !ok {
-				//	panic("should not")
-				//}
-				//id = tid
-
-				tnNode = expr.X
-				f.attributes |= StarReceiver
-				goto Again
-			case *ast.ParenExpr:
-				tnNode = expr.X
-				goto Again
-			//>> 1.18
-			case *astIndexExpr:
-				tnNode = expr.X
-				goto Again
-			case *astIndexListExpr:
-				tnNode = expr.X
-				goto Again
-				//<<
-			}
-			f.receiverTypeName = d.allTypeNameTable[d.Id2b(pkg, id.Name)]
-			if f.receiverTypeName == nil {
-				panic("should not")
-			}
-			if !token.IsExported(id.Name) { // exclude this method from asTypeOfValues list?
-				// ToDo: If it is proved that some values of this type are
-				//       exposed to other packages, then should not continue here.
-				continue
-			}
-		}
-
-		//if f.Exported() {
-		//	d.registerFunctionForInvolvedTypeNames(f)
-		//}
-		numParams, numResults, lastResultIsError := d.registerFunctionForInvolvedTypeNames(f)
-
-		// ToDo: sometimes unexported ones are also needed to read code.
-		if f.Exported() {
-			if f.IsMethod() {
-				d.stats.ExportedMethods++
-				//incSliceStat(d.stats.MethodsByParameterCount[:], numParams)
-				//incSliceStat(d.stats.FunctionsByResultCount[:], numResults)
-			} else {
-				d.stats.ExportedFunctions++
-				//incSliceStat(d.stats.FunctionsByParameterCount[:], numParams)
-				//incSliceStat(d.stats.MethodsByResultCount[:], numResults)
-			}
-			if lastResultIsError {
-				d.stats.ExportedFunctionWithLastErrorResult++
-			}
-			//incSliceStat(d.stats.ExportedIdentifiersByLength[:], len(f.Name()))
-			//d.stats.ExportedIdentifersSumLength += int32(len(f.Name()))
-			//d.stats.ExportedIdentifers++
-			d.stat_OnNewExportedIdentifer(len(f.Name()), f)
-
-			//d.stats.ExportedFunctionParameters += int32(numParams)
-			//d.stats.ExportedFunctionResults += int32(numResults)
-			//incSliceStat(d.stats.ExportedFunctionsByParameterCount[:], numParams)
-			//incSliceStat(d.stats.ExportedFunctionsByResultCount[:], numResults)
-			d.stat_OnNewExportedFunction(numParams, numResults, f)
-		}
-	}
-	//for _, tn := range pkg.PackageAnalyzeResult.AllTypeNames {
-	//	// moved to analyzePackage_CollectMoreStatistics
-	//}
-	if isBuiltinPkg {
-		//var tnRune, tnInt32, tnByte, tnUint8 *TypeName
-		//for _, tn := range pkg.PackageAnalyzeResult.AllTypeNames {
-		//	switch tn.Name() {
-		//	case "rune":
-		//		tnRune = tn
-		//	case "int32":
-		//		tnInt32 = tn
-		//	case "byte":
-		//		tnByte = tn
-		//	case "uint8":
-		//		tnUint8 = tn
-		//	}
-		//}
-		//if tnRune != nil && tnInt32 != nil { // always true
-		//	log.Println("=============== tnInt32.Named:", tnInt32.Named)
-		//	tnRune.Named = tnInt32.Named
-		//}
-		//if tnByte != nil && tnUint8 != nil { // always true
-		//	log.Println("=============== tnUint8.Named:", tnUint8.Named)
-		//	tnByte.Named = tnUint8.Named
-		//}
-		return
-	}
-
-	//if !d.IsStandardPackage(pkg) {
-	//	d.debug = true
-	//	defer func() { d.debug = false }()
-	//}
-
-	for _, v := range pkg.PackageAnalyzeResult.AllVariables {
-		d.registerValueForItsTypeName(v)
-		//if d.debug {
-		//	d.debug = false
-		//	log.Println(v.Position())
-		//}
-		if v.Exported() {
-			d.stats.ExportedVariables++
-
-			//incSliceStat(d.stats.ExportedIdentifiersByLength[:], len(v.Name()))
-			//d.stats.ExportedIdentifersSumLength += int32(len(v.Name()))
-			//d.stats.ExportedIdentifers++
-			d.stat_OnNewExportedIdentifer(len(v.Name()), v)
-
-			kind := Kind(v.TType())
-			d.stats.ExportedVariablesByTypeKind[kind]++
-		}
-		// ToDo: for a variable specification without the Type protion (then
-		// must have an initial value portion), and if its type is a unamed
-		// struct or interface type (or contains such types), then this type
-		// has no chances to get its .DirectSelectors fulfilled.
-		//
-		// An example: var reserved = new(struct{ types.Type })
-		//
-		// Currently, this is not bad, for we don't need to calculate method set
-		// for such types and the struct and interface types contained in it.
-		if v.AstSpec.Type != nil {
-			d.lookForAndRegisterUnnamedInterfaceAndStructTypes(v.AstSpec.Type, v.Pkg)
-		}
-	}
-	for _, c := range pkg.PackageAnalyzeResult.AllConstants {
-		d.registerValueForItsTypeName(c)
-		if c.Exported() {
-			d.stats.ExportedConstants++
-
-			//incSliceStat(d.stats.ExportedIdentifiersByLength[:], len(c.Name()))
-			//d.stats.ExportedIdentifersSumLength += int32(len(c.Name()))
-			//d.stats.ExportedIdentifers++
-			d.stat_OnNewExportedIdentifer(len(c.Name()), c)
-
-			kind := Kind(c.TType())
-			d.stats.ExportedConstantsByTypeKind[kind]++
-		}
-	}
 }
 
 func (d *CodeAnalyzer) analyzePackage_CollectMoreStatistics(pkg *Package) {
@@ -2233,13 +2075,19 @@ func (d *CodeAnalyzer) analyzePackage_CollectMoreStatistics(pkg *Package) {
 			//d.stats.ExportedIdentifers++
 			d.stat_OnNewExportedIdentifer(len(tn.Name()), tn)
 
-			denoting := tn.Denoting()
+			denoting := tn.Denoting
 			kind := denoting.Kind()
 			d.stats.ExportedTypeNamesByKind[kind]++
 
-			if tn.Alias != nil {
+			//if tn.Alias != nil {
+			//	d.stats.ExportedTypeAliases++
+			//	if t := tn.Alias.Denoting; t.TypeName != nil && t.TypeName.Exported() {
+			//		continue // to avoid duplicated statistics
+			//	}
+			//}
+			if tn.IsAlias() {
 				d.stats.ExportedTypeAliases++
-				if t := tn.Alias.Denoting; t.TypeName != nil && t.TypeName.Exported() {
+				if t := tn.Denoting; t.TypeName != nil && t.TypeName.Exported() {
 					continue // to avoid duplicated statistics
 				}
 			}
@@ -2321,7 +2169,7 @@ func (d *CodeAnalyzer) analyzePackage_CollectMoreStatistics(pkg *Package) {
 	}
 }
 
-func (d *CodeAnalyzer) analyzePackage_CollectMoreStatisticsFinal() {
+func (d *CodeAnalyzer) collectMoreStatisticsFinal() {
 	var sum = func(kinds ...reflect.Kind) (r int32) {
 		for _, k := range kinds {
 			r += d.stats.ExportedTypeNamesByKind[k]
@@ -2349,7 +2197,7 @@ func (d *CodeAnalyzer) analyzePackage_CollectMoreStatisticsFinal() {
 	d.stats.roughExportedIdentifierCount += d.stats.ExportedIdentifers
 }
 
-func (d *CodeAnalyzer) analyzePackage_CollectSomeRuntimeFunctionPositions() {
+func (d *CodeAnalyzer) collectSomeRuntimeFunctionPositions() {
 	// ...
 	if runtimePkg := d.packageTable["runtime"]; runtimePkg != nil {
 		fnames := []string{
@@ -2409,6 +2257,11 @@ func (d *CodeAnalyzer) analyzePackage_ConfirmTypeSources(pkg *Package) {
 						panic("type name " + typeSpec.Name.Name + " not found: " + d.Id1(typeObj.Pkg(), typeObj.Name()))
 					}
 
+					tv := pkg.PPkg.TypesInfo.Types[typeSpec.Type]
+					srcTypeInfo := d.RegisterType(tv.Type)
+					_ = srcTypeInfo
+
+					/*
 					var findSource func(ast.Expr, bool)
 					findSource = func(srcNode ast.Expr, starSource bool) {
 						var source *TypeSource
@@ -2421,13 +2274,41 @@ func (d *CodeAnalyzer) analyzePackage_ConfirmTypeSources(pkg *Package) {
 							source = &newTypeName.Source
 						}
 
+						//var originType *TypeName
+						//var typeArgs []*TypeInfo
+
 						var sttNode *ast.StructType
 						var ittNode *ast.InterfaceType
 
 						switch expr := srcNode.(type) {
-						//>> 1.18, ToDo ToDo2
+						//>> 1.18, ToDo ToDo2 InstantiatedType
 						// handle Index and IndexList?
+						// It seems not needed.
+
+						// Although an instantiated type is a named type,
+						// the source type will be recored in source.UnnamedType field.
+						//case *astIndexExpr:
+						//	findSource(expr.X, starSource)
+						//	if source.TypeName == nil {
+						//		panic("should not"
+						//	}
+						//	// source.TypeName.Type() is the generic type, not the instantiated type
+						//
+						//	originType = source.TypeName
+						//	typeArgs = 
+						//	// source.TypeName will be replaced below
+						//case *astIndexListExpr:
+						//	findSource(expr.X, starSource)
+						//	if source.TypeName == nil {
+						//		panic("should not"
+						//	}
+						//	// source.TypeName.Type() is the generic type, not the instantiated type
+						//
+						//	originType = source.TypeName
+						//	typeArgs = 
+						//	// source.TypeName will be replaced below
 						//<<
+						
 						case *ast.Ident:
 
 							//log.Println("???", d.Id(pkg.PPkg.Types, expr.Name))
@@ -2500,22 +2381,20 @@ func (d *CodeAnalyzer) analyzePackage_ConfirmTypeSources(pkg *Package) {
 						} else if ittNode != nil {
 							if isBuiltin {
 								if typeSpec.Name.Name == "error" {
-									/*
-										//errorTN, _ := types.Universe.Lookup("error").(*types.TypeName)
-										//errotUT := d.RegisterType(errorTN.Type().Underlying())
-										//d.registerExplicitlySpecifiedMethods(errotUT, ittNode, pkg)
-
-										//log.Println("=============== old:", srcTypeInfo.index)
-										// This one is the type shown in the builtin.go source code,
-										// not the one in type.Universal package. This one is only for docs purpose.
-										// ToDo: use custom builtin page, remove the special handling.
-										d.registerExplicitlySpecifiedMethods(srcTypeInfo, ittNode, pkg)
-
-										// ToDo: load builtin.error != universal.error
-										srcTypeInfo = d.RegisterType(newTypeName.Named.TT.Underlying())
-
-										//log.Println("===============", errotUT.index, srcTypeInfo.index)
-									*/
+									//	//errorTN, _ := types.Universe.Lookup("error").(*types.TypeName)
+									//	//errotUT := d.RegisterType(errorTN.Type().Underlying())
+									//	//d.registerExplicitlySpecifiedMethods(errotUT, ittNode, pkg)
+									//
+									//	//log.Println("=============== old:", srcTypeInfo.index)
+									//	// This one is the type shown in the builtin.go source code,
+									//	// not the one in type.Universal package. This one is only for docs purpose.
+									//	// ToDo: use custom builtin page, remove the special handling.
+									//	d.registerExplicitlySpecifiedMethods(srcTypeInfo, ittNode, pkg)
+									//
+									//	// ToDo: load builtin.error != universal.error
+									//	srcTypeInfo = d.RegisterType(newTypeName.Named.TT.Underlying())
+									//
+									//	//log.Println("===============", errotUT.index, srcTypeInfo.index)
 
 									d.registerExplicitlySpecifiedMethods(srcTypeInfo, ittNode, pkg)
 									srcTypeInfo = d.RegisterType(types.Universe.Lookup("error").(*types.TypeName).Type().Underlying())
@@ -2531,10 +2410,257 @@ func (d *CodeAnalyzer) analyzePackage_ConfirmTypeSources(pkg *Package) {
 						}
 					}
 					findSource(typeSpec.Type, false)
+					*/
 				}
 			}
 		}
 	}
 
 	return
+}
+
+func (d *CodeAnalyzer) astFieldListToTypeArgs(pkg *Package, fieldList *ast.FieldList) []TypeExpr {
+	var n = fieldList.NumFields()
+	if n == 0 {
+		return nil
+	}
+	var args = make([]TypeExpr, 0, n)
+	for _, field := range fieldList.List {
+		for _, name := range field.Names {
+			args = append(args, TypeExpr {
+				Expr: name,
+				Type: d.RegisterType(pkg.PPkg.TypesInfo.TypeOf(name)),
+			})
+		}
+	}
+	return args
+}
+
+func (d *CodeAnalyzer) collectDirectSelectorsForSourceType(source TypeExpr, pkg *Package, isBuiltinPkg bool) {
+	var collect func(ast.Expr, bool)
+	collect = func(srcNode ast.Expr, starSource bool) {
+		//var originType *TypeName
+		//var typeArgs []*TypeInfo
+
+		var sttNode *ast.StructType
+		var ittNode *ast.InterfaceType
+
+		switch expr := srcNode.(type) {
+		case *ast.ParenExpr:
+			//log.Println("paren,", pkg.Path+"."+typeSpec.Name.Name, "source is:")
+			collect(expr.X, false)
+			return
+		case *ast.StarExpr:
+			if !starSource {
+				//log.Println("star,", pkg.Path+"."+typeSpec.Name.Name, "source is:")
+				collect(expr.X, true)
+				return
+			}
+		case *ast.StructType:
+			sttNode = expr
+		case *ast.InterfaceType:
+			ittNode = expr
+		}
+
+		tt := pkg.PPkg.TypesInfo.TypeOf(srcNode)
+		srcTypeInfo := d.RegisterType(tt)
+
+		//log.Println(starSource, "default,", pkg.Path+"."+typeSpec.Name.Name, "source is:", tv.Type)
+
+		if sttNode != nil {
+			d.registerDirectFields(srcTypeInfo, sttNode, pkg)
+		} else if ittNode != nil {
+			d.registerExplicitlySpecifiedMethods(srcTypeInfo, ittNode, pkg)
+			if isBuiltinPkg {
+				// for "error", "comparable", ... etc.
+				d.registerExplicitlySpecifiedMethods(source.Type.Underlying, ittNode, pkg)
+			}
+		}
+	}
+	collect(source.Expr, false)
+}
+
+func (d *CodeAnalyzer) analyzePackage_CollectDirectSelectors(pkg *Package) {
+
+	var isBuiltinPkg = pkg == d.builtinPkg // pkg.Path == "builtin"
+
+	// Only collect direct fields and methods for unnamed (struct and interface) types
+	// in this step.
+	for _, tn := range pkg.PackageAnalyzeResult.AllTypeNames {
+		d.collectDirectSelectorsForSourceType(tn.Source, pkg, isBuiltinPkg)
+	}
+
+	//  We must do the collection work after all types are collected.
+	for _, f := range pkg.PackageAnalyzeResult.AllFunctions {
+		isMethod := d.tryToRegisterExplicitlyDeclaredMethod(f)
+		if isMethod {
+			if f.AstDecl.Recv == nil {
+				panic("should not")
+			}
+			if len(f.AstDecl.Recv.List) != 1 {
+				panic("should not")
+			}
+
+			field := f.AstDecl.Recv.List[0]
+
+			// NOTE: field.Type might denote a type alias denoting *T.
+
+			tt := pkg.PPkg.TypesInfo.TypeOf(field.Type)
+			if tt == nil {
+				panic("should not")
+			}
+
+			var baseTT *types.Named
+			switch tt := tt.(type) {
+			case *types.Named:
+				baseTT = tt
+			case *types.Pointer:
+				f.attributes |= StarReceiver
+				var ok bool
+				baseTT, ok = tt.Elem().(*types.Named)
+				if !ok {
+					panic("should not")
+				}
+			}
+
+			ttn := baseTT.Obj()
+			f.receiverTypeName = d.allTypeNameTable[d.Id2b(pkg, ttn.Name())]
+			if f.receiverTypeName == nil {
+				panic("should not")
+			}
+			if !ttn.Exported() {
+				// ToDo: maybe, should not continue here.
+				//       Mehtods of unexported types should be listed in the
+				//       "unexported" sections of "AsInputOf" and "AsOutputOf",
+				//       whether or not the methods are exported.
+				continue
+			}
+		}
+
+		//if f.Exported() {
+		//	d.registerFunctionForInvolvedTypeNames(f)
+		//}
+		numParams, numResults, lastResultIsError := d.registerFunctionForInvolvedTypeNames(f)
+
+		// ToDo: sometimes unexported ones are also needed to read code.
+		if f.Exported() {
+			if f.IsMethod() {
+				d.stats.ExportedMethods++
+				//incSliceStat(d.stats.MethodsByParameterCount[:], numParams)
+				//incSliceStat(d.stats.FunctionsByResultCount[:], numResults)
+			} else {
+				d.stats.ExportedFunctions++
+				//incSliceStat(d.stats.FunctionsByParameterCount[:], numParams)
+				//incSliceStat(d.stats.MethodsByResultCount[:], numResults)
+			}
+			if lastResultIsError {
+				d.stats.ExportedFunctionWithLastErrorResult++
+			}
+			//incSliceStat(d.stats.ExportedIdentifiersByLength[:], len(f.Name()))
+			//d.stats.ExportedIdentifersSumLength += int32(len(f.Name()))
+			//d.stats.ExportedIdentifers++
+			d.stat_OnNewExportedIdentifer(len(f.Name()), f)
+
+			//d.stats.ExportedFunctionParameters += int32(numParams)
+			//d.stats.ExportedFunctionResults += int32(numResults)
+			//incSliceStat(d.stats.ExportedFunctionsByParameterCount[:], numParams)
+			//incSliceStat(d.stats.ExportedFunctionsByResultCount[:], numResults)
+			d.stat_OnNewExportedFunction(numParams, numResults, f)
+		}
+	}
+	//for _, tn := range pkg.PackageAnalyzeResult.AllTypeNames {
+	//	// moved to analyzePackage_CollectMoreStatistics
+	//}
+	if isBuiltinPkg {
+		//var tnRune, tnInt32, tnByte, tnUint8 *TypeName
+		//for _, tn := range pkg.PackageAnalyzeResult.AllTypeNames {
+		//	switch tn.Name() {
+		//	case "rune":
+		//		tnRune = tn
+		//	case "int32":
+		//		tnInt32 = tn
+		//	case "byte":
+		//		tnByte = tn
+		//	case "uint8":
+		//		tnUint8 = tn
+		//	}
+		//}
+		//if tnRune != nil && tnInt32 != nil { // always true
+		//	log.Println("=============== tnInt32.Named:", tnInt32.Named)
+		//	tnRune.Named = tnInt32.Named
+		//}
+		//if tnByte != nil && tnUint8 != nil { // always true
+		//	log.Println("=============== tnUint8.Named:", tnUint8.Named)
+		//	tnByte.Named = tnUint8.Named
+		//}
+		return
+	}
+
+	//if !d.IsStandardPackage(pkg) {
+	//	d.debug = true
+	//	defer func() { d.debug = false }()
+	//}
+
+	for _, v := range pkg.PackageAnalyzeResult.AllVariables {
+		//>> ToDo: 1.18 consider instantiated TypeNames
+		//<<
+		d.registerValueForItsTypeName(v)
+		//if d.debug {
+		//	d.debug = false
+		//	log.Println(v.Position())
+		//}
+		if v.Exported() {
+			d.stats.ExportedVariables++
+
+			//incSliceStat(d.stats.ExportedIdentifiersByLength[:], len(v.Name()))
+			//d.stats.ExportedIdentifersSumLength += int32(len(v.Name()))
+			//d.stats.ExportedIdentifers++
+			d.stat_OnNewExportedIdentifer(len(v.Name()), v)
+
+			kind := Kind(v.TType())
+			d.stats.ExportedVariablesByTypeKind[kind]++
+		}
+
+		// ToDo: I forgot why to register types of variables. Maybe, not needed?
+		//        Check it sometime.
+		//
+		// ToDo: 1.18 InstantiatedType
+		//
+		// ToDo: for a variable specification without the Type protion (then
+		// must have an initial value portion), and if its type is a unamed
+		// struct or interface type (or contains such types), then this type
+		// has no chances to get its .DirectSelectors fulfilled.
+		//
+		// An example: var reserved = new(struct{ types.Type })
+		//
+		// Currently, this is not bad, for we don't need to calculate method set
+		// for such types and the struct and interface types contained in it.
+		if v.AstSpec.Type != nil {
+			d.lookForAndRegisterUnnamedInterfaceAndStructTypes(v.AstSpec.Type, v.Pkg)
+		}
+	}
+
+	//>> ToDo: 1.18
+	// Types of constants may also be instantiated types.
+	//<<
+	for _, c := range pkg.PackageAnalyzeResult.AllConstants {
+		d.registerValueForItsTypeName(c)
+		if c.Exported() {
+			d.stats.ExportedConstants++
+
+			//incSliceStat(d.stats.ExportedIdentifiersByLength[:], len(c.Name()))
+			//d.stats.ExportedIdentifersSumLength += int32(len(c.Name()))
+			//d.stats.ExportedIdentifers++
+			d.stat_OnNewExportedIdentifer(len(c.Name()), c)
+
+			kind := Kind(c.TType())
+			d.stats.ExportedConstantsByTypeKind[kind]++
+		}
+	}
+
+	// ToDo: 1.18
+	// Look for instantiated types and build instantiated fields/methods for them.
+
+
+
 }

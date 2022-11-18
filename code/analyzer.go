@@ -25,7 +25,8 @@ const (
 	SubTask_SortPackagesByDependencies
 	SubTask_CollectDeclarations
 	SubTask_CollectRuntimeFunctionPositions
-	SubTask_ConfirmTypeSources
+	//SubTask_ConfirmTypeSources
+	SubTask_CollectMoreTypes
 	SubTask_CollectSelectors
 	SubTask_CheckCollectedSelectors
 	SubTask_FindImplementations
@@ -76,7 +77,7 @@ type CodeAnalyzer struct {
 
 	//>> 1.18, fake underlying for instantiated types
 	// Always nil for 1.17-.
-	blankInterface *TypeInfo
+	//blankInterface *TypeInfo
 	//<<
 
 	// Package-level declared type names.
@@ -377,13 +378,16 @@ func (d *CodeAnalyzer) registeringType(t types.Type, createOnNonexist bool) *Typ
 
 		switch t := t.(type) {
 		case *types.Named:
+			// The following if-block is disabled for bug#33.
+			// Why added this block before?
+			//
 			//>> 1.18, todo
 			// Fake underlying for instantiated types.
 			// A temp handling to avoid high code complexity.
-			if originType(t) != t {
-				typeInfo.Underlying = d.blankInterface
-				break
-			}
+			//if originType(t) != t {
+			//	typeInfo.Underlying = d.blankInterface
+			//	break
+			//}
 			//<<
 
 			//typeInfo.Name = t.Obj().Name()
@@ -425,7 +429,17 @@ func (d *CodeAnalyzer) RetrieveTypeName(t *TypeInfo) (*TypeName, bool) {
 			return btn, true
 		}
 
-		if _, ok := bt.TT.(*types.Named); ok {
+		if ntt, ok := bt.TT.(*types.Named); ok {
+			//>> 1.18 (temp handling, need more handling. bug#33)
+			if ott := originType(ntt); ott != ntt {
+				ot := d.RegisterType(ott)
+				if otn := ot.TypeName; otn != nil {
+					log.Println("===============", ott)
+					return otn, true
+				}
+			}
+			//<<
+
 			panic("the base type must have been registered before calling this function")
 		}
 	}
@@ -515,9 +529,12 @@ func (d *CodeAnalyzer) iterateTypenames(typeLiteral ast.Expr, pkg *Package, onTy
 	switch node := typeLiteral.(type) {
 	default:
 		panic(fmt.Sprintf("unexpected ast expression. %T : %v", node, node))
-	// 1.18, ToDo
-	//>> it is actually a fallthrough to the next branch.
-	case *astIndexExpr, *astIndexListExpr:
+
+	case *ast.Ident, *astIndexExpr, *astIndexListExpr:
+		// ToDo: The latter two are added since Go 1.18.
+		//        To avoid returning too much weak-related results,
+		//        the indexes types in the lattet two are ignored now.
+
 		tt := pkg.PPkg.TypesInfo.TypeOf(node)
 		if tt == nil {
 			// ToDo: good?
@@ -552,45 +569,8 @@ func (d *CodeAnalyzer) iterateTypenames(typeLiteral ast.Expr, pkg *Package, onTy
 			return
 		}
 		onTypeName(typeInfo)
-	//<<
-	case *ast.Ident:
-		tt := pkg.PPkg.TypesInfo.TypeOf(node)
-		if tt == nil {
-			// ToDo: good?
-			if pkg.Path == "unsafe" {
-				return
-			}
-			log.Println("??? type of node is nil:", node.Name, pkg.Path)
-			return
-		}
-		switch t := tt.(type) {
-		default:
-			// not interested
-
-			// log.Printf("%T, %v", tt, tt)
-
-			// ToDo: it might be an alias to an unnamed type
-			//       To also collect functions for such aliases.
-
-			return // not interested
-		case *typesTypeParam: // 1.18
-			//log.Printf("%T, %v", tt, tt)
-			return // not interested
-		case *types.Basic:
-		case *types.Named:
-			//>> 1.18
-			tt = originType(t)
-			//<<
-		}
-		typeInfo := d.RegisterType(tt)
-		if typeInfo.TypeName == nil {
-			//panic("not a named type")
-			return
-		}
-		onTypeName(typeInfo)
 	case *ast.SelectorExpr: // ToDo: merge with *ast.IndexExpr, *ast.IndexListExpr branch?
 		d.iterateTypenames(node.Sel, pkg, onTypeName)
-
 	case *ast.ParenExpr:
 		d.iterateTypenames(node.X, pkg, onTypeName)
 	case *ast.StarExpr:
@@ -604,7 +584,9 @@ func (d *CodeAnalyzer) iterateTypenames(typeLiteral ast.Expr, pkg *Package, onTy
 		d.iterateTypenames(node.Value, pkg, onTypeName)
 	case *ast.ChanType:
 		d.iterateTypenames(node.Value, pkg, onTypeName)
-	// To avoid returning too much weak-related results, the following types are ignored now.
+	
+	// ToDo: To avoid returning too much weak-related results,
+	//       the following types are ignored now.
 	case *ast.FuncType:
 	case *ast.StructType:
 	case *ast.InterfaceType:
@@ -618,7 +600,7 @@ func (d *CodeAnalyzer) iterateTypenames(typeLiteral ast.Expr, pkg *Package, onTy
 // As Go 1.18 introduces custom generics, two new possible type exprssion nodes
 // (ast.IndexExpr and ast.IndexListExpr, both denote named types) are added,
 // so the "unnamed" word in the method name is not accurate now.
-func (d *CodeAnalyzer) lookForAndRegisterUnnamedInterfaceAndStructTypes(typeLiteral ast.Node, pkg *Package) {
+func (d *CodeAnalyzer) lookForAndRegisterUnnamedInterfaceAndStructTypes(typeLiteral ast.Expr, pkg *Package) {
 	// ToDo: move this func to package level?
 	var reg = func(n ast.Expr) *TypeInfo {
 		tv := pkg.PPkg.TypesInfo.Types[n]
@@ -659,7 +641,6 @@ func (d *CodeAnalyzer) lookForAndRegisterUnnamedInterfaceAndStructTypes(typeLite
 		//<<
 
 		d.lookForAndRegisterUnnamedInterfaceAndStructTypes(node.Index, pkg)
-		return
 	case *astIndexListExpr:
 		//log.Printf("======== node = %v, %#v", node, node)
 		t := reg(node)
@@ -812,6 +793,28 @@ func (d *CodeAnalyzer) registerDirectFields(typeInfo *TypeInfo, astStructNode *a
 			// or even disassemble any complex types and look for struct and interface types.
 
 			fieldTypeInfo := d.RegisterType(tv.Type)
+			
+			//>> 1.18 (temp handling, need more handling. bug#33)
+			//   need a replaceDirectSelectors(...)
+			if ntt, ok := tv.Type.(*types.Named); ok {
+				if ott := originType(ntt); ntt != ott {
+					ot := d.RegisterType(ott)
+					fieldTypeInfo.DirectSelectors = ot.DirectSelectors
+				}
+			}
+			//<<
+
+			//if tt, ok := tv.Type.(*types.Named); ok {
+			//	log.Println("================", tt)
+			//	t := fieldTypeInfo
+			//	log.Println(tt)
+			//	log.Println(t.DirectSelectors)
+			//	log.Println(tt.TypeArgs(), tt.TypeParams())
+			//	log.Println(tt.Origin())
+			//	var ot = d.RegisterType(tt.Origin())
+			//	log.Println(ot.DirectSelectors)
+			//	log.Println(tt.Origin().TypeArgs(), tt.Origin().TypeParams())
+			//}
 
 			embedMode := EmbedMode_Direct
 			if isStar {
@@ -1014,13 +1017,25 @@ func (d *CodeAnalyzer) registerExplicitlySpecifiedMethods(typeInfo *TypeInfo, as
 				//
 				// Now, it is also possible
 				// * an unnamed type
-				// * an instantiated type
+				// * an instantiated type (ast.IndexExpr, ast.IndexListExpr)
 				// * a type union (ast.BinaryExpr)
 				// * ~aType (ast.UnaryExpr)
+				//
+				// And note that an Ident and SelectorExpr might not
+				// denote interface.
+				//
+				// Update to Go 1.19, we may only need to consider
+				// IndexExpr/IndexListExpr/Ident/SelectorExpr which
+				// denote interface types.
 				continue
 				//<<
 
 				//panic(fmt.Sprintf("not a valid embedding interface type name: %#v", method))
+			case *ast.IndexExpr, *ast.IndexListExpr:
+				continue
+				// todo: unify these cases, by finding fieldTypeInfo
+				//       using pkg.PPkg.TypesInfo.ObjectOf(expr).
+				//       Pass if fieldTypeInfo is not an interface.
 			case *ast.Ident:
 				ttn := pkg.PPkg.TypesInfo.Uses[expr]
 				id = d.Id2(ttn.Pkg(), ttn.Name())
@@ -1030,15 +1045,17 @@ func (d *CodeAnalyzer) registerExplicitlySpecifiedMethods(typeInfo *TypeInfo, as
 				id = d.Id2(srcPkg.Imported(), expr.Sel.Name)
 			}
 
+			// ToDo: 1.18, instantiated types are not in this table.
 			tn := d.allTypeNameTable[id]
 			if tn == nil {
 				panic("TypeName for " + id + " not found")
 			}
 
-			fieldTypeInfo := tn.Named
-			if fieldTypeInfo == nil {
-				fieldTypeInfo = tn.Alias.Denoting
-			}
+			//fieldTypeInfo := tn.Named
+			//if fieldTypeInfo == nil {
+			//	fieldTypeInfo = tn.Alias.Denoting
+			//}
+			fieldTypeInfo := tn.Denoting
 			embedMode := EmbedMode_Direct
 
 			//if strings.Index(id, "image") >= 0 {
@@ -1103,18 +1120,20 @@ func (d *CodeAnalyzer) registerExplicitlySpecifiedMethods(typeInfo *TypeInfo, as
 }
 
 // ToDo: to loop parameter and result lists and use AST to constract custom methods.
-func (d *CodeAnalyzer) registerExplicitlyDeclaredMethod(f *Function) {
-	funcObj, funcDecl, pkg := f.Func, f.AstDecl, f.Pkg
-
-	funcName := funcObj.Name()
-	if funcName == "-" {
+func (d *CodeAnalyzer) tryToRegisterExplicitlyDeclaredMethod(f *Function) (isMethod bool) {
+	if f.Func == nil {
 		return
 	}
 
-	sig := funcObj.Type().(*types.Signature)
+	sig := f.Func.Type().(*types.Signature)
 	recv := sig.Recv()
 	if recv == nil {
 		return
+	}
+
+	isMethod, methodName := true, f.Func.Name()
+	if methodName == "-" {
+		return 
 	}
 
 	d.registerUnnamedInterfaceAndStructTypesFromParametersAndResults(f.AstDecl.Type, f.Pkg)
@@ -1134,10 +1153,12 @@ func (d *CodeAnalyzer) registerExplicitlyDeclaredMethod(f *Function) {
 		panic("impossible")
 	}
 
-	// ToDo: using sig.Params() and sig.Results() instead of funcObj.Type()
+	// ToDo: using sig.Params() and sig.Results() instead of f.Func.Type()
 
 	//>> 1.18
 	baseTT = originType(baseTT)
+	// As explicit methods are always declared for orign types,
+	// the above line is actually a no-op.
 	//<<
 
 	typeInfo := d.RegisterType(baseTT)
@@ -1146,18 +1167,18 @@ func (d *CodeAnalyzer) registerExplicitlyDeclaredMethod(f *Function) {
 		typeInfo.DirectSelectors = selectors
 	}
 	method := &Method{
-		Pkg:         pkg, // ToDo: research why must set it?
-		Name:        funcName,
-		Type:        d.RegisterType(funcObj.Type()),
+		Pkg:         f.Pkg, // ToDo: research why must set it?
+		Name:        methodName,
+		Type:        d.RegisterType(f.Func.Type()),
 		PointerRecv: ptrRecv,
-		AstFunc:     funcDecl,
+		AstFunc:     f.AstDecl,
 	}
 	//>> 1.18, ToDo
 	//method.Parameterized = checkParameterized(method.Type)
 	//<<
-	if !token.IsExported(funcName) {
-		method.Pkg = pkg
-		if pkg == d.builtinPkg {
+	if !token.IsExported(methodName) {
+		method.Pkg = f.Pkg
+		if method.Pkg == d.builtinPkg {
 			method.Pkg = nil
 		}
 	}
@@ -1166,6 +1187,7 @@ func (d *CodeAnalyzer) registerExplicitlyDeclaredMethod(f *Function) {
 		Method: method,
 	}
 	typeInfo.DirectSelectors = append(typeInfo.DirectSelectors, sel)
+	return
 }
 
 // ToDo: also register function variables?

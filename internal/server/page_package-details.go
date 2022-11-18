@@ -590,7 +590,7 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 										defer writeItemWrapper(exported)()
 
 										ds.writeTypeForListing(page, by, pkg.Package, "", DotMStyle_NotShow)
-										if _, ok := by.TypeName.Denoting().TT.Underlying().(*types.Interface); ok {
+										if _, ok := by.TypeName.Denoting.TT.Underlying().(*types.Interface); ok {
 											page.WriteString(" <i>(interface)</i>")
 										}
 									}()
@@ -1126,7 +1126,7 @@ func buildPackageDetailsData(analyzer *code.CodeAnalyzer, pkgPath string, alsoCo
 			continue
 		}
 
-		denoting := tn.Denoting()
+		denoting := tn.Denoting
 		//td := &TypeDetails{TypeName: tn}
 		//typeResources = append(typeResources, td)
 		rwp := regResForFile(tn)
@@ -1135,7 +1135,10 @@ func buildPackageDetailsData(analyzer *code.CodeAnalyzer, pkgPath string, alsoCo
 
 		// Generally, we don't collect info for a type alias, execpt it denotes an unnamed or unexported type.
 		// The info has been (or will be) collected for that denoting type.
-		if tn.Alias != nil && tn.Alias.Denoting.TypeName != nil && tn.Alias.Denoting.TypeName.Exported() {
+		//if tn.Alias != nil && tn.Alias.Denoting.TypeName != nil && tn.Alias.Denoting.TypeName.Exported() {
+		//	continue
+		//}
+		if tn.IsAlias() && tn.Denoting.TypeName != nil && tn.Denoting.TypeName.Exported() {
 			continue
 		}
 
@@ -1575,7 +1578,7 @@ func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pk
 		page.WriteString(v.Name())
 		page.WriteString("</a>")
 
-		if t := res.TypeInfo(ds.analyzer); t != forTypeName.Denoting() {
+		if t := res.TypeInfo(ds.analyzer); t != forTypeName.Denoting {
 			page.WriteByte(' ')
 			//page.WriteString(res.TType().String())
 			specOwner := res.(code.AstValueSpecOwner)
@@ -1607,8 +1610,8 @@ func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pk
 					buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, v.Package().Path), page, tn.Name(), "name-", tn.Name())
 					page.WriteString(")")
 				} else {
-					// ToDo: faster way: ds.analyzer.TryRegisteringType(tn.Type()) == forTypeName.Denoting()?
-					if forTypeName != nil && types.Identical(tn.Type(), forTypeName.Denoting().TT) {
+					// ToDo: faster way: ds.analyzer.TryRegisteringType(tn.Type()) == forTypeName.Denoting?
+					if forTypeName != nil && types.Identical(tn.Type(), forTypeName.Denoting.TT) {
 						fmt.Fprintf(page, `(*%[1]s)`, tn.Name())
 					} else {
 						fmt.Fprintf(page, `(*<a href="#name-%[1]s">%[1]s</a>)`, tn.Name())
@@ -1620,8 +1623,8 @@ func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pk
 					//fmt.Fprintf(page, `<a href="/pkg:%[1]s#name-%[2]s">%[2]s</a>.`, v.Package().Path, tn.Name())
 					buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, v.Package().Path), page, tn.Name(), "name-", tn.Name())
 				} else {
-					// ToDo: faster way: ds.analyzer.TryRegisteringType(tn.Type()) == forTypeName.Denoting()?
-					if forTypeName != nil && types.Identical(tn.Type(), forTypeName.Denoting().TT) {
+					// ToDo: faster way: ds.analyzer.TryRegisteringType(tn.Type()) == forTypeName.Denoting?
+					if forTypeName != nil && types.Identical(tn.Type(), forTypeName.Denoting.TT) {
 						fmt.Fprintf(page, `%[1]s`, tn.Name())
 					} else {
 						fmt.Fprintf(page, `<a href="#name-%[1]s">%[1]s</a>`, tn.Name())
@@ -1953,9 +1956,9 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Pac
 			showSource := false
 			if isBuiltin {
 				// builtin package source code are fake.
-				showSource = res.Alias != nil
+				showSource = res.IsAlias() // res.Alias != nil
 			} else {
-				allowStar := res.Alias != nil
+				allowStar := res.IsAlias() // res.Alias != nil
 				for t, done := res.AstSpec.Type, false; !done; {
 					switch e := t.(type) {
 					//>> ToDo 1.18
@@ -1980,22 +1983,23 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Pac
 				}
 			}
 
-			if res.Alias != nil {
+			if res.IsAlias() { // res.Alias != nil {
 				page.WriteByte(' ')
 				page.WriteByte('=')
 			}
 
-			//page.WriteString(types.TypeString(res.Denoting().TT, types.RelativeTo(res.Package().PPkg.Types)))
-			if res.AstSpec.Type == nil {
-				panic("res.Alias != nil, but res.AstSpec.Type == nil, ???")
-			}
+			//page.WriteString(types.TypeString(res.Denoting.TT, types.RelativeTo(res.Package().PPkg.Types)))
+			//if res.AstSpec.Type == nil {
+			//	//panic("res.Alias != nil, but res.AstSpec.Type == nil, ???")
+			//	panic("res is alias, but res.AstSpec.Type == nil, ???")
+			//}
 
 			if showSource {
 				page.WriteByte(' ')
 				ds.WriteAstType(page, res.AstSpec.Type, res.Pkg, res.Pkg, true, nil, nil)
-				//ds.writeValueTType(page, res.Denoting().TT, res.Pkg, true, nil)
+				//ds.writeValueTType(page, res.Denoting.TT, res.Pkg, true, nil)
 			}
-			writeKindText(page, res.Denoting().TT)
+			writeKindText(page, res.Denoting.TT)
 		}
 	case *code.Constant:
 		if writeKeyword {
@@ -2154,13 +2158,13 @@ func (ds *docServer) writeValueTType(page *htmlPage, tt types.Type, docPkg *code
 	default:
 		panic("should not")
 	case *types.Named:
-		if forTypeName != nil && tt == forTypeName.Denoting().TT {
+		if forTypeName != nil && tt == forTypeName.Denoting.TT {
 			page.WriteString(tt.Obj().Name())
 		} else {
 			ds.writeTypeName(page, tt, docPkg, "")
 		}
 	case *types.Basic:
-		if forTypeName != nil && tt == forTypeName.Denoting().TT {
+		if forTypeName != nil && tt == forTypeName.Denoting.TT {
 			page.WriteString(tt.Name())
 		} else {
 			buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, "builtin"), page, tt.Name(), "name-", tt.Name())
@@ -2421,8 +2425,8 @@ func (ds *docServer) WriteAstType(w *htmlPage, typeLit ast.Expr, codePkg, docPkg
 			w.Write(period)
 		}
 
-		// ToDo: faster way: ds.analyzer.TryRegisteringType(objType) == forTypeName.Denoting()?
-		if forTypeName != nil && types.Identical(objType, forTypeName.Denoting().TT) {
+		// ToDo: faster way: ds.analyzer.TryRegisteringType(objType) == forTypeName.Denoting?
+		if forTypeName != nil && types.Identical(objType, forTypeName.Denoting.TT) {
 			w.Write(BoldTagStart)
 			defer w.Write(BoldTagEnd)
 		}
@@ -2485,7 +2489,7 @@ func (ds *docServer) WriteAstType(w *htmlPage, typeLit ast.Expr, codePkg, docPkg
 			panic(fmt.Sprintf("%v is a %T, not a type name", obj, obj))
 		}
 
-		if forTypeName != nil && types.Identical(tn.Type(), forTypeName.Denoting().TT) {
+		if forTypeName != nil && types.Identical(tn.Type(), forTypeName.Denoting.TT) {
 			w.Write(BoldTagStart)
 			defer w.Write(BoldTagEnd)
 		}
@@ -2908,7 +2912,7 @@ func (ds *docServer) renderDocComment(page *htmlPage, currentPkg *code.Package, 
 					return ""
 				}
 
-				sel := tn.Denoting().SelectorByName(tokens[1])
+				sel := tn.Denoting.SelectorByName(tokens[1])
 				if sel == nil {
 					return ""
 				}
@@ -2937,7 +2941,7 @@ func (ds *docServer) renderDocComment(page *htmlPage, currentPkg *code.Package, 
 				return ""
 			}
 
-			sel := tn.Denoting().SelectorByName(tokens[2])
+			sel := tn.Denoting.SelectorByName(tokens[2])
 			if sel == nil {
 				return ""
 			}

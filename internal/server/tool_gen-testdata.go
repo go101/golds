@@ -122,7 +122,7 @@ func buildTestData_Package(details *PackageDetails) TestData_Package {
 			ValueCount:         valueCount,         // len(t.Values),
 			AsInputCount:       asInputCount,       // len(t.AsInputsOf),
 			AsOutputCount:      asOutputCount,      // len(t.AsOutputsOf),
-			IsAlias:            t.TypeName.Alias != nil,
+			IsAlias:            t.TypeName.IsAlias(), // t.TypeName.Alias != nil,
 		}
 	}
 

@@ -14,22 +14,25 @@ please visit [this page on Go101.org](https://go101.org/apps-and-libs/golds.html
 
 ### Main Features
 
-* JavaScript-off friendly, though the experience is a little richer if JavaScript is on.
-  No tracing, no auto external websites visiting.
-* Lists types not only by alphabet, but also by popularity (only available when JavaScript is on),
-  which is good to understanding some packages with many types declared.
-* Supports listing unexported types and values, which is helpful to understand some packages.
-* Treats `main` packages as same as library packages.
+* __JavaScript-off friendly, though the experience is a little richer when JavaScript is on.__
+* All functionalities are implemented locally, No tracing, no external websites visiting (except explicitly and manually required by you).
 * Rich package-level type/value information collection:
-  * Shows type implementation relations ([demo 1](https://docs.go101.org/std/pkg/go/ast.html#name-Node) and [demo 2](https://docs.go101.org/std/pkg/bytes.html#name-Buffer)).
-  * Shows method implementation relations ([demo](https://docs.go101.org/std/imp/io.Reader.html#name-Read)).
-  * Shows promoted selectors, even on unexported embedded fields ([demo](https://docs.go101.org/std/pkg/archive/zip.html#name-File)).
-  * Shows as-parameters-of and as-results-of function/method lists (including interface methods).
+  * __Shows type implementation relations ([demo 1](https://docs.go101.org/std/pkg/go/ast.html#name-Node) and [demo 2](https://docs.go101.org/std/pkg/bytes.html#name-Buffer)).__
+  * __Shows method implementation relations ([demo](https://docs.go101.org/std/imp/io.Reader.html#name-Read)).__
+  * __Shows promoted selectors, even on unexported embedded fields ([demo](https://docs.go101.org/std/pkg/archive/zip.html#name-File)).__
+  * __Shows as-parameters-of and as-results-of function/method lists (including interface methods).__
   * Shows the package-level value list of a package-level type.
-  * Shows uses of package-level declared types/constants/variables/functions (by clicking the `type`/`const`/`var`/`func` keywords).
-  * Press `p` (package), `e` (examples), `t` (types), `f` (functions), `v` (variables), `c` (constants), and `a` (all) to toggle doc expand/collapse statuses (only available when JavaScript is on).
+  * Lists all resources (types/constants/variables/functions), and
+    * supports listing unexported ones;
+    * makes them self-indexed;
+    * lists types not only by alphabet, but also by popularity (only available when JavaScript is on),
+      which is good to understanding some packages with many types declared.
+    * __supports listing their uses (by clicking the `type`/`const`/`var`/`func` keywords in package information pages).__
+    
+    Press `p` (package), `e` (examples), `t` (types), `f` (functions), `v` (variables), `c` (constants), and `a` (all) to toggle doc expand/collapse statuses (only available when JavaScript is on).
+  * Treats `main` packages as same as library packages.
 * Smooth code view experiences (good for studying Go projects without opening IDEs):
-  * Click a local identifier to highlight all the occurrences of the identifier.
+  * __Click a local identifier to highlight all the occurrences of the identifier.__
   * Click a use of a non-local identifier to jump to the declaration of the non-local identifier.
   * Click the name of a field or a method in its declaration to show its uses (only for package-level named struct types now).
     If the name represents a method, in the uses page, click the _(method)_ text to show which interface methods the method implements.
@@ -37,10 +40,9 @@ please visit [this page on Go101.org](https://go101.org/apps-and-libs/golds.html
     In the method-implementation page, click each the name of an interface method to show the uses of the interface method.
 * Shows code statistics ([demo](https://docs.go101.org/std/statistics.html)).
   * Click some of the SVG pictures to show corresponding toppest list.
-* Supports generating static HTML docs pages, to avoid rebuilding the docs later.
+* __Supports generating static HTML docs pages, to avoid rebuilding the docs later.__
   This is good for package developers to host docs of their own packages.
   (The docs of standard packages are generated within about 10 seconds, and the docs of the kubernetes project packages are generated within about 100 seconds.)
-* All functionalities are implemented locally, no external websites are needed (except explicitly required by you).
 * Just fell free to open any number of pages in new browser windows as needed.
 
 _(NOTE: This tool is still in its early experimental phase. More new features will be added from time to time in future versions.)_

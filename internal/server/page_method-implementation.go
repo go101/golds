@@ -80,7 +80,7 @@ func (ds *docServer) buildImplementationPage(w http.ResponseWriter, result *Meth
 	//writeSrouceCodeLineLink(page, result.TypeName.Package(), result.TypeName.Position(), result.TypeName.Name(), "")
 	ds.writeResourceIndexHTML(page, result.TypeName.Package(), result.TypeName, false, false, false)
 	page.WriteString(`</b></span><span style="font-size:large;">`)
-	writeKindText(page, result.TypeName.Denoting().TT)
+	writeKindText(page, result.TypeName.Denoting.TT)
 	page.WriteString("</span>\n")
 
 	nonImplementingMethodCountText := ""
@@ -183,8 +183,9 @@ func (ds *docServer) buildImplementationData(analyzer *code.CodeAnalyzer, pkgPat
 		if tn.Name() == typeName {
 			typeNameRes = tn
 			// tn might be an alias
-			typeInfo = tn.Denoting()
-			if tn.Alias != nil && typeInfo.TypeName != nil {
+			typeInfo = tn.Denoting
+			//if tn.Alias != nil && typeInfo.TypeName != nil {
+			if tn.IsAlias() && typeInfo.TypeName != nil {
 				if typeInfo.TypeName.Pkg == pkg {
 					return nil, fmt.Errorf("%s.%s is an alias of %s", pkgPath, typeName, typeInfo.TypeName.Name())
 				} else {
@@ -225,7 +226,7 @@ func (ds *docServer) buildImplementationData(analyzer *code.CodeAnalyzer, pkgPat
 				if !collectUnexporteds && impBy.TypeName.Package().Path != "builtin" && !impBy.TypeName.Exported() {
 					continue
 				}
-				impByDenoting := impBy.TypeName.Denoting()
+				impByDenoting := impBy.TypeName.Denoting
 				for _, m := range impByDenoting.AllMethods {
 					if !collectUnexporteds && !token.IsExported(m.Name()) {
 						continue
@@ -268,7 +269,7 @@ func (ds *docServer) buildImplementationData(analyzer *code.CodeAnalyzer, pkgPat
 				if !collectUnexporteds && imp.TypeName.Package().Path != "builtin" && !imp.TypeName.Exported() {
 					continue
 				}
-				impDenoting := imp.TypeName.Denoting()
+				impDenoting := imp.TypeName.Denoting
 				for _, m := range impDenoting.AllMethods {
 					if !collectUnexporteds && !token.IsExported(m.Name()) {
 						continue

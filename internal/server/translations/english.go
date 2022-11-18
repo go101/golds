@@ -121,9 +121,9 @@ func (*English) Text_Analyzing_CollectRuntimeFunctionPositions(d time.Duration) 
 	return fmt.Sprintf("Collected some runtime function positions: %s", d)
 }
 
-func (*English) Text_Analyzing_ConfirmTypeSources(d time.Duration) string {
-	return fmt.Sprintf("Confirmed type sources: %s", d)
-}
+//func (*English) Text_Analyzing_ConfirmTypeSources(d time.Duration) string {
+//	return fmt.Sprintf("Confirmed type sources: %s", d)
+//}
 
 func (*English) Text_Analyzing_CollectSelectors(d time.Duration) string {
 	return fmt.Sprintf("Collected selectors: %s", d)

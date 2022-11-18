@@ -301,7 +301,7 @@ func searchPackage(pathPrefix, relPath string, sortedPkgs []*Package) *Package {
 	for a <= b {
 		k := a + (b-a)/2
 		p := sortedPkgs[k]
-		switch strings.Compare(relPath, p.Path[n:]) {
+		switch ComparePackagePaths_ThreeWay(relPath, p.Path[n:], '/') {
 		case 0:
 			return p
 		case 1:
@@ -316,10 +316,19 @@ func searchPackage(pathPrefix, relPath string, sortedPkgs []*Package) *Package {
 // Should be faster than using strings.Split or Strings.Tokens
 // Return true for pa <= pb.
 func ComparePackagePaths(pa, pb string, sep byte) bool {
-	true, false := true, false
-	if len(pa) > len(pb) {
+	return ComparePackagePaths_ThreeWay(pa, pb, '/') < 0
+}
+
+func comparePackagePaths(pa, pb string) bool {
+	return ComparePackagePaths(pa, pb, '/')
+}
+
+func ComparePackagePaths_ThreeWay(pa, pb string, sep byte) int {
+	var n = len(pa) - len(pb)
+	var one, _one = 1, -1
+	if n > 0 {
 		pa, pb = pb, pa
-		true, false = false, true
+		one, _one = -1, 1
 	}
 	if len(pa) <= len(pb) { // BCE hint
 		for i := 0; i < len(pa); i++ {
@@ -327,18 +336,24 @@ func ComparePackagePaths(pa, pb string, sep byte) bool {
 				if pb[i] == sep {
 					continue
 				}
-				return true
+				return _one
 			} else if pb[i] == sep {
-				return false
+				return one
 			}
 			if pa[i] < pb[i] {
-				return true
+				return _one
 			} else if pa[i] > pb[i] {
-				return false
+				return one
 			}
 		}
 	}
-	return true
+
+	if n < 0 {
+		return -1
+	} else if n > 0 {
+		return 1
+	}
+	return 0
 }
 
 // Package holds the information and the analysis result of a Go package.
@@ -607,14 +622,26 @@ const (
 	// For methods.
 	StarReceiver Attribute = 1 << 9
 
+	// For type names.
+	Alias Attribute = 1 << 10
+
 	// ToDo: use these attributes.
 )
 
 // A TypeSource represents the source type in a type specification.
-type TypeSource struct {
-	TypeName    *TypeName
-	UnnamedType *TypeInfo
-}
+//type TypeSource struct {
+//	TypeName    *TypeName
+//	UnnamedType *TypeInfo
+//	// Note: since Go 1.18, instantiated source type is also stored in UnnamedType field,
+//	//       although instantiated types are named types.
+//	// ToDo: change the field name "UnnamedType". Maybe the two fields should be
+//	//       changed to Defined and Undefined.
+//}
+
+//type TypeSource struct {
+//	astExpr    ast.Expr
+//	Underlying *TypeInfo
+//}
 
 //func (ts *TypeSource) Denoting(d *CodeAnalyzer) *TypeInfo {
 //	if ts.UnnamedType != nil {
@@ -623,11 +650,16 @@ type TypeSource struct {
 //	return ts.TypeName.Denoting(d)
 //}
 
-// EmbedInfo records the information for an embedded field.
-type EmbedInfo struct {
-	TypeName *TypeName
-	IsStar   bool
+type TypeExpr struct {
+	Expr ast.Expr
+	Type *TypeInfo
 }
+
+// EmbedInfo records the information for an embedded field.
+//type EmbedInfo struct {
+//	TypeName *TypeName
+//	IsStar   bool
+//}
 
 // A TypeName represents a type name.
 type TypeName struct {
@@ -640,8 +672,10 @@ type TypeName struct {
 	*types.TypeName
 
 	// One and only one of the two is nil.
-	Alias *TypeAlias
-	Named *TypeInfo
+	//Alias *TypeAlias
+	//Named *TypeInfo
+
+	Denoting *TypeInfo
 
 	// ToDo: change the above two to:
 	// Denoting *TypeInfo
@@ -655,14 +689,27 @@ type TypeName struct {
 	// 2. *typename
 	// 3. unnamed type
 	// 4. *unname type
-	Source     TypeSource
-	StarSource *TypeSource
+	//Source     TypeSource
+	//StarSource *TypeSource
+	// Since Go 1.18, a source might be also an instantiated type.
+	// ToDo: it looks the Sources fields are not effectively used now.
+	//       Why added them? To track underlying type?
+	//       They indeed have no effects in calculating selector sets of types.
+
+	Source   TypeExpr
+	TypeArgs []TypeExpr
+
+	// A TypeName might be shared by many named types.
+	// * the origin generic type
+	// * instantiated types
+	// * patially instantiated types (might be supported in future Go versions)
+	//   A TypeName itself might be also an alias to a patially instantiated type.
 
 	//>> 1.18, ToDo
-	// Template == nil: neither a parameterized type or instantiated type
-	// Template == self: parameterized type
-	// Template != nil && Template != self: instantiated type
-	Template *TypeName // origin type name, origin's origin is self
+	// Origin == nil: neither a generic type or instantiated type
+	// Origin == self: generic type
+	// Origin != nil && Origin != self: instantiated type
+	//Origin *TypeName // origin's origin is itself
 	// Arguments  []*TypeInfo // for instantiated type names only (needed? Note: argument list might be partial)
 	//Instances  []*TypeName // for template type names only (move to referenced pages?)
 	//Parameters // ToDo (maybe not needed)
@@ -674,7 +721,14 @@ type TypeName struct {
 	//       * only show those in type specifications.
 	//EmbeddedIn []EmbedInfo
 
+	attributes Attribute
+
 	index uint32 // ToDo: any useful?
+}
+
+type InstanaiatedTypeName struct {
+	Origin   *TypeName
+	TypeArgs []TypeExpr
 }
 
 //func (tn *TypeName) IndexString() string {
@@ -752,14 +806,22 @@ func (tn *TypeName) Package() *Package {
 //	return tn.Source.Denoting(d)
 //}
 
-// Denoting returns the denoting TypeInfo of a TypeName.
-func (tn *TypeName) Denoting() *TypeInfo {
-	if tn.Named != nil {
-		return tn.Named
-	}
-
-	return tn.Alias.Denoting
+func (tn *TypeName) IsAlias() bool {
+	return tn.attributes & Alias != 0
+	// ToDo: assert the result == tn.TypeName.IsAlias()
 }
+
+// ToDo: remove this method?
+//
+// Denoting returns the denoting TypeInfo of a TypeName.
+//func (tn *TypeName) Denoting() *TypeInfo {
+//	//if tn.Named != nil {
+//	//	return tn.Named
+//	//}
+//	//
+//	//return tn.Alias.Denoting
+//	return tn.Denoting
+//}
 
 //func (tn *TypeName) Underlying(d *CodeAnalyzer) *TypeInfo {
 //	if tn.StarSource != nil || tn.Source.UnnamedType != nil {
@@ -769,15 +831,15 @@ func (tn *TypeName) Denoting() *TypeInfo {
 //}
 
 // TypeAlias represents a type alias,
-type TypeAlias struct {
-	Denoting *TypeInfo
-
-	// For named and basic types.
-	TypeName *TypeName // ToDo: any difference from Denoting.TypeName?
-
-	// Builtin, Embeddable.
-	attributes Attribute
-}
+//type TypeAlias struct {
+//	Denoting *TypeInfo
+//
+//	// For named and basic types.
+//	//TypeName *TypeName // ToDo: any difference from Denoting.TypeName?
+//
+//	// Builtin, Embeddable.
+//	attributes Attribute
+//}
 
 //func (a *TypeAlias) Embeddable() bool {
 //	var tc = a.Denoting.Common()
@@ -794,9 +856,12 @@ type TypeAlias struct {
 //	return tc.Kind&(Ptr|Interface) == 0
 //}
 
+
+
 // TypeInfo represents a type and records its analysis result.
 type TypeInfo struct {
 	TT types.Type
+
 
 	Underlying *TypeInfo
 
@@ -804,7 +869,7 @@ type TypeInfo struct {
 	TypeName *TypeName
 
 	//Implements     []*TypeInfo
-	///StarImplements []*TypeInfo // if TT is neither pointer nor interface.
+	//StarImplements []*TypeInfo // if TT is neither pointer nor interface.
 	Implements []Implementation
 
 	// For interface types.
@@ -827,6 +892,8 @@ type TypeInfo struct {
 	//   The field is only built for T. (*T).DirectSelectors is always nil.
 	// * For named interface types, all explicitly specified methods and embedded types (as fields).
 	// * For unnamed struct types, only direct fields. Only built for strct{...}, not for *struct{...}.
+	// ToDo: note, for a type may have many alias, the ast.Expr (for types)
+	//       recorded in a Selector is just one of many possibilities.
 	DirectSelectors []*Selector
 	EmbeddingFields int32 // for struct types only now. ToDo: also for interface types.
 
@@ -837,14 +904,6 @@ type TypeInfo struct {
 	// The impler list for an interface with parameterized methods will not get calculated.
 	//<<
 
-	// ToDo:
-	// The sorting rules are different from the rules in package details.
-	// For most types, the twp are not needed to be sorted.
-	// ToDo: put the two in attributes?
-	//MethodsAreSorted bool
-	//FieldsAreSorted bool
-	AllSelectors map[string]*Selector // built as needed for links in doc comments.
-
 	// All methods, including extended/promoted ones.
 	AllMethods []*Selector
 
@@ -853,6 +912,10 @@ type TypeInfo struct {
 
 	// Including promoted ones. For both T and *T.
 	//Methods []*Method
+
+	// Ror rendering links in doc comments.
+	// Built as neede.
+	AllSelectors map[string]*Selector
 
 	// For .TypeName != nil
 	AsTypesOf   []ValueResource // variables and constants

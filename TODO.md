@@ -2,13 +2,13 @@
 
 ### Soon to do
 
-* handle inks in comments: https://tip.golang.org/doc/comment, not support lists and headers
-  * not handle [otherModulePkg.Name]
-  * try to handle [sameModulePkg.Name] and [Name]
-  * handle [XYZ] + [XYZ]: link
-  * handle bare urls.
+* Show go version at footer.
 
-* show alias list for types, or identical tyoe list
+* bug: https://github.com/go101/golds/issues/33 (search bug#33)
+
+* write some generic cases: internal/testing/manual-check-generated-html/generics
+
+* show alias list for types, or identical type list
 
 * show id ref counts, and ref counts should affect populirities.
 
@@ -64,6 +64,9 @@
 
 * id introduced in version: 1.15-, 1.16, 1.17, ...
 * check "Deprecated: " in comments
+
+* in analyzePackage_CollectDirectSelectors
+  maybe, methods of unexported types should be collected for "AsInputOf" and "AsOutputOf".
 
 * generics
   * use https://pkg.go.dev/golang.org/x/exp/typeparams ?
@@ -465,6 +468,12 @@
   * https://go.googlesource.com/go/+/refs/heads/dev.typeparams/src/cmd/compile/internal/types2/
 
 ### Done
+
+* (done) handle links in comments: https://tip.golang.org/doc/comment, not support lists and headers
+  * not handle [otherModulePkg.Name]
+  * try to handle [sameModulePkg.Name] and [Name]
+  * handle [XYZ] + [XYZ]: link
+  * handle bare urls.
 
 * (done) hotkey
   * overview page

@@ -99,9 +99,9 @@ func (*Chinese) Text_Analyzing_CollectRuntimeFunctionPositions(d time.Duration) 
 	return fmt.Sprintf("搜集一些runtime包中的函数的代码位置：%s", d)
 }
 
-func (*Chinese) Text_Analyzing_ConfirmTypeSources(d time.Duration) string {
-	return fmt.Sprintf("确定类型声明的源类型：%s", d)
-}
+//func (*Chinese) Text_Analyzing_ConfirmTypeSources(d time.Duration) string {
+//	return fmt.Sprintf("确定类型声明的源类型：%s", d)
+//}
 
 func (*Chinese) Text_Analyzing_CollectSelectors(d time.Duration) string {
 	return fmt.Sprintf("搜集选择器：%s", d)

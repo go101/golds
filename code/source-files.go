@@ -53,113 +53,86 @@ func (info *SourceFileInfo) AstBareFileName() string {
 	return info.BareFilename
 }
 
-func (d *CodeAnalyzer) collectSourceFiles() {
-	//log.Println("=================== collectSourceFiles")
+func (d *CodeAnalyzer) analyzePackage_collectSourceFiles(pkg *Package) {
+	if len(pkg.PPkg.CompiledGoFiles) != len(pkg.PPkg.Syntax) {
+		panic(fmt.Sprintf("!!! len(pkg.PPkg.CompiledGoFiles) != len(pkg.PPkg.Syntax), %d:%d, %s", len(pkg.PPkg.CompiledGoFiles), len(pkg.PPkg.Syntax), pkg.Path))
+	}
 
-	//d.sourceFile2PackageTable = make(map[string]SourceFile, len(d.packageList)*5)
-	//d.sourceFile2PackageTable = make(map[string]*Package, len(d.packageList)*5)
-	//d.generatedFile2OriginalFileTable = make(map[string]string, 128)
-	//d.sourceFileLineOffsetTable = make(map[string]int32, 256)
-	for _, pkg := range d.packageList {
-		//log.Println("====== ", pkg.Path)
-		//if pkg.Path == "unsafe" {
-		//	//log.Println("///============== ", pkg.PPkg.GoFiles)
-		//	//ast.Print(pkg.PPkg.Fset, pkg.PPkg.Syntax[0])
-		//
-		//	// For unsafe package, pkg.PPkg.CompiledGoFiles is blank.
-		//	// ToDo: fill it in fillUnsafePackage? (Done)
-		//
-		//	path := pkg.PPkg.GoFiles[0]
-		//
-		//	d.sourceFile2PackageTable[path] = SourceFile{
-		//		Path:    path,
-		//		Pkg:     pkg,
-		//		AstFile: pkg.PPkg.Syntax[0],
-		//	}
-		//
-		//	continue
-		//}
+	//for range pkg.PPkg.OtherFiles {
+	//	//d.sourceFile2PackageTable[path] = pkg
+	//	d.stats.FilesWithoutGenerateds++
+	//}
+	d.stats.FilesWithoutGenerateds += int32(len(pkg.PPkg.OtherFiles))
 
-		if len(pkg.PPkg.CompiledGoFiles) != len(pkg.PPkg.Syntax) {
-			panic(fmt.Sprintf("!!! len(pkg.PPkg.CompiledGoFiles) != len(pkg.PPkg.Syntax), %d:%d, %s", len(pkg.PPkg.CompiledGoFiles), len(pkg.PPkg.Syntax), pkg.Path))
-		}
+	//for range pkg.PPkg.CompiledGoFiles {
+	//	//d.sourceFile2PackageTable[path] = pkg
+	//}
 
-		//for range pkg.PPkg.OtherFiles {
-		//	//d.sourceFile2PackageTable[path] = pkg
+	for _, path := range pkg.PPkg.GoFiles {
+		//	//if _, ok := d.sourceFile2PackageTable[path]; !ok {
+		//	//	//log.Println("! in GoFiles but not CompiledGoFiles:", path)
+		//	//	d.sourceFile2PackageTable[path] = pkg
+		//	//}
 		//	d.stats.FilesWithoutGenerateds++
-		//}
-		d.stats.FilesWithoutGenerateds += int32(len(pkg.PPkg.OtherFiles))
-
-		//for range pkg.PPkg.CompiledGoFiles {
-		//	//d.sourceFile2PackageTable[path] = pkg
-		//}
-
-		for _, path := range pkg.PPkg.GoFiles {
-			//	//if _, ok := d.sourceFile2PackageTable[path]; !ok {
-			//	//	//log.Println("! in GoFiles but not CompiledGoFiles:", path)
-			//	//	d.sourceFile2PackageTable[path] = pkg
-			//	//}
-			//	d.stats.FilesWithoutGenerateds++
-			if pkg.Directory == "" {
-				pkg.Directory = filepath.Dir(path)
-				break
-			}
+		if pkg.Directory == "" {
+			pkg.Directory = filepath.Dir(path)
+			break
 		}
-		d.stats.FilesWithoutGenerateds += int32(len(pkg.PPkg.GoFiles))
+	}
+	d.stats.FilesWithoutGenerateds += int32(len(pkg.PPkg.GoFiles))
 
-		//d.collectSourceFileInfos(pkg)
-		if pkg.SourceFiles != nil {
-			return
-		}
-		func() {
-			pkg.SourceFiles = make([]SourceFileInfo, 0, len(pkg.PPkg.CompiledGoFiles))
+	//d.collectSourceFileInfos(pkg)
+	if pkg.SourceFiles != nil {
+		return
+	}
+	func() {
+		pkg.SourceFiles = make([]SourceFileInfo, 0, len(pkg.PPkg.CompiledGoFiles))
 
-			for i, compiledFile := range pkg.PPkg.CompiledGoFiles {
-				if strings.HasSuffix(compiledFile, ".go") {
-					// ToDo: verify compiledFile must be also in  pkg.PPkg.GoFiles
-					pkg.SourceFiles = append(pkg.SourceFiles,
-						SourceFileInfo{
-							Pkg:           pkg,
-							BareFilename:  filepath.Base(compiledFile),
-							OriginalFile:  compiledFile,
-							GeneratedFile: "", //compiledFile,
-							AstFile:       pkg.PPkg.Syntax[i],
-						},
-					)
-					continue
-				}
-
-				//info := generatedFileInfo(pkg, compiledFile, pkg.PPkg.Syntax[i])
-				//
-				//if info.OriginalFile != "" && info.GeneratedFile != info.OriginalFile {
-				//	d.generatedFile2OriginalFileTable[info.GeneratedFile] = info.OriginalFile
-				//}
-				//
-				//info.AstFile = pkg.PPkg.Syntax[i]
-
-				info := generatedFileInfo(pkg, compiledFile, pkg.PPkg.Syntax[i])
-				pkg.SourceFiles = append(pkg.SourceFiles, info)
-
-				//if info.GoFileLineOffset != 0 {
-				//	d.sourceFileLineOffsetTable[info.OriginalGoFile] = info.GoFileLineOffset
-				//}
-			}
-
-			for _, path := range pkg.PPkg.OtherFiles {
+		for i, compiledFile := range pkg.PPkg.CompiledGoFiles {
+			if strings.HasSuffix(compiledFile, ".go") {
+				// ToDo: verify compiledFile must be also in  pkg.PPkg.GoFiles
 				pkg.SourceFiles = append(pkg.SourceFiles,
 					SourceFileInfo{
-						Pkg:          pkg,
-						BareFilename: filepath.Base(path),
-						OriginalFile: path,
+						Pkg:           pkg,
+						BareFilename:  filepath.Base(compiledFile),
+						OriginalFile:  compiledFile,
+						GeneratedFile: "", //compiledFile,
+						AstFile:       pkg.PPkg.Syntax[i],
 					},
 				)
+				continue
 			}
-		}()
 
-		////d.stats.Files += int32(len(pkg.SourceFiles))
-		//d.stat_OnNewPackage(d.IsStandardPackage(pkg), len(pkg.SourceFiles), len(pkg.Deps), pkg.Path)
-		d.stat_OnNewPackage(d.IsStandardPackage(pkg), len(pkg.PPkg.CompiledGoFiles), len(pkg.Deps), pkg.Path)
-	}
+			//info := generatedFileInfo(pkg, compiledFile, pkg.PPkg.Syntax[i])
+			//
+			//if info.OriginalFile != "" && info.GeneratedFile != info.OriginalFile {
+			//	d.generatedFile2OriginalFileTable[info.GeneratedFile] = info.OriginalFile
+			//}
+			//
+			//info.AstFile = pkg.PPkg.Syntax[i]
+
+			info := generatedFileInfo(pkg, compiledFile, pkg.PPkg.Syntax[i])
+			pkg.SourceFiles = append(pkg.SourceFiles, info)
+
+			//if info.GoFileLineOffset != 0 {
+			//	d.sourceFileLineOffsetTable[info.OriginalGoFile] = info.GoFileLineOffset
+			//}
+		}
+
+		for _, path := range pkg.PPkg.OtherFiles {
+			pkg.SourceFiles = append(pkg.SourceFiles,
+				SourceFileInfo{
+					Pkg:          pkg,
+					BareFilename: filepath.Base(path),
+					OriginalFile: path,
+				},
+			)
+		}
+	}()
+
+	////d.stats.Files += int32(len(pkg.SourceFiles))
+	//d.stat_OnNewPackage(d.IsStandardPackage(pkg), len(pkg.SourceFiles), len(pkg.Deps), pkg.Path)
+	d.stat_OnNewPackage(d.IsStandardPackage(pkg), len(pkg.PPkg.CompiledGoFiles), len(pkg.Deps), pkg.Path)
 }
 
 //==================================

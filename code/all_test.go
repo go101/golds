@@ -145,3 +145,26 @@ func TestAnalyzeStandardPackage(t *testing.T) {
 		}
 	}
 }
+
+func TestComparePackagePaths(t *testing.T) {
+	var vs = []struct {
+		x, y   string
+		b1, b2 bool
+	}{
+		{"abc/cde-xyz", "abc/cde/xyz", false, true},
+		{"abc/cde/xyz", "abc/cde-xyz", true, false},
+		{"abc/cde/xyz", "abc/cde/xyz", true, true},
+		{"abc/cde-xyz", "abc/cde-xyz", true, true},
+		{"abc/cde-xyz", "afc/cde-xyz", true, true},
+		{"afc/cde-xyz", "abc/cde-xyz", false, false},
+	}
+
+	for _, v := range vs {
+		if ComparePackagePaths(v.x, v.y, '/') != v.b1 {
+			t.Errorf("ComparePackagePaths(%s, %s) != %v", v.x, v.y, v.b1)
+		}
+		if v.x <= v.y != v.b2 {
+			t.Errorf("(%s <= %s) == %v", v.x, v.y, v.b2)
+		}
+	}
+}

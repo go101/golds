@@ -380,7 +380,7 @@ func (ds *docServer) buildReferencesData(pkgPath string, tokens ...string) (*Ref
 
 		for _, tn := range pkg.AllTypeNames {
 			if tn.Name() == tokens[0] {
-				t := tn.Denoting()
+				t := tn.Denoting
 				for _, field := range t.AllFields {
 					if field.Name() == tokens[1] {
 						sel = field
