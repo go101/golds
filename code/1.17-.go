@@ -31,3 +31,7 @@ func isParameterizedType(tt types.Type) bool {
 func isTypeParam(tt types.Type) bool {
 	return false
 }
+
+func (d *CodeAnalyzer) comfirmDirectSelectorsForInstantiatedType(typeInfo *TypeInfo, currentCounter uint32, fieldMap, methodMap map[string]*TypeInfo) {
+}
+

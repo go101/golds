@@ -96,7 +96,7 @@ func TestAnalyzeStandardPackage(t *testing.T) {
 		switch tt := ti.TT.(type) {
 		case *types.Interface:
 			if cache.MethodSet(tt).Len() != len(ti.AllMethods) {
-				t.Errorf("%v: interface (%d) method numbers not match. %d : %d.\n %v", ti, ti.index, cache.MethodSet(ti.TT).Len(), len(ti.AllMethods), ti.AllMethods)
+				t.Errorf("interface (%d) method numbers not match. %v. %d : %d.\n %v", ti.index, tt, cache.MethodSet(ti.TT).Len(), len(ti.AllMethods), ti.AllMethods)
 			}
 		case *types.Pointer:
 			switch btt := tt.Elem(); btt.Underlying().(type) {
@@ -122,6 +122,12 @@ func TestAnalyzeStandardPackage(t *testing.T) {
 				if bt.TypeName == nil {
 					break
 				}
+
+				//>> ToDo:
+				if bt.TypeName.Denoting != bt && bt.Instantiated == nil {
+					break
+				}
+				//<<
 
 				if len(analyzer.allTypeInfos) > typesCount {
 					t.Log("============================")

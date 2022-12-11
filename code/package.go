@@ -316,7 +316,7 @@ func searchPackage(pathPrefix, relPath string, sortedPkgs []*Package) *Package {
 // Should be faster than using strings.Split or Strings.Tokens
 // Return true for pa <= pb.
 func ComparePackagePaths(pa, pb string, sep byte) bool {
-	return ComparePackagePaths_ThreeWay(pa, pb, '/') < 0
+	return ComparePackagePaths_ThreeWay(pa, pb, '/') <= 0
 }
 
 func comparePackagePaths(pa, pb string) bool {
@@ -419,8 +419,8 @@ func (p *Package) ParentPackage() *Package {
 
 // PackageAnalyzeResult holds the analysis result of a Go package.
 type PackageAnalyzeResult struct {
-	AllTypeNames []*TypeName
-	AllFunctions []*Function
+	AllTypeNames []*TypeName // not including instantiated ones
+	AllFunctions []*Function // not including instantiated ones
 	AllVariables []*Variable
 	AllConstants []*Constant
 	AllImports   []*Import
@@ -650,18 +650,15 @@ const (
 //	return ts.TypeName.Denoting(d)
 //}
 
-type TypeExpr struct {
-	Expr ast.Expr
-	Type *TypeInfo
-}
-
 // EmbedInfo records the information for an embedded field.
 //type EmbedInfo struct {
 //	TypeName *TypeName
 //	IsStar   bool
 //}
 
-// A TypeName represents a type name.
+// ToDo: currently, a TypeName is used as both TypeAlias and NamedType.
+//       Need to change.?
+
 type TypeName struct {
 	//Examples []*Example // better to maintain a table in package
 
@@ -669,13 +666,13 @@ type TypeName struct {
 	AstDecl *ast.GenDecl
 	AstSpec *ast.TypeSpec
 
-	*types.TypeName
+	//*types.TypeName
 
 	// One and only one of the two is nil.
 	//Alias *TypeAlias
 	//Named *TypeInfo
 
-	Denoting *TypeInfo
+	//Denoting *TypeInfo
 
 	// ToDo: change the above two to:
 	// Denoting *TypeInfo
@@ -696,8 +693,20 @@ type TypeName struct {
 	//       Why added them? To track underlying type?
 	//       They indeed have no effects in calculating selector sets of types.
 
-	Source   TypeExpr
-	TypeArgs []TypeExpr
+	// For alias TypeName, Source.Type is the denoting type.
+	Source TypeExpr
+
+	TypeParams []TypeExpr
+
+	// This slice is for optimization purpose, it is not concurrency safe.
+	//typeArgs []TypeExpr
+
+	// It this is an alias, then Denoting is also the Source type.
+	Denoting *TypeInfo
+
+	*types.TypeName
+
+	//TypeParams []TypeExpr
 
 	// A TypeName might be shared by many named types.
 	// * the origin generic type
@@ -726,9 +735,15 @@ type TypeName struct {
 	index uint32 // ToDo: any useful?
 }
 
-type InstanaiatedTypeName struct {
-	Origin   *TypeName
+type TypeExpr struct {
+	Expr ast.Expr
+	Type *TypeInfo
+}
+
+type InstantiatedType struct {
 	TypeArgs []TypeExpr
+
+	//FinalTypeArgs []TypeExpr
 }
 
 //func (tn *TypeName) IndexString() string {
@@ -862,11 +877,23 @@ func (tn *TypeName) IsAlias() bool {
 type TypeInfo struct {
 	TT types.Type
 
+	// ToDo: 
+	Exprs []ast.Expr
 
 	Underlying *TypeInfo
 
-	// For named and basic types.
+	//>> 1.18
+	// For named types only.
+	// For an origin named type, Instantiated is always nil, and this == TypeName.Denoting.
+	// For an instantiated type, Instantiated should not be nil, and this != TypeName.Denoting.
+	// But for some diffcualies, the Instantiated field if an instantiated type is nil,
+	// in which case, the selectors of the instantiated type is incomplete.
+	//
+	// ToDo: the Origin field might be useless. It is this if TypeName is nil, otherwise, it is TypeName.Denoting.
+	//Origin *TypeInfo
 	TypeName *TypeName
+	Instantiated *InstantiatedType
+	//<<
 
 	//Implements     []*TypeInfo
 	//StarImplements []*TypeInfo // if TT is neither pointer nor interface.
@@ -1571,6 +1598,11 @@ type Selector struct {
 	*Field
 	*Method
 
+	//>> 1.18
+	Instantiated *InstantiatedType
+	RealType     *TypeInfo
+	//<<
+
 	// EmbeddedField is nil means this is not an promoted selector.
 	//EmbeddedFields []*Field
 
@@ -1623,6 +1655,19 @@ func (s *Selector) Name() string {
 		return s.Field.Name
 	} else {
 		return s.Method.Name
+	}
+}
+
+// Name returns the name of a Selector.
+func (s *Selector) Type() *TypeInfo {
+	if s.RealType != nil {
+		return s.RealType
+	}
+
+	if s.Field != nil {
+		return s.Field.Type
+	} else {
+		return s.Method.Type
 	}
 }
 

@@ -6,7 +6,6 @@ import (
 	"path/filepath"
 	"testing"
 
-	"go101.org/golds/code"
 	"go101.org/golds/internal/util"
 )
 

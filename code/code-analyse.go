@@ -55,6 +55,7 @@ func (d *CodeAnalyzer) AnalyzePackages(onSubTaskDone func(int, time.Duration, ..
 	for _, pkg := range d.packageList {
 		d.analyzePackage_CollectDirectSelectors(pkg)
 	}
+	d.comfirmDirectSelectorsForInstantiatedTypes()
 	d.collectSelectors()
 	logProgress(SubTask_CollectSelectors)
 
@@ -145,8 +146,28 @@ func (d *CodeAnalyzer) findImplementations() { // (resultMethodCache *typeutil.M
 		t := d.allTypeInfos[i]
 
 		// ToDo: auto register underlying type in RegisterType.
-		underlying := t.TT.Underlying()
+		//underlying := t.TT.Underlying()
+		underlying := t.Underlying.TT
+		// Reason if using the above line instead the line previous to the above line:
+		// t.TT might be a TypeParam, in which case, the next line will produce a
+		// new TypeInfo if the line previous to the above line is used.
+		// Producing new TypeInfo at this time is prohibited.
+		// 
+		// Surely, the analysis result is not correct for TypeParam, but it is not important.
+
+		// ToDo: The next 3 lines should be able to be replaced with one line:
+		//       underlyingTypeInfo = t.Underlying.
+		// Here, they are for assert purpsoe.
+		
 		underlyingTypeInfo := d.RegisterType(underlying) // underlying must have been already registered
+
+		//if m, n := underlyingTypeInfo.index, t.Underlying.index; m == 17838 && m != n {
+		//	u := t.TT.Underlying()
+		//	x := d.RegisterType(underlying)
+		//	y := d.RegisterType(u)
+		//	panic(fmt.Sprintf("%d != %d, %d, %d\naaa: %v\nbbb: %v\nccc: %v\n", m, n, x.index, y.index, underlyingTypeInfo.TT, t.Underlying.TT, t.TT))
+		//}
+
 		t.Underlying = underlyingTypeInfo
 		underlyingTypeInfo.Underlying = underlyingTypeInfo
 
@@ -1082,12 +1103,6 @@ func (d *CodeAnalyzer) collectSelectorsForInterfaceType(t *TypeInfo, depth int, 
 
 		t.DirectSelectors = t.Underlying.DirectSelectors
 		t.AllMethods = t.Underlying.AllMethods
-
-		//if debug {
-		//	log.Println("yyy ===", t.TT, len(t.AllMethods), "\n",
-		//		t.Underlying.TT, len(t.Underlying.AllMethods), "\n",
-		//		t.Underlying.AllMethods)
-		//}
 	} else { // t == t.Underlying
 		//if debug {
 		//	log.Println("333", depth)
@@ -1096,8 +1111,8 @@ func (d *CodeAnalyzer) collectSelectorsForInterfaceType(t *TypeInfo, depth int, 
 			//if depth == 0 {
 			//	return // ToDo: temp ignore field and parameter/result unnamed interface types
 			//}
-			log.Printf("!!! %v:", t.TT)
-			log.Printf("!!! %v:", t.Underlying)
+			//log.Printf("!!! %v:", t.TT)
+			//log.Printf("!!! %v:", t.Underlying)
 			panic("unnamed interface should have collected direct selectors now. " + fmt.Sprintf("%#v", t))
 		}
 
@@ -1170,10 +1185,8 @@ func (d *CodeAnalyzer) collectSelectorsForInterfaceType(t *TypeInfo, depth int, 
 					//for _, sel := range sel.Field.Type.AllMethods {
 					ut := sel.Field.Type.Underlying
 
-					// The true is needed.
-					//if true || !d.collectSelectorsForInterfaceType(ut, depth+1, currentCounter, smm) {
 					d.collectSelectorsForInterfaceType(ut, depth+1, currentCounter, smm)
-					if true {
+					if t != ut { // it is possible t == ut
 						for _, sel := range ut.AllMethods {
 							if old, ok := selectors[sel.Id]; ok {
 								if old.Method.Type != sel.Method.Type {
@@ -1955,6 +1968,7 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 						} else {
 							//tn.Named = newTypeInfo
 							tn.Denoting = newTypeInfo
+							//newTypeInfo.Origin = newTypeInfo
 							newTypeInfo.TypeName = tn
 							if isBuiltinPkg || isUnsafePkg {
 								//tn.Named.attributes |= Builtin
@@ -1965,7 +1979,8 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 						//>> 1.18
 						tn.Source.Expr = typeSpec.Type
 						tn.Source.Type = srcTypeInfo
-						tn.TypeArgs = d.astFieldListToTypeArgs(pkg, typeSpec.TypeParams)
+						tn.TypeParams = d.astFieldListToTypeArgs(pkg, typeSpec.TypeParams)
+						//tn.typeArgs = append(tn.typeArgs, tn.TypeParams...)
 						//<<
 
 						registerTypeName(tn)
@@ -2226,198 +2241,198 @@ func (d *CodeAnalyzer) collectSomeRuntimeFunctionPositions() {
 	}
 }
 
-func (d *CodeAnalyzer) analyzePackage_ConfirmTypeSources(pkg *Package) {
-	var isBuiltin = pkg == d.builtinPkg // pkg.Path == "builtin"
-
-	//log.Println("[analyzing]", pkg.Path, pkg.PPkg.Name)
-	for _, file := range pkg.PPkg.Syntax {
-
-		//ast.Inspect(file, func(n ast.Node) bool {
-		//	log.Printf("%T\n", n)
-		//	return true
-		//})
-
-		for _, decl := range file.Decls {
-			if gd, ok := decl.(*ast.GenDecl); ok && gd.Tok == token.TYPE {
-				for _, spec := range gd.Specs {
-					typeSpec := spec.(*ast.TypeSpec)
-
-					obj := pkg.PPkg.TypesInfo.Defs[typeSpec.Name]
-					typeObj := obj.(*types.TypeName)
-					if typeObj.Name() == "_" {
-						continue
-					}
-
-					if isBuiltin && token.IsExported(typeObj.Name()) {
-						continue
-					}
-
-					newTypeName := d.allTypeNameTable[d.Id2(typeObj.Pkg(), typeObj.Name())]
-					if newTypeName == nil {
-						panic("type name " + typeSpec.Name.Name + " not found: " + d.Id1(typeObj.Pkg(), typeObj.Name()))
-					}
-
-					tv := pkg.PPkg.TypesInfo.Types[typeSpec.Type]
-					srcTypeInfo := d.RegisterType(tv.Type)
-					_ = srcTypeInfo
-
-					/*
-					var findSource func(ast.Expr, bool)
-					findSource = func(srcNode ast.Expr, starSource bool) {
-						var source *TypeSource
-						if starSource {
-							if newTypeName.StarSource == nil {
-								newTypeName.StarSource = &TypeSource{}
-							}
-							source = newTypeName.StarSource
-						} else {
-							source = &newTypeName.Source
-						}
-
-						//var originType *TypeName
-						//var typeArgs []*TypeInfo
-
-						var sttNode *ast.StructType
-						var ittNode *ast.InterfaceType
-
-						switch expr := srcNode.(type) {
-						//>> 1.18, ToDo ToDo2 InstantiatedType
-						// handle Index and IndexList?
-						// It seems not needed.
-
-						// Although an instantiated type is a named type,
-						// the source type will be recored in source.UnnamedType field.
-						//case *astIndexExpr:
-						//	findSource(expr.X, starSource)
-						//	if source.TypeName == nil {
-						//		panic("should not"
-						//	}
-						//	// source.TypeName.Type() is the generic type, not the instantiated type
-						//
-						//	originType = source.TypeName
-						//	typeArgs = 
-						//	// source.TypeName will be replaced below
-						//case *astIndexListExpr:
-						//	findSource(expr.X, starSource)
-						//	if source.TypeName == nil {
-						//		panic("should not"
-						//	}
-						//	// source.TypeName.Type() is the generic type, not the instantiated type
-						//
-						//	originType = source.TypeName
-						//	typeArgs = 
-						//	// source.TypeName will be replaced below
-						//<<
-						
-						case *ast.Ident:
-
-							//log.Println("???", d.Id(pkg.PPkg.Types, expr.Name))
-
-							//log.Println("   ", pkg.PPkg.TypesInfo.ObjectOf(expr))
-
-							srcObj := pkg.PPkg.TypesInfo.ObjectOf(expr)
-							if srcObj == nil {
-								if pkg.Path != "unsafe" {
-									panic("srcObj is nil but package is not unsafe")
-								}
-								return
-							}
-							srcTypeObj := srcObj.(*types.TypeName)
-
-							//log.Println("   srcTypeObj.Pkg() =", srcTypeObj.Pkg())
-							// if srcType is a built type, srcTypeObj.Pkg() == nil
-
-							tn := d.allTypeNameTable[d.Id2(srcTypeObj.Pkg(), expr.Name)]
-							if tn == nil {
-								panic("type name " + expr.Name + " not found")
-							}
-							source.TypeName = tn
-
-							//log.Println(starSource, "ident,", pkg.Path+"."+typeSpec.Name.Name, "source is:", tn.Pkg.Path+"."+expr.Name)
-
-							return
-						case *ast.SelectorExpr:
-							//log.Println("selector,", pkg.Path+"."+typeSpec.Name.Name, "source is:")
-							srcObj := pkg.PPkg.TypesInfo.ObjectOf(expr.X.(*ast.Ident))
-							srcPkg := srcObj.(*types.PkgName)
-
-							tn := d.allTypeNameTable[d.Id2(srcPkg.Imported(), expr.Sel.Name)]
-							if tn == nil {
-								panic("type name " + expr.Sel.Name + " not found")
-							}
-							source.TypeName = tn
-
-							//log.Println(starSource, "selector,", pkg.Path+"."+typeSpec.Name.Name, "source is:", tn.Pkg.Path+"."+expr.Sel.Name)
-							return
-						case *ast.ParenExpr:
-							//log.Println("paren,", pkg.Path+"."+typeSpec.Name.Name, "source is:")
-							findSource(expr.X, false)
-							return
-						case *ast.StarExpr:
-							if !starSource {
-								//log.Println("star,", pkg.Path+"."+typeSpec.Name.Name, "source is:")
-								findSource(expr.X, true)
-								return
-							}
-						case *ast.StructType:
-							sttNode = expr
-						case *ast.InterfaceType:
-							ittNode = expr
-						}
-
-						// ToDo: don't use the std go/types and go/pacakges packages.
-						//       Now, uint8 and byte are treat as two types by go/types.
-						//       Write a custom one tailored for docs and code analyzing.
-						//       Run "go mod tidy" before running golds using the custom packages
-						//       to ensure all modules are cached locally.
-
-						tv := pkg.PPkg.TypesInfo.Types[srcNode]
-						srcTypeInfo := d.RegisterType(tv.Type)
-						source.UnnamedType = srcTypeInfo
-						//log.Println(starSource, "default,", pkg.Path+"."+typeSpec.Name.Name, "source is:", tv.Type)
-
-						if sttNode != nil {
-							d.registerDirectFields(srcTypeInfo, sttNode, pkg)
-						} else if ittNode != nil {
-							if isBuiltin {
-								if typeSpec.Name.Name == "error" {
-									//	//errorTN, _ := types.Universe.Lookup("error").(*types.TypeName)
-									//	//errotUT := d.RegisterType(errorTN.Type().Underlying())
-									//	//d.registerExplicitlySpecifiedMethods(errotUT, ittNode, pkg)
-									//
-									//	//log.Println("=============== old:", srcTypeInfo.index)
-									//	// This one is the type shown in the builtin.go source code,
-									//	// not the one in type.Universal package. This one is only for docs purpose.
-									//	// ToDo: use custom builtin page, remove the special handling.
-									//	d.registerExplicitlySpecifiedMethods(srcTypeInfo, ittNode, pkg)
-									//
-									//	// ToDo: load builtin.error != universal.error
-									//	srcTypeInfo = d.RegisterType(newTypeName.Named.TT.Underlying())
-									//
-									//	//log.Println("===============", errotUT.index, srcTypeInfo.index)
-
-									d.registerExplicitlySpecifiedMethods(srcTypeInfo, ittNode, pkg)
-									srcTypeInfo = d.RegisterType(types.Universe.Lookup("error").(*types.TypeName).Type().Underlying())
-								} else if typeSpec.Name.Name == "comparable" {
-									d.registerExplicitlySpecifiedMethods(srcTypeInfo, ittNode, pkg)
-									srcTypeInfo = d.RegisterType(types.Universe.Lookup("comparable").(*types.TypeName).Type().Underlying())
-								} else if typeSpec.Name.Name == "ordered" { // just a pure guess later versions will introduce this one
-									d.registerExplicitlySpecifiedMethods(srcTypeInfo, ittNode, pkg)
-									srcTypeInfo = d.RegisterType(types.Universe.Lookup("ordered").(*types.TypeName).Type().Underlying())
-								}
-							}
-							d.registerExplicitlySpecifiedMethods(srcTypeInfo, ittNode, pkg)
-						}
-					}
-					findSource(typeSpec.Type, false)
-					*/
-				}
-			}
-		}
-	}
-
-	return
-}
+//func (d *CodeAnalyzer) analyzePackage_ConfirmTypeSources(pkg *Package) {
+//	var isBuiltin = pkg == d.builtinPkg // pkg.Path == "builtin"
+//
+//	//log.Println("[analyzing]", pkg.Path, pkg.PPkg.Name)
+//	for _, file := range pkg.PPkg.Syntax {
+//
+//		//ast.Inspect(file, func(n ast.Node) bool {
+//		//	log.Printf("%T\n", n)
+//		//	return true
+//		//})
+//
+//		for _, decl := range file.Decls {
+//			if gd, ok := decl.(*ast.GenDecl); ok && gd.Tok == token.TYPE {
+//				for _, spec := range gd.Specs {
+//					typeSpec := spec.(*ast.TypeSpec)
+//
+//					obj := pkg.PPkg.TypesInfo.Defs[typeSpec.Name]
+//					typeObj := obj.(*types.TypeName)
+//					if typeObj.Name() == "_" {
+//						continue
+//					}
+//
+//					if isBuiltin && token.IsExported(typeObj.Name()) {
+//						continue
+//					}
+//
+//					newTypeName := d.allTypeNameTable[d.Id2(typeObj.Pkg(), typeObj.Name())]
+//					if newTypeName == nil {
+//						panic("type name " + typeSpec.Name.Name + " not found: " + d.Id1(typeObj.Pkg(), typeObj.Name()))
+//					}
+//
+//					tv := pkg.PPkg.TypesInfo.Types[typeSpec.Type]
+//					srcTypeInfo := d.RegisterType(tv.Type)
+//					_ = srcTypeInfo
+//
+//					/*
+//					var findSource func(ast.Expr, bool)
+//					findSource = func(srcNode ast.Expr, starSource bool) {
+//						var source *TypeSource
+//						if starSource {
+//							if newTypeName.StarSource == nil {
+//								newTypeName.StarSource = &TypeSource{}
+//							}
+//							source = newTypeName.StarSource
+//						} else {
+//							source = &newTypeName.Source
+//						}
+//
+//						//var originType *TypeName
+//						//var typeArgs []*TypeInfo
+//
+//						var sttNode *ast.StructType
+//						var ittNode *ast.InterfaceType
+//
+//						switch expr := srcNode.(type) {
+//						//>> 1.18, ToDo ToDo2 InstantiatedType
+//						// handle Index and IndexList?
+//						// It seems not needed.
+//
+//						// Although an instantiated type is a named type,
+//						// the source type will be recored in source.UnnamedType field.
+//						//case *astIndexExpr:
+//						//	findSource(expr.X, starSource)
+//						//	if source.TypeName == nil {
+//						//		panic("should not"
+//						//	}
+//						//	// source.TypeName.Type() is the generic type, not the instantiated type
+//						//
+//						//	originType = source.TypeName
+//						//	typeArgs = 
+//						//	// source.TypeName will be replaced below
+//						//case *astIndexListExpr:
+//						//	findSource(expr.X, starSource)
+//						//	if source.TypeName == nil {
+//						//		panic("should not"
+//						//	}
+//						//	// source.TypeName.Type() is the generic type, not the instantiated type
+//						//
+//						//	originType = source.TypeName
+//						//	typeArgs = 
+//						//	// source.TypeName will be replaced below
+//						//<<
+//						
+//						case *ast.Ident:
+//
+//							//log.Println("???", d.Id(pkg.PPkg.Types, expr.Name))
+//
+//							//log.Println("   ", pkg.PPkg.TypesInfo.ObjectOf(expr))
+//
+//							srcObj := pkg.PPkg.TypesInfo.ObjectOf(expr)
+//							if srcObj == nil {
+//								if pkg.Path != "unsafe" {
+//									panic("srcObj is nil but package is not unsafe")
+//								}
+//								return
+//							}
+//							srcTypeObj := srcObj.(*types.TypeName)
+//
+//							//log.Println("   srcTypeObj.Pkg() =", srcTypeObj.Pkg())
+//							// if srcType is a built type, srcTypeObj.Pkg() == nil
+//
+//							tn := d.allTypeNameTable[d.Id2(srcTypeObj.Pkg(), expr.Name)]
+//							if tn == nil {
+//								panic("type name " + expr.Name + " not found")
+//							}
+//							source.TypeName = tn
+//
+//							//log.Println(starSource, "ident,", pkg.Path+"."+typeSpec.Name.Name, "source is:", tn.Pkg.Path+"."+expr.Name)
+//
+//							return
+//						case *ast.SelectorExpr:
+//							//log.Println("selector,", pkg.Path+"."+typeSpec.Name.Name, "source is:")
+//							srcObj := pkg.PPkg.TypesInfo.ObjectOf(expr.X.(*ast.Ident))
+//							srcPkg := srcObj.(*types.PkgName)
+//
+//							tn := d.allTypeNameTable[d.Id2(srcPkg.Imported(), expr.Sel.Name)]
+//							if tn == nil {
+//								panic("type name " + expr.Sel.Name + " not found")
+//							}
+//							source.TypeName = tn
+//
+//							//log.Println(starSource, "selector,", pkg.Path+"."+typeSpec.Name.Name, "source is:", tn.Pkg.Path+"."+expr.Sel.Name)
+//							return
+//						case *ast.ParenExpr:
+//							//log.Println("paren,", pkg.Path+"."+typeSpec.Name.Name, "source is:")
+//							findSource(expr.X, false)
+//							return
+//						case *ast.StarExpr:
+//							if !starSource {
+//								//log.Println("star,", pkg.Path+"."+typeSpec.Name.Name, "source is:")
+//								findSource(expr.X, true)
+//								return
+//							}
+//						case *ast.StructType:
+//							sttNode = expr
+//						case *ast.InterfaceType:
+//							ittNode = expr
+//						}
+//
+//						// ToDo: don't use the std go/types and go/pacakges packages.
+//						//       Now, uint8 and byte are treat as two types by go/types.
+//						//       Write a custom one tailored for docs and code analyzing.
+//						//       Run "go mod tidy" before running golds using the custom packages
+//						//       to ensure all modules are cached locally.
+//
+//						tv := pkg.PPkg.TypesInfo.Types[srcNode]
+//						srcTypeInfo := d.RegisterType(tv.Type)
+//						source.UnnamedType = srcTypeInfo
+//						//log.Println(starSource, "default,", pkg.Path+"."+typeSpec.Name.Name, "source is:", tv.Type)
+//
+//						if sttNode != nil {
+//							d.registerDirectFields(srcTypeInfo, sttNode, pkg)
+//						} else if ittNode != nil {
+//							if isBuiltin {
+//								if typeSpec.Name.Name == "error" {
+//									//	//errorTN, _ := types.Universe.Lookup("error").(*types.TypeName)
+//									//	//errotUT := d.RegisterType(errorTN.Type().Underlying())
+//									//	//d.registerExplicitlySpecifiedMethods(errotUT, ittNode, pkg)
+//									//
+//									//	//log.Println("=============== old:", srcTypeInfo.index)
+//									//	// This one is the type shown in the builtin.go source code,
+//									//	// not the one in type.Universal package. This one is only for docs purpose.
+//									//	// ToDo: use custom builtin page, remove the special handling.
+//									//	d.registerExplicitlySpecifiedMethods(srcTypeInfo, ittNode, pkg)
+//									//
+//									//	// ToDo: load builtin.error != universal.error
+//									//	srcTypeInfo = d.RegisterType(newTypeName.Named.TT.Underlying())
+//									//
+//									//	//log.Println("===============", errotUT.index, srcTypeInfo.index)
+//
+//									d.registerExplicitlySpecifiedMethods(srcTypeInfo, ittNode, pkg)
+//									srcTypeInfo = d.RegisterType(types.Universe.Lookup("error").(*types.TypeName).Type().Underlying())
+//								} else if typeSpec.Name.Name == "comparable" {
+//									d.registerExplicitlySpecifiedMethods(srcTypeInfo, ittNode, pkg)
+//									srcTypeInfo = d.RegisterType(types.Universe.Lookup("comparable").(*types.TypeName).Type().Underlying())
+//								} else if typeSpec.Name.Name == "ordered" { // just a pure guess later versions will introduce this one
+//									d.registerExplicitlySpecifiedMethods(srcTypeInfo, ittNode, pkg)
+//									srcTypeInfo = d.RegisterType(types.Universe.Lookup("ordered").(*types.TypeName).Type().Underlying())
+//								}
+//							}
+//							d.registerExplicitlySpecifiedMethods(srcTypeInfo, ittNode, pkg)
+//						}
+//					}
+//					findSource(typeSpec.Type, false)
+//					*/
+//				}
+//			}
+//		}
+//	}
+//
+//	return
+//}
 
 func (d *CodeAnalyzer) astFieldListToTypeArgs(pkg *Package, fieldList *ast.FieldList) []TypeExpr {
 	var n = fieldList.NumFields()
@@ -2436,16 +2451,52 @@ func (d *CodeAnalyzer) astFieldListToTypeArgs(pkg *Package, fieldList *ast.Field
 	return args
 }
 
+func (d *CodeAnalyzer) astIndexExprToTypeArgs(pkg *Package, index *ast.IndexExpr) []TypeExpr {
+	return []TypeExpr {
+		{
+			Expr: index.Index,
+			Type: d.RegisterType(pkg.PPkg.TypesInfo.TypeOf(index.Index)),
+		},
+	}
+}
+
+func (d *CodeAnalyzer) astIndexListExprToTypeArgs(pkg *Package, list *ast.IndexListExpr) []TypeExpr {
+	var args = make([]TypeExpr, 0, len(list.Indices))
+	for _, index := range list.Indices {
+		args = append(args, TypeExpr {
+			Expr: index,
+			Type: d.RegisterType(pkg.PPkg.TypesInfo.TypeOf(index)),
+		})
+	}
+	return args
+}
+
+func (d *CodeAnalyzer) confirmInstantiatedInfoForTypeConstraints(typeParams *ast.FieldList , pkg *Package) {
+	if typeParams.NumFields() == 0 {
+		return
+	}
+	for _, field := range typeParams.List {
+		d.lookForAndRegisterUnnamedInterfaceAndStructTypes(field.Type, pkg)
+	}
+}
+
 func (d *CodeAnalyzer) collectDirectSelectorsForSourceType(source TypeExpr, pkg *Package, isBuiltinPkg bool) {
 	var collect func(ast.Expr, bool)
 	collect = func(srcNode ast.Expr, starSource bool) {
 		//var originType *TypeName
 		//var typeArgs []*TypeInfo
 
+		var typeArgs []TypeExpr
 		var sttNode *ast.StructType
 		var ittNode *ast.InterfaceType
 
 		switch expr := srcNode.(type) {
+		case *astIndexExpr:
+			typeArgs = d.astIndexExprToTypeArgs(pkg, expr)
+			// ToDo: it looks no needs to collect expr.Index
+		case *astIndexListExpr:
+			typeArgs = d.astIndexListExprToTypeArgs(pkg, expr)
+			// ToDo: it looks no needs to collect expr.Slices
 		case *ast.ParenExpr:
 			//log.Println("paren,", pkg.Path+"."+typeSpec.Name.Name, "source is:")
 			collect(expr.X, false)
@@ -2464,12 +2515,25 @@ func (d *CodeAnalyzer) collectDirectSelectorsForSourceType(source TypeExpr, pkg 
 
 		tt := pkg.PPkg.TypesInfo.TypeOf(srcNode)
 		srcTypeInfo := d.RegisterType(tt)
+		if ntt, ok := tt.(*types.Named); ok {
+			if ott := originType(ntt); ott != ntt {
+				origin := d.RegisterType(ott)
+				if origin.TypeName == nil {
+					panic("should not at this time point")
+				}
+				srcTypeInfo.TypeName = origin.TypeName
+			}
+		}
 
 		//log.Println(starSource, "default,", pkg.Path+"."+typeSpec.Name.Name, "source is:", tv.Type)
 
-		if sttNode != nil {
+		if typeArgs != nil {
+			d.registerInstantiatedType(srcTypeInfo, typeArgs)
+		} else if sttNode != nil {
 			d.registerDirectFields(srcTypeInfo, sttNode, pkg)
 		} else if ittNode != nil {
+			// ToDo: why need two calls here? Forget the reason. But really need now,
+
 			d.registerExplicitlySpecifiedMethods(srcTypeInfo, ittNode, pkg)
 			if isBuiltinPkg {
 				// for "error", "comparable", ... etc.
@@ -2487,11 +2551,13 @@ func (d *CodeAnalyzer) analyzePackage_CollectDirectSelectors(pkg *Package) {
 	// Only collect direct fields and methods for unnamed (struct and interface) types
 	// in this step.
 	for _, tn := range pkg.PackageAnalyzeResult.AllTypeNames {
+		d.confirmInstantiatedInfoForTypeConstraints(tn.AstSpec.TypeParams, pkg)
 		d.collectDirectSelectorsForSourceType(tn.Source, pkg, isBuiltinPkg)
 	}
 
 	//  We must do the collection work after all types are collected.
 	for _, f := range pkg.PackageAnalyzeResult.AllFunctions {
+		d.confirmInstantiatedInfoForTypeConstraints(f.AstDecl.Type.TypeParams, pkg)
 		isMethod := d.tryToRegisterExplicitlyDeclaredMethod(f)
 		if isMethod {
 			if f.AstDecl.Recv == nil {
@@ -2500,6 +2566,9 @@ func (d *CodeAnalyzer) analyzePackage_CollectDirectSelectors(pkg *Package) {
 			if len(f.AstDecl.Recv.List) != 1 {
 				panic("should not")
 			}
+
+			// Unnecessary to do so.
+			// d.confirmInstantiatedInfoForTypeConstraints(f.AstDecl.Recv, pkg)
 
 			field := f.AstDecl.Recv.List[0]
 
@@ -2604,7 +2673,7 @@ func (d *CodeAnalyzer) analyzePackage_CollectDirectSelectors(pkg *Package) {
 	for _, v := range pkg.PackageAnalyzeResult.AllVariables {
 		//>> ToDo: 1.18 consider instantiated TypeNames
 		//<<
-		d.registerValueForItsTypeName(v)
+		d.registerValueForItsTypeName(v, v.AstSpec)
 		//if d.debug {
 		//	d.debug = false
 		//	log.Println(v.Position())
@@ -2644,7 +2713,7 @@ func (d *CodeAnalyzer) analyzePackage_CollectDirectSelectors(pkg *Package) {
 	// Types of constants may also be instantiated types.
 	//<<
 	for _, c := range pkg.PackageAnalyzeResult.AllConstants {
-		d.registerValueForItsTypeName(c)
+		d.registerValueForItsTypeName(c, c.AstSpec)
 		if c.Exported() {
 			d.stats.ExportedConstants++
 
@@ -2657,10 +2726,32 @@ func (d *CodeAnalyzer) analyzePackage_CollectDirectSelectors(pkg *Package) {
 			d.stats.ExportedConstantsByTypeKind[kind]++
 		}
 	}
+}
 
-	// ToDo: 1.18
-	// Look for instantiated types and build instantiated fields/methods for them.
+func (d *CodeAnalyzer) comfirmDirectSelectorsForInstantiatedTypes() {
+	var l = d.instantiatedTypes
+	if l == nil {
+		return
+	}
 
+	for i := 0; i < len(d.allTypeInfos); i++ {
+		t := d.allTypeInfos[i]
+		t.counter = 0
+	}
 
+	// An interface may has a method and an embedding field sharing the same name.
+	var fieldMap = make(map[string]*TypeInfo, 256)
+	var methodMap = make(map[string]*TypeInfo, 256)
+	var currentCounter uint32
+	var i = 0
+	for e := l.Front(); e != nil; e = l.Front() {
+		log.Println("============================================ #", i); i++
+		
+		t := e.Value.(*TypeInfo)
+		l.Remove(e)
+		currentCounter++
+		d.comfirmDirectSelectorsForInstantiatedType(t, currentCounter, fieldMap, methodMap)
+	}
 
+	log.Println("======== numSeenInstantiatedTypes:", d.numSeenInstantiatedTypes)
 }

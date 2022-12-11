@@ -3,6 +3,7 @@
 package code
 
 import (
+	"container/list"
 	"fmt"
 	"go/ast"
 	"go/token"
@@ -75,14 +76,19 @@ type CodeAnalyzer struct {
 	ttype2TypeInfoTable typeutil.Map
 	allTypeInfos        []*TypeInfo
 
+	instantiatedTypes *list.List
+	numSeenInstantiatedTypes uint32
+
 	//>> 1.18, fake underlying for instantiated types
 	// Always nil for 1.17-.
 	//blankInterface *TypeInfo
 	//<<
 
+	// ToDo: it looks this table is not much useful.
+	//
 	// Package-level declared type names.
 	lastTypeNameIndex uint32
-	allTypeNameTable  map[string]*TypeName
+	allTypeNameTable  map[string]*TypeName // not including instantiated ones
 
 	// ToDo: need a better implementation.
 	typeMethodsContributingToTypeImplementations map[[4]string]struct{}
@@ -305,6 +311,7 @@ func (d *CodeAnalyzer) Id2b(pkg *Package, name string) string {
 //}
 
 // RegisterTypeName registers a TypeName.
+// Only origin ones should be registered.
 func (d *CodeAnalyzer) RegisterTypeName(tn *TypeName) {
 	if d.allTypeNameTable == nil {
 		d.allTypeNameTable = make(map[string]*TypeName, 4096)
@@ -324,6 +331,31 @@ func (d *CodeAnalyzer) RegisterTypeName(tn *TypeName) {
 	}
 }
 
+func (d *CodeAnalyzer) registerInstantiatedType(t *TypeInfo, typeArgs []TypeExpr) {
+	ntt, ok := t.TT.(*types.Named)
+	if !ok {
+		panic("should not")
+	}
+	ot := d.RegisterType(ntt.Origin())
+	//t.Origin = ot
+	if ot.TypeName == nil {
+		panic("ot.TypeName == nil")
+	}
+	//t.TypeName = ot.TypeName // already set in registeringType
+	if t.TypeName == nil {
+		panic("t.TypeName == nil")
+	}
+	t.Instantiated = &InstantiatedType {
+		TypeArgs: typeArgs,
+	}
+
+	if d.instantiatedTypes == nil {
+		d.instantiatedTypes = list.New()
+	}
+	d.instantiatedTypes.PushBack(t)
+	d.numSeenInstantiatedTypes++
+}
+
 // RegisterType registers a go/types.Type as TypeInfo.
 func (d *CodeAnalyzer) RegisterType(t types.Type) *TypeInfo {
 	return d.registeringType(t, true)
@@ -334,38 +366,26 @@ func (d *CodeAnalyzer) LookForType(t types.Type) *TypeInfo {
 	return d.registeringType(t, false)
 }
 
-func (d *CodeAnalyzer) registeringType(t types.Type, createOnNonexist bool) *TypeInfo {
-	if t == nil {
-		t = types.Typ[types.Invalid]
+func (d *CodeAnalyzer) registeringType(tt types.Type, createOnNonexist bool) *TypeInfo {
+	if tt == nil {
+		tt = types.Typ[types.Invalid]
 	}
 
-	typeInfo, _ := d.ttype2TypeInfoTable.At(t).(*TypeInfo)
+	if tt.(
+
+	typeInfo, _ := d.ttype2TypeInfoTable.At(tt).(*TypeInfo)
 	if typeInfo == nil && createOnNonexist {
 		if d.forbidRegisterTypes {
 			if d.debug {
-				log.Printf("================================= %v, %T", t, t)
+				log.Printf("================================= %v, %T", tt, tt)
 			}
 		}
 
 		//d.lastTypeIndex++ // the old design (1-based)
-		typeInfo = &TypeInfo{TT: t, index: d.lastTypeIndex}
-		//if st, ok := t.(*types.Struct); ok {
-		//	if st.NumFields() == 1 {
-		//		ft := st.Field(0).Type()
-		//		if nt, ok := ft.(*types.Named); ok {
-		//			if true &&
-		//				nt.Obj().Name() == "Type" &&
-		//				nt.Obj().Pkg().Name() == "types" &&
-		//				st.Field(0).Name() == "Type" {
-		//				log.Println("=====================", nt.Obj().Pkg())
-		//				debug.PrintStack()
-		//				//d.debug = true
-		//				iiiii = d.lastTypeIndex
-		//			}
-		//		}
-		//	}
-		//}
-		d.ttype2TypeInfoTable.Set(t, typeInfo)
+		typeInfo = &TypeInfo{TT: tt, index: d.lastTypeIndex}
+		d.lastTypeIndex++ // the new design (0-based)
+		
+		d.ttype2TypeInfoTable.Set(tt, typeInfo)
 		if d.allTypeInfos == nil {
 			d.allTypeInfos = make([]*TypeInfo, 0, 8192)
 
@@ -373,45 +393,59 @@ func (d *CodeAnalyzer) registeringType(t types.Type, createOnNonexist bool) *Typ
 			// which maight be an unnecessary design.
 			//d.allTypeInfos = append(d.allTypeInfos, nil)
 		}
-		d.lastTypeIndex++ // the new design (0-based)
 		d.allTypeInfos = append(d.allTypeInfos, typeInfo)
 
-		switch t := t.(type) {
+		switch tt := tt.(type) {
 		case *types.Named:
-			// The following if-block is disabled for bug#33.
-			// Why added this block before?
-			//
-			//>> 1.18, todo
-			// Fake underlying for instantiated types.
-			// A temp handling to avoid high code complexity.
-			//if originType(t) != t {
-			//	typeInfo.Underlying = d.blankInterface
-			//	break
+			// ToDo: Use types.Identical instead of comparison operator?
+			//if ott := originType(tt); ott != tt {
+			//	typeInfo.Origin = d.RegisterType(ott)
+			//} else {
+			//	typeInfo.Origin = typeInfo
 			//}
-			//<<
+			if ott := originType(tt); ott != tt {
+				origin := d.RegisterType(ott)
 
-			//typeInfo.Name = t.Obj().Name()
+				// origin.TypeName may be nil now, for
+				// the origin type might declared later.
+				// So also need to try to set typeInfo.TypeName
+				// again in collectDirectSelectorsForSourceType,
+				// confirmInstantiatedInfoForTypeConstraints, and so on.
+				if origin.TypeName != nil {
+					//panic("should not")
+					typeInfo.TypeName = origin.TypeName
+				}
+			}
 
-			underlying := d.RegisterType(t.Underlying())
+			//typeInfo.Name = tt.Obj().Name()
+
+			underlying := d.RegisterType(tt.Underlying())
 			typeInfo.Underlying = underlying
 			//underlying.Underlying = underlying // already done
 
 			//numNameds++
-			//if _, ok := t.Underlying().(*types.Interface); ok {
+			//if _, ok := tt.Underlying().(*types.Interface); ok {
 			//	numNamedInterfaces++
 			//}
+		//>> 1.18
+		// No need to be special, use default behavior.
+		// Just need to be care in findImplementations.
+		// ToDo: reject to register such types.
+		//case *typesTypeParam: 
+		//	typeInfo.Underlying = typeInfo
+		//<<
 		default:
 			typeInfo.Underlying = typeInfo
 		}
 
-		switch t.Underlying().(type) {
+		switch tt.Underlying().(type) {
 		case *types.Pointer:
 			// The exception is to avoid infinite pointer depth.
 		case *types.Interface:
 			// Pointers of interfaces are not important.
 		default:
 			// *T might have methods if T is neigher an interface nor pointer type.
-			d.RegisterType(types.NewPointer(t))
+			d.RegisterType(types.NewPointer(tt))
 		}
 	}
 	return typeInfo
@@ -429,19 +463,23 @@ func (d *CodeAnalyzer) RetrieveTypeName(t *TypeInfo) (*TypeName, bool) {
 			return btn, true
 		}
 
-		if ntt, ok := bt.TT.(*types.Named); ok {
-			//>> 1.18 (temp handling, need more handling. bug#33)
-			if ott := originType(ntt); ott != ntt {
-				ot := d.RegisterType(ott)
-				if otn := ot.TypeName; otn != nil {
-					log.Println("===============", ott)
-					return otn, true
-				}
-			}
-			//<<
+		if _, ok := bt.TT.(*types.Named); ok {
+		//	//>> 1.18 (temp handling, need more handling. bug#33)
+		//	if ott := originType(ntt); ott != ntt {
+		//		ot := d.RegisterType(ott)
+		//		if otn := ot.TypeName; otn != nil {
+		//			log.Println("===============", ott)
+		//			return otn, true
+		//		}
+		//	}
+		//	//<<
 
-			panic("the base type must have been registered before calling this function")
+			panic("named types must has a type name (*)")
 		}
+	}
+
+	if _, ok := t.TT.(*types.Named); ok {
+		panic("named types must has a type name")
 	}
 
 	return nil, false
@@ -525,15 +563,31 @@ func (d *CodeAnalyzer) CleanImplements(self *TypeInfo) []Implementation {
 	return implements
 }
 
+// iterateTypenames is used in registerFunctionForInvolvedTypeNames
+// to build AsInputsOf and AsOutputsOf lists.
 func (d *CodeAnalyzer) iterateTypenames(typeLiteral ast.Expr, pkg *Package, onTypeName func(*TypeInfo)) {
 	switch node := typeLiteral.(type) {
 	default:
 		panic(fmt.Sprintf("unexpected ast expression. %T : %v", node, node))
 
-	case *ast.Ident, *astIndexExpr, *astIndexListExpr:
+	case *astIndexExpr:
+		typeArgs := d.astIndexExprToTypeArgs(pkg, node)
+		tt := pkg.PPkg.TypesInfo.TypeOf(typeLiteral)
+		typeInfo := d.RegisterType(tt)
+		d.registerInstantiatedType(typeInfo, typeArgs)
+
+		d.iterateTypenames(node.X, pkg, onTypeName) // to find the origin type
+	case *astIndexListExpr:
+		typeArgs := d.astIndexListExprToTypeArgs(pkg, node)
+		tt := pkg.PPkg.TypesInfo.TypeOf(typeLiteral)
+		typeInfo := d.RegisterType(tt)
+		d.registerInstantiatedType(typeInfo, typeArgs)
+
+		d.iterateTypenames(node.X, pkg, onTypeName) // to find the origin type
+	case *ast.Ident:
 		// ToDo: The latter two are added since Go 1.18.
-		//        To avoid returning too much weak-related results,
-		//        the indexes types in the lattet two are ignored now.
+		//       To avoid returning too much weak-related results,
+		//       the indexes types in the lattet two are ignored now.
 
 		tt := pkg.PPkg.TypesInfo.TypeOf(node)
 		if tt == nil {
@@ -560,7 +614,7 @@ func (d *CodeAnalyzer) iterateTypenames(typeLiteral ast.Expr, pkg *Package, onTy
 		case *types.Basic:
 		case *types.Named:
 			//>> 1.18
-			tt = originType(t)
+			tt = originType(t) // should be no-op here
 			//<<
 		}
 		typeInfo := d.RegisterType(tt)
@@ -630,7 +684,8 @@ func (d *CodeAnalyzer) lookForAndRegisterUnnamedInterfaceAndStructTypes(typeLite
 	case *astIndexExpr:
 		//log.Printf("======== node = %v, %#v", node, node)
 		t := reg(node)
-		_ = t
+		typeArgs := d.astIndexExprToTypeArgs(pkg, node)
+		d.registerInstantiatedType(t, typeArgs)
 
 		//>> 1.18, ToDo
 		// How to get the instanced ast.Node, with the specified TypeParams?
@@ -644,7 +699,8 @@ func (d *CodeAnalyzer) lookForAndRegisterUnnamedInterfaceAndStructTypes(typeLite
 	case *astIndexListExpr:
 		//log.Printf("======== node = %v, %#v", node, node)
 		t := reg(node)
-		_ = t
+		typeArgs := d.astIndexListExprToTypeArgs(pkg, node)
+		d.registerInstantiatedType(t, typeArgs)
 
 		//>> 1.18, ToDo
 		// How to get the instanced ast.Node, with the specified TypeParams?
@@ -657,6 +713,8 @@ func (d *CodeAnalyzer) lookForAndRegisterUnnamedInterfaceAndStructTypes(typeLite
 		for _, index := range node.Indices {
 			d.lookForAndRegisterUnnamedInterfaceAndStructTypes(index, pkg)
 		}
+	case *ast.BinaryExpr, *ast.UnaryExpr:
+		// The two may be used as type constraints.
 	//<<
 	default:
 		panic(fmt.Sprintf("unexpected ast expression. %T : %v", node, node))
@@ -734,12 +792,26 @@ func (d *CodeAnalyzer) registerDirectFields(typeInfo *TypeInfo, astStructNode *a
 	}
 
 	for _, field := range astStructNode.Fields.List {
+		fieldTT := pkg.PPkg.TypesInfo.TypeOf(field.Type)
+		fieldTypeInfo := d.RegisterType(fieldTT)
+
+		switch expr := field.Type.(type) {
+		case *astIndexExpr:
+			typeArgs := d.astIndexExprToTypeArgs(pkg, expr)
+			d.registerInstantiatedType(fieldTypeInfo, typeArgs)
+		case *astIndexListExpr:
+			typeArgs := d.astIndexListExprToTypeArgs(pkg, expr)
+			d.registerInstantiatedType(fieldTypeInfo, typeArgs)
+		}
+
+		d.lookForAndRegisterUnnamedInterfaceAndStructTypes(field.Type, pkg)
+
 		if len(field.Names) == 0 {
 			//var id string
 			var fieldName string
-
 			var isStar = false
-			for ok, node := true, field.Type; ok; ok = isStar {
+
+			for node := field.Type; ; {
 				switch expr := node.(type) {
 				default:
 					panic("not an embedded field but should be. type: " + fmt.Sprintf("%T", expr))
@@ -770,6 +842,9 @@ func (d *CodeAnalyzer) registerDirectFields(typeInfo *TypeInfo, astStructNode *a
 					node = expr.X
 					isStar = true
 					continue
+				case *ast.ParenExpr:
+					node = expr.X
+					continue
 				}
 
 				break
@@ -787,21 +862,21 @@ func (d *CodeAnalyzer) registerDirectFields(typeInfo *TypeInfo, astStructNode *a
 			//
 			// fieldName := tn.Name()
 
-			tv := pkg.PPkg.TypesInfo.Types[field.Type]
+			//tv := pkg.PPkg.TypesInfo.Types[field.Type]
 
 			// ToDo: if field.Type is an interface or struct, or pointer to interface or struct, collect direct selectors.
 			// or even disassemble any complex types and look for struct and interface types.
 
-			fieldTypeInfo := d.RegisterType(tv.Type)
+			//fieldTypeInfo := d.RegisterType(tv.Type)
 			
 			//>> 1.18 (temp handling, need more handling. bug#33)
 			//   need a replaceDirectSelectors(...)
-			if ntt, ok := tv.Type.(*types.Named); ok {
-				if ott := originType(ntt); ntt != ott {
-					ot := d.RegisterType(ott)
-					fieldTypeInfo.DirectSelectors = ot.DirectSelectors
-				}
-			}
+			//if ntt, ok := tv.Type.(*types.Named); ok {
+			//	if ott := originType(ntt); ntt != ott {
+			//		ot := d.RegisterType(ott)
+			//		fieldTypeInfo.DirectSelectors = ot.DirectSelectors
+			//	}
+			//}
 			//<<
 
 			//if tt, ok := tv.Type.(*types.Named); ok {
@@ -843,14 +918,12 @@ func (d *CodeAnalyzer) registerDirectFields(typeInfo *TypeInfo, astStructNode *a
 			continue
 		}
 
-		d.lookForAndRegisterUnnamedInterfaceAndStructTypes(field.Type, pkg)
-
-		tv := pkg.PPkg.TypesInfo.Types[field.Type]
+		//tv := pkg.PPkg.TypesInfo.Types[field.Type]
 
 		// ToDo: if field.Type is an interface or struct, or pointer to interface or struct, collect direct selectors.
 		// or even disassemble any complex types and look for struct and interface types.
 
-		fieldTypeInfo := d.RegisterType(tv.Type)
+		//fieldTypeInfo := d.RegisterType(tv.Type)
 
 		var tag string
 		if field.Tag != nil {
@@ -920,9 +993,22 @@ func (d *CodeAnalyzer) registerUnnamedInterfaceAndStructTypesFromParametersAndRe
 	}
 }
 
+// id must be a *ast.Ident or *ast.ast.SelectorExpr
+func (d *CodeAnalyzer) lookForUnnamedSourceExpr(pkg *Package, id ast.Expr, forAliasOnly bool) *ast.InterfaceType {
+	//obj := pkg.PPkg.TypesInfo.ObjectOf(id)
+	//_ = obj.(types.TypeName)
+	//tn := d.allTypeNameTable[d.Id2(obj.Pkg(), obj.Name())]
+	//if tn == nil {
+	//	panic("should not")
+	//}
+	
+	// ToDo:
+	return nil
+}
+
 // ToDo: now interface{Error() string} and interface{error} will be viewed as one TypeInfo,
-//
-//	which is true from Go senmatics view, but might be not good from code analysis view.
+//      which is true from Go senmatics view, but might be not good from code analysis view.
+// typeInfo must be an unnamed interface type.
 func (d *CodeAnalyzer) registerExplicitlySpecifiedMethods(typeInfo *TypeInfo, astInterfaceNode *ast.InterfaceType, pkg *Package) {
 	//if (typeInfo.attributes & directSelectorsCollected) != 0 {
 	//	return
@@ -958,6 +1044,13 @@ func (d *CodeAnalyzer) registerExplicitlySpecifiedMethods(typeInfo *TypeInfo, as
 			// A method and some field names can be the same.
 			if old.Id == newId && old.Method != nil {
 				// See the comment at the starting of the function.
+
+				// ToDo: this loop is not effecient,
+				//       try to find a new efficient way ...
+
+				// ToDo: is this if-block possible to be entered?
+				//       If not, then the loop is useless.
+
 				return
 			}
 		}
@@ -970,22 +1063,29 @@ func (d *CodeAnalyzer) registerExplicitlySpecifiedMethods(typeInfo *TypeInfo, as
 	}
 
 	// ToDo: since Go 1.14, two same name interface names can be embedded together.
+	//       But it looks this is not a problem.
+	// ToDo: since Go 1.18, any type may be embedded in an interface,
+	//       furthmore, more embedding forms: ~T and T1 | T2, ...
+	//       But up to 1.20, only an interface types (either unnamed or named)
+	//       will make contributions to the method set.
 	registerField := func(field *Field) {
-		if field.Name == "-" {
-			panic("impossible")
-		}
-		if !token.IsExported(field.Name) {
-			field.Pkg = pkg
-			if pkg == d.builtinPkg {
-				field.Pkg = nil
-			}
-		}
+		//>> since 1.18, it is possible now
+		//if field.Name == "-" {
+		//	panic("impossible")
+		//}
+		//if !token.IsExported(field.Name) {
+		//	field.Pkg = pkg
+		//	if pkg == d.builtinPkg {
+		//		field.Pkg = nil
+		//	}
+		//}
+		//
+		//newId := d.Id1b(field.Pkg, field.Name)
+		//<<
 
 		if typeInfo.DirectSelectors == nil {
 			typeInfo.DirectSelectors = make([]*Selector, 0, 16)
 		}
-
-		newId := d.Id1b(field.Pkg, field.Name)
 
 		// Two embedded types in an interface type can have an identical name.
 		//for _, old := range typeInfo.DirectSelectors {
@@ -994,9 +1094,13 @@ func (d *CodeAnalyzer) registerExplicitlySpecifiedMethods(typeInfo *TypeInfo, as
 		//		return
 		//	}
 		//}
+		// Why is the above block commented away?
+		// Because interface {Name(); Name; Name} is valid code.
 
 		sel := &Selector{
-			Id:    newId,
+			//>> since 1.18
+			//Id:    newId,
+			//<<
 			Field: field,
 		}
 		typeInfo.DirectSelectors = append(typeInfo.DirectSelectors, sel)
@@ -1006,56 +1110,105 @@ func (d *CodeAnalyzer) registerExplicitlySpecifiedMethods(typeInfo *TypeInfo, as
 
 	for _, method := range astInterfaceNode.Methods.List {
 		// method is a *ast.Field.
-
 		if len(method.Names) == 0 {
-			var id string
-			switch expr := method.Type.(type) {
-			default:
-				// embed interface type (anonymous field)
+			// embed interface type (anonymous field)
 
-				//>> 1.18
-				//
-				// Now, it is also possible
-				// * an unnamed type
-				// * an instantiated type (ast.IndexExpr, ast.IndexListExpr)
-				// * a type union (ast.BinaryExpr)
-				// * ~aType (ast.UnaryExpr)
-				//
-				// And note that an Ident and SelectorExpr might not
-				// denote interface.
-				//
-				// Update to Go 1.19, we may only need to consider
-				// IndexExpr/IndexListExpr/Ident/SelectorExpr which
-				// denote interface types.
+			//>> 1.18
+			//
+			// Now, it is also possible
+			// * an unnamed type
+			// * an instantiated type (ast.IndexExpr, ast.IndexListExpr)
+			// * a type union (ast.BinaryExpr)
+			// * ~aType (ast.UnaryExpr)
+			//
+			// And note that an Ident and SelectorExpr might not
+			// denote interface.
+			//
+			// Update to Go 1.19, we may only need to consider
+			// IndexExpr/IndexListExpr/Ident/SelectorExpr which
+			// denote interface types.
+			//<<
+
+			//var id string
+			var astInterfaceType *ast.InterfaceType
+			var typeArgs []TypeExpr
+
+			var expr = method.Type
+
+			fieldTT := pkg.PPkg.TypesInfo.TypeOf(expr)
+			if fieldTT == nil {
+				panic("should not")
+			}
+			if _, ok := fieldTT.Underlying().(*types.Interface); !ok {
+				// Up to Go 1.20, the following cases may be safely ignored:
+				// 1. T, where T is a non-interfaces
+				// 2. ~T
+				// 3. T1 | T2
+
+				//ToDo: 1.18. Up to now, this is valid.
 				continue
+			}
+
+			var name string
+			var expr1 = expr
+
+		NextToFindName:
+			switch expr2 := expr1.(type) {
+			default:
+				//>> 1.18
+				panic(fmt.Sprintf("not a valid embedding interface type name: %#v", method))
+				//continue
 				//<<
 
-				//panic(fmt.Sprintf("not a valid embedding interface type name: %#v", method))
-			case *ast.IndexExpr, *ast.IndexListExpr:
-				continue
-				// todo: unify these cases, by finding fieldTypeInfo
-				//       using pkg.PPkg.TypesInfo.ObjectOf(expr).
-				//       Pass if fieldTypeInfo is not an interface.
+			case *ast.InterfaceType: // since 1.18
+				astInterfaceType = expr2
+			case *astIndexExpr: // since 1.18
+				typeArgs = d.astIndexExprToTypeArgs(pkg, expr2)
+				expr1 = expr2.X // X is either Ident or SelectorExpr
+				goto NextToFindName
+			case *astIndexListExpr: // since 1.18
+				typeArgs = d.astIndexListExprToTypeArgs(pkg, expr2)
+				expr1 = expr2.X // X is either Ident or SelectorExpr
+				goto NextToFindName
 			case *ast.Ident:
-				ttn := pkg.PPkg.TypesInfo.Uses[expr]
-				id = d.Id2(ttn.Pkg(), ttn.Name())
+				//ttn := pkg.PPkg.TypesInfo.Uses[expr2]
+				//id = d.Id2(ttn.Pkg(), ttn.Name())
+				name = expr2.Name
 			case *ast.SelectorExpr:
-				srcObj := pkg.PPkg.TypesInfo.ObjectOf(expr.X.(*ast.Ident))
-				srcPkg := srcObj.(*types.PkgName)
-				id = d.Id2(srcPkg.Imported(), expr.Sel.Name)
+				//srcObj := pkg.PPkg.TypesInfo.ObjectOf(expr2.X.(*ast.Ident))
+				//srcPkg := srcObj.(*types.PkgName)
+				//id = d.Id2(srcPkg.Imported(), expr2.Sel.Name)
+				name = expr2.Sel.Name
 			}
 
-			// ToDo: 1.18, instantiated types are not in this table.
-			tn := d.allTypeNameTable[id]
-			if tn == nil {
-				panic("TypeName for " + id + " not found")
-			}
-
-			//fieldTypeInfo := tn.Named
-			//if fieldTypeInfo == nil {
-			//	fieldTypeInfo = tn.Alias.Denoting
+			//>> since 1.18, instantiated types are not in this table.
+			//tn := d.allTypeNameTable[id]
+			//if tn == nil {
+			//	panic("TypeName for " + id + " not found")
 			//}
-			fieldTypeInfo := tn.Denoting
+			//
+			//
+			////fieldTypeInfo := tn.Named
+			////if fieldTypeInfo == nil {
+			////	fieldTypeInfo = tn.Alias.Denoting
+			////}
+			//fieldTypeInfo := tn.Denoting
+			
+			fieldTypeInfo := d.RegisterType(fieldTT)
+			if _, ok := fieldTypeInfo.Underlying.TT.(*types.Interface); !ok {
+				continue // ToDo: up to Go 1.20, this is okay.
+			}
+
+			if astInterfaceType != nil {
+				//d.registerExplicitlySpecifiedMethods(fieldTypeInfo, astInterfaceType, pkg)
+				// Register the items of unnamed embedded interfaces on the embedding one directly.
+				d.registerExplicitlySpecifiedMethods(typeInfo, astInterfaceType, pkg)
+				continue
+			} else if typeArgs != nil {
+				d.registerInstantiatedType(fieldTypeInfo, typeArgs)
+			}
+			//<<
+
 			embedMode := EmbedMode_Direct
 
 			//if strings.Index(id, "image") >= 0 {
@@ -1064,7 +1217,7 @@ func (d *CodeAnalyzer) registerExplicitlySpecifiedMethods(typeInfo *TypeInfo, as
 
 			registerField(&Field{
 				Pkg:  pkg,
-				Name: tn.Name(),
+				Name: name,
 				Type: fieldTypeInfo,
 				Mode: embedMode,
 
@@ -1269,70 +1422,46 @@ func (d *CodeAnalyzer) registerFunctionForInvolvedTypeNames(f FunctionResource) 
 	return
 }
 
-func (d *CodeAnalyzer) registerValueForItsTypeName(res ValueResource) {
-
-	//>> 1.18, ToDo
-	// Now, for an instantiated type, t.TypeName is nil.
-	// ToDo: in d.registeringType, if t.TT is found a *types.Named,
-	//       then find the Origin type, and register the value on that origin type.
+func (d *CodeAnalyzer) registerValueForItsTypeName(res ValueResource, valueSpec *ast.ValueSpec) {
 	t := res.TypeInfo(d)
-	//<<
-	toRegsiter := t.TypeName != nil
+	if t.TypeName != nil {
+		goto Register
+	}
 
-	//if d.debug {
-	//	log.Printf("======= toRegsiter %v, === %v, === %v, ", toRegsiter, t.TypeName, res)
-	//}
-
-	if !toRegsiter {
-		//>> 1.18
-		originNamedType := func(t *TypeInfo) *TypeInfo {
-			if ntt, ok := t.TT.(*types.Named); ok {
-				if ott := originType(ntt); ntt != ott {
-					ot := d.RegisterType(ott)
-					if ot.TypeName != nil {
-						return ot
-					}
-				}
-			}
-			return nil
-		}
-
-		if ot := originNamedType(t); ot != nil {
-			toRegsiter = true
-			t = ot
-			goto Done
-		}
-		//<<
-
-		// ToDo: also for []T, [N]T, chan T, etc.
-		switch tt := t.TT.(type) {
-		// ToDo: also consider []T, [..]T, chan T, map[K]T, ... ?
-		case *types.Pointer:
-			bt := d.RegisterType(tt.Elem())
-			// ToDo: also register if an unnamed type has some aliases
-			if bt.TypeName != nil {
-				//log.Println("========= t=", t)
-				toRegsiter = true
-				goto Done
-			}
-
-			//>> 1.18
-			if ot := originNamedType(bt); ot != nil {
-				toRegsiter = true
-				t = d.RegisterType(types.NewPointer(ot.TT))
-				goto Done
-			}
-			//<<
+	// ToDo: also consider []T, [..]T, chan T, map[K]T, ... ?
+	switch tt := t.TT.(type) {
+	case *types.Pointer:
+		t = d.RegisterType(tt.Elem())
+		// ToDo: also register if an unnamed type has some aliases
+		if t.TypeName != nil {
+			goto Register
 		}
 	}
 
-Done:
-	if toRegsiter {
+	return
 
-		if t.AsTypesOf == nil {
-			t.AsTypesOf = make([]ValueResource, 0, 4)
+Register:
+
+	if t.AsTypesOf == nil {
+		t.AsTypesOf = make([]ValueResource, 0, 4)
+	}
+	t.AsTypesOf = append(t.AsTypesOf, res)
+
+
+	ot := t.TypeName.Denoting
+	if ot != t {
+		if ot.AsTypesOf == nil {
+			ot.AsTypesOf = make([]ValueResource, 0, 4)
 		}
-		t.AsTypesOf = append(t.AsTypesOf, res)
+		ot.AsTypesOf = append(ot.AsTypesOf, res)
+
+		if t.Instantiated == nil {
+			// Try to confirm the instantiated info.
+			// ToDo: but it is not always easy (though always possible I think).
+	
+			
+
+		}
 	}
 }
 

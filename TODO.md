@@ -2,6 +2,48 @@
 
 ### Soon to do
 
+* imporve package path compare:
+   * / is smaller than other chars
+   * . (and more) are larger than other chars
+   https://www.asciitable.com/
+
+* Use types.Identical to compare types.Type values
+   Note: Some places still need to sue the == opeartor.
+  * now, multiple types.Type may correspond one TypeInfo, which causes some imperfecitons in UE.
+    * ex. in "interface { interface { ... } }", the TypeInfos of
+      the outer and inner interfaces are the same one.
+
+* now, not collect uses for unnamed struct type fields.
+  In the following code, only collect for x1 and y1
+    var a struct {
+      x int
+      y struct {
+        m bool
+      }
+    }
+    use a fake type alias named with its hash for the struct type? 
+    So that the nested field could be used in ref page urls.
+    
+    example: golang.zx2c4.com/wireguard/device.Device
+    
+    only do this when --source-code-reading=rich
+
+* trace nested field: aPkg.Device.net.port for ref pages.
+  Not a good solution! This problen should be the same as the last one.
+  We need to use a fake type alias to "struct{port uint16}"
+  and use "theAlias.port" to denote the ref id.
+  
+	type Device struct {
+		net struct {
+			port          uint16 // listening port
+		}
+	}
+
+  Maybe the alias idea is not good.
+  Maybe using pkg.varX.field.filed and pkg.typeX.field.field is good enough.
+
+* If a type alias is alias to unnamed type, then list methods and fields.
+
 * Show go version at footer.
 
 * bug: https://github.com/go101/golds/issues/33 (search bug#33)
@@ -32,31 +74,7 @@
     * uses places
     * ...
 
-* now, not collect uses for unnamed struct type fields.
-  In the following code, only collect for x1 and y1
-    var a struct {
-      x int
-      y struct {
-        m bool
-      }
-    }
-    use a fake type alias named with its hash for the struct type? 
-    So that the nested field could be used in ref page urls.
-    
-    example: golang.zx2c4.com/wireguard/device.Device
-    
-    only do this when --source-code-reading=rich
-    
-* trace nested field: aPkg.Device.net.port for ref pages.
-  Not a good solution! This problen should be the same as the last one.
-  We need to use a fake type alias to "struct{port uint16}"
-  and use "theAlias.port" to denote the ref id.
-  
-	type Device struct {
-		net struct {
-			port          uint16 // listening port
-		}
-	}
+
 
 * the handling of "removeOriginalIdent" in output docs is not very reasonable
 
