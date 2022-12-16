@@ -17,7 +17,10 @@ type (
 	//astUnaryExpr = struct { ast.UnaryExpr }
 	//astBinaryExpr = struct { ast.BinaryExpr }
 
-	typesTypeParam = struct{ types.Named }
+	typesTypeParam = struct {
+		types.Named
+		Index func() int
+	}
 )
 
 func originType(nt *types.Named) *types.Named {
@@ -34,4 +37,3 @@ func isTypeParam(tt types.Type) bool {
 
 func (d *CodeAnalyzer) comfirmDirectSelectorsForInstantiatedType(typeInfo *TypeInfo, currentCounter uint32, fieldMap, methodMap map[string]*TypeInfo) {
 }
-

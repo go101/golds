@@ -114,7 +114,7 @@ func (ds *docServer) buildImplementationPage(w http.ResponseWriter, result *Meth
 		//
 		if buildIdUsesPages {
 			buildPageHref(page.PathInfo, createPagePathInfo3(ResTypeReference, result.Package.Path, "..", result.TypeName.Name(), method.Method.Name()), page, method.Method.Name())
-			ds.writeMethodType(page, result.Package, method.Method.Method, nil)
+			ds.writeMethodType(page, result.Package, method.Method, nil)
 		} else {
 			ds.writeMethodForListing(page, result.Package, method.Method, nil, false, false)
 		}

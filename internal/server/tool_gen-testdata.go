@@ -117,11 +117,11 @@ func buildTestData_Package(details *PackageDetails) TestData_Package {
 		ts[t.TypeName.Name()] = TestData_Type{
 			FieldNames:         fieldNames,
 			MethodNames:        methodNames,
-			ImplementedByCount: implementedByCount, //len(t.ImplementedBys),
-			ImplementCount:     implementsCount,    // len(t.Implements),
-			ValueCount:         valueCount,         // len(t.Values),
-			AsInputCount:       asInputCount,       // len(t.AsInputsOf),
-			AsOutputCount:      asOutputCount,      // len(t.AsOutputsOf),
+			ImplementedByCount: implementedByCount,   //len(t.ImplementedBys),
+			ImplementCount:     implementsCount,      // len(t.Implements),
+			ValueCount:         valueCount,           // len(t.Values),
+			AsInputCount:       asInputCount,         // len(t.AsInputsOf),
+			AsOutputCount:      asOutputCount,        // len(t.AsOutputsOf),
 			IsAlias:            t.TypeName.IsAlias(), // t.TypeName.Alias != nil,
 		}
 	}

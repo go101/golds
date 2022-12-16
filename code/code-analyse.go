@@ -152,13 +152,13 @@ func (d *CodeAnalyzer) findImplementations() { // (resultMethodCache *typeutil.M
 		// t.TT might be a TypeParam, in which case, the next line will produce a
 		// new TypeInfo if the line previous to the above line is used.
 		// Producing new TypeInfo at this time is prohibited.
-		// 
+		//
 		// Surely, the analysis result is not correct for TypeParam, but it is not important.
 
 		// ToDo: The next 3 lines should be able to be replaced with one line:
 		//       underlyingTypeInfo = t.Underlying.
 		// Here, they are for assert purpsoe.
-		
+
 		underlyingTypeInfo := d.RegisterType(underlying) // underlying must have been already registered
 
 		//if m, n := underlyingTypeInfo.index, t.Underlying.index; m == 17838 && m != n {
@@ -226,9 +226,11 @@ func (d *CodeAnalyzer) findImplementations() { // (resultMethodCache *typeutil.M
 			//
 			//sig := d.BuildMethodSignatureFromFuncObject(funcObj) // will not produce new type registrations for sure
 			sel := selectors[i]
-			funcSig, ok := sel.Method.Type.TT.(*types.Signature)
+			//funcSig, ok := sel.Method.Type.TT.(*types.Signature)
+			funcSig, ok := sel.Type().TT.(*types.Signature)
 			if !ok {
-				panic(fmt.Sprintf("not a types.Signature: %T", sel.Method.Type.TT))
+				//panic(fmt.Sprintf("not a types.Signature: %T", sel.Method.Type.TT))
+				panic(fmt.Sprintf("not a types.Signature: %T", sel.Type().TT))
 			}
 			pkgImportPath := ""
 			if sel.Method.Pkg != nil {
@@ -306,7 +308,8 @@ func (d *CodeAnalyzer) findImplementations() { // (resultMethodCache *typeutil.M
 			//
 			//sig := d.BuildMethodSignatureFromFuncObject(funcObj) // will not produce new type registrations for sure
 			sel := selectors[i]
-			funcSig, ok := sel.Method.Type.TT.(*types.Signature)
+			//funcSig, ok := sel.Method.Type.TT.(*types.Signature)
+			funcSig, ok := sel.Type().TT.(*types.Signature)
 			if !ok {
 				panic("not a types.Signature")
 			}
@@ -804,9 +807,9 @@ func (d *CodeAnalyzer) findImplementations() { // (resultMethodCache *typeutil.M
 
 // This method should only be called when all selectors are confirmed.
 func (d *CodeAnalyzer) registerNamedInterfaceMethodsForInvolvedTypeNames() {
-	
+
 	for _, pkg := range d.packageList {
-	
+
 		// ToDo:
 		// sometime situations are much complicated.
 		// An interface method might have several origins.
@@ -830,7 +833,8 @@ func (d *CodeAnalyzer) registerNamedInterfaceMethodsForInvolvedTypeNames() {
 					continue
 				}
 
-				sig, ok := sel.Method.Type.TT.(*types.Signature)
+				//sig, ok := sel.Method.Type.TT.(*types.Signature)
+				sig, ok := sel.Type().TT.(*types.Signature)
 				if !ok {
 					panic("impossible")
 				}
@@ -849,7 +853,8 @@ func (d *CodeAnalyzer) registerNamedInterfaceMethodsForInvolvedTypeNames() {
 
 				im := &InterfaceMethod{
 					InterfaceTypeName: tn,
-					Method:            sel.Method,
+					//Method:            sel.Method,
+					Selector: sel,
 				}
 				_, _, _ = d.registerFunctionForInvolvedTypeNames(im)
 			}
@@ -1005,7 +1010,7 @@ type SeleterMapManager struct {
 	release func(r map[string]*Selector)
 }
 
-//var debug = false
+var debug = false
 
 func (d *CodeAnalyzer) collectSelectorsForInterfaceType(t *TypeInfo, depth int, currentCounter uint32, smm *SeleterMapManager) (r bool) {
 
@@ -1081,6 +1086,7 @@ func (d *CodeAnalyzer) collectSelectorsForInterfaceType(t *TypeInfo, depth int, 
 		if (t.Underlying.attributes & directSelectorsCollected) == 0 {
 
 			//>> 1.18
+			// ToDo: still needed?
 			if isParameterizedType(t.TT) {
 				return
 			}
@@ -1116,97 +1122,105 @@ func (d *CodeAnalyzer) collectSelectorsForInterfaceType(t *TypeInfo, depth int, 
 			panic("unnamed interface should have collected direct selectors now. " + fmt.Sprintf("%#v", t))
 		}
 
-		hasEmbeddings := false
-		for _, s := range t.DirectSelectors {
-			if s.Field != nil {
-				hasEmbeddings = true
-				break
-			}
-		}
+		//hasEmbeddings := false
+		//for _, s := range t.DirectSelectors {
+		//	if s.Field != nil {
+		//		hasEmbeddings = true
+		//		break
+		//	}
+		//}
+
+		// Interface type composite literals become very flexible now,
+		// so that even if no embedding fields, duplicated methods may still exist.
 
 		//if n := itt.NumEmbeddeds(); n == 0 {
-		if !hasEmbeddings { // the embedding ones might overlap with non-embedding ones
-			//if debug {
-			//	log.Println("444", depth)
-			//}
-			t.AllMethods = t.DirectSelectors
-		} else {
-			//if debug {
-			//	log.Println("555", depth)
-			//}
-			selectors := smm.apply()
-			defer func() {
-				smm.release(selectors)
-			}()
+		//if !hasEmbeddings { // the embedding ones might overlap with non-embedding ones
+		//	//if debug {
+		//	//	log.Println("444", depth)
+		//	//}
+		//	t.AllMethods = t.DirectSelectors
+		//} else {
+		//if debug {
+		//	log.Println("555", depth)
+		//}
+		selectors := smm.apply()
+		defer func() {
+			smm.release(selectors)
+		}()
 
-			t.AllMethods = make([]*Selector, 0, len(t.DirectSelectors)+2*itt.NumEmbeddeds())
+		t.AllMethods = make([]*Selector, 0, len(t.DirectSelectors)+2*itt.NumEmbeddeds())
 
-			for _, sel := range t.DirectSelectors {
-				if sel.Method != nil {
-					if old, ok := selectors[sel.Id]; ok {
-						if old.Method.Type != sel.Method.Type {
-							panic("direct overlapped interface methods and signatures are different")
-						} else {
-							//log.Println("$$$ overlapping interface method:", sel.Id, ". (allowed since Go 1.14)")
-							//log.Println("            ", t.TT)
-							//log.Println("            ", t.DirectSelectors)
-
-							// ToDo: go-ethethum has 3 such cases? why?
-							//panic("direct overlapped interface methods are not allowed")
-						}
+		for _, sel := range t.DirectSelectors {
+			if sel.Method != nil {
+				if old, ok := selectors[sel.Id]; ok {
+					//if old.Method.Type != sel.Method.Type {
+					if old.Type() != sel.Type() {
+						panic("direct overlapped interface methods and signatures are different")
 					} else {
-						selectors[sel.Id] = sel
-						t.AllMethods = append(t.AllMethods, sel)
+						//log.Println("$$$ overlapping interface method:", sel.Id, ". (allowed since Go 1.14)")
+						//log.Println("            ", t.TT)
+						//log.Println("            ", t.DirectSelectors)
+
+						// ToDo: go-ethethum has 3 such cases? why?
+						//panic("direct overlapped interface methods are not allowed")
 					}
-				} else { // sel.Field != nil
+				} else {
+					selectors[sel.Id] = sel
+					t.AllMethods = append(t.AllMethods, sel)
+				}
+			} else { // sel.Field != nil
 
-					// It is some quirk here. An unnamed interface type
-					// interface {I} might be the underlying type of
-					// named interface type I.
+				// It is some quirk here. An unnamed interface type
+				// interface {I} might be the underlying type of
+				// named interface type I.
 
-					//log.Println("      ", sel.Field.Type)
-					//d.collectSelectorsForInterfaceType(sel.Field.Type, depth+1, currentCounter, smm)
-					//for _, sel := range sel.Field.Type.AllMethods {
-					//	if old, ok := selectors[sel.Id]; ok {
-					//		if old.Method.Type != sel.Method.Type {
-					//			panic("overlapped interface methods but signatures are different")
-					//		} else {
-					//			log.Println("overlapping interface method:", sel.Id, ". (allowed since Go 1.14)")
-					//		}
-					//	} else {
-					//		selectors[sel.Id] = sel
-					//		t.AllMethods = append(t.AllMethods, sel)
-					//	}
-					//}
+				//log.Println("      ", sel.Field.Type)
+				//d.collectSelectorsForInterfaceType(sel.Field.Type, depth+1, currentCounter, smm)
+				//for _, sel := range sel.Field.Type.AllMethods {
+				//	if old, ok := selectors[sel.Id]; ok {
+				//		if old.Method.Type != sel.Method.Type {
+				//			panic("overlapped interface methods but signatures are different")
+				//		} else {
+				//			log.Println("overlapping interface method:", sel.Id, ". (allowed since Go 1.14)")
+				//		}
+				//	} else {
+				//		selectors[sel.Id] = sel
+				//		t.AllMethods = append(t.AllMethods, sel)
+				//	}
+				//}
 
-					// ToDo: verify the correctness of the following implementation.
+				// ToDo: verify the correctness of the following implementation.
 
-					//d.collectSelectorsForInterfaceType(sel.Field.Type, depth+1, currentCounter, smm)
-					//for _, sel := range sel.Field.Type.AllMethods {
-					ut := sel.Field.Type.Underlying
+				//d.collectSelectorsForInterfaceType(sel.Field.Type, depth+1, currentCounter, smm)
+				//for _, sel := range sel.Field.Type.AllMethods {
+				//ut := sel.Field.Type.Underlying
+				ut := sel.Type().Underlying
 
-					d.collectSelectorsForInterfaceType(ut, depth+1, currentCounter, smm)
-					if t != ut { // it is possible t == ut
-						for _, sel := range ut.AllMethods {
-							if old, ok := selectors[sel.Id]; ok {
-								if old.Method.Type != sel.Method.Type {
-									panic("overlapped interface methods but signatures are different")
-								} else {
-									// ToDo: The current implementation does not always find true overlappings.
-									//log.Println("overlapping interface method:", sel.Id, ". (allowed since Go 1.14)")
-								}
+				// ToDo: if t == ut, the following line should be a no-op.
+				//       The logic is right?
+				d.collectSelectorsForInterfaceType(ut, depth+1, currentCounter, smm)
+				if t != ut { // it is possible t == ut
+					for _, sel := range ut.AllMethods {
+						if old, ok := selectors[sel.Id]; ok {
+							//if old.Method.Type != sel.Method.Type {
+							if old.Type() != sel.Type() {
+								panic("overlapped interface methods but signatures are different")
 							} else {
-								selectors[sel.Id] = sel
-								t.AllMethods = append(t.AllMethods, sel)
+								// ToDo: The current implementation does not always find true overlappings.
+								//log.Println("overlapping interface method:", sel.Id, ". (allowed since Go 1.14)")
 							}
+						} else {
+							selectors[sel.Id] = sel
+							t.AllMethods = append(t.AllMethods, sel)
 						}
 					}
 				}
-
 			}
 
-			//log.Println(depth, "===", len(t.DirectSelectors), len(t.AllMethods), t.TT)
 		}
+
+		//log.Println(depth, "===", len(t.DirectSelectors), len(t.AllMethods), t.TT)
+		//}
 	}
 
 	return
@@ -1214,20 +1228,42 @@ func (d *CodeAnalyzer) collectSelectorsForInterfaceType(t *TypeInfo, depth int, 
 
 func (d *CodeAnalyzer) collectSelectorsForNonInterfaceType(t *TypeInfo, smm *SeleterMapManager, checkedTypes map[uint32]uint16) {
 
+	if debug {
+		log.Println("aaa")
+	}
+
 	if (t.attributes & promotedSelectorsCollected) != 0 {
+
+		if debug {
+			log.Printf("aaa === %v\n   ===%#v", t, t)
+		}
+
 		return
+	}
+
+	if debug {
+		log.Println("bbb")
 	}
 
 	defer func() {
 		t.attributes |= promotedSelectorsCollected
 	}()
 
-	var namedType *TypeInfo // which DirectSelectors are all explicit methods now.
+	var namedType *TypeInfo  // which DirectSelectors are all explicit methods now.
 	var structType *TypeInfo // which DirectSelectors are all direct fields now.
 
 	switch t.TT.(type) {
 	case *types.Named:
 		namedType = t
+
+		if namedType.TypeName == nil {
+
+		} else if namedType.TypeName.Name() == "A" {
+			debug = true
+			defer func() {
+				debug = false
+			}()
+		}
 
 		switch t.Underlying.TT.(type) {
 		case *types.Struct:
@@ -1262,7 +1298,15 @@ func (d *CodeAnalyzer) collectSelectorsForNonInterfaceType(t *TypeInfo, smm *Sel
 		panic("should not")
 	}
 
+	if debug {
+		log.Println(111)
+	}
+
 	if namedType == nil {
+
+		if debug {
+			log.Println(222)
+		}
 
 		//	if len(structType.DirectSelectors) == 1 {
 		//		sel := structType.DirectSelectors[0]
@@ -1356,6 +1400,14 @@ func (d *CodeAnalyzer) collectSelectorsForNonInterfaceType(t *TypeInfo, smm *Sel
 		// Returns how many new promoted embedded fields are inserted. (Not quite useful acctually.)
 		var collectSelectorsFromEmbeddedField = func(embeddedField *Selector, insertAfter *list.Element) (numNewPromotedEmbeddedFields int) {
 
+			var trace = false
+			if embeddedField.Name() == "G" {
+				trace = true
+			}
+			if trace {
+				log.Printf("xxx %v\nyyy %#v", embeddedField, embeddedField)
+			}
+
 			depth := embeddedField.Depth + 1
 
 			////if embeddedField.Field.Type.counter == currentCounter {
@@ -1414,6 +1466,8 @@ func (d *CodeAnalyzer) collectSelectorsForNonInterfaceType(t *TypeInfo, smm *Sel
 						Id:             sel.Id,
 						Field:          sel.Field,
 						Method:         sel.Method,
+						Instantiated:   sel.Instantiated,
+						RealType:       sel.RealType,
 						EmbeddingChain: embeddingChain,
 						Depth:          depth,
 						Indirect:       embeddedField.Indirect || indrect,
@@ -1430,11 +1484,12 @@ func (d *CodeAnalyzer) collectSelectorsForNonInterfaceType(t *TypeInfo, smm *Sel
 			}
 
 			//log.Println("       000", embeddedField.Field.Type)
-			switch t := embeddedField.Field.Type; tt := t.TT.(type) {
+			//switch t := embeddedField.Field.Type; tt := t.TT.(type) {
+			switch t := embeddedField.Type(); tt := t.TT.(type) {
 			case *types.Named:
 				// ToDo: since Go 1.18, this might be an instantiated type of a generic type.
 				//       See: types.Info.Instances, should be handled in the collect phase.
-				
+
 				// ToDo: Note: the underlying is an interface if t is a generic type.
 
 				//>> 1.18 (temp handling, need more handling. bug#33)
@@ -1458,7 +1513,8 @@ func (d *CodeAnalyzer) collectSelectorsForNonInterfaceType(t *TypeInfo, smm *Sel
 					// Collect all methods
 					collect(t, t.AllMethods, false) // <=> t.Underlying.AllMethods
 				case *types.Pointer:
-					log.Println("       111 ccc")
+					// ToDo: merged with the default branch.
+					//log.Println("       111 ccc")
 					// named pointer types have no selectors.
 				default:
 					//log.Println("       111 ddd")
@@ -1531,6 +1587,10 @@ func (d *CodeAnalyzer) collectSelectorsForNonInterfaceType(t *TypeInfo, smm *Sel
 		}
 
 		return
+	}
+
+	if debug {
+		log.Println(333)
 	}
 
 	// The following is for named types.
@@ -1926,6 +1986,12 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 						newTypeInfo := d.RegisterType(typeObj.Type())
 
 						if isBuiltinPkg {
+							//defer func(t *TypeInfo) {
+							//	// Not much meaningful, just simplify code.
+							//	t.attributes = srcTypeInfo.attributes
+							//	t.TypeName = srcTypeInfo.TypeName
+							//}(srcTypeInfo)
+
 							srcTypeInfo = newTypeInfo
 						}
 
@@ -1942,15 +2008,15 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 						}
 						if typeObj.IsAlias() {
 							//if isBuiltinPkg {
-								// byte != uint8
-								// rune != int32
+							// byte != uint8
+							// rune != int32
 							//} else {
-								if srcTypeInfo != newTypeInfo {
-									panic(fmt.Sprintf("srcTypeInfo != newTypeInfo, %v, %v", srcTypeInfo, newTypeInfo))
-								}
-								//if !types.Identical(srcTypeInfo.TT, newTypeInfo.TT) {
-								//	panic(fmt.Sprintf("srcTypeInfo != newTypeInfo, %v, %v", srcTypeInfo.TT, newTypeInfo.TT))
-								//}
+							if srcTypeInfo != newTypeInfo {
+								panic(fmt.Sprintf("srcTypeInfo != newTypeInfo, %v, %v", srcTypeInfo, newTypeInfo))
+							}
+							//if !types.Identical(srcTypeInfo.TT, newTypeInfo.TT) {
+							//	panic(fmt.Sprintf("srcTypeInfo != newTypeInfo, %v, %v", srcTypeInfo.TT, newTypeInfo.TT))
+							//}
 							//}
 
 							//tn.Alias = &TypeAlias{
@@ -2310,7 +2376,7 @@ func (d *CodeAnalyzer) collectSomeRuntimeFunctionPositions() {
 //						//	// source.TypeName.Type() is the generic type, not the instantiated type
 //						//
 //						//	originType = source.TypeName
-//						//	typeArgs = 
+//						//	typeArgs =
 //						//	// source.TypeName will be replaced below
 //						//case *astIndexListExpr:
 //						//	findSource(expr.X, starSource)
@@ -2320,10 +2386,10 @@ func (d *CodeAnalyzer) collectSomeRuntimeFunctionPositions() {
 //						//	// source.TypeName.Type() is the generic type, not the instantiated type
 //						//
 //						//	originType = source.TypeName
-//						//	typeArgs = 
+//						//	typeArgs =
 //						//	// source.TypeName will be replaced below
 //						//<<
-//						
+//
 //						case *ast.Ident:
 //
 //							//log.Println("???", d.Id(pkg.PPkg.Types, expr.Name))
@@ -2442,7 +2508,7 @@ func (d *CodeAnalyzer) astFieldListToTypeArgs(pkg *Package, fieldList *ast.Field
 	var args = make([]TypeExpr, 0, n)
 	for _, field := range fieldList.List {
 		for _, name := range field.Names {
-			args = append(args, TypeExpr {
+			args = append(args, TypeExpr{
 				Expr: name,
 				Type: d.RegisterType(pkg.PPkg.TypesInfo.TypeOf(name)),
 			})
@@ -2452,7 +2518,7 @@ func (d *CodeAnalyzer) astFieldListToTypeArgs(pkg *Package, fieldList *ast.Field
 }
 
 func (d *CodeAnalyzer) astIndexExprToTypeArgs(pkg *Package, index *ast.IndexExpr) []TypeExpr {
-	return []TypeExpr {
+	return []TypeExpr{
 		{
 			Expr: index.Index,
 			Type: d.RegisterType(pkg.PPkg.TypesInfo.TypeOf(index.Index)),
@@ -2463,7 +2529,7 @@ func (d *CodeAnalyzer) astIndexExprToTypeArgs(pkg *Package, index *ast.IndexExpr
 func (d *CodeAnalyzer) astIndexListExprToTypeArgs(pkg *Package, list *ast.IndexListExpr) []TypeExpr {
 	var args = make([]TypeExpr, 0, len(list.Indices))
 	for _, index := range list.Indices {
-		args = append(args, TypeExpr {
+		args = append(args, TypeExpr{
 			Expr: index,
 			Type: d.RegisterType(pkg.PPkg.TypesInfo.TypeOf(index)),
 		})
@@ -2471,7 +2537,7 @@ func (d *CodeAnalyzer) astIndexListExprToTypeArgs(pkg *Package, list *ast.IndexL
 	return args
 }
 
-func (d *CodeAnalyzer) confirmInstantiatedInfoForTypeConstraints(typeParams *ast.FieldList , pkg *Package) {
+func (d *CodeAnalyzer) confirmInstantiatedInfoForTypeConstraints(typeParams *ast.FieldList, pkg *Package) {
 	if typeParams.NumFields() == 0 {
 		return
 	}
@@ -2745,8 +2811,9 @@ func (d *CodeAnalyzer) comfirmDirectSelectorsForInstantiatedTypes() {
 	var currentCounter uint32
 	var i = 0
 	for e := l.Front(); e != nil; e = l.Front() {
-		log.Println("============================================ #", i); i++
-		
+		log.Println("============================================ #", i)
+		i++
+
 		t := e.Value.(*TypeInfo)
 		l.Remove(e)
 		currentCounter++

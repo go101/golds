@@ -740,7 +740,7 @@ type TypeExpr struct {
 	Type *TypeInfo
 }
 
-type InstantiatedType struct {
+type InstantiatedInfo struct {
 	TypeArgs []TypeExpr
 
 	//FinalTypeArgs []TypeExpr
@@ -822,7 +822,7 @@ func (tn *TypeName) Package() *Package {
 //}
 
 func (tn *TypeName) IsAlias() bool {
-	return tn.attributes & Alias != 0
+	return tn.attributes&Alias != 0
 	// ToDo: assert the result == tn.TypeName.IsAlias()
 }
 
@@ -871,13 +871,11 @@ func (tn *TypeName) IsAlias() bool {
 //	return tc.Kind&(Ptr|Interface) == 0
 //}
 
-
-
 // TypeInfo represents a type and records its analysis result.
 type TypeInfo struct {
 	TT types.Type
 
-	// ToDo: 
+	// ToDo:
 	Exprs []ast.Expr
 
 	Underlying *TypeInfo
@@ -891,8 +889,8 @@ type TypeInfo struct {
 	//
 	// ToDo: the Origin field might be useless. It is this if TypeName is nil, otherwise, it is TypeName.Denoting.
 	//Origin *TypeInfo
-	TypeName *TypeName
-	Instantiated *InstantiatedType
+	TypeName     *TypeName
+	Instantiated *InstantiatedInfo
 	//<<
 
 	//Implements     []*TypeInfo
@@ -1380,7 +1378,8 @@ type InterfaceMethod struct {
 	// Examples []*Example // better to maintain a table in package
 
 	InterfaceTypeName *TypeName
-	Method            *Method // .AstFunc == nil, .AstInterface != nil
+	//Method            *Method // .AstFunc == nil, .AstField  != nil
+	Selector *Selector // .Method.AstFunc == nil,.Method .AstField  != nil
 
 	// ToDo: an interface method might have several ast sources,
 	//       so there should be multiple Methods ([]*Method).
@@ -1388,7 +1387,7 @@ type InterfaceMethod struct {
 
 // Name returns the name of a InterfaceMethod.
 func (im *InterfaceMethod) Name() string {
-	return im.Method.Name
+	return im.Selector.Method.Name
 }
 
 // Name returns whether or not a InterfaceMethod is exported.
@@ -1398,17 +1397,17 @@ func (im *InterfaceMethod) Exported() bool {
 
 // Name returns the code position of a InterfaceMethod.
 func (im *InterfaceMethod) Position() token.Position {
-	return im.Method.Pkg.PPkg.Fset.PositionFor(im.Method.AstField.Pos(), false)
+	return im.Selector.Method.Pkg.PPkg.Fset.PositionFor(im.Selector.Method.AstField.Pos(), false)
 }
 
 // Name returns the document of a InterfaceMethod.
 func (im *InterfaceMethod) Documentation() string {
-	return im.Method.AstField.Doc.Text()
+	return im.Selector.Method.AstField.Doc.Text()
 }
 
 // Name returns the comment of a InterfaceMethod.
 func (im *InterfaceMethod) Comment() string {
-	return im.Method.AstField.Comment.Text()
+	return im.Selector.Method.AstField.Comment.Text()
 }
 
 // Name returns the owner Package of a InterfaceMethod.
@@ -1418,12 +1417,12 @@ func (im *InterfaceMethod) Package() *Package {
 
 // Name returns the go/types.Type for a InterfaceMethod.
 func (im *InterfaceMethod) TType() types.Type {
-	return im.Method.Type.TT
+	return im.Selector.Method.Type.TT
 }
 
 // Name returns the type of a InterfaceMethod.
 func (im *InterfaceMethod) TypeInfo(d *CodeAnalyzer) *TypeInfo {
-	return im.Method.Type
+	return im.Selector.Method.Type
 }
 
 // Name always returns true.
@@ -1434,7 +1433,7 @@ func (im *InterfaceMethod) IsMethod() bool {
 // Name returns the string representation of a InterfaceMethod.
 func (im *InterfaceMethod) String() string {
 	// ToDo: show the inteface receiver in result.
-	return im.Method.Type.TT.String()
+	return im.Selector.Method.Type.TT.String()
 }
 
 //func (im *InterfaceMethod) IndexString() string {
@@ -1453,13 +1452,13 @@ func (im *InterfaceMethod) ReceiverTypeName() (paramField *ast.Field, typename *
 
 // AstFuncType returns the go/ast.FuncType for a InterfaceMethod.
 func (im *InterfaceMethod) AstFuncType() *ast.FuncType {
-	return im.Method.AstField.Type.(*ast.FuncType)
+	return im.Selector.Method.AstField.Type.(*ast.FuncType)
 }
 
 // AstPackage returns the Package where a InterfaceMethodis is specified.
 // For embedding reason. The result might be different from the owner package.
 func (im *InterfaceMethod) AstPackage() *Package {
-	return im.Method.Pkg
+	return im.Selector.Method.Pkg
 }
 
 // MethodSignature represents a hashable struct for a method.
@@ -1599,7 +1598,7 @@ type Selector struct {
 	*Method
 
 	//>> 1.18
-	Instantiated *InstantiatedType
+	Instantiated *InstantiatedInfo
 	RealType     *TypeInfo
 	//<<
 

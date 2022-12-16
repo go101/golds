@@ -1799,7 +1799,7 @@ func (ds *docServer) writeFieldForListing(page *htmlPage, pkg *code.Package, sel
 	}
 	ds.writeFieldCodeLink(page, sel.Selector)
 	page.WriteString(" <i>")
-	ds.WriteAstType(page, sel.Field.AstField.Type, sel.Field.Pkg, pkg, true, nil, forTypeName)
+	ds.WriteAstType2(page, sel.Field.AstField.Type, sel.Field.Pkg, pkg, true, nil, forTypeName, sel.Instantiated)
 	page.WriteString("</i>")
 }
 
@@ -1829,7 +1829,9 @@ func (ds *docServer) writeMethodForListing(page *htmlPage, docPkg *code.Package,
 		}
 		page.WriteString(forTypeName.Name())
 		//>> 1.18
-		writeTypeParamsForMethodReceiver(page, method.AstFunc, forTypeName)
+		if len(forTypeName.TypeParams) > 0 {
+			writeTypeParamsForMethodReceiver(page, method.AstFunc, forTypeName)
+		}
 		//<<
 		page.WriteString(") ")
 	}
@@ -1849,15 +1851,16 @@ func (ds *docServer) writeMethodForListing(page *htmlPage, docPkg *code.Package,
 	}
 
 	if !onlyWriteMethodName {
-		ds.writeMethodType(page, docPkg, method, forTypeName)
+		ds.writeMethodType(page, docPkg, sel, forTypeName)
 	}
 }
 
-func (ds *docServer) writeMethodType(page *htmlPage, docPkg *code.Package, method *code.Method, forTypeName *code.TypeName) {
+func (ds *docServer) writeMethodType(page *htmlPage, docPkg *code.Package, methodSel *code.Selector, forTypeName *code.TypeName) {
+	method := methodSel.Method
 	if method.AstFunc != nil {
-		ds.WriteAstType(page, method.AstFunc.Type, method.Pkg, docPkg, false, nil, forTypeName)
+		ds.WriteAstType2(page, method.AstFunc.Type, method.Pkg, docPkg, false, nil, forTypeName, methodSel.Instantiated)
 	} else {
-		ds.WriteAstType(page, method.AstField.Type, method.Pkg, docPkg, false, nil, forTypeName)
+		ds.WriteAstType2(page, method.AstField.Type, method.Pkg, docPkg, false, nil, forTypeName, methodSel.Instantiated)
 	}
 }
 
@@ -2346,38 +2349,42 @@ var (
 	BoldTagEnd   = []byte("</b>")
 )
 
+func (ds *docServer) WriteAstType(w *htmlPage, typeLit ast.Expr, codePkg, docPkg *code.Package, funcKeywordNeeded bool, recvParam *ast.Field, forTypeName *code.TypeName) {
+	ds.WriteAstType2(w, typeLit, codePkg, docPkg, funcKeywordNeeded, recvParam, forTypeName, nil)
+}
+
 // This is a rewritten of WriteTypeEx.
 // Please make sure w.Write never makes errors.
 // "forTypeName", if it is not blank, should be declared in docPkg.
 // ToDo: "too many fields/methods/params/results" is replaced with ".....".
-func (ds *docServer) WriteAstType(w *htmlPage, typeLit ast.Expr, codePkg, docPkg *code.Package, funcKeywordNeeded bool, recvParam *ast.Field, forTypeName *code.TypeName) {
+func (ds *docServer) WriteAstType2(w *htmlPage, typeLit ast.Expr, codePkg, docPkg *code.Package, funcKeywordNeeded bool, recvParam *ast.Field, forTypeName *code.TypeName, ins *code.InstantiatedInfo) {
 	switch node := typeLit.(type) {
 	default:
 		panic(fmt.Sprintf("WriteType, unknown node: %[1]T, %[1]v", node))
 	//>> 1.18
 	case *astUnaryExpr:
 		w.WriteString(node.Op.String())
-		ds.WriteAstType(w, node.X, codePkg, docPkg, true, nil, forTypeName)
+		ds.WriteAstType2(w, node.X, codePkg, docPkg, true, nil, forTypeName, ins)
 	case *astBinaryExpr:
-		ds.WriteAstType(w, node.X, codePkg, docPkg, true, nil, forTypeName)
+		ds.WriteAstType2(w, node.X, codePkg, docPkg, true, nil, forTypeName, ins)
 		w.Write(space)
 		w.WriteString(node.Op.String())
 		w.Write(space)
-		ds.WriteAstType(w, node.Y, codePkg, docPkg, true, nil, forTypeName)
+		ds.WriteAstType2(w, node.Y, codePkg, docPkg, true, nil, forTypeName, ins)
 	case *astIndexExpr:
 		// ast.Ident or ast.SelectorExpr
-		ds.WriteAstType(w, node.X, codePkg, docPkg, true, nil, forTypeName)
+		ds.WriteAstType2(w, node.X, codePkg, docPkg, true, nil, forTypeName, nil)
 		w.Write(leftSquare)
-		ds.WriteAstType(w, node.Index, codePkg, docPkg, true, nil, forTypeName)
+		ds.WriteAstType2(w, node.Index, codePkg, docPkg, true, nil, forTypeName, ins)
 		w.Write(rightSquare)
 	case *astIndexListExpr:
-		ds.WriteAstType(w, node.X, codePkg, docPkg, true, nil, forTypeName)
+		ds.WriteAstType2(w, node.X, codePkg, docPkg, true, nil, forTypeName, nil)
 		w.Write(leftSquare)
 		for i := range node.Indices {
 			if i > 0 {
 				w.Write(comma)
 			}
-			ds.WriteAstType(w, node.Indices[i], codePkg, docPkg, true, nil, forTypeName)
+			ds.WriteAstType2(w, node.Indices[i], codePkg, docPkg, true, nil, forTypeName, ins)
 		}
 		w.Write(rightSquare)
 	//<<
@@ -2389,8 +2396,16 @@ func (ds *docServer) WriteAstType(w *htmlPage, typeLit ast.Expr, codePkg, docPkg
 		//>> ToDo: Go 1.18, obj might be a type parameter now!
 		obj := codePkg.PPkg.TypesInfo.ObjectOf(node)
 		if obj != nil { // !!! The identifers in builtin package have not objects!
-			if _, ok := obj.Type().(*typesTypeParam); ok {
-				w.WriteString(node.Name)
+			if ttp, ok := obj.Type().(*typesTypeParam); ok {
+				if ins == nil {
+					w.WriteString(node.Name)
+					return
+				}
+				var i = ttp.Index()
+				if i >= len(ins.TypeArgs) {
+					panic(fmt.Sprintf("should not. %d : %d", i, len(ins.TypeArgs)))
+				}
+				ds.WriteAstType2(w, ins.TypeArgs[i].Expr, codePkg, docPkg, true, nil, forTypeName, ins)
 				return
 			}
 		}
@@ -2510,17 +2525,17 @@ func (ds *docServer) WriteAstType(w *htmlPage, typeLit ast.Expr, codePkg, docPkg
 		}
 	case *ast.ParenExpr:
 		w.Write(leftParen)
-		ds.WriteAstType(w, node.X, codePkg, docPkg, true, nil, forTypeName)
+		ds.WriteAstType2(w, node.X, codePkg, docPkg, true, nil, forTypeName, ins)
 		w.Write(rightParen)
 	case *ast.StarExpr:
 		w.Write(star)
-		ds.WriteAstType(w, node.X, codePkg, docPkg, true, nil, forTypeName)
+		ds.WriteAstType2(w, node.X, codePkg, docPkg, true, nil, forTypeName, ins)
 	case *ast.Ellipsis: // possible? (yes, variadic parameters)
 		//panic("[...] should be impossible") // ToDo: go/types package has a case.
 		//w.Write(leftSquare)
 		w.Write(ellipsis)
 		//w.Write(rightSquare)
-		ds.WriteAstType(w, node.Elt, codePkg, docPkg, true, nil, forTypeName)
+		ds.WriteAstType2(w, node.Elt, codePkg, docPkg, true, nil, forTypeName, ins)
 	case *ast.ArrayType:
 		w.Write(leftSquare)
 		if node.Len != nil {
@@ -2531,13 +2546,13 @@ func (ds *docServer) WriteAstType(w *htmlPage, typeLit ast.Expr, codePkg, docPkg
 			w.WriteString(tv.Value.String())
 		}
 		w.Write(rightSquare)
-		ds.WriteAstType(w, node.Elt, codePkg, docPkg, true, nil, forTypeName)
+		ds.WriteAstType2(w, node.Elt, codePkg, docPkg, true, nil, forTypeName, ins)
 	case *ast.MapType:
 		w.Write(mapKeyword)
 		w.Write(leftSquare)
-		ds.WriteAstType(w, node.Key, codePkg, docPkg, true, nil, forTypeName)
+		ds.WriteAstType2(w, node.Key, codePkg, docPkg, true, nil, forTypeName, ins)
 		w.Write(rightSquare)
-		ds.WriteAstType(w, node.Value, codePkg, docPkg, true, nil, forTypeName)
+		ds.WriteAstType2(w, node.Value, codePkg, docPkg, true, nil, forTypeName, ins)
 	case *ast.ChanType:
 		if node.Dir == ast.RECV {
 			w.Write(chanDir)
@@ -2549,22 +2564,22 @@ func (ds *docServer) WriteAstType(w *htmlPage, typeLit ast.Expr, codePkg, docPkg
 			w.Write(chanKeyword)
 		}
 		w.Write(space)
-		ds.WriteAstType(w, node.Value, codePkg, docPkg, true, nil, forTypeName)
+		ds.WriteAstType2(w, node.Value, codePkg, docPkg, true, nil, forTypeName, ins)
 	case *ast.FuncType:
 		if funcKeywordNeeded {
 			w.Write(funcKeyword)
 			//w.Write(space)
 		}
 		w.Write(leftParen)
-		ds.WriteAstFieldList(w, node.Params, true, comma, codePkg, docPkg, true, recvParam, forTypeName)
+		ds.WriteAstFieldList(w, node.Params, true, comma, codePkg, docPkg, true, recvParam, forTypeName, ins)
 		w.Write(rightParen)
 		if node.Results != nil && len(node.Results.List) > 0 {
 			w.Write(space)
 			if len(node.Results.List) == 1 && len(node.Results.List[0].Names) == 0 {
-				ds.WriteAstFieldList(w, node.Results, true, comma, codePkg, docPkg, true, nil, forTypeName)
+				ds.WriteAstFieldList(w, node.Results, true, comma, codePkg, docPkg, true, nil, forTypeName, ins)
 			} else {
 				w.Write(leftParen)
-				ds.WriteAstFieldList(w, node.Results, true, comma, codePkg, docPkg, true, nil, forTypeName)
+				ds.WriteAstFieldList(w, node.Results, true, comma, codePkg, docPkg, true, nil, forTypeName, ins)
 				w.Write(rightParen)
 			}
 		}
@@ -2572,18 +2587,18 @@ func (ds *docServer) WriteAstType(w *htmlPage, typeLit ast.Expr, codePkg, docPkg
 		w.Write(structKeyword)
 		//w.Write(space)
 		w.Write(leftBrace)
-		ds.WriteAstFieldList(w, node.Fields, false, semicoloon, codePkg, docPkg, true, nil, forTypeName)
+		ds.WriteAstFieldList(w, node.Fields, false, semicoloon, codePkg, docPkg, true, nil, forTypeName, ins)
 		w.Write(rightBrace)
 	case *ast.InterfaceType:
 		w.Write(interfaceKeyword)
 		//w.Write(space)
 		w.Write(leftBrace)
-		ds.WriteAstFieldList(w, node.Methods, false, semicoloon, codePkg, docPkg, false, nil, forTypeName)
+		ds.WriteAstFieldList(w, node.Methods, false, semicoloon, codePkg, docPkg, false, nil, forTypeName, ins)
 		w.Write(rightBrace)
 	}
 }
 
-func (ds *docServer) WriteAstFieldList(w *htmlPage, fieldList *ast.FieldList, isParamOrResultList bool, sep []byte, codePkg, docPkg *code.Package, funcKeywordNeeded bool, recvParam *ast.Field, forTypeName *code.TypeName) {
+func (ds *docServer) WriteAstFieldList(w *htmlPage, fieldList *ast.FieldList, isParamOrResultList bool, sep []byte, codePkg, docPkg *code.Package, funcKeywordNeeded bool, recvParam *ast.Field, forTypeName *code.TypeName, ins *code.InstantiatedInfo) {
 	if fieldList == nil {
 		return
 	}
@@ -2613,7 +2628,7 @@ func (ds *docServer) WriteAstFieldList(w *htmlPage, fieldList *ast.FieldList, is
 				w.Write(space)
 			} // else for interface methods
 		}
-		ds.WriteAstType(w, fld.Type, codePkg, docPkg, funcKeywordNeeded, nil, forTypeName)
+		ds.WriteAstType2(w, fld.Type, codePkg, docPkg, funcKeywordNeeded, nil, forTypeName, ins)
 		if i+1 < len(fields) {
 			w.Write(sep)
 		}

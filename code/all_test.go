@@ -123,7 +123,8 @@ func TestAnalyzeStandardPackage(t *testing.T) {
 					break
 				}
 
-				//>> ToDo:
+				//>> ToDo: ...
+				// For some difficuties, some instantiation info are incomplete, so skip.
 				if bt.TypeName.Denoting != bt && bt.Instantiated == nil {
 					break
 				}
