@@ -298,7 +298,7 @@ func (d *CodeAnalyzer) comfirmDirectSelectorsForInstantiatedType(typeInfo *TypeI
 				//log.Printf("4 b: %#v", sel.Field.Type.TT)
 
 				if realType == nil {
-					log.Println(sel.Field.Name)//, fieldMap)
+					log.Println(sel.Field.Name) //, fieldMap)
 					panic("should not")
 				}
 			}

@@ -1518,7 +1518,7 @@ func init() {
 			asciiOrder[i] = n
 			n++
 		}
-		asciiOrder[i + 128] = byte(i+128)
+		asciiOrder[i+128] = byte(i + 128)
 	}
 }
 
