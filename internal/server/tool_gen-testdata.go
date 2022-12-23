@@ -75,7 +75,7 @@ func buildTestData_Package(details *PackageDetails) TestData_Package {
 		// ...
 		var implementedByCount int
 		for _, impedBy := range t.ImplementedBys {
-			if isInformalPackage(impedBy.Package().Path) {
+			if isInformalPackage(impedBy.BaseType.TypeName.Package().Path) {
 				continue
 			}
 			implementedByCount++
@@ -83,7 +83,7 @@ func buildTestData_Package(details *PackageDetails) TestData_Package {
 
 		var implementsCount int
 		for _, impl := range t.Implements {
-			if isInformalPackage(impl.Package().Path) {
+			if isInformalPackage(impl.BaseType.TypeName.Package().Path) {
 				continue
 			}
 			implementsCount++

@@ -450,15 +450,15 @@ func (d *CodeAnalyzer) registeringType(tt types.Type, createOnNonexist bool) *Ty
 }
 
 // RetrieveTypeName trys to retrieve the TypeName from a TypeInfo.
-func (d *CodeAnalyzer) RetrieveTypeName(t *TypeInfo) (*TypeName, bool) {
+func (d *CodeAnalyzer) RetrieveNamedType(t *TypeInfo) (*TypeInfo, bool) {
 	if tn := t.TypeName; tn != nil {
-		return tn, false
+		return t, false
 	}
 
 	if ptt, ok := t.TT.(*types.Pointer); ok {
 		bt := d.RegisterType(ptt.Elem())
 		if btn := bt.TypeName; btn != nil {
-			return btn, true
+			return bt, true
 		}
 
 		if _, ok := bt.TT.(*types.Named); ok {
@@ -518,7 +518,7 @@ func (d *CodeAnalyzer) CheckTypeMethodContributingToTypeImplementations(pkg, typ
 }
 
 // CleanImplements returns a clean list of the implementions for a TypeInfo.
-func (d *CodeAnalyzer) CleanImplements(self *TypeInfo) []Implementation {
+func (d *CodeAnalyzer) CleanImplements(self *TypeInfo, includingUnnamed bool) []Implementation {
 	// remove:
 	// * self
 	// * unnameds whose underlied names are also in the list (or are self)
@@ -543,19 +543,23 @@ func (d *CodeAnalyzer) CleanImplements(self *TypeInfo) []Implementation {
 			continue
 		}
 		typeLookupTable[it.index] = struct{}{}
-		ut := d.RegisterType(it.TT.Underlying())
+		//ut := d.RegisterType(it.TT.Underlying())
+		ut := it.Underlying
 		typeLookupTable[ut.index] = struct{}{}
 		implements = append(implements, impl)
 	}
-	for _, impl := range self.Implements {
-		it := impl.Interface
-		if it.TypeName != nil {
-			continue
+
+	if includingUnnamed {
+		for _, impl := range self.Implements {
+			it := impl.Interface
+			if it.TypeName != nil {
+				continue
+			}
+			if _, ok := typeLookupTable[it.index]; ok {
+				continue
+			}
+			implements = append(implements, impl)
 		}
-		if _, ok := typeLookupTable[it.index]; ok {
-			continue
-		}
-		implements = append(implements, impl)
 	}
 
 	return implements
@@ -897,6 +901,14 @@ func (d *CodeAnalyzer) registerDirectFields(typeInfo *TypeInfo, astStructNode *a
 			//	log.Println(ot.DirectSelectors)
 			//	log.Println(tt.Origin().TypeArgs(), tt.Origin().TypeParams())
 			//}
+
+			//>>
+			// ToDo:
+			// Field type might present as a type alias to a pointer type.
+			// So the calculation for isStar might be wrong above?
+			// But it looks the EmbedMode_Indirect and EmbedMode_Direct
+			// enums are not effectively used, so ...
+			//<<
 
 			embedMode := EmbedMode_Direct
 			if isStar {

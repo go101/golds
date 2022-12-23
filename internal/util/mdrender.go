@@ -205,7 +205,7 @@ current package type: [StopWatch]
 current package funciton: [MemoryUse], [trimEndingSpaces]
 current package selector: [MarkdownRenderer.freeSegments], [MarkdownRenderer.Render]
 slibing package function: [app.Main], [app.run]
-slibing package slector: [server.TypeForListing.Named], [server.TypeForListing.Position]
+slibing package slector: [server.TypeForListing.IsPointer], [server.TypeForListing.InCurrentPkg]
 module top-level package type: [*code.Package],
 module top-level package funciton: [code.ComparePackagePaths], [code.getMatchedPackages]
 

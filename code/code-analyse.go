@@ -405,6 +405,12 @@ func (d *CodeAnalyzer) findImplementations() { // (resultMethodCache *typeutil.M
 				return
 			}
 
+			//>> ToDo: now only show method implementations for origin types.
+			if ti.TypeName.Denoting != ti {
+				return
+			}
+			//<<
+
 			pathPath := ti.TypeName.Package().Path
 			for _, sel := range uiInfo.t.AllMethods {
 				var selPkg string
@@ -1070,17 +1076,8 @@ func (d *CodeAnalyzer) collectSelectorsForInterfaceType(t *TypeInfo, depth int, 
 	//	panic("unnamed interface should have collected direct selectors now. " + fmt.Sprintf("%#v", t))
 	//}
 
-	//if debug {
-	//	log.Println("==== 111", depth, t)
-	//}
 	if t != t.Underlying {
 		// t is a named interface type.
-
-		//if debug {
-		//	log.Println("xxx ===", t.TT, len(t.DirectSelectors), "\n",
-		//		t.Underlying.TT, len(t.Underlying.DirectSelectors), "\n",
-		//		t.Underlying.DirectSelectors)
-		//}
 
 		//log.Println("222", depth)
 		if (t.Underlying.attributes & directSelectorsCollected) == 0 {
@@ -1110,9 +1107,6 @@ func (d *CodeAnalyzer) collectSelectorsForInterfaceType(t *TypeInfo, depth int, 
 		t.DirectSelectors = t.Underlying.DirectSelectors
 		t.AllMethods = t.Underlying.AllMethods
 	} else { // t == t.Underlying
-		//if debug {
-		//	log.Println("333", depth)
-		//}
 		if (t.Underlying.attributes & directSelectorsCollected) == 0 {
 			//if depth == 0 {
 			//	return // ToDo: temp ignore field and parameter/result unnamed interface types
@@ -1135,14 +1129,8 @@ func (d *CodeAnalyzer) collectSelectorsForInterfaceType(t *TypeInfo, depth int, 
 
 		//if n := itt.NumEmbeddeds(); n == 0 {
 		//if !hasEmbeddings { // the embedding ones might overlap with non-embedding ones
-		//	//if debug {
-		//	//	log.Println("444", depth)
-		//	//}
 		//	t.AllMethods = t.DirectSelectors
 		//} else {
-		//if debug {
-		//	log.Println("555", depth)
-		//}
 		selectors := smm.apply()
 		defer func() {
 			smm.release(selectors)
@@ -1227,22 +1215,8 @@ func (d *CodeAnalyzer) collectSelectorsForInterfaceType(t *TypeInfo, depth int, 
 }
 
 func (d *CodeAnalyzer) collectSelectorsForNonInterfaceType(t *TypeInfo, smm *SeleterMapManager, checkedTypes map[uint32]uint16) {
-
-	if debug {
-		log.Println("aaa")
-	}
-
 	if (t.attributes & promotedSelectorsCollected) != 0 {
-
-		if debug {
-			log.Printf("aaa === %v\n   ===%#v", t, t)
-		}
-
 		return
-	}
-
-	if debug {
-		log.Println("bbb")
 	}
 
 	defer func() {
@@ -1298,15 +1272,7 @@ func (d *CodeAnalyzer) collectSelectorsForNonInterfaceType(t *TypeInfo, smm *Sel
 		panic("should not")
 	}
 
-	if debug {
-		log.Println(111)
-	}
-
 	if namedType == nil {
-
-		if debug {
-			log.Println(222)
-		}
 
 		//	if len(structType.DirectSelectors) == 1 {
 		//		sel := structType.DirectSelectors[0]
@@ -1399,15 +1365,6 @@ func (d *CodeAnalyzer) collectSelectorsForNonInterfaceType(t *TypeInfo, smm *Sel
 
 		// Returns how many new promoted embedded fields are inserted. (Not quite useful acctually.)
 		var collectSelectorsFromEmbeddedField = func(embeddedField *Selector, insertAfter *list.Element) (numNewPromotedEmbeddedFields int) {
-
-			var trace = false
-			if embeddedField.Name() == "G" {
-				trace = true
-			}
-			if trace {
-				log.Printf("xxx %v\nyyy %#v", embeddedField, embeddedField)
-			}
-
 			depth := embeddedField.Depth + 1
 
 			////if embeddedField.Field.Type.counter == currentCounter {
@@ -1587,10 +1544,6 @@ func (d *CodeAnalyzer) collectSelectorsForNonInterfaceType(t *TypeInfo, smm *Sel
 		}
 
 		return
-	}
-
-	if debug {
-		log.Println(333)
 	}
 
 	// The following is for named types.
@@ -2511,6 +2464,7 @@ func (d *CodeAnalyzer) astFieldListToTypeArgs(pkg *Package, fieldList *ast.Field
 			args = append(args, TypeExpr{
 				Expr: name,
 				Type: d.RegisterType(pkg.PPkg.TypesInfo.TypeOf(name)),
+				Pkg:  pkg,
 			})
 		}
 	}
@@ -2522,6 +2476,7 @@ func (d *CodeAnalyzer) astIndexExprToTypeArgs(pkg *Package, index *ast.IndexExpr
 		{
 			Expr: index.Index,
 			Type: d.RegisterType(pkg.PPkg.TypesInfo.TypeOf(index.Index)),
+			Pkg:  pkg,
 		},
 	}
 }
@@ -2532,6 +2487,7 @@ func (d *CodeAnalyzer) astIndexListExprToTypeArgs(pkg *Package, list *ast.IndexL
 		args = append(args, TypeExpr{
 			Expr: index,
 			Type: d.RegisterType(pkg.PPkg.TypesInfo.TypeOf(index)),
+			Pkg:  pkg,
 		})
 	}
 	return args
@@ -2811,7 +2767,7 @@ func (d *CodeAnalyzer) comfirmDirectSelectorsForInstantiatedTypes() {
 	var currentCounter uint32
 	var i = 0
 	for e := l.Front(); e != nil; e = l.Front() {
-		log.Println("============================================ #", i)
+		//log.Println("============================================ #", i)
 		i++
 
 		t := e.Value.(*TypeInfo)
@@ -2820,5 +2776,5 @@ func (d *CodeAnalyzer) comfirmDirectSelectorsForInstantiatedTypes() {
 		d.comfirmDirectSelectorsForInstantiatedType(t, currentCounter, fieldMap, methodMap)
 	}
 
-	log.Println("======== numSeenInstantiatedTypes:", d.numSeenInstantiatedTypes)
+	//log.Println("======== numSeenInstantiatedTypes:", d.numSeenInstantiatedTypes)
 }

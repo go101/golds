@@ -583,14 +583,15 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 								exported := true
 							ListImpedBys:
 								for _, by := range td.ImplementedBys {
-									if by.TypeName.Exported() != exported {
+									if by.BaseType.TypeName.Exported() != exported {
 										continue
 									}
 									func() {
 										defer writeItemWrapper(exported)()
 
-										ds.writeTypeForListing(page, by, pkg.Package, "", DotMStyle_NotShow)
-										if _, ok := by.TypeName.Denoting.TT.Underlying().(*types.Interface); ok {
+										ds.writeTypeForListing(page, by, pkg.Package, "", DotMStyle_NotShow, td.TypeName)
+										//if _, ok := by.TypeName.Denoting.TT.Underlying().(*types.Interface); ok {
+										if _, ok := by.BaseType.TT.Underlying().(*types.Interface); ok {
 											page.WriteString(" <i>(interface)</i>")
 										}
 									}()
@@ -621,13 +622,13 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 								exported := true
 							ListImpls:
 								for _, impl := range td.Implements {
-									if impl.TypeName.Exported() != exported {
+									if impl.BaseType.TypeName.Exported() != exported {
 										continue
 									}
 									func() {
 										defer writeItemWrapper(exported)()
 
-										ds.writeTypeForListing(page, impl, pkg.Package, td.TypeName.Name(), DotMStyle_NotShow)
+										ds.writeTypeForListing(page, impl, pkg.Package, td.TypeName.Name(), DotMStyle_NotShow, td.TypeName)
 									}()
 								}
 
@@ -912,7 +913,12 @@ type ValueForListing struct {
 }
 
 type TypeForListing struct {
-	*code.TypeName
+	//*code.TypeName
+	//Instantiated *InstantiatedInfo
+	//IsOriginType bool
+	BaseType         *code.TypeInfo
+	NameWithTypeArgs string // for sorting purpose
+
 	IsPointer    bool
 	InCurrentPkg bool
 	CommonPath   string // relative to the current package
@@ -1147,7 +1153,7 @@ func buildPackageDetailsData(analyzer *code.CodeAnalyzer, pkgPath string, alsoCo
 		//td.ImplementedBys = make([]*code.TypeInfo, 0, len(denoting.ImplementedBys))
 		td.ImplementedBys, td.NumExportedImpedBys = buildTypeImplementedByList(analyzer, pkg, denoting, alsoCollectNonExporteds, tn)
 		//td.Implements = make([]code.Implementation, 0, len(denoting.Implements))
-		td.Implements, td.NumExportedImpls = buildTypeImplementsList(analyzer, pkg, denoting, alsoCollectNonExporteds)
+		td.Implements, td.NumExportedImpls = buildTypeImplementsList(analyzer, pkg, denoting, alsoCollectNonExporteds, tn)
 
 		if isBuiltin {
 			continue
@@ -1352,13 +1358,14 @@ func sortMethodList(selectors []*code.Selector) []*code.Selector {
 func buildTypeImplementedByList(analyzer *code.CodeAnalyzer, pkg *code.Package, denoting *code.TypeInfo, alsoCollectNonExporteds bool, exceptTypeName *code.TypeName) ([]*TypeForListing, int32) {
 	numExporteds, implementedBys := int32(0), make([]TypeForListing, 0, len(denoting.ImplementedBys))
 	for _, impledBy := range denoting.ImplementedBys {
-		bytn, isPointer := analyzer.RetrieveTypeName(impledBy)
-		if bytn == nil || bytn == exceptTypeName {
+		nt, isPointer := analyzer.RetrieveNamedType(impledBy)
+		if nt == nil || nt.TypeName == exceptTypeName {
 			continue
 		}
-		if e := bytn.Exported(); alsoCollectNonExporteds || e {
+
+		if e := nt.TypeName.Exported(); alsoCollectNonExporteds || e {
 			implementedBys = append(implementedBys, TypeForListing{
-				TypeName:  bytn,
+				BaseType:  nt,
 				IsPointer: isPointer,
 			})
 			if e {
@@ -1369,22 +1376,26 @@ func buildTypeImplementedByList(analyzer *code.CodeAnalyzer, pkg *code.Package, 
 	return sortTypeList(implementedBys, pkg), numExporteds
 }
 
-func buildTypeImplementsList(analyzer *code.CodeAnalyzer, pkg *code.Package, denoting *code.TypeInfo, alsoCollectNonExporteds bool) ([]*TypeForListing, int32) {
+func buildTypeImplementsList(analyzer *code.CodeAnalyzer, pkg *code.Package, denoting *code.TypeInfo, alsoCollectNonExporteds bool, exceptTypeName *code.TypeName) ([]*TypeForListing, int32) {
 	//implements = make([]code.Implementation, 0, len(denoting.Implements))
 	numExporteds, implements := int32(0), make([]TypeForListing, 0, len(denoting.Implements))
-	for _, impl := range analyzer.CleanImplements(denoting) {
+	for _, impl := range analyzer.CleanImplements(denoting, false) {
 		//if impl.Interface.TypeName == nil || token.IsExported(impl.Interface.TypeName.Name()) {
 		//	td.Implements = append(td.Implements, impl)
 		//}
 		// Might miss: interface {Unwrap() error}
 		itn := impl.Interface.TypeName
-		if itn == nil {
+		if itn == nil { // always false now
+			continue
+		}
+		if itn == exceptTypeName {
 			continue
 		}
 		if e := itn.Exported(); alsoCollectNonExporteds || e {
 			_, isPointer := impl.Impler.TT.(*types.Pointer)
 			implements = append(implements, TypeForListing{
-				TypeName:  itn,
+				//TypeName:  itn,
+				BaseType:  impl.Interface,
 				IsPointer: isPointer,
 			})
 			if e {
@@ -1397,28 +1408,52 @@ func buildTypeImplementsList(analyzer *code.CodeAnalyzer, pkg *code.Package, den
 
 // Assume all types are named or pointer to named.
 func sortTypeList(typeList []TypeForListing, pkg *code.Package) []*TypeForListing {
-	result := make([]*TypeForListing, len(typeList))
+	result := make([]*TypeForListing, 0, len(typeList))
 
 	pkgPath := pkg.Path
 	for i := range typeList {
 		t := &typeList[i]
-		result[i] = t
-		t.InCurrentPkg = t.Package() == pkg
+
+		if ins := t.BaseType.Instantiated; ins == nil {
+			if t.BaseType.TypeName.Denoting != t.BaseType {
+				// ToDo: temp skip it. (Try to avoid such cases)
+				continue
+			}
+			t.NameWithTypeArgs = t.BaseType.TypeName.Name()
+		} else {
+			var b strings.Builder
+			b.Grow(64)
+			b.WriteString(t.BaseType.TypeName.Name())
+			b.WriteByte('[')
+			for i := range ins.TypeArgs {
+				if i > 0 {
+					b.WriteString(", ")
+				}
+				var typeArg = &ins.TypeArgs[i]
+				writePlainTypeArg(&b, typeArg.Expr, typeArg.Pkg, pkg, true)
+			}
+			b.WriteByte(']')
+			t.NameWithTypeArgs = b.String()
+		}
+
+		result = append(result, t)
+		t.InCurrentPkg = t.BaseType.TypeName.Package() == pkg
 		if t.InCurrentPkg {
 			t.CommonPath = pkgPath
 		} else {
-			t.CommonPath = FindPackageCommonPrefixPaths(t.Package().Path, pkgPath)
+			t.CommonPath = FindPackageCommonPrefixPaths(t.BaseType.TypeName.Package().Path, pkgPath)
 		}
 	}
 
 	sort.Slice(result, func(a, b int) bool {
-		if ea, eb := result[a].Exported(), result[b].Exported(); ea != eb {
+		if ea, eb := result[a].BaseType.TypeName.Exported(), result[b].BaseType.TypeName.Exported(); ea != eb {
 			return ea
 		}
 
 		if x, y := result[a].InCurrentPkg, result[b].InCurrentPkg; x || y {
 			if x && y {
-				return strings.ToLower(result[a].Name()) < strings.ToLower(result[b].Name())
+				//return strings.ToLower(result[a].BaseType.TypeName.Name()) < strings.ToLower(result[b].BaseType.TypeName.Name())
+				return compareNamesWithTypeArgs(result[a].NameWithTypeArgs, result[b].NameWithTypeArgs) <= 0
 			}
 			return x
 		}
@@ -1434,10 +1469,12 @@ func sortTypeList(typeList []TypeForListing, pkg *code.Package) []*TypeForListin
 				return len(commonA) > len(commonB)
 			}
 		}
-		pathA, pathB := strings.ToLower(result[a].Pkg.Path), strings.ToLower(result[b].Pkg.Path)
-		r := strings.Compare(pathA, pathB)
+		pathA, pathB := strings.ToLower(result[a].BaseType.TypeName.Pkg.Path), strings.ToLower(result[b].BaseType.TypeName.Pkg.Path)
+		//r := strings.Compare(pathA, pathB)
+		r := code.ComparePackagePaths_ThreeWay(pathA, pathB, '/')
 		if r == 0 {
-			return strings.ToLower(result[a].Name()) < strings.ToLower(result[b].Name())
+			//return strings.ToLower(result[a].BaseType.TypeName.Name()) < strings.ToLower(result[b].BaseType.TypeName.Name())
+			return compareNamesWithTypeArgs(result[a].NameWithTypeArgs, result[b].NameWithTypeArgs) <= 0
 		}
 		if pathA == "builtin" {
 			return true
@@ -1448,7 +1485,67 @@ func sortTypeList(typeList []TypeForListing, pkg *code.Package) []*TypeForListin
 		return r < 0
 	})
 
+	// Remove instantiated ones if the origin one exists.
+
+	var lastTypeName *code.TypeName = nil
+	old := result
+	result = result[:0]
+	for _, t := range old {
+		bt := t.BaseType
+		if lastTypeName != bt.TypeName {
+			if bt.TypeName.Denoting == bt {
+				lastTypeName = bt.TypeName
+			}
+			result = append(result, t)
+		} else if bt.TypeName.Denoting == bt {
+			panic("should not")
+		}
+	}
+
 	return result
+}
+
+var asciiOrder [256]byte
+
+func init() {
+	const s = "[]:;, .()<>!\"'`&#$?=@\\/^|*+-_0123456789AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz"
+	for i, b := range []byte(s) {
+		asciiOrder[b] = byte(i) + 128 - byte(len(s))
+	}
+	var n byte = 0
+	for i := 0; i < 128; i++ {
+		if asciiOrder[i] == 0 {
+			asciiOrder[i] = n
+			n++
+		}
+		asciiOrder[i + 128] = byte(i+128)
+	}
+}
+
+func compareNamesWithTypeArgs(pa, pb string) int {
+	var n = len(pa) - len(pb)
+	var one, _one = 1, -1
+	if n > 0 {
+		pa, pb = pb, pa
+		one, _one = -1, 1
+	}
+	if len(pa) <= len(pb) { // BCE hint
+		for i := 0; i < len(pa); i++ {
+			a, b := asciiOrder[pa[i]], asciiOrder[pb[i]]
+			if a < b {
+				return _one
+			} else if a > b {
+				return one
+			}
+		}
+	}
+
+	if n < 0 {
+		return -1
+	} else if n > 0 {
+		return 1
+	}
+	return 0
 }
 
 func buildValueList(values []code.ValueResource, pkg *code.Package, showUnexported bool) ([]*ValueForListing, int32) {
@@ -1522,7 +1619,9 @@ func sortValueList(valueList []ValueForListing, pkg *code.Package) []*ValueForLi
 				return len(commonA) > len(commonB)
 			}
 		}
-		r := strings.Compare(strings.ToLower(result[a].Package().Path), strings.ToLower(result[b].Package().Path))
+		//r := strings.Compare(strings.ToLower(result[a].Package().Path), strings.ToLower(result[b].Package().Path))
+		pathA, pathB := strings.ToLower(result[a].Package().Path), strings.ToLower(result[b].Package().Path)
+		r := code.ComparePackagePaths_ThreeWay(pathA, pathB, '/')
 		if r == 0 {
 			return compareWithoutPackges(result[a], result[b])
 		}
@@ -1583,7 +1682,7 @@ func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pk
 			//page.WriteString(res.TType().String())
 			specOwner := res.(code.AstValueSpecOwner)
 			if astType := specOwner.AstValueSpec().Type; astType != nil {
-				ds.WriteAstType(page, astType, specOwner.Package(), specOwner.Package(), false, nil, forTypeName)
+				ds.WriteAstType(page, astType, specOwner.Package(), specOwner.Package(), false, nil, forTypeName, nil)
 			} else {
 				// ToDo: track to get the AstType and use WriteAstType instead.
 				ds.writeValueTType(page, res.TType(), specOwner.Package(), true, forTypeName)
@@ -1646,7 +1745,7 @@ func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pk
 			writeSrouceCodeLineLink(page, res.AstPackage(), pos, v.Name(), "")
 
 			//ds.WriteAstType(page, res.AstDecl.Type, res.Pkg, pkg, false, recvParam, forTypeName)
-			ds.WriteAstType(page, res.AstFuncType(), res.AstPackage(), pkg, false, nil, forTypeName)
+			ds.WriteAstType(page, res.AstFuncType(), res.AstPackage(), pkg, false, nil, forTypeName, nil)
 			_ = recvParam // might be nil for interface method.
 		} else {
 			if v.Package() != pkg {
@@ -1662,7 +1761,7 @@ func (ds *docServer) writeValueForListing(page *htmlPage, v *ValueForListing, pk
 			}
 			//<<
 
-			ds.WriteAstType(page, res.AstFuncType(), res.AstPackage(), pkg, false, nil, forTypeName)
+			ds.WriteAstType(page, res.AstFuncType(), res.AstPackage(), pkg, false, nil, forTypeName, nil)
 		}
 	}
 }
@@ -1675,7 +1774,7 @@ const (
 
 // writeReceiverLink=false means for method implementation page.
 // exportMethod is for method implementation page only.
-func (ds *docServer) writeTypeForListing(page *htmlPage, t *TypeForListing, pkg *code.Package, implerName string, dotMStyle int) {
+func (ds *docServer) writeTypeForListing(page *htmlPage, t *TypeForListing, pkg *code.Package, implerName string, dotMStyle int, forTypeName *code.TypeName) {
 	if implerName == "" {
 	} else if dotMStyle == DotMStyle_NotShow {
 		if t.IsPointer {
@@ -1703,17 +1802,21 @@ func (ds *docServer) writeTypeForListing(page *htmlPage, t *TypeForListing, pkg 
 		}
 	}
 
-	if t.Package() != pkg {
+	tpkg := t.BaseType.TypeName.Package()
+
+	if tpkg != pkg {
 		if implerName == "" {
 			if t.IsPointer {
 				page.WriteString("*")
 			} else {
-				page.WriteString(" ")
+				if dotMStyle == DotMStyle_NotShow { // ToDo: need this if?
+					page.WriteString(" ")
+				}
 			}
 		}
 
-		if t.Pkg.Path != "builtin" {
-			page.WriteString(t.Pkg.Path)
+		if tpkg.Path != "builtin" {
+			page.WriteString(tpkg.Path)
 			page.WriteByte('.')
 		}
 
@@ -1741,23 +1844,44 @@ func (ds *docServer) writeTypeForListing(page *htmlPage, t *TypeForListing, pkg 
 	// Now, unexported types are always listed (but hidden initially).
 	//if t.Exported() {
 	// dotMStyle != DotMStyle_NotShow means in method implementation list page.
-	if t.Package() != pkg || dotMStyle != DotMStyle_NotShow {
+	if tpkg != pkg || dotMStyle != DotMStyle_NotShow {
 		fmt.Fprintf(page, `<a href="`)
 		//page.WriteString("/pkg:")
 		//page.WriteString(t.Pkg.Path)
-		buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, t.Pkg.Path), page, "")
+		buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, tpkg.Path), page, "")
 	} else {
 		fmt.Fprintf(page, `<a href="`)
 	}
 	page.WriteString("#name-")
-	page.WriteString(t.Name())
+	page.WriteString(t.BaseType.TypeName.Name())
 	fmt.Fprintf(page, `">`)
-	page.WriteString(t.Name())
+	page.WriteString(t.BaseType.TypeName.Name())
 	page.WriteString("</a>")
 	//} else {
 	//	//page.WriteString("?show=all")
 	//	writeSrouceCodeLineLink(page, t.Pkg, t.Position(), t.Name(), "")
 	//}
+
+	ds.writeTypeArgumentList(page, pkg, forTypeName, t.BaseType)
+}
+
+func (ds *docServer) writeTypeArgumentList(page *htmlPage, docPkg *code.Package, forTypeName *code.TypeName, t *code.TypeInfo) {
+	if t.Instantiated == nil {
+		if len(t.TypeName.TypeParams) > 0 {
+			page.WriteString("[...]")
+		}
+		return
+	}
+
+	page.WriteByte('[')
+	for i := range t.Instantiated.TypeArgs {
+		if i > 0 {
+			page.WriteString(", ")
+		}
+		var typeArg = &t.Instantiated.TypeArgs[i]
+		ds.WriteAstType(page, typeArg.Expr, typeArg.Pkg, docPkg, true, nil, forTypeName, nil)
+	}
+	page.WriteByte(']')
 }
 
 func (ds *docServer) WriteEmbeddingChain(page *htmlPage, embedding *code.EmbeddedField) {
@@ -1799,7 +1923,7 @@ func (ds *docServer) writeFieldForListing(page *htmlPage, pkg *code.Package, sel
 	}
 	ds.writeFieldCodeLink(page, sel.Selector)
 	page.WriteString(" <i>")
-	ds.WriteAstType2(page, sel.Field.AstField.Type, sel.Field.Pkg, pkg, true, nil, forTypeName, sel.Instantiated)
+	ds.WriteAstType(page, sel.Field.AstField.Type, sel.Field.Pkg, pkg, true, nil, forTypeName, sel.Instantiated)
 	page.WriteString("</i>")
 }
 
@@ -1858,9 +1982,9 @@ func (ds *docServer) writeMethodForListing(page *htmlPage, docPkg *code.Package,
 func (ds *docServer) writeMethodType(page *htmlPage, docPkg *code.Package, methodSel *code.Selector, forTypeName *code.TypeName) {
 	method := methodSel.Method
 	if method.AstFunc != nil {
-		ds.WriteAstType2(page, method.AstFunc.Type, method.Pkg, docPkg, false, nil, forTypeName, methodSel.Instantiated)
+		ds.WriteAstType(page, method.AstFunc.Type, method.Pkg, docPkg, false, nil, forTypeName, methodSel.Instantiated)
 	} else {
-		ds.WriteAstType2(page, method.AstField.Type, method.Pkg, docPkg, false, nil, forTypeName, methodSel.Instantiated)
+		ds.WriteAstType(page, method.AstField.Type, method.Pkg, docPkg, false, nil, forTypeName, methodSel.Instantiated)
 	}
 }
 
@@ -1999,7 +2123,7 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Pac
 
 			if showSource {
 				page.WriteByte(' ')
-				ds.WriteAstType(page, res.AstSpec.Type, res.Pkg, res.Pkg, true, nil, nil)
+				ds.WriteAstType(page, res.AstSpec.Type, res.Pkg, res.Pkg, true, nil, nil, nil)
 				//ds.writeValueTType(page, res.Denoting.TT, res.Pkg, true, nil)
 			}
 			writeKindText(page, res.Denoting.TT)
@@ -2025,7 +2149,7 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Pac
 				page.WriteByte(' ')
 				//page.WriteString(types.TypeString(res.TType(), types.RelativeTo(res.Package().PPkg.Types)))
 				if res.AstSpec.Type != nil {
-					ds.WriteAstType(page, res.AstSpec.Type, res.Pkg, res.Pkg, false, nil, nil)
+					ds.WriteAstType(page, res.AstSpec.Type, res.Pkg, res.Pkg, false, nil, nil, nil)
 				} else {
 					ds.writeValueTType(page, res.TType(), res.Pkg, true, nil)
 				}
@@ -2053,7 +2177,7 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Pac
 			page.WriteByte(' ')
 			//page.WriteString(res.TType().String())
 			if res.AstSpec.Type != nil {
-				ds.WriteAstType(page, res.AstSpec.Type, res.Pkg, res.Pkg, false, nil, nil)
+				ds.WriteAstType(page, res.AstSpec.Type, res.Pkg, res.Pkg, false, nil, nil, nil)
 			} else {
 				// ToDo: track to get the AstType and use WriteAstType instead.
 				ds.writeValueTType(page, res.TType(), res.Pkg, true, nil)
@@ -2113,7 +2237,7 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Pac
 			writeTypeParamsOfFunciton(page, res)
 			//<<
 
-			ds.WriteAstType(page, res.AstDecl.Type, res.Pkg, res.Pkg, false, nil, nil)
+			ds.WriteAstType(page, res.AstDecl.Type, res.Pkg, res.Pkg, false, nil, nil, nil)
 			//ds.writeValueTType(page, res.TType(), res.Pkg, false)
 		}
 	}
@@ -2165,6 +2289,9 @@ func (ds *docServer) writeValueTType(page *htmlPage, tt types.Type, docPkg *code
 			page.WriteString(tt.Obj().Name())
 		} else {
 			ds.writeTypeName(page, tt, docPkg, "")
+		}
+		if tt.TypeParams() != nil {
+			page.WriteString("[...]") // ToDo: try to find out the type arguments
 		}
 	case *types.Basic:
 		if forTypeName != nil && tt == forTypeName.Denoting.TT {
@@ -2349,42 +2476,42 @@ var (
 	BoldTagEnd   = []byte("</b>")
 )
 
-func (ds *docServer) WriteAstType(w *htmlPage, typeLit ast.Expr, codePkg, docPkg *code.Package, funcKeywordNeeded bool, recvParam *ast.Field, forTypeName *code.TypeName) {
-	ds.WriteAstType2(w, typeLit, codePkg, docPkg, funcKeywordNeeded, recvParam, forTypeName, nil)
-}
+//func (ds *docServer) WriteAstType(w *htmlPage, typeLit ast.Expr, codePkg, docPkg *code.Package, funcKeywordNeeded bool, recvParam *ast.Field, forTypeName *code.TypeName) {
+//	ds.WriteAstType(w, typeLit, codePkg, docPkg, funcKeywordNeeded, recvParam, forTypeName, nil)
+//}
 
 // This is a rewritten of WriteTypeEx.
 // Please make sure w.Write never makes errors.
 // "forTypeName", if it is not blank, should be declared in docPkg.
 // ToDo: "too many fields/methods/params/results" is replaced with ".....".
-func (ds *docServer) WriteAstType2(w *htmlPage, typeLit ast.Expr, codePkg, docPkg *code.Package, funcKeywordNeeded bool, recvParam *ast.Field, forTypeName *code.TypeName, ins *code.InstantiatedInfo) {
+func (ds *docServer) WriteAstType(w *htmlPage, typeLit ast.Expr, codePkg, docPkg *code.Package, funcKeywordNeeded bool, recvParam *ast.Field, forTypeName *code.TypeName, ins *code.InstantiatedInfo) {
 	switch node := typeLit.(type) {
 	default:
 		panic(fmt.Sprintf("WriteType, unknown node: %[1]T, %[1]v", node))
 	//>> 1.18
 	case *astUnaryExpr:
 		w.WriteString(node.Op.String())
-		ds.WriteAstType2(w, node.X, codePkg, docPkg, true, nil, forTypeName, ins)
+		ds.WriteAstType(w, node.X, codePkg, docPkg, true, nil, forTypeName, ins)
 	case *astBinaryExpr:
-		ds.WriteAstType2(w, node.X, codePkg, docPkg, true, nil, forTypeName, ins)
+		ds.WriteAstType(w, node.X, codePkg, docPkg, true, nil, forTypeName, ins)
 		w.Write(space)
 		w.WriteString(node.Op.String())
 		w.Write(space)
-		ds.WriteAstType2(w, node.Y, codePkg, docPkg, true, nil, forTypeName, ins)
+		ds.WriteAstType(w, node.Y, codePkg, docPkg, true, nil, forTypeName, ins)
 	case *astIndexExpr:
 		// ast.Ident or ast.SelectorExpr
-		ds.WriteAstType2(w, node.X, codePkg, docPkg, true, nil, forTypeName, nil)
+		ds.WriteAstType(w, node.X, codePkg, docPkg, true, nil, forTypeName, nil)
 		w.Write(leftSquare)
-		ds.WriteAstType2(w, node.Index, codePkg, docPkg, true, nil, forTypeName, ins)
+		ds.WriteAstType(w, node.Index, codePkg, docPkg, true, nil, forTypeName, ins)
 		w.Write(rightSquare)
 	case *astIndexListExpr:
-		ds.WriteAstType2(w, node.X, codePkg, docPkg, true, nil, forTypeName, nil)
+		ds.WriteAstType(w, node.X, codePkg, docPkg, true, nil, forTypeName, nil)
 		w.Write(leftSquare)
 		for i := range node.Indices {
 			if i > 0 {
 				w.Write(comma)
 			}
-			ds.WriteAstType2(w, node.Indices[i], codePkg, docPkg, true, nil, forTypeName, ins)
+			ds.WriteAstType(w, node.Indices[i], codePkg, docPkg, true, nil, forTypeName, ins)
 		}
 		w.Write(rightSquare)
 	//<<
@@ -2405,7 +2532,8 @@ func (ds *docServer) WriteAstType2(w *htmlPage, typeLit ast.Expr, codePkg, docPk
 				if i >= len(ins.TypeArgs) {
 					panic(fmt.Sprintf("should not. %d : %d", i, len(ins.TypeArgs)))
 				}
-				ds.WriteAstType2(w, ins.TypeArgs[i].Expr, codePkg, docPkg, true, nil, forTypeName, ins)
+				//ds.WriteAstType(w, ins.TypeArgs[i].Expr, codePkg, docPkg, true, nil, forTypeName, ins)
+				ds.WriteAstType(w, ins.TypeArgs[i].Expr, ins.TypeArgs[i].Pkg, docPkg, true, nil, forTypeName, nil)
 				return
 			}
 		}
@@ -2525,17 +2653,17 @@ func (ds *docServer) WriteAstType2(w *htmlPage, typeLit ast.Expr, codePkg, docPk
 		}
 	case *ast.ParenExpr:
 		w.Write(leftParen)
-		ds.WriteAstType2(w, node.X, codePkg, docPkg, true, nil, forTypeName, ins)
+		ds.WriteAstType(w, node.X, codePkg, docPkg, true, nil, forTypeName, ins)
 		w.Write(rightParen)
 	case *ast.StarExpr:
 		w.Write(star)
-		ds.WriteAstType2(w, node.X, codePkg, docPkg, true, nil, forTypeName, ins)
+		ds.WriteAstType(w, node.X, codePkg, docPkg, true, nil, forTypeName, ins)
 	case *ast.Ellipsis: // possible? (yes, variadic parameters)
 		//panic("[...] should be impossible") // ToDo: go/types package has a case.
 		//w.Write(leftSquare)
 		w.Write(ellipsis)
 		//w.Write(rightSquare)
-		ds.WriteAstType2(w, node.Elt, codePkg, docPkg, true, nil, forTypeName, ins)
+		ds.WriteAstType(w, node.Elt, codePkg, docPkg, true, nil, forTypeName, ins)
 	case *ast.ArrayType:
 		w.Write(leftSquare)
 		if node.Len != nil {
@@ -2546,13 +2674,13 @@ func (ds *docServer) WriteAstType2(w *htmlPage, typeLit ast.Expr, codePkg, docPk
 			w.WriteString(tv.Value.String())
 		}
 		w.Write(rightSquare)
-		ds.WriteAstType2(w, node.Elt, codePkg, docPkg, true, nil, forTypeName, ins)
+		ds.WriteAstType(w, node.Elt, codePkg, docPkg, true, nil, forTypeName, ins)
 	case *ast.MapType:
 		w.Write(mapKeyword)
 		w.Write(leftSquare)
-		ds.WriteAstType2(w, node.Key, codePkg, docPkg, true, nil, forTypeName, ins)
+		ds.WriteAstType(w, node.Key, codePkg, docPkg, true, nil, forTypeName, ins)
 		w.Write(rightSquare)
-		ds.WriteAstType2(w, node.Value, codePkg, docPkg, true, nil, forTypeName, ins)
+		ds.WriteAstType(w, node.Value, codePkg, docPkg, true, nil, forTypeName, ins)
 	case *ast.ChanType:
 		if node.Dir == ast.RECV {
 			w.Write(chanDir)
@@ -2564,7 +2692,7 @@ func (ds *docServer) WriteAstType2(w *htmlPage, typeLit ast.Expr, codePkg, docPk
 			w.Write(chanKeyword)
 		}
 		w.Write(space)
-		ds.WriteAstType2(w, node.Value, codePkg, docPkg, true, nil, forTypeName, ins)
+		ds.WriteAstType(w, node.Value, codePkg, docPkg, true, nil, forTypeName, ins)
 	case *ast.FuncType:
 		if funcKeywordNeeded {
 			w.Write(funcKeyword)
@@ -2628,7 +2756,217 @@ func (ds *docServer) WriteAstFieldList(w *htmlPage, fieldList *ast.FieldList, is
 				w.Write(space)
 			} // else for interface methods
 		}
-		ds.WriteAstType2(w, fld.Type, codePkg, docPkg, funcKeywordNeeded, nil, forTypeName, ins)
+		ds.WriteAstType(w, fld.Type, codePkg, docPkg, funcKeywordNeeded, nil, forTypeName, ins)
+		if i+1 < len(fields) {
+			w.Write(sep)
+		}
+	}
+}
+
+func writePlainTypeArg(w writer, typeLit ast.Expr, codePkg, docPkg *code.Package, funcKeywordNeeded bool) {
+	switch node := typeLit.(type) {
+	default:
+		panic(fmt.Sprintf("WriteType, unknown node: %[1]T, %[1]v", node))
+	//>> 1.18
+	case *astUnaryExpr:
+		w.WriteString(node.Op.String())
+		writePlainTypeArg(w, node.X, codePkg, docPkg, true)
+	case *astBinaryExpr:
+		writePlainTypeArg(w, node.X, codePkg, docPkg, true)
+		w.Write(space)
+		w.WriteString(node.Op.String())
+		w.Write(space)
+		writePlainTypeArg(w, node.Y, codePkg, docPkg, true)
+	case *astIndexExpr:
+		// ast.Ident or ast.SelectorExpr
+		writePlainTypeArg(w, node.X, codePkg, docPkg, true)
+		w.Write(leftSquare)
+		writePlainTypeArg(w, node.Index, codePkg, docPkg, true)
+		w.Write(rightSquare)
+	case *astIndexListExpr:
+		writePlainTypeArg(w, node.X, codePkg, docPkg, true)
+		w.Write(leftSquare)
+		for i := range node.Indices {
+			if i > 0 {
+				w.Write(comma)
+			}
+			writePlainTypeArg(w, node.Indices[i], codePkg, docPkg, true)
+		}
+		w.Write(rightSquare)
+	//<<
+	case *ast.Ident:
+		// obj := codePkg.PPkg.TypesInfo.ObjectOf(node)
+		// The above one might return a *types.Var object for embedding field.
+		// So us the following one instead, to make sure it is a *types.TypeName.
+
+		//>> ToDo: Go 1.18, obj might be a type parameter now!
+		//         [update]: maybe no need to make specail handle here.
+		obj := codePkg.PPkg.TypesInfo.ObjectOf(node)
+		if obj != nil { // !!! The identifers in builtin package have not objects!
+			if _, ok := obj.Type().(*typesTypeParam); ok {
+				w.WriteString(node.Name)
+				return
+			}
+		}
+		//<<
+
+		obj = codePkg.PPkg.Types.Scope().Lookup(node.Name)
+		if obj == nil {
+			obj = types.Universe.Lookup(node.Name)
+		}
+		if obj == nil {
+			//log.Printf("%s, %s: %s", docPkg.Path(), codePkg.Path(), node.Name)
+			//panic("should not")
+
+			// It really should panic here, but to make it tolerable,
+
+			w.WriteString(node.Name)
+			return
+		}
+
+		_, ok := obj.(*types.TypeName)
+		if !ok {
+			panic(fmt.Sprintf("object should be a TypeName, but %T, %v.\nObject: %T", obj, obj, codePkg.PPkg.TypesInfo.ObjectOf(node)))
+		}
+
+		objpkg := obj.Pkg()
+		if objpkg != nil && objpkg != docPkg.PPkg.Types {
+			w.WriteString(objpkg.Name())
+			w.Write(period)
+		}
+		w.WriteString(node.Name)
+	case *ast.SelectorExpr:
+		pkgId, ok := node.X.(*ast.Ident)
+		if !ok {
+			panic("should not")
+		}
+		importobj := codePkg.PPkg.TypesInfo.ObjectOf(pkgId)
+		if importobj == nil {
+			panic("should not")
+		}
+		pkgobj := importobj.(*types.PkgName)
+		if pkgobj == nil {
+			panic("should not")
+		}
+		pkgpkg := pkgobj.Imported()
+		if pkgpkg == nil {
+			panic("should not")
+		}
+		if pkgpkg != docPkg.PPkg.Types {
+			w.WriteString(pkgId.Name)
+			w.Write(period)
+		}
+
+		//log.Println(pkgId.Name, node.Sel.Name, pkgpkg.Path(), codePkg.Path())
+		obj := pkgpkg.Scope().Lookup(node.Sel.Name)
+		if obj.Pkg() != pkgpkg {
+			//panic("should not")
+
+			// It really should panic here, but to make it tolerable,
+
+			w.WriteString(node.Sel.Name)
+
+			return
+		}
+		_, ok = obj.(*types.TypeName)
+		if !ok {
+			panic(fmt.Sprintf("%v is a %T, not a type name", obj, obj))
+		}
+		w.WriteString(node.Sel.Name)
+	case *ast.ParenExpr:
+		w.Write(leftParen)
+		writePlainTypeArg(w, node.X, codePkg, docPkg, true)
+		w.Write(rightParen)
+	case *ast.StarExpr:
+		w.Write(star)
+		writePlainTypeArg(w, node.X, codePkg, docPkg, true)
+	case *ast.Ellipsis: // possible? (yes, variadic parameters)
+		//panic("[...] should be impossible") // ToDo: go/types package has a case.
+		//w.Write(leftSquare)
+		w.Write(ellipsis)
+		//w.Write(rightSquare)
+		writePlainTypeArg(w, node.Elt, codePkg, docPkg, true)
+	case *ast.ArrayType:
+		w.Write(leftSquare)
+		if node.Len != nil {
+			tv, ok := codePkg.PPkg.TypesInfo.Types[node.Len]
+			if !ok {
+				panic(fmt.Sprint("no values found for ", node.Len))
+			}
+			w.WriteString(tv.Value.String())
+		}
+		w.Write(rightSquare)
+		writePlainTypeArg(w, node.Elt, codePkg, docPkg, true)
+	case *ast.MapType:
+		w.Write(mapKeyword)
+		w.Write(leftSquare)
+		writePlainTypeArg(w, node.Key, codePkg, docPkg, true)
+		w.Write(rightSquare)
+		writePlainTypeArg(w, node.Value, codePkg, docPkg, true)
+	case *ast.ChanType:
+		if node.Dir == ast.RECV {
+			w.Write(chanDir)
+			w.Write(chanKeyword)
+		} else if node.Dir == ast.SEND {
+			w.Write(chanKeyword)
+			w.Write(chanDir)
+		} else {
+			w.Write(chanKeyword)
+		}
+		w.Write(space)
+		writePlainTypeArg(w, node.Value, codePkg, docPkg, true)
+	case *ast.FuncType:
+		if funcKeywordNeeded {
+			w.Write(funcKeyword)
+			//w.Write(space)
+		}
+		w.Write(leftParen)
+		writePlainAstFieldList(w, node.Params, true, comma, codePkg, docPkg, true)
+		w.Write(rightParen)
+		if node.Results != nil && len(node.Results.List) > 0 {
+			w.Write(space)
+			if len(node.Results.List) == 1 && len(node.Results.List[0].Names) == 0 {
+				writePlainAstFieldList(w, node.Results, true, comma, codePkg, docPkg, true)
+			} else {
+				w.Write(leftParen)
+				writePlainAstFieldList(w, node.Results, true, comma, codePkg, docPkg, true)
+				w.Write(rightParen)
+			}
+		}
+	case *ast.StructType:
+		w.Write(structKeyword)
+		//w.Write(space)
+		w.Write(leftBrace)
+		writePlainAstFieldList(w, node.Fields, false, semicoloon, codePkg, docPkg, true)
+		w.Write(rightBrace)
+	case *ast.InterfaceType:
+		w.Write(interfaceKeyword)
+		//w.Write(space)
+		w.Write(leftBrace)
+		writePlainAstFieldList(w, node.Methods, false, semicoloon, codePkg, docPkg, false)
+		w.Write(rightBrace)
+	}
+}
+
+func writePlainAstFieldList(w writer, fieldList *ast.FieldList, isParamOrResultList bool, sep []byte, codePkg, docPkg *code.Package, funcKeywordNeeded bool) {
+	if fieldList == nil {
+		return
+	}
+
+	fields := fieldList.List
+	for i, fld := range fields {
+		if len(fld.Names) > 0 {
+			for k, n := range fld.Names {
+				w.Write([]byte(n.Name))
+				if k+1 < len(fld.Names) {
+					w.Write(comma)
+				}
+			}
+			if funcKeywordNeeded {
+				w.Write(space)
+			} // else for interface methods
+		}
+		writePlainTypeArg(w, fld.Type, codePkg, docPkg, funcKeywordNeeded)
 		if i+1 < len(fields) {
 			w.Write(sep)
 		}
@@ -2874,6 +3212,9 @@ func (ds *docServer) renderDocComment(page *htmlPage, currentPkg *code.Package, 
 
 				res := currentPkg.SearchResourceByName(tokens[0])
 				if res == nil {
+					return ""
+				}
+				if f, ok := res.(*code.Function); ok && f.IsMethod() {
 					return ""
 				}
 

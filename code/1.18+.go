@@ -72,8 +72,6 @@ func (d *CodeAnalyzer) comfirmDirectSelectorsForInstantiatedType(typeInfo *TypeI
 		methodMap[m.Name()] = d.RegisterType(m.Type())
 	}
 
-	var debug = ntt.Obj().Name() == "I"
-
 	origin := typeInfo.TypeName.Denoting
 	typeInfo.DirectSelectors = make([]*Selector, len(origin.DirectSelectors))
 	for i, sel := range origin.DirectSelectors {
@@ -93,9 +91,11 @@ func (d *CodeAnalyzer) comfirmDirectSelectorsForInstantiatedType(typeInfo *TypeI
 
 	// For the underlying type of the named type.
 	underlying := typeInfo.Underlying
-	if underlying.counter < currentCounter {
+	defer func() {
+		//if underlying.counter < currentCounter {
 		underlying.counter = currentCounter
-	}
+		//}
+	}()
 
 	//log.Println(2, len(underlying.DirectSelectors), typeInfo.Underlying)
 
@@ -105,21 +105,16 @@ func (d *CodeAnalyzer) comfirmDirectSelectorsForInstantiatedType(typeInfo *TypeI
 		//for _, s := range underlying.DirectSelectors {
 		//	log.Println(">>> (defer)", s.String(), s.Type())
 		//}
-
-		if debug {
-			for _, sel := range underlying.DirectSelectors {
-				log.Println("====", sel.Instantiated, sel.RealType)
-				log.Println("====", sel.Instantiated, sel.Type())
-				log.Println("====", sel.Instantiated, sel.Method.Type)
-			}
-		}
 	}()
 
 	//if underlying.DirectSelectors != nil {
-	//	// The DirectSelectors of an underlying type might have been collected,
+	//	// For many reasons, the DirectSelectors of an underlying type might have been collected,
 	//	// in which case, Instantiated is either nil or doesn't depend on *types.TypeParam,
 	//	// so that DirectSelectors has been collected for another instantiated type.
 	//	// The two Instantiated types share the same underlying type.
+	//    //
+	//    // Possible reasons: the underlying types of some different instantiated types
+	//    // might be identical. They even may be identical with non-generic types.
 	//	//
 	//	// ToDo: so here is an imperfection in rendering.
 	//	return
@@ -146,8 +141,6 @@ func (d *CodeAnalyzer) comfirmDirectSelectorsForInstantiatedType(typeInfo *TypeI
 	if source.Type == underlying { // true if the type doesn't use any TypeParam.
 		return
 	}
-
-	//log.Println(3, source.Type.TT)
 
 	//switch tt := source.Type.TT.(type) {
 	switch tt := underlying.TT.(type) {
@@ -179,19 +172,28 @@ func (d *CodeAnalyzer) comfirmDirectSelectorsForInstantiatedType(typeInfo *TypeI
 				panic("should not")
 			}
 
-			log.Println("$$$", insSel.Instantiated)
-			log.Println("   ", insSel.RealType)
-
 			if sel.Field.Mode == EmbedMode_None {
 				// To save computation.
 				continue
 			}
 
-			// EmbedMode_Indirect
+			// EmbedMode_Indirect or EmbedMode_Direct
 
-			// EmbedMode_Direct
+			realType := insSel.RealType
 
-			// d.registerInstantiatedType(t *TypeInfo, typeArgs []TypeExpr)
+			//if sel.Field.Mode == EmbedMode_Indirect {
+			// ...
+			//}
+
+			// It is not a good idea to use the EmbedMode_Indirect enum
+			// to make decisisons here, for an embedding field might be
+			// an alias to a pointer type.
+
+			if ptt, ok := realType.TT.(*types.Pointer); ok {
+				realType = d.RegisterType(ptt.Elem())
+			}
+
+			d.registerInstantiatedType(realType, instantiated.TypeArgs)
 		}
 
 	case *types.Interface:
@@ -200,19 +202,26 @@ func (d *CodeAnalyzer) comfirmDirectSelectorsForInstantiatedType(typeInfo *TypeI
 
 		var collectTypes func(itt *types.Interface)
 		collectTypes = func(itt *types.Interface) {
-			for i := itt.NumExplicitMethods() - 1; i >= 0; i-- {
-				m := itt.ExplicitMethod(i)
+			//log.Println("4. =====", itt.NumExplicitMethods(), itt.NumEmbeddeds())
+
+			for i := itt.NumMethods() - 1; i >= 0; i-- {
+				m := itt.Method(i)
 				methodMap[m.Name()] = d.RegisterType(m.Type())
-				//log.Println(">>>>>> method", m.Name())
+
+				//log.Println("41. =====", m)
 			}
 
 			for i := itt.NumEmbeddeds() - 1; i >= 0; i-- {
 				et := itt.EmbeddedType(i)
+
+				//log.Println("42. =====", et)
+
 				switch tt2 := et.(type) {
 				case *types.Named:
-					fieldMap[ntt.Obj().Name()] = d.RegisterType(et)
-					//log.Println(">>>>>> field", ntt.Obj().Name())
+					//log.Println("421. =====", tt2.Obj().Name())
+					fieldMap[tt2.Obj().Name()] = d.RegisterType(et)
 				case *types.Interface:
+					//log.Println("422. =====", tt2)
 					t2 := d.RegisterType(tt2)
 					if t2.counter < currentCounter {
 						t2.counter = currentCounter
@@ -220,6 +229,8 @@ func (d *CodeAnalyzer) comfirmDirectSelectorsForInstantiatedType(typeInfo *TypeI
 					}
 				default: // Union is ignored now.
 					// ToDo: maybe need to consider later.
+
+					//log.Println("423. =====", tt2)
 				}
 			}
 		}
@@ -257,6 +268,7 @@ func (d *CodeAnalyzer) comfirmDirectSelectorsForInstantiatedType(typeInfo *TypeI
 		// That is why two maps are used.
 		clearMethodMap()
 		clearFieldMap()
+
 		collectTypes(tt)
 		//collectTypesFromUnnamedInterfaces(source.Expr.(*ast.InterfaceType))
 
@@ -274,6 +286,7 @@ func (d *CodeAnalyzer) comfirmDirectSelectorsForInstantiatedType(typeInfo *TypeI
 				//log.Printf("4 a: %#v", sel.Method.Type.TT)
 
 				if realType == nil {
+					log.Println(sel.Method.Name)
 					panic("should not")
 				}
 			} else if sel.Field == nil {
@@ -285,6 +298,7 @@ func (d *CodeAnalyzer) comfirmDirectSelectorsForInstantiatedType(typeInfo *TypeI
 				//log.Printf("4 b: %#v", sel.Field.Type.TT)
 
 				if realType == nil {
+					log.Println(sel.Field.Name)//, fieldMap)
 					panic("should not")
 				}
 			}

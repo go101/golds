@@ -121,9 +121,9 @@ func (ds *docServer) buildImplementationPage(w http.ResponseWriter, result *Meth
 		for _, imp := range method.Implementations {
 			page.WriteString("\n\t\t")
 			if result.IsInterface {
-				ds.writeTypeForListing(page, imp.Receiver, result.Package, "", dotMStyle)
+				ds.writeTypeForListing(page, imp.Receiver, result.Package, "", dotMStyle, nil)
 			} else {
-				ds.writeTypeForListing(page, imp.Receiver, result.Package, result.TypeName.Name(), dotMStyle)
+				ds.writeTypeForListing(page, imp.Receiver, result.Package, result.TypeName.Name(), dotMStyle, nil)
 			}
 			page.WriteByte('.')
 			ds.WriteEmbeddingChain(page, imp.Method.EmbeddingChain)
@@ -223,10 +223,11 @@ func (ds *docServer) buildImplementationData(analyzer *code.CodeAnalyzer, pkgPat
 			impBys, _ := buildTypeImplementedByList(analyzer, pkg, typeInfo, true, typeNameRes)
 			selNameIsUnexported := !token.IsExported(sel.Name())
 			for _, impBy := range impBys {
-				if !collectUnexporteds && impBy.TypeName.Package().Path != "builtin" && !impBy.TypeName.Exported() {
+				if !collectUnexporteds && impBy.BaseType.TypeName.Package().Path != "builtin" && !impBy.BaseType.TypeName.Exported() {
 					continue
 				}
-				impByDenoting := impBy.TypeName.Denoting
+				//impByDenoting := impBy.TypeName.Denoting
+				impByDenoting := impBy.BaseType
 				for _, m := range impByDenoting.AllMethods {
 					if !collectUnexporteds && !token.IsExported(m.Name()) {
 						continue
@@ -263,13 +264,14 @@ func (ds *docServer) buildImplementationData(analyzer *code.CodeAnalyzer, pkgPat
 				continue
 			}
 			impls := make([]MethodInfo, 0, len(typeInfo.Implements))
-			imps, _ := buildTypeImplementsList(analyzer, pkg, typeInfo, true)
+			imps, _ := buildTypeImplementsList(analyzer, pkg, typeInfo, true, typeInfo.TypeName)
 			selNameIsUnexported := !token.IsExported(sel.Name())
 			for _, imp := range imps {
-				if !collectUnexporteds && imp.TypeName.Package().Path != "builtin" && !imp.TypeName.Exported() {
+				if !collectUnexporteds && imp.BaseType.TypeName.Package().Path != "builtin" && !imp.BaseType.TypeName.Exported() {
 					continue
 				}
-				impDenoting := imp.TypeName.Denoting
+				//impDenoting := imp.TypeName.Denoting
+				impDenoting := imp.BaseType
 				for _, m := range impDenoting.AllMethods {
 					if !collectUnexporteds && !token.IsExported(m.Name()) {
 						continue

@@ -738,12 +738,11 @@ type TypeName struct {
 type TypeExpr struct {
 	Expr ast.Expr
 	Type *TypeInfo
+	Pkg  *Package
 }
 
 type InstantiatedInfo struct {
 	TypeArgs []TypeExpr
-
-	//FinalTypeArgs []TypeExpr
 }
 
 //func (tn *TypeName) IndexString() string {
@@ -982,7 +981,7 @@ func (t *TypeInfo) SelectorByName(name string) *Selector {
 	return t.AllSelectors[name]
 }
 
-// Kind rerurns the kinds (as reflect.Kind) for a go/types.Type.
+// Kind returns the kinds (as reflect.Kind) for a go/types.Type.
 func Kind(tt types.Type) reflect.Kind {
 	switch tt := tt.Underlying().(type) {
 	default:

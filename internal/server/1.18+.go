@@ -91,8 +91,9 @@ func (ds *docServer) _writeTypeParameterList(page *htmlPage, pkg *code.Package, 
 		for _, n := range fld.Names {
 			page.WriteString("\n\t\t\t")
 			page.WriteString(n.Name)
-			page.WriteString(page.Translation().Text_Colon(false))
-			ds.WriteAstType(page, fld.Type, pkg, pkg, true, nil, nil)
+			//page.WriteString(page.Translation().Text_Colon(false))
+			page.WriteString(": ")
+			ds.WriteAstType(page, fld.Type, pkg, pkg, true, nil, nil, nil)
 		}
 	}
 }
