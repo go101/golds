@@ -14,7 +14,7 @@ import (
 
 const RoughBuildTime = "2022-12-23"
 
-const Version = "v0.5.4"
+const Version = "v0.5.5"
 
 func releaseGolds() {
 	if _, err := util.RunShell(time.Minute*3, "", nil, "go", "test", "./..."); err != nil {

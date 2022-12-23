@@ -3214,9 +3214,6 @@ func (ds *docServer) renderDocComment(page *htmlPage, currentPkg *code.Package, 
 				if res == nil {
 					return ""
 				}
-				if f, ok := res.(*code.Function); ok && f.IsMethod() {
-					return ""
-				}
 
 				return buildPkgResLink(currentPkg, res)
 			}

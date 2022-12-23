@@ -476,6 +476,9 @@ func (pkg *Package) BuildResourceLookupTable() {
 	}
 
 	for _, res := range pkg.AllFunctions {
+		if res.IsMethod() {
+			continue
+		}
 		pkg.AllResources[res.Name()] = res
 	}
 
