@@ -73,20 +73,19 @@ func (d *CodeAnalyzer) comfirmDirectSelectorsForInstantiatedType(typeInfo *TypeI
 	}
 
 	origin := typeInfo.TypeName.Denoting
-	typeInfo.DirectSelectors = make([]*Selector, len(origin.DirectSelectors))
-	for i, sel := range origin.DirectSelectors {
-		if sel.Method == nil {
-			panic("should not")
-		}
+	if typeInfo != origin { // looks possible
+		directSelectors := make([]*Selector, len(origin.DirectSelectors))
+		for i, sel := range origin.DirectSelectors {
+			insSel := *sel
+			directSelectors[i] = &insSel
 
-		insSel := *sel
-		typeInfo.DirectSelectors[i] = &insSel
-
-		insSel.Instantiated = typeInfo.Instantiated
-		insSel.RealType = methodMap[sel.Method.Name]
-		if insSel.RealType == nil {
-			panic("should not")
+			insSel.Instantiated = typeInfo.Instantiated
+			insSel.RealType = methodMap[sel.Method.Name]
+			if insSel.RealType == nil {
+				panic("should not")
+			}
 		}
+		typeInfo.DirectSelectors = directSelectors
 	}
 
 	// For the underlying type of the named type.
@@ -157,14 +156,14 @@ func (d *CodeAnalyzer) comfirmDirectSelectorsForInstantiatedType(typeInfo *TypeI
 		}
 
 		instantiated := &InstantiatedInfo{TypeArgs: typeArgs}
-		underlying.DirectSelectors = make([]*Selector, len(source.Type.DirectSelectors))
+		directSelectors := make([]*Selector, len(source.Type.DirectSelectors))
 		for i, sel := range source.Type.DirectSelectors {
 			if sel.Field == nil {
 				panic("should not")
 			}
 
 			insSel := *sel
-			underlying.DirectSelectors[i] = &insSel
+			directSelectors[i] = &insSel
 
 			insSel.Instantiated = instantiated
 			insSel.RealType = fieldMap[sel.Field.Name]
@@ -195,6 +194,7 @@ func (d *CodeAnalyzer) comfirmDirectSelectorsForInstantiatedType(typeInfo *TypeI
 
 			d.registerInstantiatedType(realType, instantiated.TypeArgs)
 		}
+		underlying.DirectSelectors = directSelectors
 
 	case *types.Interface:
 		// ToDo: For the fact that, in "interface { interface { ... } }",
@@ -273,8 +273,9 @@ func (d *CodeAnalyzer) comfirmDirectSelectorsForInstantiatedType(typeInfo *TypeI
 		//collectTypesFromUnnamedInterfaces(source.Expr.(*ast.InterfaceType))
 
 		instantiated := &InstantiatedInfo{TypeArgs: typeArgs}
-		if underlying.DirectSelectors == nil {
-			underlying.DirectSelectors = make([]*Selector, 0, len(source.Type.DirectSelectors))
+		directSelectors := underlying.DirectSelectors
+		if directSelectors == nil {
+			directSelectors = make([]*Selector, 0, len(source.Type.DirectSelectors))
 		}
 
 		for _, sel := range source.Type.DirectSelectors {
@@ -304,7 +305,7 @@ func (d *CodeAnalyzer) comfirmDirectSelectorsForInstantiatedType(typeInfo *TypeI
 			}
 
 			insSel := *sel
-			underlying.DirectSelectors = append(underlying.DirectSelectors, &insSel)
+			directSelectors = append(directSelectors, &insSel)
 
 			insSel.Instantiated = instantiated
 			insSel.RealType = realType
@@ -313,6 +314,8 @@ func (d *CodeAnalyzer) comfirmDirectSelectorsForInstantiatedType(typeInfo *TypeI
 				d.registerInstantiatedType(realType, instantiated.TypeArgs)
 			}
 		}
+
+		underlying.DirectSelectors = directSelectors
 	}
 }
 

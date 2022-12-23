@@ -239,10 +239,12 @@ func (d *CodeAnalyzer) findImplementations() { // (resultMethodCache *typeutil.M
 
 			sig := d.BuildMethodSignatureFromFunctionSignature(funcSig, sel.Method.Name, pkgImportPath)
 
-			if d.lastTypeIndex > x {
-				log.Println("       > ", uiInfo.t.TT)
-				log.Println("             >> ", sel)
-			}
+			// ToDo: if looks for go-ethereum project, here are some outputs. Check!?
+			//if d.lastTypeIndex > x {
+			//	log.Println("       > ", uiInfo.t.TT)
+			//	log.Println("             >> ", sel)
+			//}
+			_ = x
 
 			methodIndex, ok := allInterfaceMethods[sig]
 			if ok {
