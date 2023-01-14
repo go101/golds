@@ -336,7 +336,7 @@ func (d *CodeAnalyzer) registerInstantiatedType(t *TypeInfo, typeArgs []TypeExpr
 	if !ok {
 		panic("should not")
 	}
-	ot := d.RegisterType(ntt.Origin())
+	ot := d.RegisterType(originType(ntt))
 	//t.Origin = ot
 	if ot.TypeName == nil {
 		panic("ot.TypeName == nil")

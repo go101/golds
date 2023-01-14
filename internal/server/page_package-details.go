@@ -2290,7 +2290,7 @@ func (ds *docServer) writeValueTType(page *htmlPage, tt types.Type, docPkg *code
 		} else {
 			ds.writeTypeName(page, tt, docPkg, "")
 		}
-		if tt.TypeParams() != nil {
+		if typesNamedTypeParams(tt) != nil {
 			page.WriteString("[...]") // ToDo: try to find out the type arguments
 		}
 	case *types.Basic:

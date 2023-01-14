@@ -17,7 +17,12 @@ type (
 	astBinaryExpr    = ast.BinaryExpr
 
 	typesTypeParam = types.TypeParam
+	typesTypeParamList = types.TypeParamList
 )
+
+func typesNamedTypeParams(named *types.Named) *typesTypeParamList {
+	return named.TypeParams()
+}
 
 func _writeTypeParams(page *htmlPage, fields []*ast.Field) {
 	page.WriteByte('[')

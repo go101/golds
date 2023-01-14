@@ -4,7 +4,7 @@
 It tries to extract as much information as possible from Go code to help gophers understand, study and use Go packages.
 
 * [Demo of the generated docs for standard packages](https://docs.go101.org/index.html)
-  (generated with `golds -gen -nouses -only-list-exporteds std`).
+  (generated with `golds -gen -nouses -only-list-exporteds -render-doclinks std`).
 * Please follow [@Go100and1](https://twitter.com/go100and1) to get the latest news of **Golds**
   (and Go details/facts/tips/etc.).
 
@@ -41,7 +41,7 @@ please visit [this page on Go101.org](https://go101.org/apps-and-libs/golds.html
   * Click the name of a method specified in an interface type declaration to show the methods implementing it (only for package-level named interface types now).
     In the method-implementation page, click each the name of an interface method to show the uses of the interface method.
 * Shows code statistics ([demo](https://docs.go101.org/std/statistics.html)).
-  * Click some of the SVG pictures to show corresponding toppest list.
+  * Click some of the SVG pictures to show corresponding toppest lists.
 * __Supports generating static HTML docs pages, to avoid rebuilding the docs later.__
   This is good for package developers to host docs of their own packages.
   (The docs of standard packages are generated within about 10 seconds, and the docs of the kubernetes project packages are generated within about 100 seconds.)

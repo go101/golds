@@ -44,6 +44,10 @@
 
 * If a type alias is alias to unnamed type, then list methods and fields.
 
+* need to investigate: the https://github.com/tdewolff/canvas project consumes so much memory (>8G)
+  in the parse phase. (happens in the golang.org/x/tools/go/packages)
+  * finding: a specfic example consumes less (about 4G).
+
 * Show go version at footer.
 
 * bug: https://github.com/go101/golds/issues/33 (search bug#33)

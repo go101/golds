@@ -1621,6 +1621,9 @@ func (d *CodeAnalyzer) sortPackagesByDepHeight() {
 		calculatePackageDepHeight(pkg)
 	}
 
+	if d.builtinPkg == nil {
+		panic("should not")
+	}
 	var old = d.builtinPkg.DepHeight
 	d.builtinPkg.DepHeight = 0
 
@@ -2000,7 +2003,7 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 						//>> 1.18
 						tn.Source.Expr = typeSpec.Type
 						tn.Source.Type = srcTypeInfo
-						tn.TypeParams = d.astFieldListToTypeArgs(pkg, typeSpec.TypeParams)
+						tn.TypeParams = d.astFieldListToTypeArgs(pkg, astTypeSpecTypeParams(typeSpec))
 						//tn.typeArgs = append(tn.typeArgs, tn.TypeParams...)
 						//<<
 
@@ -2456,6 +2459,10 @@ func (d *CodeAnalyzer) collectSomeRuntimeFunctionPositions() {
 //}
 
 func (d *CodeAnalyzer) astFieldListToTypeArgs(pkg *Package, fieldList *ast.FieldList) []TypeExpr {
+	if fieldList == nil {
+		return nil
+	}
+
 	var n = fieldList.NumFields()
 	if n == 0 {
 		return nil
@@ -2473,7 +2480,7 @@ func (d *CodeAnalyzer) astFieldListToTypeArgs(pkg *Package, fieldList *ast.Field
 	return args
 }
 
-func (d *CodeAnalyzer) astIndexExprToTypeArgs(pkg *Package, index *ast.IndexExpr) []TypeExpr {
+func (d *CodeAnalyzer) astIndexExprToTypeArgs(pkg *Package, index *astIndexExpr) []TypeExpr {
 	return []TypeExpr{
 		{
 			Expr: index.Index,
@@ -2483,7 +2490,7 @@ func (d *CodeAnalyzer) astIndexExprToTypeArgs(pkg *Package, index *ast.IndexExpr
 	}
 }
 
-func (d *CodeAnalyzer) astIndexListExprToTypeArgs(pkg *Package, list *ast.IndexListExpr) []TypeExpr {
+func (d *CodeAnalyzer) astIndexListExprToTypeArgs(pkg *Package, list *astIndexListExpr) []TypeExpr {
 	var args = make([]TypeExpr, 0, len(list.Indices))
 	for _, index := range list.Indices {
 		args = append(args, TypeExpr{
@@ -2496,6 +2503,9 @@ func (d *CodeAnalyzer) astIndexListExprToTypeArgs(pkg *Package, list *ast.IndexL
 }
 
 func (d *CodeAnalyzer) confirmInstantiatedInfoForTypeConstraints(typeParams *ast.FieldList, pkg *Package) {
+	if typeParams == nil {
+		return
+	}
 	if typeParams.NumFields() == 0 {
 		return
 	}
@@ -2575,13 +2585,13 @@ func (d *CodeAnalyzer) analyzePackage_CollectDirectSelectors(pkg *Package) {
 	// Only collect direct fields and methods for unnamed (struct and interface) types
 	// in this step.
 	for _, tn := range pkg.PackageAnalyzeResult.AllTypeNames {
-		d.confirmInstantiatedInfoForTypeConstraints(tn.AstSpec.TypeParams, pkg)
+		d.confirmInstantiatedInfoForTypeConstraints(astTypeSpecTypeParams(tn.AstSpec), pkg)
 		d.collectDirectSelectorsForSourceType(tn.Source, pkg, isBuiltinPkg)
 	}
 
 	//  We must do the collection work after all types are collected.
 	for _, f := range pkg.PackageAnalyzeResult.AllFunctions {
-		d.confirmInstantiatedInfoForTypeConstraints(f.AstDecl.Type.TypeParams, pkg)
+		d.confirmInstantiatedInfoForTypeConstraints(astFuncTypeTypeParams(f.AstDecl.Type), pkg)
 		isMethod := d.tryToRegisterExplicitlyDeclaredMethod(f)
 		if isMethod {
 			if f.AstDecl.Recv == nil {

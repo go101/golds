@@ -27,6 +27,14 @@ func originType(nt *types.Named) *types.Named {
 	return nt
 }
 
+func astTypeSpecTypeParams(ts *ast.TypeSpec) *ast.FieldList {
+	return nil
+}
+
+func astFuncTypeTypeParams(ft *ast.FuncType) *ast.FieldList {
+	return nil
+}
+
 func isParameterizedType(tt types.Type) bool {
 	return false
 }
