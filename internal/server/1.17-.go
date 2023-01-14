@@ -19,8 +19,11 @@ type (
 	astUnaryExpr  = struct{ ast.UnaryExpr }
 	astBinaryExpr = struct{ ast.BinaryExpr }
 
-	typesTypeParam = struct{ types.Named; Index func() int; }
-	typesTypeParamList struct{_ [0]*typesTypeParamList}
+	typesTypeParam = struct {
+		types.Named
+		Index func() int
+	}
+	typesTypeParamList struct{ _ [0]*typesTypeParamList }
 )
 
 func typesNamedTypeParams(*types.Named) *typesTypeParamList {

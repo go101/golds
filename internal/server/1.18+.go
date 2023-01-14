@@ -16,7 +16,7 @@ type (
 	astUnaryExpr     = ast.UnaryExpr
 	astBinaryExpr    = ast.BinaryExpr
 
-	typesTypeParam = types.TypeParam
+	typesTypeParam     = types.TypeParam
 	typesTypeParamList = types.TypeParamList
 )
 
