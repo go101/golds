@@ -3211,11 +3211,32 @@ func (ds *docServer) renderDocComment(page *htmlPage, currentPkg *code.Package, 
 				}
 
 				res := currentPkg.SearchResourceByName(tokens[0])
-				if res == nil {
-					return ""
+				if res != nil {
+					return buildPkgResLink(currentPkg, res)
 				}
 
-				return buildPkgResLink(currentPkg, res)
+				var pkg = ds.analyzer.PackageByPath(tokens[0])
+				if pkg == nil {
+					pkg = currentPkg.Module().PackageByPath(currentPkg.Path + "/" + tokens[0])
+				}
+				if pkg == nil {
+					i := strings.LastIndexByte(currentPkg.Path, '/')
+					if i > 0 {
+						pkg = currentPkg.Module().PackageByPath(currentPkg.Path[:i+1] + tokens[0])
+					}
+				}
+				if pkg == nil {
+					pkg = currentPkg.Module().PackageByPath(currentPkg.ModulePath() + "/" + tokens[0])
+				}
+				if pkg == currentPkg {
+					pkg = nil
+				}
+
+				if pkg != nil {
+					return buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, pkg.Path), nil, "")
+				}
+
+				return ""
 			}
 
 			if !checkResNameRoughly(tokens[1]) {
