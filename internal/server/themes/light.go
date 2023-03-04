@@ -4,6 +4,7 @@ type Light struct{}
 
 func (*Light) Name() string { return "light" }
 
+// TODO: fs embedding
 func (*Light) CSS() string {
 	return `
 body {background: #fff; color: #333; font-family: {{ .Fonts }};}
@@ -20,9 +21,9 @@ h3 {background: #ddd;}
 
 .b {font-weight: bold;}
 
-.title {font-size: 110%; font-wieght: bold;}
+.title {font-size: 110%; font-weight: bold;}
 .title:after {content: "{{ .Colon }}";}
-.title-stat {font-size: medium; font-wieght: normal;}
+.title-stat {font-size: medium; font-weight: normal;}
 
 .type-res, .value-res {padding-top: 2px; padding-bottom: 2px;}
 
