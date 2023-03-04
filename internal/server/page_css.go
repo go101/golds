@@ -2,7 +2,9 @@ package server
 
 import (
 	//"bytes"
+	"io"
 	"net/http"
+	"os"
 	"text/template"
 )
 
@@ -54,11 +56,26 @@ func (ds *docServer) cssFile(w http.ResponseWriter, r *http.Request, themeName s
 		options: options,
 	}
 	data, ok := ds.cachedPage(pageKey)
+
+	// check if custom CSS exists
+	customCSS := ""
+	customCSSPath := os.ExpandEnv("${HOME}/.config/golds/custom.css")
+	if _, err := os.Stat(customCSSPath); err == nil {
+		// if so, load from file and bypass cache
+		if pF, err := os.Open(customCSSPath); err == nil {
+			if tmp, err := io.ReadAll(pF); err == nil {
+				customCSS = string(tmp)
+				ok = false
+			}
+			pF.Close()
+		}
+	}
+
 	if !ok {
 		page := NewHtmlPage(goldsVersion, "", nil, ds.currentTranslation, createPagePathInfo(ResTypeCSS, themeName))
 
 		theme := ds.themeByName(themeName)
-		css := theme.CSS() + commonCSS
+		css := commonCSS + theme.CSS() + customCSS
 		t, err := template.New("css").Parse(css)
 		if err != nil {
 			panic("parse css template error: " + err.Error())
