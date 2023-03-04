@@ -30,7 +30,7 @@ please visit [this page on Go101.org](https://go101.org/apps-and-libs/golds.html
     * lists types not only by alphabet, but also by popularity (only available when JavaScript is on),
       which is good to understanding some packages with many types declared.
     * __supports listing their uses (by clicking the `type`/`const`/`var`/`func` keywords in package information pages).__
-    
+
     Press `p` (package), `e` (examples), `t` (types), `f` (functions), `v` (variables), `c` (constants), and `a` (all) to toggle doc expand/collapse statuses (only available when JavaScript is on).
   * Treats `main` packages as same as library packages.
 * Smooth code view experiences (good for studying Go projects without opening IDEs):
@@ -46,6 +46,7 @@ please visit [this page on Go101.org](https://go101.org/apps-and-libs/golds.html
   This is good for package developers to host docs of their own packages.
   (The docs of standard packages are generated within about 10 seconds, and the docs of the kubernetes project packages are generated within about 100 seconds.)
 * Just fell free to open any number of pages in new browser windows as needed.
+* Customize formatting by saving CSS style overrides at `$HOME/.config/golds/custom.css`
 
 _(NOTE: This tool is still in its early experimental phase. More new features will be added from time to time in future versions.)_
 
