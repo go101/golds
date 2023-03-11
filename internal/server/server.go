@@ -1,7 +1,6 @@
 package server
 
 import (
-	//"bytes"
 	"fmt"
 	"io"
 	"log"
@@ -121,7 +120,7 @@ func Run(options PageOutputOptions, args []string, recommendedPort string, silen
 NextTry:
 	l, err := net.ListenTCP("tcp", addr)
 	if err != nil {
-		if strings.Index(err.Error(), "bind: address already in use") >= 0 {
+		if strings.Index(err.Error(), "bind:") >= 0 {
 			addr.Port += delta
 			goto NextTry
 		}
