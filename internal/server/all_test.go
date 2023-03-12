@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"go101.org/golds/internal/util"
@@ -174,6 +175,9 @@ func TestDocsForStandardPackages(t *testing.T) {
 		if isInformalPackage(pkgPath) {
 			continue
 		}
+		if pkgPath == "syscall" || pkgPath == "log/syslog" {
+			continue // to avoid failing on non-Linux OSes
+		}
 		pkgTestDataNew, ok := testdataNew[pkgPath]
 		if !ok {
 			if pkgPath != "runtime/cgo" {
@@ -202,6 +206,9 @@ func TestDocsForStandardPackages(t *testing.T) {
 			}
 			if err := assureSubsetStringSlice(typeTestDataOld.MethodNames, typeTestDataNew.MethodNames); err != nil {
 				t.Errorf("[%s] %s methods become less: %s", pkgPath, typeName, err)
+			}
+			if runtime.GOOS != "linux" {
+				continue
 			}
 			if n, m := typeTestDataOld.ImplementedByCount, typeTestDataNew.ImplementedByCount; n > m {
 				t.Errorf("[%s] %s implementdBy count becomes less: %d > %d", pkgPath, typeName, n, m)
