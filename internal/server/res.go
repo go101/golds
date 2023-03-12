@@ -160,7 +160,7 @@ func (ds *docServer) changeTranslationByAcceptLanguage(acceptedLanguage string) 
 // so that no syncrhomization is needed.
 func (ds *docServer) initSettings(lang string) {
 	var (
-		themes        = make([]Theme, 0, 2)
+		themes        = make([]Theme, 0, 4)
 		translations  = make([]Translation, 0, 6)
 		langTags      = make([]language.Tag, 0, len(translations)*2)
 		translations2 = make([]Translation, 0, len(translations)*2)
@@ -176,7 +176,9 @@ func (ds *docServer) initSettings(lang string) {
 		translations2 = append(translations2, tr)
 	}
 
-	registerTheme(&theme.Light{})
+	registerTheme(theme.Auto{})
+	registerTheme(theme.Light{})
+	registerTheme(theme.Dark{})
 
 	registerTranslation(&translation.English{})
 	registerTranslation(&translation.Chinese{})
@@ -189,7 +191,7 @@ func (ds *docServer) initSettings(lang string) {
 	ds.langMatcher = language.NewMatcher(langTags)
 	ds.translationsByLangTagIndex = translations2
 
-	ds.currentTheme = ds.allThemes[0]
+	ds.currentTheme = ds.themeByName(pageTheme)
 	ds.currentTranslation = ds.allTranslations[0]
 	ds.currentTranslation = ds.translationByLangs(lang)
 }
@@ -200,7 +202,7 @@ func (ds *docServer) currentTranslationSafely() Translation {
 
 func (ds *docServer) themeByName(name string) Theme {
 	theme := ds.allThemes[0]
-	for _, t := range ds.allThemes[1:] {
+	for _, t := range ds.allThemes {
 		if t.Name() == name {
 			theme = t
 			break

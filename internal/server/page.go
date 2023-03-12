@@ -28,6 +28,7 @@ type PageOutputOptions struct {
 	SourceReadingStyle     string
 	WdPkgsListingManner    string
 	FooterShowingManner    string
+	Theme                  string
 
 	// ToDo:
 	//ListUnexportedRes   bool
@@ -51,6 +52,7 @@ var (
 	allowNetworkConnection = false
 	wdPkgsListingManner    = WdPkgsListingManner_general
 	footerShowingManner    = FooterShowingManner_none
+	pageTheme              = "auto"
 
 	renderDocLinks     = false
 	unfoldAllInitially = false
@@ -75,6 +77,8 @@ func setPageOutputOptions(options PageOutputOptions, forTesting bool) {
 	unfoldAllInitially = options.UnfoldAllInitially && !forTesting
 	wdPkgsListingManner = options.WdPkgsListingManner
 	footerShowingManner = options.FooterShowingManner
+	pageTheme = options.Theme
+
 	verboseLogs = options.VerboseLogs
 }
 

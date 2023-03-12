@@ -216,6 +216,7 @@ func run() {
 		FooterShowingManner:    footerShowingManner,
 		RenderDocLinks:         *renderDocLinksFlag,
 		UnfoldAllInitially:     *unfoldAllInitiallyFlag,
+		Theme:                  *themeFlag,
 		VerboseLogs:            verboseMode,
 	}
 
@@ -292,6 +293,8 @@ var unfoldAllInitiallyFlag = flag.Bool("unfold-all-initially", false, "unfold al
 // depreciated by "-wdpkgs-listing=promoted" since v0.1.8
 var emphasizeWdPackagesFlag = flag.Bool("emphasize-wdpkgs", false, "promote working directory packages")
 var wdPkgsListingMannerFlag = flag.String("wdpkgs-listing", "", "specify how to list working directory packages")
+
+var themeFlag = flag.String("theme", "auto", "auto | light | theme")
 
 func printVersion(out io.Writer) {
 	fmt.Fprintf(out, "Golds %s\n", Version)
