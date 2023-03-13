@@ -43,10 +43,10 @@ a.path-duplicate {color: #26a;}
 
 .golds-update {text-align: center; font-size: smaller; background: #eee; padding: 3px;}
 
-div.codelines a.path-duplicate {color: #58a6ff;}
-div.importedbys a.path-duplicate {color: #58a6ff;}
-div.depdepth a.path-duplicate {color: #58a6ff;}
-div.depheight a.path-duplicate {color: #58a6ff;}
+div.codelines a.path-duplicate {color: #26a;}
+div.importedbys a.path-duplicate {color: #26a;}
+div.depdepth a.path-duplicate {color: #26a;}
+div.depheight a.path-duplicate {color: #26a;}
 
 i.codelines, i.importedbys, i.depdepth, i.depheight {font-size: smaller;}
 
