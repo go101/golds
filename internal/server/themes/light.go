@@ -10,9 +10,6 @@ const light_css = `
 body {background: #fff; color: #333; font-family: {{ .Fonts }};}
 
 a {color: #079;}
-.module-version {color: #555; font-style: italic; font-size: smaller; text-decoration: none;}
-ol.package-list {line-height: 139%;}
-h3 {background: #ddd;}
 
 .md-text a {color: #333;}
 .md-text a:hover {color: black;}
@@ -59,8 +56,8 @@ span.nodocs {padding-left: 1px; padding-right: 1px;}
 span.nodocs:before {content: ". ";}
 label {cursor: pointer; padding-left: 1px; padding-right: 1px;}
 
-input.fold + label:before {content: "▶ ";}
-input.fold:checked + label:before {content: "▼ ";}
+input.fold + label:before {content: "▸ ";}
+input.fold:checked + label:before {content: "▾ ";}
 input.fold:checked + label.fold-items:after {content: "{{ .Colon }}";}
 
 /* code page */

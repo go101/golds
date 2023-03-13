@@ -7,17 +7,14 @@ func (Dark) Name() string { return "dark" }
 func (Dark) CSS() string { return dark_css }
 
 const dark_css = `
-body {background: #223; color: #ddd; font-family: {{ .Fonts }};}
+body {background: #0d1117; color: #c9d1d9; font-family: {{ .Fonts }};}
 
-a {color: #079;}
-.module-version {color: #555; font-style: italic; font-size: smaller; text-decoration: none;}
-ol.package-list {line-height: 139%;}
-h3 {background: #ddd;}
+a {color: #8899ff;}
 
-.md-text a {color: #333;}
-.md-text a:hover {color: black;}
-.md-text a:visited {color: #666;}
-.md-text a:visited:hover {color: black;}
+.md-text a {color: #c9d1d9;}
+.md-text a:hover {color: white;}
+.md-text a:visited {color: #abb;}
+.md-text a:visited:hover {color: white;}
 
 .b {font-weight: bold;}
 
@@ -28,13 +25,13 @@ h3 {background: #ddd;}
 .type-res, .value-res {padding-top: 2px; padding-bottom: 2px;}
 
 .button {border-radius: 3px; padding: 1px 3px;}
-.chosen {background: #226; color: #ff8; cursor: default;}
+.chosen {background: #ff8; color: #226; cursor: default;}
 .unchosen {}
 
 #footer {
 	padding: 5px 8px;
 	font-size: small;
-	color: #555;
+	color: #aaa;
 	border-top: 1px solid #888;
 }
 
@@ -42,14 +39,14 @@ h3 {background: #ddd;}
 
 div.pkg {margin-top: 1px; padding-top: 1px; padding-bottom: 1px;}
 
-a.path-duplicate {color: #9cd;}
+a.path-duplicate {color: #26a;}
 
 .golds-update {text-align: center; font-size: smaller; background: #eee; padding: 3px;}
 
-div.codelines a.path-duplicate {color: #079;}
-div.importedbys a.path-duplicate {color: #079;}
-div.depdepth a.path-duplicate {color: #079;}
-div.depheight a.path-duplicate {color: #079;}
+div.codelines a.path-duplicate {color: #58a6ff;}
+div.importedbys a.path-duplicate {color: #58a6ff;}
+div.depdepth a.path-duplicate {color: #58a6ff;}
+div.depheight a.path-duplicate {color: #58a6ff;}
 
 i.codelines, i.importedbys, i.depdepth, i.depheight {font-size: smaller;}
 
@@ -59,8 +56,8 @@ span.nodocs {padding-left: 1px; padding-right: 1px;}
 span.nodocs:before {content: ". ";}
 label {cursor: pointer; padding-left: 1px; padding-right: 1px;}
 
-input.fold + label:before {content: "▶ ";}
-input.fold:checked + label:before {content: "▼ ";}
+input.fold + label:before {content: "▸ ";}
+input.fold:checked + label:before {content: "▾ ";}
 input.fold:checked + label.fold-items:after {content: "{{ .Colon }}";}
 
 /* code page */
@@ -90,17 +87,17 @@ pre.line-numbers span.codeline:before {
 .codeline {}
 
 .codeline:target, .anchor:target {
-	border-top: 1px solid #d5ddbb;
-	border-bottom: 1px solid #d5ddbb;
-	background-color: #e5eecc;
+	border-top: 1px solid #3d4b55;
+	border-bottom: 1px solid #3d4b55;
+	background-color: #2d3a44;
 }
 
-code .ident {color: blue;}
-code .id-type {color: blue;}
-code .id-value {color: blue;}
-code .id-function {color: blue;}
-code .lit-number {color: #e66;}
-code .lit-string {color: #a66;}
-code .keyword {color: brown;}
-code .comment {color: green; font-style: italic;}
+code .ident {color: #d1d8aa;}
+code .id-type {color: #d1d8aa;}
+code .id-value {color: #d1d8aa;}
+code .id-function {color: #d1d8aa;}
+code .lit-number {color: #a9d1a4;}
+code .lit-string {color: #a9d1a4;}
+code .keyword {color: #ff7b72;}
+code .comment {color: #aaa; font-style: italic;}
 `
