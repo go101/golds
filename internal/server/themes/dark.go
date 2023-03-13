@@ -25,7 +25,7 @@ a {color: #8899ff;}
 .type-res, .value-res {padding-top: 2px; padding-bottom: 2px;}
 
 .button {border-radius: 3px; padding: 1px 3px;}
-.chosen {background: #ff8; color: #226; cursor: default;}
+.chosen {background: #cca; color: #223; cursor: default;}
 .unchosen {}
 
 #footer {
@@ -56,8 +56,8 @@ span.nodocs {padding-left: 1px; padding-right: 1px;}
 span.nodocs:before {content: ". ";}
 label {cursor: pointer; padding-left: 1px; padding-right: 1px;}
 
-input.fold + label:before {content: "▸ ";}
-input.fold:checked + label:before {content: "▾ ";}
+input.fold + label:before {content: "▶ ";}
+input.fold:checked + label:before {content: "▼ ";}
 input.fold:checked + label.fold-items:after {content: "{{ .Colon }}";}
 
 /* code page */
