@@ -135,6 +135,7 @@
 * show/warning Trojan Source https://news.ycombinator.com/item?id=29061987
 
 * use padding instead of indent tabs
+  and use <details><summary> html tags to do collsapse/expand.
 
 * support https://github.com/go101/golds/issues/25
   syupport "golds aModule@version"
