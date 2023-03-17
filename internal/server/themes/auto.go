@@ -24,7 +24,5 @@ func init() {
 		return
 	}
 
-	println(string(data))
-
 	auto_css += string(data)
 }

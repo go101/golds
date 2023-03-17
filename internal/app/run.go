@@ -294,7 +294,7 @@ var unfoldAllInitiallyFlag = flag.Bool("unfold-all-initially", false, "unfold al
 var emphasizeWdPackagesFlag = flag.Bool("emphasize-wdpkgs", false, "promote working directory packages")
 var wdPkgsListingMannerFlag = flag.String("wdpkgs-listing", "", "specify how to list working directory packages")
 
-var themeFlag = flag.String("theme", "auto", "auto | light | theme")
+var themeFlag = flag.String("theme", "auto", "auto | light | dark")
 
 func printVersion(out io.Writer) {
 	fmt.Fprintf(out, "Golds %s\n", Version)
@@ -392,6 +392,14 @@ Options:
 		Whether or not to render links in docs.
 	-unfold-all-initially
 		Unfold all foldables initially.
+	-theme
+		Specify the theme of HTML pages.
+		* auto (the default value). It means the
+		  light theme plus custom styling set in the
+		  $UserConfigDir/golds/custom.css file (if
+		  it exists).
+		* light
+		* dark
 
 Examples:
 	%[1]v std
