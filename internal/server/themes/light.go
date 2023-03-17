@@ -53,7 +53,7 @@ i.codelines, i.importedbys, i.depdepth, i.depheight {font-size: smaller;}
 /* package details page */
 
 span.nodocs {padding-left: 1px; padding-right: 1px;}
-span.nodocs:before {content: "--- ";}
+span.nodocs:before {content: " -  ";}
 label {cursor: pointer; padding-left: 1px; padding-right: 1px;}
 
 input.fold + label:before {content: "[+] ";}

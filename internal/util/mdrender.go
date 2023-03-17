@@ -622,24 +622,39 @@ func (render *MarkdownRenderer) Render(w interface {
 				seg.kind = Plain
 			} else if seg.kind == DirectLinkURL {
 				var text = seg.text
-				if strings.HasSuffix(text, ")") {
-					var k = strings.Index(text, "://")
-					if k < 0 {
-						panic("should not")
+				var parenthesesRemoved = false
+				var punctuationsRemoved = false
+
+				// (https://golang.org/pkg/go/build).
+				// => https://golang.org/pkg/go/build
+				//
+				// (https://golang.org/pkg/go/build.).
+				// => https://golang.org/pkg/go/build.
+
+			Check:
+				if len(text) > 4 {
+					var q = 0
+					for text[len(text)-1-q] == ')' {
+						q++
 					}
-					var n = 0
-					for _, r := range text[k+3:] {
-						if r == '(' {
-							n--
-						} else if r == ')' {
-							n++
+					if q > 0 {
+						var k = strings.Index(text, "://")
+						if k < 0 {
+							panic("should not")
+						}
+						var n = 0
+						for _, r := range text[k+3 : len(text)-q] {
+							if r == '(' {
+								n++
+							}
+						}
+						if k = q - n; k > 0 {
+							text = text[:len(text)-k]
+							parenthesesRemoved = true
 						}
 					}
-					if n > 0 {
-						text = text[:len(text)-n]
-					}
 				}
-				{
+				if !punctuationsRemoved {
 					var n = 0
 					for i := len(text) - 1; i >= 0; i-- {
 						if text[i] == '"' {
@@ -650,11 +665,20 @@ func (render *MarkdownRenderer) Render(w interface {
 					}
 					if n > 0 {
 						text = text[:len(text)-n]
+						punctuationsRemoved = true
+						if !parenthesesRemoved {
+							goto Check
+						}
 					} else {
 						for _, s := range []string{",", ".", "!", "?", ":", ";"} {
 							if strings.HasSuffix(seg.text, s) {
 								text = text[:len(text)-1]
-								break
+								punctuationsRemoved = true
+								if parenthesesRemoved {
+									break
+								} else {
+									goto Check
+								}
 							}
 						}
 					}

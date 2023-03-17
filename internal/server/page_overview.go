@@ -113,7 +113,6 @@ func (ds *docServer) writePackagesForListing(page *htmlPage, packages []*Package
 		return
 	}
 
-	const MainPkgArrowCharCount = 2
 	const MinPrefixSpacesCount = 3
 	var maxDigitCount = 0 // 2 // 2 for ". " suffix
 	for n := len(packages); n > 0; n /= 10 {

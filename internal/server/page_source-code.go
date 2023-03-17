@@ -1670,29 +1670,33 @@ func writeSrouceCodeFileLink(page *htmlPage, pkg *code.Package, sourceFilename s
 	buildPageHref(page.PathInfo, createPagePathInfo2b(ResTypeSource, pkg.Path, "/", sourceFilename), page, sourceFilename)
 }
 
+const PkgDocArrowCharCount = 1
+
 func writeSourceCodeDocLink(page *htmlPage, pkg *code.Package, sourceFilename string, startLine, endLine int32) {
 	if sourceReadingStyle == SourceReadingStyle_external {
 		start, end := strconv.Itoa(int(startLine)), ""
 		if endLine == startLine {
-			buildPageHref(page.PathInfo, createPagePathInfo2b(ResTypeSource, pkg.Path, "/", sourceFilename), page, "#d", "doc", "line-", start)
+			buildPageHref(page.PathInfo, createPagePathInfo2b(ResTypeSource, pkg.Path, "/", sourceFilename), page, "d", "doc", "line-", start)
 		} else {
 			end = strconv.Itoa(int(endLine))
-			buildPageHref(page.PathInfo, createPagePathInfo2b(ResTypeSource, pkg.Path, "/", sourceFilename), page, "#d", "doc", "line-", start, ":", end)
+			buildPageHref(page.PathInfo, createPagePathInfo2b(ResTypeSource, pkg.Path, "/", sourceFilename), page, "d", "doc", "line-", start, ":", end)
 		}
 	} else {
-		buildPageHref(page.PathInfo, createPagePathInfo2b(ResTypeSource, pkg.Path, "/", sourceFilename), page, "#d", "doc")
+		buildPageHref(page.PathInfo, createPagePathInfo2b(ResTypeSource, pkg.Path, "/", sourceFilename), page, "d", "doc")
 	}
 	page.WriteByte(' ')
 }
+
+const MainPkgArrowCharCount = 1
 
 func writeMainFunctionArrow(page *htmlPage, pkg *code.Package, mainPos token.Position) {
 	if mainPos.IsValid() {
 		//mainPos.Line += ds.analyzer.SourceFileLineOffset(mainPos.Filename)
 		//writeSrouceCodeLineLink(page, pkg, mainPos, "m-&gt;", "")
-		writeSrouceCodeLineLink(page, pkg, mainPos, "#m", "")
+		writeSrouceCodeLineLink(page, pkg, mainPos, "m", "")
 	} else {
 		//page.WriteString("m-&gt;")
-		page.WriteString("#m")
+		page.WriteString("m")
 	}
 	page.WriteByte(' ')
 }

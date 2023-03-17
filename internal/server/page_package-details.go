@@ -107,13 +107,14 @@ func (ds *docServer) buildPackageDetailsPage(w http.ResponseWriter, pkg *Package
 				writeSourceCodeDocLink(page, pkg.Package, info.Filename, info.DocStartLine, info.DocEndLine)
 			} else if info.MainPosition != nil {
 				writeMainFunctionArrow(page, pkg.Package, *info.MainPosition)
-				page.WriteString("   ")
+				page.WriteString("  ")
 			} else if info.DocText != "" {
-				page.WriteString("   ")
+				page.WriteString("  ")
 				writeSourceCodeDocLink(page, pkg.Package, info.Filename, info.DocStartLine, info.DocEndLine)
 			} else {
-				page.WriteString("   ")
-				page.WriteString("   ")
+				// ToDo: use MainPkgArrowCharCount and PkgDocArrowCharCount
+				page.WriteString("  ")
+				page.WriteString("  ")
 			}
 			writeSrouceCodeFileLink(page, pkg.Package, info.Filename)
 		}
