@@ -4,7 +4,7 @@
 It tries to extract as much information as possible from Go code to help gophers understand, study and use Go packages.
 
 * [Demo of the generated docs for standard packages](https://docs.go101.org/index.html)
-  (generated with `golds -gen -nouses -only-list-exporteds -render-doclinks std`).
+  (generated with `golds -gen -nouses -only-list-exporteds -render-doclinks -theme=dark std`).
 * Please follow [@Go100and1](https://twitter.com/go100and1) to get the latest news of **Golds**
   (and Go details/facts/tips/etc.).
 
@@ -61,7 +61,7 @@ All packages must compile okay to get their docs shown.
 
 Only a code snapshot is analyzed. When code changes, a new analyzation is needed from scratch.
 
-Testing packages are excluded currently.
+Testing packages are not fully parsed currently.
 
 ### Analyzation Cases
 
