@@ -9,8 +9,7 @@ import (
 )
 
 func printLinkDefinition(bracketLeading, urlSeg *segment) {
-	return
-	fmt.Println(bracketLeading.text, urlSeg.text)
+	//fmt.Println(bracketLeading.text, urlSeg.text)
 }
 
 func IsAsciiLetter(r rune) bool {

@@ -295,7 +295,7 @@ func (ds *docServer) analyze(args []string, options PageOutputOptions, toolchain
 	// ...
 	func() {
 		var repoInfoCache = make(map[string]localRepoInfo, 4)
-		completeModuleInfo := func(m *code.Module)() {
+		completeModuleInfo := func(m *code.Module) {
 			ds.tryToCompleteModuleInfo(m, repoInfoCache)
 		}
 
@@ -306,7 +306,7 @@ func (ds *docServer) analyze(args []string, options PageOutputOptions, toolchain
 				}
 
 				log.Println()
-				log.Println(`Exit for the above errors.
+				log.Print(`Exit for the above errors.
 
 If you are sure that the code should compile okay, and
 you just upgraded your Go toolchain to a new Go version,

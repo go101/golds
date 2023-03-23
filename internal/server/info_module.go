@@ -304,7 +304,7 @@ func (ds *docServer) tryToCompleteModuleInfo(m *code.Module, localRepoInfos map[
 		//log.Printf("(replace) guess moudle %s repository (to use working directory module)", m.Path)
 		// The old implementation assumed that local replacing modules and the wd module are in the same repository.
 		// This might be not always true.
-		
+
 		ds.tryRetrievingWorkdingDirectoryModuleInfo(m, localRepoInfos)
 	} else {
 
@@ -642,7 +642,7 @@ func (ds *docServer) tryRetrievingWorkdingDirectoryModuleInfo(m *code.Module, lo
 
 		repoInfo.latestCommit = string(commitHash)
 		repoInfo.remoteURL = ensureHttpsRepositoryURL(projectRemoteURL)
-		
+
 		localRepoInfos[projectLocalDir] = repoInfo
 		gotIt = true
 	}
