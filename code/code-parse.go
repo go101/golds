@@ -713,22 +713,38 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 		}
 		confirmModuleReposotoryCommit(m)
 	}
-	if completeModuleInfo != nil && d.wdModule != nil {
-		for i := range d.nonToolchainModules {
-			m := &d.nonToolchainModules[i]
-			if strings.HasPrefix(m.Replace.Path, ".") {
-				moduleDir := m.ActualDir()
-				if !strings.HasPrefix(moduleDir, d.wdModule.Dir) {
-					panic("should not\n" + moduleDir + "\n" + d.wdModule.Dir + "\n" + m.Replace.Dir)
-				}
-				path := moduleDir[len(d.wdModule.Dir):]
-				m.ExtraPathInRepository = d.wdModule.ExtraPathInRepository + path
-				m.RepositoryCommit = d.wdModule.RepositoryCommit
-				m.RepositoryDir = d.wdModule.RepositoryDir
-				m.RepositoryURL = d.wdModule.RepositoryURL
-			}
-		}
-	}
+	//if completeModuleInfo != nil && d.wdModule != nil {
+	//	for i := range d.nonToolchainModules {
+	//		m := &d.nonToolchainModules[i]
+	//		//if strings.HasPrefix(m.Replace.Path, ".") {
+	//		//	moduleDir := m.ActualDir()
+	//		//	// bug: https://github.com/go101/golds/issues/39
+	//		//	// It is possible the replaced module is a parant directory.
+	//		//	//if !strings.HasPrefix(moduleDir, d.wdModule.Dir) {
+	//		//	//	panic("should not\n\t" + moduleDir + "\n\t" + d.wdModule.Dir + "\n\t" + m.Replace.Dir)
+	//		//	//} else {
+	//		//	//	path := moduleDir[len(d.wdModule.Dir):]
+	//		//	//	m.ExtraPathInRepository = d.wdModule.ExtraPathInRepository + path
+	//		//	//}
+	//		//	if strings.HasPrefix(d.wdModule.RepositoryDir, moduleDir) {
+	//		//		m.ExtraPathInRepository = moduleDir[len(d.wdModule.RepositoryDir):]
+	//		//	} else {
+	//		//		// ToDo: it is possible that the replace module
+	//		//		//       is put into a seperated git project
+	//		//		//       different from the wdModule.
+	//		//	}
+	//		//
+	//		//	//m.RepositoryCommit = d.wdModule.RepositoryCommit
+	//		//	m.RepositoryDir = d.wdModule.RepositoryDir
+	//		//	m.RepositoryURL = d.wdModule.RepositoryURL
+	//		//}
+	//
+	//		println("====== module:", m.Path)
+	//		println("       m.ExtraPathInRepository:", m.ExtraPathInRepository)
+	//		println("       m.RepositoryDir:", m.RepositoryDir)
+	//		println("       m.RepositoryURL:", m.RepositoryURL)
+	//	}
+	//}
 
 	for i := range d.nonToolchainModules {
 		m := &d.nonToolchainModules[i]
@@ -755,7 +771,7 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 
 // v0.0.0-20180917221912-90fa682c2a6e
 // v0.4.2-0.20210302225053-d515b24adc21
-var findCommentRegexp = regexp.MustCompile(`v[0-9]\S*[0-9]{8,}-([0-9a-f]{6,})`)
+var findCommitRegexp = regexp.MustCompile(`v[0-9]\S*[0-9]{8,}-([0-9a-f]{6,})`)
 
 const incompatibleSuffix = "+incompatible"
 
@@ -764,14 +780,15 @@ func confirmModuleReposotoryCommit(m *Module) {
 	if i := strings.Index(version, incompatibleSuffix); i > 0 {
 		version = version[:i]
 	}
-	matches := findCommentRegexp.FindStringSubmatch(version)
+
+	matches := findCommitRegexp.FindStringSubmatch(version)
 	if len(matches) >= 2 {
 		m.RepositoryCommit = matches[1]
 		return
 	}
 
 	// ToDo: valid for all code hosting websites?
-	if extra := m.ExtraPathInRepository; extra != "" {
+	if extra := m.ExtraPathInRepository; extra != "" && strings.HasPrefix(version, "v") {
 		if strings.HasPrefix(extra, "/") {
 			extra = extra[1:]
 		}
@@ -856,6 +873,11 @@ func fillUnsafePackage(unsafePPkg *packages.Package, builtinPPkg *packages.Packa
 					if fd.Name.Name == "Add" || fd.Name.Name == "Slice" {
 						return fmt.Errorf(`unsafe.%s is introduced in Go 1.17.
 Please re-install Golds with Go toolchain v1.17+ with:
+	go install go101.org/golds@latest`,
+							fd.Name.Name)
+					} else if fd.Name.Name == "String" || fd.Name.Name == "StringData" || fd.Name.Name == "SliceData" {
+						return fmt.Errorf(`unsafe.%s is introduced in Go 1.20.
+Please re-install Golds with Go toolchain v1.20+ with:
 	go install go101.org/golds@latest`,
 							fd.Name.Name)
 					}

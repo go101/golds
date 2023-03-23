@@ -201,6 +201,8 @@ var codeHosts = []CodeHost{
 func buildSourceLinkFunc_github(w writer, commit, extraPath, sourcePath, line, endLine string) error {
 	// https://github.com/user/project/blob/commit/extra/path/to/file.go#L11-L22
 	items := make([]string, 0, 8)
+	// ToDo: not build the slice, write to w directly instead.
+
 	items = append(items, "/blob/", commit, extraPath, sourcePath)
 	if line != "" {
 		items = append(items, "#L", line)
@@ -208,6 +210,7 @@ func buildSourceLinkFunc_github(w writer, commit, extraPath, sourcePath, line, e
 			items = append(items, "-L", endLine)
 		}
 	}
+
 	for _, s := range items {
 		_, err := w.WriteString(s)
 		if err != nil {
@@ -278,7 +281,7 @@ func buildSourceLinkFunc_sr_ht(w writer, commit, extraPath, sourcePath, line, en
 //
 //=====================================
 
-func (ds *docServer) tryToCompleteModuleInfo(m *code.Module) {
+func (ds *docServer) tryToCompleteModuleInfo(m *code.Module, localRepoInfos map[string]localRepoInfo) {
 	//if ds.analysisWorkingDirectory == "" {
 	//	ds.analysisWorkingDirectory = util.WorkingDirectory()
 	//}
@@ -295,16 +298,18 @@ func (ds *docServer) tryToCompleteModuleInfo(m *code.Module) {
 		// 1. run "golds ./..." in subpackages of a module folder.
 		// 2. run "golds foo/..." for the foo module.
 
-		ds.tryRetrievingWorkdingDirectoryModuleInfo(m)
+		ds.tryRetrievingWorkdingDirectoryModuleInfo(m, localRepoInfos)
 		// ToDo: also need ?go-get=1 query if ...
+	} else if strings.HasPrefix(m.Replace.Path, ".") {
+		//log.Printf("(replace) guess moudle %s repository (to use working directory module)", m.Path)
+		// The old implementation assumed that local replacing modules and the wd module are in the same repository.
+		// This might be not always true.
+		
+		ds.tryRetrievingWorkdingDirectoryModuleInfo(m, localRepoInfos)
 	} else {
-		if strings.HasPrefix(m.Replace.Path, ".") {
-			log.Printf("(replace) guess moudle %s repository (to use working directory module)", m.Path)
-			return // local replacements will be handled in analyzer.
-		}
 
 		foundInVendor := false
-		if m.ActualDir() == "" { // this happens for packages in project vendor folder
+		if m.ActualDir() == "" { // this happens for modules in project vendor folder
 			func() {
 				pkgDir := m.Pkgs[0].Directory
 				in, relDir := ds.inVendor(pkgDir)
@@ -511,11 +516,18 @@ func (ds *docServer) inVendor(pkgDir string) (bool, string) {
 var dotgit = []byte(".git")
 var slash = []byte("/")
 
-// Make sure d.wdModule is conirmed before call this method.
-func (ds *docServer) tryRetrievingWorkdingDirectoryModuleInfo(m *code.Module) {
+type localRepoInfo struct {
+	latestCommit string
+	remoteURL    string
+}
+
+// Make sure d.wdModule is confirmed before call this method.
+// ToDo: support more cvs tools.
+func (ds *docServer) tryRetrievingWorkdingDirectoryModuleInfo(m *code.Module, localRepoInfos map[string]localRepoInfo) {
+	cmdWD := m.Dir
 
 	// ...
-	output, err := util.RunShellCommand(time.Second*5, "", nil, "git", "rev-parse", "--show-toplevel")
+	output, err := util.RunShellCommand(time.Second*5, cmdWD, nil, "git", "rev-parse", "--show-toplevel")
 	if err != nil {
 		if verboseLogs {
 			log.Println("unable to confirm wording diretory module: not in a CVS (only supports git now) directory")
@@ -524,108 +536,129 @@ func (ds *docServer) tryRetrievingWorkdingDirectoryModuleInfo(m *code.Module) {
 	}
 	projectLocalDir := string(bytes.TrimSpace(output))
 
-	// ...
-	output, err = util.RunShellCommand(time.Second*5, "", nil, "git", "rev-parse", "HEAD")
-	if err != nil {
-		if verboseLogs {
-			log.Printf("unable to confirm wording diretory module: git rev-parse HEAD error: %s", err)
-		}
-		return
+	repoInfo, gotIt := localRepoInfos[projectLocalDir]
+	if gotIt {
+		goto Done
 	}
-	commitHash := bytes.TrimSpace(output)
 
-	// ...
-	var remoteName string
-	output, err = util.RunShellCommand(time.Second*5, "", nil, "git", "remote")
-	if err != nil {
-		if verboseLogs {
-			log.Printf("unable to confirm wording diretory module: git remote error: %s", err)
-		}
-		return
-	}
-	output = bytes.TrimSpace(output)
-	if i := bytes.IndexByte(output, '\n'); i < 0 {
-		remoteName = string(output)
-	} else {
-		firstRemote := string(bytes.TrimSpace(output[:i]))
-
-		// output: remote-name/remote-branch
-		output, err = util.RunShellCommand(time.Second*5, "", nil, "git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}")
+	{
+		// ...
+		output, err = util.RunShellCommand(time.Second*5, cmdWD, nil, "git", "rev-parse", "HEAD")
 		if err != nil {
 			if verboseLogs {
-				log.Printf("unable to confirm wording diretory module: git rev-parse --abbrev-ref --symbolic-full-name @{upstream} error: %s", err)
+				log.Printf("unable to confirm wording diretory module: git rev-parse HEAD error: %s", err)
 			}
-		} else if i := bytes.IndexByte(output, '/'); i <= 0 {
+			return
+		}
+		commitHash := bytes.TrimSpace(output)
+
+		// ...
+		var remoteName string
+		output, err = util.RunShellCommand(time.Second*5, cmdWD, nil, "git", "remote")
+		if err != nil {
 			if verboseLogs {
-				log.Printf("unable to confirm wording diretory module: could not find remote in %s", output)
+				log.Printf("unable to confirm wording diretory module: git remote error: %s", err)
 			}
+			return
+		}
+		output = bytes.TrimSpace(output)
+		if i := bytes.IndexByte(output, '\n'); i < 0 {
+			remoteName = string(output)
 		} else {
-			remoteName = string(bytes.TrimSpace(output[:i]))
-		}
-		if remoteName == "" {
-			remoteName = firstRemote
-		}
-	}
-	output, err = util.RunShellCommand(time.Second*5, "", nil, "git", "remote", "get-url", remoteName)
-	if err != nil {
-		if verboseLogs {
-			log.Printf("unable to confirm wording diretory module: git remote get-url origin %s error: %s", remoteName, output)
-		}
-		return
-	}
-	output = bytes.TrimSpace(output)
-	if bytes.HasSuffix(output, dotgit) {
-		output = output[:len(output)-len(dotgit)]
-	}
-	if bytes.HasSuffix(output, slash) {
-		output = output[:len(output)-1]
-	}
-	projectRemoteURL := string(output)
+			firstRemote := string(bytes.TrimSpace(output[:i]))
 
-	// ...
-	var warnings []string
-	output, err = util.RunShellCommand(time.Second*15, "", nil, "git", "status", "-s")
-	output = bytes.TrimSpace(output)
-	if err != nil {
-		warnings = append(warnings, "unable to get project CVS commit status.")
-		if verboseLogs {
-			log.Printf("unable to get wording diretory commit status: git status -s: %s. %s", err, output)
+			// output: remote-name/remote-branch
+			output, err = util.RunShellCommand(time.Second*5, cmdWD, nil, "git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}")
+			if err != nil {
+				if verboseLogs {
+					log.Printf("unable to confirm wording diretory module: git rev-parse --abbrev-ref --symbolic-full-name @{upstream} error: %s", err)
+				}
+			} else if i := bytes.IndexByte(output, '/'); i <= 0 {
+				if verboseLogs {
+					log.Printf("unable to confirm wording diretory module: could not find remote in %s", output)
+				}
+			} else {
+				remoteName = string(bytes.TrimSpace(output[:i]))
+			}
+			if remoteName == "" {
+				remoteName = firstRemote
+			}
 		}
-	} else if len(output) != 0 {
-		warnings = append(warnings, "something in project haven't been committed yet")
+		output, err = util.RunShellCommand(time.Second*5, cmdWD, nil, "git", "remote", "get-url", remoteName)
+		if err != nil {
+			if verboseLogs {
+				log.Printf("unable to confirm wording diretory module: git remote get-url origin %s error: %s", remoteName, output)
+			}
+			return
+		}
+		output = bytes.TrimSpace(output)
+		if bytes.HasSuffix(output, dotgit) {
+			output = output[:len(output)-len(dotgit)]
+		}
+		if bytes.HasSuffix(output, slash) {
+			output = output[:len(output)-1]
+		}
+		projectRemoteURL := string(output)
+
+		// ...
+		var warnings []string
+		output, err = util.RunShellCommand(time.Second*15, cmdWD, nil, "git", "status", "-s")
+		output = bytes.TrimSpace(output)
+		if err != nil {
+			warnings = append(warnings, fmt.Sprintf("unable to get project (%s) CVS commit status.", projectLocalDir))
+			if verboseLogs {
+				log.Printf("unable to get working diretory (%s) commit status: git status -s: %s. %s", projectLocalDir, err, output)
+			}
+		} else if len(output) != 0 {
+			warnings = append(warnings, fmt.Sprintf("something in project (%s) haven't been committed yet", projectLocalDir))
+		}
+		//output, err = util.RunShellCommand(time.Second*5, "", nil, "git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}")
+		//output = bytes.TrimSpace(output)
+		//if err != nil {
+		//	warnings = append(warnings, "unable to get project CVS push status.")
+		//	if verboseLogs {
+		//		log.Printf("unable to get wording diretory push status: git rev-parse --abbrev-ref --symbolic-full-name @{upstream}: %s. %s", err, output)
+		//	}
+		//}
+		//originBranch := string(output)
+		//output, err = util.RunShellCommand(time.Second*5, "", nil, "git", "diff", originBranch)
+		//output = bytes.TrimSpace(output)
+		//if err != nil {
+		//	warnings = append(warnings, "unable to get project CVS push status.")
+		//	if verboseLogs {
+		//		log.Printf("unable to get wording diretory push status: (git diff %s: %s. %s", originBranch, err, output)
+		//	}
+		//} else if len(output) != 0 {
+		//	warnings = append(warnings, "something in project haven't been pushed yet to remote CVS")
+		//}
+
+		// ...
+
+		if !strings.HasPrefix(m.Dir, projectLocalDir) {
+			panic("should not")
+		}
+
+		ds.localRepositoryWarnings = append(ds.localRepositoryWarnings, warnings...)
+
+		repoInfo.latestCommit = string(commitHash)
+		repoInfo.remoteURL = ensureHttpsRepositoryURL(projectRemoteURL)
+		
+		localRepoInfos[projectLocalDir] = repoInfo
+		gotIt = true
 	}
-	//output, err = util.RunShellCommand(time.Second*5, "", nil, "git", "rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{upstream}")
-	//output = bytes.TrimSpace(output)
-	//if err != nil {
-	//	warnings = append(warnings, "unable to get project CVS push status.")
-	//	if verboseLogs {
-	//		log.Printf("unable to get wording diretory push status: git rev-parse --abbrev-ref --symbolic-full-name @{upstream}: %s. %s", err, output)
-	//	}
-	//}
-	//originBranch := string(output)
-	//output, err = util.RunShellCommand(time.Second*5, "", nil, "git", "diff", originBranch)
-	//output = bytes.TrimSpace(output)
-	//if err != nil {
-	//	warnings = append(warnings, "unable to get project CVS push status.")
-	//	if verboseLogs {
-	//		log.Printf("unable to get wording diretory push status: (git diff %s: %s. %s", originBranch, err, output)
-	//	}
-	//} else if len(output) != 0 {
-	//	warnings = append(warnings, "something in project haven't been pushed yet to remote CVS")
-	//}
 
-	// ...
+Done:
 
-	if strings.HasPrefix(m.Dir, projectLocalDir) {
-		m.ExtraPathInRepository = m.Dir[len(projectLocalDir):]
-		m.Version = string(commitHash)
+	if gotIt {
 		m.RepositoryDir = projectLocalDir
-		m.RepositoryURL = ensureHttpsRepositoryURL(projectRemoteURL)
-		ds.wdRepositoryWarnings = warnings
+		m.ExtraPathInRepository = m.Dir[len(projectLocalDir):]
+
+		m.RepositoryURL = repoInfo.remoteURL
+		m.Version = repoInfo.latestCommit
 	}
 
 	if verboseLogs {
-		log.Printf("(working directory) guess moudle %s repository: %s", m.Path, m.RepositoryURL)
+		log.Printf("guess moudle %s repository: %s", m.Path, m.RepositoryURL)
 	}
 }
 

@@ -83,7 +83,7 @@ type docServer struct {
 	visited       int32
 
 	// ToDo: show which packages are dirty in overview page.
-	wdRepositoryWarnings []string // not committed, not pushed, etc. (useful for docs generation mode)
+	localRepositoryWarnings []string // not committed, not pushed, etc. (useful for docs generation mode)
 }
 
 func Run(options PageOutputOptions, args []string, recommendedPort string, silentMode bool, printUsage func(io.Writer), appPkgPath string, roughBuildTime func() time.Time) {
@@ -278,7 +278,7 @@ func (ds *docServer) analyze(args []string, options PageOutputOptions, toolchain
 		})
 
 		if sourceReadingStyle == SourceReadingStyle_external {
-			for _, w := range ds.wdRepositoryWarnings {
+			for _, w := range ds.localRepositoryWarnings {
 				ds.registerAnalyzingLogMessage(func() string {
 					return "!!! Warning: " + w
 				})
@@ -293,14 +293,20 @@ func (ds *docServer) analyze(args []string, options PageOutputOptions, toolchain
 	})
 
 	// ...
-	if err := ds.analyzer.ParsePackages(ds.onAnalyzingSubTaskDone, ds.tryToCompleteModuleInfo, toolchain, args...); err != nil {
-		if loadErr, ok := err.(*code.LoadError); ok {
-			for _, e := range loadErr.Errs {
-				fmt.Fprintln(os.Stderr, e)
-			}
+	func() {
+		var repoInfoCache = make(map[string]localRepoInfo, 4)
+		completeModuleInfo := func(m *code.Module)() {
+			ds.tryToCompleteModuleInfo(m, repoInfoCache)
+		}
 
-			log.Println()
-			log.Fatal(`Exit for the above errors.
+		if err := ds.analyzer.ParsePackages(ds.onAnalyzingSubTaskDone, completeModuleInfo, toolchain, args...); err != nil {
+			if loadErr, ok := err.(*code.LoadError); ok {
+				for _, e := range loadErr.Errs {
+					fmt.Fprintln(os.Stderr, e)
+				}
+
+				log.Println()
+				log.Println(`Exit for the above errors.
 
 If you are sure that the code should compile okay, and
 you just upgraded your Go toolchain to a new Go version,
@@ -310,16 +316,17 @@ then please rebuild Golds with the following command.
 
 `)
 
-		} else {
-			log.Println(err)
+			} else {
+				log.Println(err)
 
-			//if printUsage != nil {
-			//printUsage(os.Stdout)
-			//}
+				//if printUsage != nil {
+				//printUsage(os.Stdout)
+				//}
+			}
 
 			os.Exit(1)
 		}
-	}
+	}()
 
 	// ...
 	ds.confirmModuleBuildSourceLinkFuncs()

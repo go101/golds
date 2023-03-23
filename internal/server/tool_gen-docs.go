@@ -629,10 +629,10 @@ func GenDocs(options PageOutputOptions, args []string, outputDir string, silentM
 
 	log.Printf("Docs are generated in %s.", outputDir) // genOutputDir)
 	if sourceReadingStyle == SourceReadingStyle_external {
-		for _, w := range ds.wdRepositoryWarnings {
+		for _, w := range ds.localRepositoryWarnings {
 			log.Println("!!! Warning:", w)
 		}
-		if len(ds.wdRepositoryWarnings) > 0 {
+		if len(ds.localRepositoryWarnings) > 0 {
 			log.Println()
 		}
 	}
