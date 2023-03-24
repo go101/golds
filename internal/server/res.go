@@ -1,6 +1,8 @@
 package server
 
 import (
+	"bufio"
+	"strings"
 	"time"
 
 	"golang.org/x/text/language"
@@ -192,6 +194,7 @@ func (ds *docServer) initSettings(lang string) {
 	ds.translationsByLangTagIndex = translations2
 
 	ds.currentTheme = ds.themeByName(pageTheme)
+	ds.onThemeChanged()
 	ds.currentTranslation = ds.allTranslations[0]
 	ds.currentTranslation = ds.translationByLangs(lang)
 }
@@ -209,6 +212,27 @@ func (ds *docServer) themeByName(name string) Theme {
 		}
 	}
 	return theme
+}
+
+func (ds *docServer) onThemeChanged() {
+	css := ds.currentTheme.CSS()
+	scanner := bufio.NewScanner(strings.NewReader(css))
+	for scanner.Scan() {
+		var pv *string
+		var prefix string
+		line := strings.TrimSpace(scanner.Text())
+		if prefix = "code.chosen-ident {"; strings.HasPrefix(line, prefix) {
+			pv = &ds.css.chosenIdent
+		} else if prefix = "code.chosen-id-import {"; strings.HasPrefix(line, prefix) {
+			pv = &ds.css.chosenImport
+		}
+		if pv != nil {
+			line = line[len(prefix)-1:]
+			if i := strings.LastIndex(line, "}"); i > 0 {
+				*pv = line[:i+1]
+			}
+		}
+	}
 }
 
 func (ds *docServer) translationByName(name string) Translation {

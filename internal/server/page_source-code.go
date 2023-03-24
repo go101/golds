@@ -140,7 +140,8 @@ func (ds *docServer) buildSourceCodePage(w http.ResponseWriter, result *SourceFi
 			}
 			page.WriteByte('\n')
 		}
-		page.WriteString("{background: #226; color: #ff8;}\n")
+		page.WriteString(ds.css.chosenIdent)
+		page.WriteByte('\n')
 		for i := int32(0); i < result.NumImportRatios; i++ {
 			fmt.Fprintf(page, `input[id=i%[1]d]:checked ~pre .i%[1]d`, i)
 			if i < result.NumImportRatios-1 {
@@ -148,7 +149,8 @@ func (ds *docServer) buildSourceCodePage(w http.ResponseWriter, result *SourceFi
 			}
 			page.WriteByte('\n')
 		}
-		page.WriteString("{background: brown; color: #eed;}\n")
+		page.WriteString(ds.css.chosenImport)
+		page.WriteByte('\n')
 		page.WriteString("</style>")
 
 		for i := int32(0); i < result.NumRatios; i++ {

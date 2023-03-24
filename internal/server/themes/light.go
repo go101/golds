@@ -101,4 +101,11 @@ code .lit-string {color: #a66;}
 code .keyword {color: brown;}
 code .comment {color: green; font-style: italic;}
 
+
+// These lines are parsed and used in code.
+// Please keep each of them in a seperated line and
+// keep the "xxxxx {" prefixes unchanged.
+code.chosen-ident {background: #226; color: #ff8;}
+code.chosen-id-import {background: brown; color: #eed;}
+
 `

@@ -68,8 +68,12 @@ type docServer struct {
 	docRenderer util.MarkdownRenderer
 
 	//
-	currentTheme       Theme
 	currentTranslation Translation
+	currentTheme       Theme
+	css struct {
+		chosenIdent  string
+		chosenImport string
+	}
 
 	//
 	updateLogger          *log.Logger

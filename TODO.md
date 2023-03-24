@@ -2,6 +2,9 @@
 
 ### Soon to do
 
+* impl func (ds *docServer) onThemeChanged()
+  and also for import chosen colors.
+
 * imporve package path compare:
    * / is smaller than other chars
    * . (and more) are larger than other chars
