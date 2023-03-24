@@ -70,7 +70,7 @@ type docServer struct {
 	//
 	currentTranslation Translation
 	currentTheme       Theme
-	css struct {
+	css                struct {
 		chosenIdent  string
 		chosenImport string
 	}
