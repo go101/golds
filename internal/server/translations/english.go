@@ -142,15 +142,15 @@ func (*English) Text_Analyzing_MakeStatistics(d time.Duration) string {
 }
 
 func (*English) Text_Analyzing_CollectSourceFiles(d time.Duration) string {
-	return fmt.Sprintf("Collected Source Files: %s", d)
+	return fmt.Sprintf("Collected source files: %s", d)
 }
 
 func (*English) Text_Analyzing_CollectObjectReferences(d time.Duration) string {
-	return fmt.Sprintf("Collected Object References: %s", d)
+	return fmt.Sprintf("Collected object references: %s", d)
 }
 
 func (*English) Text_Analyzing_CacheSourceFiles(d time.Duration) string {
-	return fmt.Sprintf("Cached Source Files: %s", d)
+	return fmt.Sprintf("Cached source files: %s", d)
 }
 
 func (*English) Text_Analyzing_Done(d time.Duration, memoryUse string) string {

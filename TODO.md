@@ -2,6 +2,9 @@
 
 ### Soon to do
 
+* filter listed packages
+  deprecate -wdpkgs-listing? Or make it support more, such as prefix=abc.com/yyy
+
 * impl func (ds *docServer) onThemeChanged()
   and also for import chosen colors.
 
@@ -9,6 +12,11 @@
    * / is smaller than other chars
    * . (and more) are larger than other chars
    https://www.asciitable.com/
+
+* support multiple seed modules:
+  https://github.com/go101/golds/issues/39
+  https://github.com/go101/golds/issues/25
+  https://github.com/go101/slog/tree/main/temp
 
 * Use types.Identical to compare types.Type values
    Note: Some places still need to sue the == opeartor.
@@ -56,6 +64,8 @@
 * bug: https://github.com/go101/golds/issues/33 (search bug#33)
 
 * write some generic cases: internal/testing/manual-check-generated-html/generics
+
+* implementation for generic types: https://github.com/golang/go/issues/59224
 
 * show alias list for types, or identical type list
 
