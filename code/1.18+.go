@@ -179,25 +179,31 @@ func (d *CodeAnalyzer) comfirmDirectSelectorsForInstantiatedType(typeInfo *TypeI
 				panic("should not")
 			}
 
-			if sel.Field.Mode == EmbedMode_None {
-				// To save computation.
-				continue
-			}
-
-			// EmbedMode_Indirect or EmbedMode_Direct
-
 			realType := insSel.RealType
 
-			//if sel.Field.Mode == EmbedMode_Indirect {
-			// ...
-			//}
+			if sel.Field.Mode == EmbedMode_None {
+				// To save computation.
+				//continue
 
-			// It is not a good idea to use the EmbedMode_Indirect enum
-			// to make decisisons here, for an embedding field might be
-			// an alias to a pointer type.
+				// to fix bug: https://github.com/go101/golds/issues/40
+				if ntt, ok := realType.TT.(*types.Named); !ok || ntt.Origin() == ntt {
+					continue
+				}
+			} else {
 
-			if ptt, ok := realType.TT.(*types.Pointer); ok {
-				realType = d.RegisterType(ptt.Elem())
+				// EmbedMode_Indirect or EmbedMode_Direct
+
+				//if sel.Field.Mode == EmbedMode_Indirect {
+				// ...
+				//}
+
+				// It is not a good idea to use the EmbedMode_Indirect enum
+				// to make decisisons here, for an embedding field might be
+				// an alias to a pointer type.
+
+				if ptt, ok := realType.TT.(*types.Pointer); ok {
+					realType = d.RegisterType(ptt.Elem())
+				}
 			}
 
 			d.registerInstantiatedType(realType, instantiated.TypeArgs)

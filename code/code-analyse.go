@@ -1129,6 +1129,9 @@ func (d *CodeAnalyzer) collectSelectorsForInterfaceType(t *TypeInfo, depth int, 
 			for i := 0; i < itt.NumMethods(); i++ {
 				fmt.Fprintf(&bd, "    Method(%v): %v\n", i, itt.Method(i))
 			}
+
+			//fmt.Printf("unnamed interface should have collected direct selectors now. %#v.\nMore info:\n%s", t, bd.String())
+			//return
 			panic(fmt.Sprintf("unnamed interface should have collected direct selectors now. %#v.\nMore info:\n%s", t, bd.String()))
 		}
 
