@@ -303,6 +303,20 @@ func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...i
 		//       And, go/types can be used to verify the correctness of the custom implementation.
 	}
 
+	// load builtin package
+	builtinPPkgs, err := packages.Load(configForParsing, "builtin")
+	if err != nil {
+		return fmt.Errorf("packages.Load (parse builtin package): %w", err)
+	}
+	if len(builtinPPkgs) != 1 {
+		return errors.New("packages.Load: load builtin page error (unknown).")
+	}
+	numParsedPackages++
+	for _, ppkg := range builtinPPkgs[0].Imports {
+		args = append(args, ppkg.PkgPath) // !!! since Go 1.21, "builtin" imports "cmp".
+	}
+
+	// load all others
 	ppkgs, err := packages.Load(configForParsing, args...)
 	if err != nil {
 		return fmt.Errorf("packages.Load (parse packages): %w", err)
@@ -344,19 +358,9 @@ func (d *CodeAnalyzer) ParsePackages(onSubTaskDone func(int, time.Duration, ...i
 		ppkgs = append(ppkgs, runtimePPkgs...)
 	}
 
-	//if num := numParsedPackages; num&(num-1) != 0 {
-	//	logProgress(true, SubTask_ParsePackagesDone, num)
-	//}
-
-	builtinPPkgs, err := packages.Load(configForParsing, "builtin")
-	if err != nil {
-		return fmt.Errorf("packages.Load (parse builtin package): %w", err)
+	if num := numParsedPackages; num&(num-1) != 0 {
+		logProgress(true, SubTask_ParsePackagesDone, num)
 	}
-	if len(builtinPPkgs) != 1 {
-		return errors.New("packages.Load: load builtin page error (unknown).")
-	}
-	numParsedPackages++
-	logProgress(true, SubTask_ParsePackagesDone, numParsedPackages)
 
 	//...
 

@@ -2,16 +2,29 @@
 
 ### Soon to do
 
+* support "golds [:tip | 1.m.n] ..." 
+
+* improve doc comment: https://github.com/golang/go/issues/61394
+  * and "see FooBar" alike: https://docs.go101.org/std/pkg/net/http.html#name-TimeFormat
+  * and "http://www.google.com/". https://docs.go101.org/std/pkg/net/http.html#name-ServeMux
+
 * filter listed packages
   deprecate -wdpkgs-listing? Or make it support more, such as prefix=abc.com/yyy
 
 * impl func (ds *docServer) onThemeChanged()
   and also for import chosen colors.
 
-* imporve package path compare:
+* (done?) imporve package path compare:
    * / is smaller than other chars
    * . (and more) are larger than other chars
    https://www.asciitable.com/
+
+* method list: toggle full method form
+  https://github.com/golang/go/issues/6127#issuecomment-1594953640
+  Current rough impl idea: use a key-binding to toggle.
+
+* click pkg:runtime#name-Error.RuntimeError to source page,
+  bug: the RuntimeError method in src page is not clickable now.
 
 * support multiple seed modules:
   https://github.com/go101/golds/issues/39
