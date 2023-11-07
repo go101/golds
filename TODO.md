@@ -3,6 +3,8 @@
 ### Soon to do
 
 * support "golds [:tip | 1.m.n] ..." 
+  or `golds -gotv=xxx ...`
+  and `gotv xxx lds ...`
 
 * improve doc comment: https://github.com/golang/go/issues/61394
   * and "see FooBar" alike: https://docs.go101.org/std/pkg/net/http.html#name-TimeFormat
@@ -10,6 +12,8 @@
 
 * filter listed packages
   deprecate -wdpkgs-listing? Or make it support more, such as prefix=abc.com/yyy
+
+* https://github.com/golang/go/issues/63223
 
 * impl func (ds *docServer) onThemeChanged()
   and also for import chosen colors.
@@ -79,6 +83,10 @@
 * write some generic cases: internal/testing/manual-check-generated-html/generics
 
 * implementation for generic types: https://github.com/golang/go/issues/59224
+  * first step: view all type parameters as an identical type and find
+                all implementations.
+  * second step: check correspndong constraint satisfications in the results
+                got in the last step.
 
 * show alias list for types, or identical type list
 

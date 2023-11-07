@@ -1119,9 +1119,9 @@ func (d *CodeAnalyzer) collectSelectorsForInterfaceType(t *TypeInfo, depth int, 
 			itt := t.TT.(*types.Interface)
 			var bd strings.Builder
 			bd.Grow(2048)
-			fmt.Fprintf(&bd, "  IsMethodSet(): %v\n", itt.IsMethodSet())
-			fmt.Fprintf(&bd, "  IsImplicit(): %v\n", itt.IsImplicit())
-			fmt.Fprintf(&bd, "  NumEmbeddeds(): %v\n", itt.NumEmbeddeds())
+			//fmt.Fprintf(&bd, "  IsMethodSet(): %v\n", itt.IsMethodSet())
+			//fmt.Fprintf(&bd, "  IsImplicit(): %v\n", itt.IsImplicit())
+			//fmt.Fprintf(&bd, "  NumEmbeddeds(): %v\n", itt.NumEmbeddeds())
 			for i := 0; i < itt.NumEmbeddeds(); i++ {
 				fmt.Fprintf(&bd, "    EmbeddedType(%v): %v\n", i, itt.EmbeddedType(i))
 			}
