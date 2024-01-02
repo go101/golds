@@ -359,7 +359,7 @@ Options:
 		* source files of the packages which external
 		  host URLs couldn't be determined locally
 		  will be found out by sending a HTTPS query.
-		* Possible more cases needing net connections.
+		* possible more cases needing net connections.
 	-only-list-exporteds
 		Not to list unexported resources
 		in package-details pages.
@@ -367,7 +367,7 @@ Options:
 		This is a shortcut of the combination
 		of several other options, including
 		-nouses, -only-list-exporteds and
-		-source-code-reading=plain|cvs now.
+		-source-code-reading=plain now.
 	-emphasize-wdpkgs (depreciated)
 		List the packages under the current
 		directory before other pacakges.
