@@ -384,7 +384,7 @@ Options:
 		Available values (default is verbose+qrcode):
 		* none: show nothing.
 		* simple: show Golds version only.
-		* verbose: also show Golds author.
+		* verbose: also show Golds author and
 		  promotion info.
 		* verbose+qrcode: include verbose content
 		  and a qr-code.
