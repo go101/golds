@@ -172,7 +172,7 @@
   and use <details><summary> html tags to do collsapse/expand.
 
 * support https://github.com/go101/golds/issues/25
-  syupport "golds aModule@version"
+  support "golds aModule@version", "golds aModule@version/...", "golds aModule@version/apkg/..."
   * create a temp dir to process
 
 * show/run examples/tests/banchmarks 

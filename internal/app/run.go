@@ -379,7 +379,7 @@ Options:
 		* solo: list them without others.
 		* general: list them with others by
 		  alphabetical order.
-	-footer-showing=verbose+qrcode|verbose|simple|none
+	-footer=verbose+qrcode|verbose|simple|none
 		Specify how page footers should be shown.
 		Available values (default is verbose+qrcode):
 		* none: show nothing.

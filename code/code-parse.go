@@ -552,7 +552,7 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 	//}
 
 	numToolchainPkgs, modulesNumPkgs := 0, make(map[string]int, 256)
-	count := bytes.Count(output, []byte("ImportPath"))
+	count := bytes.Count(output, []byte(`"ImportPath"`))
 	if count == 0 {
 		return fmt.Errorf("go list nothing: %s", output)
 	}
@@ -566,6 +566,13 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 		if err != nil {
 			return fmt.Errorf("decode package#%d json error: %w", i, err)
 		}
+		if strings.HasSuffix(p.ImportPath, "]") {
+			// Since Go 1.21, some entries with ImportPath
+			// as "import-path [cmd/compile]" appears in
+			// the "go list" result. Don't know what they mean.
+			// ToDo:
+			continue
+		}
 		if p.Module.Path != "" { // must be not std or toolchain mobule
 			modulesNumPkgs[p.Module.Path]++
 		} else if strings.HasPrefix(p.Dir, toolchain.Cmd) {
@@ -573,9 +580,11 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 		}
 		i++
 	}
-	if i != count {
-		return fmt.Errorf("decoded package json count (%d) != result of bytes.Count (%d)", i, count)
-	}
+	// ToDo: since Go 1.21 ... (see the comment in the about for loop.)
+	//if i != count {
+	//	return fmt.Errorf("decoded package json count (%d) != result of bytes.Count (%d)", i, count)
+	//}
+	pkgs = pkgs[:i]
 
 	if numToolchainPkgs == 0 {
 		if hasToolchain {
@@ -616,6 +625,7 @@ func (d *CodeAnalyzer) confirmPackageModules(args []string, hasToolchain bool, t
 			fmt.Printf("!!! package %s is not found, weird\n", p.ImportPath)
 			continue
 		}
+		//fmt.Printf("### package %s is found.\n", p.ImportPath)
 
 		pkg.OneLineDoc = p.Doc
 		pkg.Directory = p.Dir
