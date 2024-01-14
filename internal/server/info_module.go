@@ -294,7 +294,7 @@ func (ds *docServer) tryToCompleteModuleInfo(m *code.Module, localRepoInfos map[
 		//	log.Printf("working directory module dir is not correct:\n\t%s\n\t%s", m.Dir, ds.initialWorkingDirectory)
 		//	return
 		//}
-		// m.Dir might be prefix of ds.initialWorkingDirectory, or vice version:
+		// m.Dir might be prefix of ds.initialWorkingDirectory, or vice versa:
 		// 1. run "golds ./..." in subpackages of a module folder.
 		// 2. run "golds foo/..." for the foo module.
 
@@ -307,7 +307,6 @@ func (ds *docServer) tryToCompleteModuleInfo(m *code.Module, localRepoInfos map[
 
 		ds.tryRetrievingWorkdingDirectoryModuleInfo(m, localRepoInfos)
 	} else {
-
 		foundInVendor := false
 		if m.ActualDir() == "" { // this happens for modules in project vendor folder
 			func() {
@@ -635,7 +634,8 @@ func (ds *docServer) tryRetrievingWorkdingDirectoryModuleInfo(m *code.Module, lo
 		// ...
 
 		if !strings.HasPrefix(m.Dir, projectLocalDir) {
-			panic("should not")
+			//panic("should not. m.Dir = " + m.Dir + ", projectLocalDir = " +projectLocalDir)
+			return
 		}
 
 		ds.localRepositoryWarnings = append(ds.localRepositoryWarnings, warnings...)
