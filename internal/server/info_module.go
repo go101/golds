@@ -634,7 +634,13 @@ func (ds *docServer) tryRetrievingWorkdingDirectoryModuleInfo(m *code.Module, lo
 		// ...
 
 		if !strings.HasPrefix(m.Dir, projectLocalDir) {
+			if verboseLogs {
+				log.Printf("Directories not match (%s)", m.Path)
+				log.Printf("    module.Dir          : %s", m.Dir)
+				log.Printf("    module.RepositoryDir: %s", projectLocalDir)
+			}
 			//panic("should not. m.Dir = " + m.Dir + ", projectLocalDir = " +projectLocalDir)
+
 			return
 		}
 
