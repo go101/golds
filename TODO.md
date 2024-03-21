@@ -5,6 +5,16 @@
 * support "golds [:tip | 1.m.n] ..." 
   or `golds -gotv=xxx ...`
   and `gotv xxx lds ...`
+  
+* check why not work
+  golds -s github.com/abhinav/doc2go
+  golds -s github.com/abhinav/doc2go@latest
+  golds -s github.com/abhinav/doc2go/...
+
+* use golang.org/x/mod to manipulate versions
+
+* find version of seed module
+  https://github.com/go101/golds/issues/47
 
 * improve doc comment: https://github.com/golang/go/issues/61394
   * and "see FooBar" alike: https://docs.go101.org/std/pkg/net/http.html#name-TimeFormat

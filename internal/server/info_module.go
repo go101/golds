@@ -746,22 +746,21 @@ func findSourceRepository(forModule string) (repoURL, extraPath string, err erro
 //======================================
 
 // devel go1.17-326a792517 Tue May 11 02:46:21 2021 +0000
-var findGoVersionRegexp = regexp.MustCompile(`devel go[.0-9]+-([0-9a-fA-F]{6,})\s`)
+var findGoVersionRegexp = regexp.MustCompile(`go[.0-9]+(-[0-9a-fA-F]{6,})?`)
 
 func findGoToolchainVersionFromGoRoot(goroot string) (string, error) {
 	versionData, err := ioutil.ReadFile(filepath.Join(goroot, "VERSION"))
 	if err == nil {
-		return string(bytes.TrimSpace(versionData)), nil
+		//return string(bytes.TrimSpace(versionData)), nil
 	} else {
-		//panic("failed to get Go toolchain version in GOROOT: " + goroot)
+		versionData, err = ioutil.ReadFile(filepath.Join(goroot, "VERSION.cache"))
 	}
-	versionData, err = ioutil.ReadFile(filepath.Join(goroot, "VERSION.cache"))
 	if err != nil {
-		return "", fmt.Errorf("failed to get Go toolchain version in GOROOT (%s): %w", goroot, err)
+		return "", fmt.Errorf("failed to get Go toolchain version in GOROOT (%s)", goroot)
 	}
-	matches := findGoVersionRegexp.FindStringSubmatch(string(versionData))
-	if len(matches) >= 2 {
-		return matches[1], nil
+	matches := findGoVersionRegexp.FindSubmatch(versionData)
+	if len(matches) >= 1 {
+		return string(matches[0]), nil
 	}
 	return "", fmt.Errorf("failed to get Go toolchain version in GOROOT (%s)", goroot)
 }
