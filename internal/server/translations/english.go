@@ -769,7 +769,7 @@ func (*English) Text_GeneratedPageFooter(goldsVersion, qrCodeLink, goOS, goArch 
 <td>The pages are generated with <a href="https://go101.org/apps-and-libs/golds.html"><b>Golds</b></a> <i>%s</i>. (GOOS=%s GOARCH=%s)
 <b>Golds</b> is a <a href="https://go101.org">Go 101</a> project developed by <a href="https://tapirgames.com">Tapir Liu</a>.
 PR and bug reports are welcome and can be submitted to <a href="https://github.com/go101/golds">the issue list</a>.
-Please follow <a href="https://twitter.com/go100and1">@Go100and1</a>%s to get the latest news of <b>Golds</b>.</td></tr></table>`,
+Please follow <a href="https://twitter.com/zigo_101">@zigo_101</a>%s to get the latest news of <b>Golds</b>.</td></tr></table>`,
 		qrImg,
 		goldsVersion,
 		goOS,

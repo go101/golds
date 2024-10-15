@@ -256,7 +256,7 @@ func (page *htmlPage) Done(w io.Writer) []byte {
 					case *translations.Chinese:
 						qrImgLink = buildPageHref(page.PathInfo, createPagePathInfo(ResTypePNG, "go101-wechat"), nil, "")
 					case *translations.English:
-						qrImgLink = buildPageHref(page.PathInfo, createPagePathInfo(ResTypePNG, "go101-twitter"), nil, "")
+						qrImgLink = buildPageHref(page.PathInfo, createPagePathInfo(ResTypePNG, "zigo101-twitter"), nil, "")
 					}
 				}
 				footer = page.translation.Text_GeneratedPageFooter(goldsVersion, qrImgLink, build.Default.GOOS, build.Default.GOARCH)

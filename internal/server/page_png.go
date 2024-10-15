@@ -37,8 +37,8 @@ func (ds *docServer) pngFile(w http.ResponseWriter, r *http.Request, pngFilename
 }
 
 var imageFiles = map[string]string{
-	"go101-wechat":  images.Go101WeChat_png,
-	"go101-twitter": images.Go101Twitter_png,
+	"go101-wechat":    images.Go101WeChat_png,
+	"zigo101-twitter": images.Zigo101Twitter_png,
 }
 
 func decodeBase64Data(pngFilename string) []byte {

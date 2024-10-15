@@ -2,6 +2,10 @@
 
 ### Soon to do
 
+* io.Writer.Write method is linked to wrong source position.
+
+* Copy name links, such as https://docs.go101.org/std/pkg/io.html#name-Writer
+
 * support "golds [:tip | 1.m.n] ..." 
   or `golds -gotv=xxx ...`
   and `gotv xxx lds ...`
@@ -15,6 +19,11 @@
 
 * find version of seed module
   https://github.com/go101/golds/issues/47
+  * find the tag of current branch if it is the last commit
+  	git describe --exact-match --tags 2> /dev/null || git rev-parse --short HEAD
+  * find the latest tag
+    git describe --tags --abbrev=0
+  
 
 * improve doc comment: https://github.com/golang/go/issues/61394
   * and "see FooBar" alike: https://docs.go101.org/std/pkg/net/http.html#name-TimeFormat
@@ -432,11 +441,12 @@
     * https://github.com/xlab/c-for-go
     * https://github.com/elliotchance/c2go
     * https://github.com/gotranspile/cxgo
-    * port tinycc
     * https://github.com/DQNEO/8cc.go
     * is LSIF helpful?
 	  https://lsif.dev/
 	  lsif-c++ for cgo etc.
+	* use tinycc wasm
+	  * https://lupyuen.codeberg.page/articles/tcc.html#zig-compiles-tcc-to-webassembly
 
 * list .md files and render markdown files
 

@@ -5,7 +5,7 @@ It tries to extract as much information as possible from Go code to help gophers
 
 * [Demo of the generated docs for standard packages](https://docs.go101.org/index.html)
   (generated with `golds -gen -nouses -only-list-exporteds -render-doclinks -theme=dark std`).
-* Please follow [@Go100and1](https://twitter.com/go100and1) to get the latest news of **Golds**
+* Please follow [@zigo_101](https://twitter.com/zigo_101) to get the latest news of **Golds**
   (and Go details/facts/tips/etc.).
 
 ### Installation & Usages
