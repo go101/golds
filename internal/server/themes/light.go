@@ -39,7 +39,7 @@ a {color: #079;}
 
 div.pkg {margin-top: 1px; padding-top: 1px; padding-bottom: 1px;}
 
-a.path-duplicate {color: #fff;}
+a.path-duplicate {color: #bdf;}
 
 .golds-update {text-align: center; font-size: smaller; background: #eee; padding: 3px;}
 
