@@ -9,6 +9,7 @@ import (
 	"go/token"
 	"go/types"
 	"log"
+	"os"
 	"strings"
 	//"runtime/debug"
 
@@ -342,8 +343,15 @@ func (d *CodeAnalyzer) registerInstantiatedType(t *TypeInfo, typeArgs []TypeExpr
 		panic("ot.TypeName == nil")
 	}
 	//t.TypeName = ot.TypeName // already set in registeringType
-	if t.TypeName == nil {
-		panic("t.TypeName == nil")
+	if t.TypeName == nil || true {
+		// see: https://github.com/go101/golds/issues/52
+		//      I haven't get why a named type has not a type name now.
+		// panic("t.TypeName == nil")
+
+		if len(os.Getenv("GoldsIssue52")) > 0 {
+			log.Printf("Issue#52: registerInstantiatedType:\n\tntt=%v\n\tntt.Obj()=%v\n\tot.TypeName=%v\n\n", ntt, ntt.Obj(), ot.TypeName)
+		}
+		t.TypeName = ot.TypeName
 	}
 	t.Instantiated = &InstantiatedInfo{
 		TypeArgs: typeArgs,
