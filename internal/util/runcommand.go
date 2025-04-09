@@ -25,6 +25,9 @@ func RunShellCommand(timeout time.Duration, wd string, envs []string, cmd string
 	defer cancel()
 	command := exec.CommandContext(ctx, cmd, args...)
 	command.Dir = wd
+	if cmd == "go" {
+		envs = addGOTOOLCHAIN(envs)
+	}
 	command.Env = removeGODEBUG(append(os.Environ(), envs...))
 	var erroutput bytes.Buffer
 	command.Stderr = &erroutput
@@ -50,6 +53,15 @@ func RunShell(timeout time.Duration, wd string, envs []string, cmdAndArgs ...str
 	}
 
 	return RunShellCommand(timeout, wd, envs, cmdAndArgs[0], cmdAndArgs[1:]...)
+}
+
+func addGOTOOLCHAIN(envs []string) []string {
+	for _, e := range envs {
+		if strings.HasPrefix(e, "GOTOOLCHAIN=") {
+			return envs
+		}
+	}
+	return append(envs, "GOTOOLCHAIN=local")
 }
 
 func removeGODEBUG(envs []string) []string {
