@@ -231,7 +231,9 @@ func (d *CodeAnalyzer) findImplementations() { // (resultMethodCache *typeutil.M
 			funcSig, ok := sel.Type().TT.(*types.Signature)
 			if !ok {
 				//panic(fmt.Sprintf("not a types.Signature: %T", sel.Method.Type.TT))
-				panic(fmt.Sprintf("not a types.Signature: %T", sel.Type().TT))
+				//panic(fmt.Sprintf("not a types.Signature: %[1]T. \n\t%[1]v", sel.Type().TT))
+				// Since 1.25, might be *types.Basic (invalid type)
+				continue
 			}
 			pkgImportPath := ""
 			if sel.Method.Pkg != nil {
@@ -314,7 +316,9 @@ func (d *CodeAnalyzer) findImplementations() { // (resultMethodCache *typeutil.M
 			//funcSig, ok := sel.Method.Type.TT.(*types.Signature)
 			funcSig, ok := sel.Type().TT.(*types.Signature)
 			if !ok {
-				panic("not a types.Signature")
+				//panic("not a types.Signature")
+				// Since 1.25, might be *types.Basic (invalid type)
+				continue
 			}
 			pkgImportPath := ""
 			if sel.Method.Pkg != nil {
@@ -845,7 +849,9 @@ func (d *CodeAnalyzer) registerNamedInterfaceMethodsForInvolvedTypeNames() {
 				//sig, ok := sel.Method.Type.TT.(*types.Signature)
 				sig, ok := sel.Type().TT.(*types.Signature)
 				if !ok {
-					panic("impossible")
+					//panic("impossible")
+					// Since 1.25, might be *types.Basic (invalid type)
+					continue
 				}
 
 				params, results := sig.Params(), sig.Results()
