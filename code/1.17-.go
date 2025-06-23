@@ -27,6 +27,10 @@ func originType(nt *types.Named) *types.Named {
 	return nt
 }
 
+func originAlias(at *types.Alias) *types.Alias {
+	return at
+}
+
 func astTypeSpecTypeParams(ts *ast.TypeSpec) *ast.FieldList {
 	return nil
 }

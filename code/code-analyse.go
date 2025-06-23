@@ -231,7 +231,7 @@ func (d *CodeAnalyzer) findImplementations() { // (resultMethodCache *typeutil.M
 			funcSig, ok := sel.Type().TT.(*types.Signature)
 			if !ok {
 				//panic(fmt.Sprintf("not a types.Signature: %T", sel.Method.Type.TT))
-				//panic(fmt.Sprintf("not a types.Signature: %[1]T. \n\t%[1]v", sel.Type().TT))
+				//log.Printf("not a types.Signature: %[1]T. \n\t%[1]v\n\t%[2]v", sel.Type().TT, uiInfo.t)
 				// Since 1.25, might be *types.Basic (invalid type)
 				continue
 			}
@@ -317,6 +317,7 @@ func (d *CodeAnalyzer) findImplementations() { // (resultMethodCache *typeutil.M
 			funcSig, ok := sel.Type().TT.(*types.Signature)
 			if !ok {
 				//panic("not a types.Signature")
+				//log.Printf("=== not a types.Signature: %[1]T. \n\t%[1]v", sel.Type().TT)
 				// Since 1.25, might be *types.Basic (invalid type)
 				continue
 			}
@@ -851,6 +852,7 @@ func (d *CodeAnalyzer) registerNamedInterfaceMethodsForInvolvedTypeNames() {
 				if !ok {
 					//panic("impossible")
 					// Since 1.25, might be *types.Basic (invalid type)
+					//log.Printf("~~~ not a types.Signature: %[1]T. \n\t%[1]v", sel.Type().TT)
 					continue
 				}
 

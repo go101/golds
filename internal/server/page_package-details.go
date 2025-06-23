@@ -2253,8 +2253,8 @@ func (ds *docServer) writeResourceIndexHTML(page *htmlPage, currentPkg *code.Pac
 	//fmt.Fprint(page, ` <a href="#">{/}</a>`)
 }
 
-func (ds *docServer) writeTypeName(page *htmlPage, tt *types.Named, docPkg *code.Package, alternativeTypeName string) {
-	objpkg := tt.Obj().Pkg()
+func (ds *docServer) writeTypeName(page *htmlPage, tn *types.TypeName, docPkg *code.Package, alternativeTypeName string) {
+	objpkg := tn.Pkg()
 	isBuiltin := objpkg == nil
 	if isBuiltin {
 		objpkg = ds.analyzer.BuiltinPackge().PPkg.Types
@@ -2264,17 +2264,17 @@ func (ds *docServer) writeTypeName(page *htmlPage, tt *types.Named, docPkg *code
 	}
 	ttName := alternativeTypeName
 	if ttName == "" {
-		ttName = tt.Obj().Name()
+		ttName = tn.Name()
 	}
-	//page.WriteString(tt.Obj().Name())
-	if isBuiltin || collectUnexporteds || tt.Obj().Exported() {
-		buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, objpkg.Path()), page, ttName, "name-", tt.Obj().Name())
+	//page.WriteString(tn.Name())
+	if isBuiltin || collectUnexporteds || tn.Exported() {
+		buildPageHref(page.PathInfo, createPagePathInfo1(ResTypePackage, objpkg.Path()), page, ttName, "name-", tn.Name())
 	} else {
 		p := ds.analyzer.PackageByPath(objpkg.Path())
 		if p == nil {
 			panic("should not")
 		}
-		ttPos := p.PPkg.Fset.PositionFor(tt.Obj().Pos(), false)
+		ttPos := p.PPkg.Fset.PositionFor(tn.Pos(), false)
 		//log.Printf("============ %v, %v, %v", tt, pkg.Path, ttPos)
 		writeSrouceCodeLineLink(page, p, ttPos, ttName, "")
 	}
@@ -2285,11 +2285,17 @@ func (ds *docServer) writeValueTType(page *htmlPage, tt types.Type, docPkg *code
 	switch tt := tt.(type) {
 	default:
 		panic("should not")
+	case *types.Alias:
+		if forTypeName != nil && tt == forTypeName.Denoting.TT {
+			page.WriteString(tt.Obj().Name())
+		} else {
+			ds.writeTypeName(page, tt.Obj(), docPkg, "")
+		}
 	case *types.Named:
 		if forTypeName != nil && tt == forTypeName.Denoting.TT {
 			page.WriteString(tt.Obj().Name())
 		} else {
-			ds.writeTypeName(page, tt, docPkg, "")
+			ds.writeTypeName(page, tt.Obj(), docPkg, "")
 		}
 		if typesNamedTypeParams(tt) != nil {
 			page.WriteString("[...]") // ToDo: try to find out the type arguments
@@ -2397,9 +2403,12 @@ func (ds *docServer) writeStructFields(page *htmlPage, st *types.Struct, docPkg 
 			// ToDo: try to find ast representation of the types of all variables.
 			//       Otherwise, the embedded interface type aliases info are lost.
 			// This is a suboptimal implementaiuon.
-			if tn, ok := v.Type().(*types.Named); ok {
-				ds.writeTypeName(page, tn, docPkg, v.Name())
-			} else {
+			switch tt := v.Type().(type) {
+			case *types.Named:
+				ds.writeTypeName(page, tt.Obj(), docPkg, v.Name())
+			case *types.Alias:
+				ds.writeTypeName(page, tt.Obj(), docPkg, v.Name())
+			default:
 				page.WriteString(v.Name())
 			}
 		} else {

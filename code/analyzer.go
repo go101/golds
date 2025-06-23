@@ -333,26 +333,35 @@ func (d *CodeAnalyzer) RegisterTypeName(tn *TypeName) {
 }
 
 func (d *CodeAnalyzer) registerInstantiatedType(t *TypeInfo, typeArgs []TypeExpr) {
-	ntt, ok := t.TT.(*types.Named)
-	if !ok {
+	
+	switch tt := t.TT.(type) {
+	case *types.Named:
+		ot := d.RegisterType(originType(tt))
+		//t.Origin = ot
+		if ot.TypeName == nil {
+			panic("ot.TypeName == nil")
+		}
+		//t.TypeName = ot.TypeName // already set in registeringType
+		if t.TypeName == nil || true {
+			// see: https://github.com/go101/golds/issues/52
+			//      I haven't get why a named type has not a type name now.
+			// panic("t.TypeName == nil")
+
+			if len(os.Getenv("GoldsIssue52")) > 0 {
+				log.Printf("Issue#52: registerInstantiatedType:\n\tntt=%v\n\tntt.Obj()=%v\n\tot.TypeName=%v\n\n", tt, tt.Obj(), ot.TypeName)
+			}
+			t.TypeName = ot.TypeName
+		}
+	case *types.Alias:
+		// ToDo: now Go support alias generic types, things become more complicated ...
+		return
+	default:
+		log.Printf("????? %T\n\t%v", t.TT, t.TT)
 		panic("should not")
 	}
-	ot := d.RegisterType(originType(ntt))
-	//t.Origin = ot
-	if ot.TypeName == nil {
-		panic("ot.TypeName == nil")
-	}
-	//t.TypeName = ot.TypeName // already set in registeringType
-	if t.TypeName == nil || true {
-		// see: https://github.com/go101/golds/issues/52
-		//      I haven't get why a named type has not a type name now.
-		// panic("t.TypeName == nil")
 
-		if len(os.Getenv("GoldsIssue52")) > 0 {
-			log.Printf("Issue#52: registerInstantiatedType:\n\tntt=%v\n\tntt.Obj()=%v\n\tot.TypeName=%v\n\n", ntt, ntt.Obj(), ot.TypeName)
-		}
-		t.TypeName = ot.TypeName
-	}
+
+
 	t.Instantiated = &InstantiatedInfo{
 		TypeArgs: typeArgs,
 	}
@@ -1255,8 +1264,14 @@ func (d *CodeAnalyzer) registerExplicitlySpecifiedMethods(typeInfo *TypeInfo, as
 				continue
 			}
 
-			tv := pkg.PPkg.TypesInfo.Types[method.Type]
-			methodTypeInfo := d.RegisterType(tv.Type)
+			//mtt := pkg.PPkg.TypesInfo.Types[method.Type].Type
+			mtt := pkg.PPkg.TypesInfo.TypeOf(method.Type)
+			if (mtt == nil) {
+				log.Printf("===> method [%s] has no type!", ident.Name)
+				panic("should not")
+			}
+			methodTypeInfo := d.RegisterType(mtt)
+
 			if pkg == d.builtinPkg && ident.Name == "Error" {
 				// The special handling is to correctly find all implementations of the builtin "error" type.
 				errorUnderlyingType := types.Universe.Lookup("error").(*types.TypeName).Type().Underlying().(*types.Interface)
