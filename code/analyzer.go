@@ -333,7 +333,7 @@ func (d *CodeAnalyzer) RegisterTypeName(tn *TypeName) {
 }
 
 func (d *CodeAnalyzer) registerInstantiatedType(t *TypeInfo, typeArgs []TypeExpr) {
-	
+
 	switch tt := t.TT.(type) {
 	case *types.Named:
 		ot := d.RegisterType(originType(tt))
@@ -359,8 +359,6 @@ func (d *CodeAnalyzer) registerInstantiatedType(t *TypeInfo, typeArgs []TypeExpr
 		log.Printf("????? %T\n\t%v", t.TT, t.TT)
 		panic("should not")
 	}
-
-
 
 	t.Instantiated = &InstantiatedInfo{
 		TypeArgs: typeArgs,
@@ -1266,7 +1264,7 @@ func (d *CodeAnalyzer) registerExplicitlySpecifiedMethods(typeInfo *TypeInfo, as
 
 			//mtt := pkg.PPkg.TypesInfo.Types[method.Type].Type
 			mtt := pkg.PPkg.TypesInfo.TypeOf(method.Type)
-			if (mtt == nil) {
+			if mtt == nil {
 				log.Printf("===> method [%s] has no type!", ident.Name)
 				panic("should not")
 			}

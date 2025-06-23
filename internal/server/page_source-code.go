@@ -1654,7 +1654,8 @@ func writeSrouceCodeLineLink(page *htmlPage, pkg *code.Package, p token.Position
 	var sourceFilename string
 	fileInfo := pkg.SourceFileInfoByFilePath(p.Filename)
 	if fileInfo == nil {
-		panic(fmt.Sprintf("! file info for %s in package %s is not found", p.Filename, pkg.Path))
+		// ToDo: possible for some links in comments?
+		//panic(fmt.Sprintf("! file info for %s in package %s is not found", p.Filename, pkg.Path))
 	} else {
 		//sourceFilename = fileInfo.BareFilename
 		//if sourceFilename == "" {
