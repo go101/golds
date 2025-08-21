@@ -123,14 +123,20 @@ func run() {
 		return
 	}
 
-	// Use user GOROOT instead binary releaser GOROOT.
-	output, err := util.RunShellCommand(time.Second*5, "", nil, "go", "env", "GOROOT")
-	if err != nil {
-		log.Fatalf("Run: go env GOROOT error: %s", err)
-		//return
-	}
-	if gr := string(bytes.TrimSpace(output)); gr != "" {
-		build.Default.GOROOT = gr // the initial value is the value of releaser machine
+	// Use user GOROOT instead binary release GOROOT.
+	var goroot = func() string {
+		if gr := os.Getenv("GOROOT"); gr != "" {
+			return gr
+		}
+		output, err := util.RunShellCommand(time.Second*5, "", nil, "go", "env", "GOROOT")
+		if err != nil {
+			log.Fatalf("Run: go env GOROOT error: %s", err)
+			//return
+		}
+		return string(bytes.TrimSpace(output))
+	}()
+	if goroot != "" {
+		build.Default.GOROOT = goroot // the initial value is the value of releaser machine
 	}
 
 	// docs generating

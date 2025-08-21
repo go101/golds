@@ -4,9 +4,11 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"go/build"
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -27,7 +29,12 @@ func RunShellCommand(timeout time.Duration, wd string, envs []string, cmd string
 	command.Dir = wd
 	if cmd == "go" {
 		envs = addGOTOOLCHAIN(envs)
+		if build.Default.GOROOT != "" {
+			cmd = filepath.Join(build.Default.GOROOT, "bin", "go")
+		}
 	}
+
+	//println("======== cmd:", cmd);
 	command.Env = removeGODEBUG(append(os.Environ(), envs...))
 	var erroutput bytes.Buffer
 	command.Stderr = &erroutput

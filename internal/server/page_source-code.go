@@ -1611,6 +1611,14 @@ GoOn:
 		return
 	}
 
+	if objPkg.Path == "cmp" && v.pkg.Path == "builtin" {
+		// such as cmp.Ordered
+		obj := objPkg.PPkg.Types.Scope().Lookup(ident.Name)
+		if obj != nil {
+			objPos = objPkg.PPkg.Fset.Position(obj.Pos())
+		}
+	}
+
 	v.buildIdentifier(start, end, -1, buildSrouceCodeLineLink(v.currentPathInfo, v.dataAnalyzer, objPkg, objPos))
 
 End:
