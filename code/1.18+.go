@@ -152,7 +152,12 @@ func (d *CodeAnalyzer) comfirmDirectSelectorsForInstantiatedType(typeInfo *TypeI
 	// The for loop might be endless sometimes.
 	// Here, just changing it to a if-block, just to make it work.
 	// I haven't enough energy to get a deep understanding here.
-	if source.Type.TypeName != nil {
+	//if source.Type.TypeName != nil {
+	//	lastPkg, source, typeArgs = transformTypeArgs(source, typeArgs)
+	//}
+	// Possible to be endless?
+	// Lets change it back to see what will happen ...
+	for source.Type.TypeName != nil {
 		lastPkg, source, typeArgs = transformTypeArgs(source, typeArgs)
 	}
 
@@ -160,12 +165,14 @@ func (d *CodeAnalyzer) comfirmDirectSelectorsForInstantiatedType(typeInfo *TypeI
 		return
 	}
 
+	//log.Println("underlying = ", underlying)
+
 	//switch tt := source.Type.TT.(type) {
 	switch tt := underlying.TT.(type) {
 	default:
 		return
-	case *types.Named:
-		panic("should not")
+	//case *types.Named:
+	//	panic("should not")
 	case *types.Struct:
 		stt := tt
 		clearFieldMap()
@@ -246,7 +253,7 @@ func (d *CodeAnalyzer) comfirmDirectSelectorsForInstantiatedType(typeInfo *TypeI
 					//log.Println("421. =====", tt2.Obj().Name())
 					fieldMap[tt2.Obj().Name()] = d.RegisterType(et)
 				case *types.Interface:
-					//log.Println("422. =====", tt2)
+					log.Println("422. =====", tt2)
 					t2 := d.RegisterType(tt2)
 					if t2.counter < currentCounter {
 						t2.counter = currentCounter
@@ -311,10 +318,10 @@ func (d *CodeAnalyzer) comfirmDirectSelectorsForInstantiatedType(typeInfo *TypeI
 
 				//log.Printf("4 a: %#v", sel.Method.Type.TT)
 
-				if realType == nil {
-					log.Println(sel.Method.Name)
-					panic("should not")
-				}
+				//if realType == nil {
+				//	log.Println(sel.Method.Name)
+				//	panic("should not")
+				//}
 			} else if sel.Field == nil {
 				panic("should not")
 			} else {
@@ -323,10 +330,13 @@ func (d *CodeAnalyzer) comfirmDirectSelectorsForInstantiatedType(typeInfo *TypeI
 
 				//log.Printf("4 b: %#v", sel.Field.Type.TT)
 
-				if realType == nil {
-					log.Println(sel.Field.Name) //, fieldMap)
-					panic("should not")
-				}
+				//if realType == nil {
+				//	log.Println(sel.Field.Name, fieldMap)
+				//	panic("should not")
+				//}
+			}
+			if realType == nil {
+				continue
 			}
 
 			insSel := *sel
