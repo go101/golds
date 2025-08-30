@@ -159,6 +159,9 @@ func (d *CodeAnalyzer) comfirmDirectSelectorsForInstantiatedType(typeInfo *TypeI
 	// Lets change it back to see what will happen ...
 	for source.Type.TypeName != nil {
 		lastPkg, source, typeArgs = transformTypeArgs(source, typeArgs)
+		if lastPkg == nil {
+			return
+		}
 	}
 
 	if source.Type == underlying { // true if the type doesn't use any TypeParam.
@@ -364,7 +367,34 @@ func transformTypeArgs(source TypeExpr, typeArgs []TypeExpr) (*Package, TypeExpr
 	//	log.Println(">>>", source.Type.Instantiated.TypeArgs);
 	//	panic(fmt.Sprintf("should not (%d != %d)", m, n))
 	//}
+	
+	// Okay, now I get it. Some type argument lists are partial.
+	// Partial lists can be made complete, but need some efforts.
+	// Now, teporatirly not handle such cases.
+	//
+	// But, still not undetstand why len(source.Type.Instantiated.TypeArgs)=1
+	// which is larger than len(source.Type.TypeName.TypeParams)==0. for
+	// https://github.com/go101/golds/issues/57#issuecomment-3238063030
+	//
+	//	type Equaler[V comparable] interface {
+	//		Equal(other V) bool
+	//		comparable
+	//	}
+	//
+	//	func Equal[V Equaler[V]](a, b V) bool {
+	//		return a.Equal(b)
+	//	}
+	//
+	// ToDo: handle it.
 	n := len(source.Type.Instantiated.TypeArgs)
+	if n != len(source.Type.TypeName.TypeParams) {
+	println(n, len(source.Type.TypeName.TypeParams))
+	log.Println(n, len(source.Type.TypeName.TypeParams))
+	log.Printf("source = %#v", source)
+	log.Printf("typeArgs = %#v", typeArgs)
+		return nil, source, typeArgs // means unable to handle now
+	}
+
 	nextTypeArgs := make([]TypeExpr, n)
 	for i := range source.Type.Instantiated.TypeArgs {
 		argType := source.Type.Instantiated.TypeArgs[i].Type
