@@ -367,7 +367,7 @@ func transformTypeArgs(source TypeExpr, typeArgs []TypeExpr) (*Package, TypeExpr
 	//	log.Println(">>>", source.Type.Instantiated.TypeArgs);
 	//	panic(fmt.Sprintf("should not (%d != %d)", m, n))
 	//}
-	
+
 	// Okay, now I get it. Some type argument lists are partial.
 	// Partial lists can be made complete, but need some efforts.
 	// Now, teporatirly not handle such cases.
@@ -388,10 +388,10 @@ func transformTypeArgs(source TypeExpr, typeArgs []TypeExpr) (*Package, TypeExpr
 	// ToDo: handle it.
 	n := len(source.Type.Instantiated.TypeArgs)
 	if n != len(source.Type.TypeName.TypeParams) {
-	println(n, len(source.Type.TypeName.TypeParams))
-	log.Println(n, len(source.Type.TypeName.TypeParams))
-	log.Printf("source = %#v", source)
-	log.Printf("typeArgs = %#v", typeArgs)
+		println(n, len(source.Type.TypeName.TypeParams))
+		log.Println(n, len(source.Type.TypeName.TypeParams))
+		log.Printf("source = %#v", source)
+		log.Printf("typeArgs = %#v", typeArgs)
 		return nil, source, typeArgs // means unable to handle now
 	}
 
