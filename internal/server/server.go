@@ -317,8 +317,9 @@ func (ds *docServer) analyze(args []string, options PageOutputOptions, toolchain
 	// ...
 	func() {
 		var repoInfoCache = make(map[string]localRepoInfo, 4)
+		var repoInfoCacheLock sync.Mutex
 		completeModuleInfo := func(m *code.Module) {
-			ds.tryToCompleteModuleInfo(m, repoInfoCache)
+			ds.tryToCompleteModuleInfo(m, repoInfoCache, &repoInfoCacheLock)
 		}
 
 		if err := ds.analyzer.ParsePackages(ds.onAnalyzingSubTaskDone, completeModuleInfo, toolchain, args...); err != nil {

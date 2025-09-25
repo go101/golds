@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"time"
 
 	"golang.org/x/net/html"
@@ -281,7 +282,7 @@ func buildSourceLinkFunc_sr_ht(w writer, commit, extraPath, sourcePath, line, en
 //
 //=====================================
 
-func (ds *docServer) tryToCompleteModuleInfo(m *code.Module, localRepoInfos map[string]localRepoInfo) {
+func (ds *docServer) tryToCompleteModuleInfo(m *code.Module, localRepoInfos map[string]localRepoInfo, localRepoInfosLock *sync.Mutex) {
 	//if ds.analysisWorkingDirectory == "" {
 	//	ds.analysisWorkingDirectory = util.WorkingDirectory()
 	//}
@@ -298,14 +299,14 @@ func (ds *docServer) tryToCompleteModuleInfo(m *code.Module, localRepoInfos map[
 		// 1. run "golds ./..." in subpackages of a module folder.
 		// 2. run "golds foo/..." for the foo module.
 
-		ds.tryRetrievingWorkdingDirectoryModuleInfo(m, localRepoInfos)
+		ds.tryRetrievingWorkdingDirectoryModuleInfo(m, localRepoInfos, localRepoInfosLock)
 		// ToDo: also need ?go-get=1 query if ...
 	} else if strings.HasPrefix(m.Replace.Path, ".") {
 		//log.Printf("(replace) guess moudle %s repository (to use working directory module)", m.Path)
 		// The old implementation assumed that local replacing modules and the wd module are in the same repository.
 		// This might be not always true.
 
-		ds.tryRetrievingWorkdingDirectoryModuleInfo(m, localRepoInfos)
+		ds.tryRetrievingWorkdingDirectoryModuleInfo(m, localRepoInfos, localRepoInfosLock)
 	} else {
 		foundInVendor := false
 		if m.ActualDir() == "" { // this happens for modules in project vendor folder
@@ -522,7 +523,7 @@ type localRepoInfo struct {
 
 // Make sure d.wdModule is confirmed before call this method.
 // ToDo: support more cvs tools.
-func (ds *docServer) tryRetrievingWorkdingDirectoryModuleInfo(m *code.Module, localRepoInfos map[string]localRepoInfo) {
+func (ds *docServer) tryRetrievingWorkdingDirectoryModuleInfo(m *code.Module, localRepoInfos map[string]localRepoInfo, localRepoInfosLock *sync.Mutex) {
 	cmdWD := m.Dir
 
 	// ...
@@ -535,7 +536,9 @@ func (ds *docServer) tryRetrievingWorkdingDirectoryModuleInfo(m *code.Module, lo
 	}
 	projectLocalDir := string(bytes.TrimSpace(output))
 
+	localRepoInfosLock.Lock()
 	repoInfo, gotIt := localRepoInfos[projectLocalDir]
+	localRepoInfosLock.Unlock()
 	if gotIt {
 		goto Done
 	}
@@ -649,7 +652,9 @@ func (ds *docServer) tryRetrievingWorkdingDirectoryModuleInfo(m *code.Module, lo
 		repoInfo.latestCommit = string(commitHash)
 		repoInfo.remoteURL = ensureHttpsRepositoryURL(projectRemoteURL)
 
+		localRepoInfosLock.Lock()
 		localRepoInfos[projectLocalDir] = repoInfo
+		localRepoInfosLock.Unlock()
 		gotIt = true
 	}
 
