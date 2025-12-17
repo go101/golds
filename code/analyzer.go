@@ -1050,6 +1050,7 @@ func (d *CodeAnalyzer) registerExplicitlySpecifiedMethods(typeInfo *TypeInfo, as
 	typeInfo.attributes |= directSelectorsCollected
 
 	registerMethod := func(method *Method) {
+
 		if method.Name == "-" {
 			panic("impossible")
 		}

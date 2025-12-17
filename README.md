@@ -1,5 +1,10 @@
 [![go-recipes](https://raw.githubusercontent.com/nikolaydubina/go-recipes/main/badge.svg?raw=true)](https://github.com/nikolaydubina/go-recipes)
 
+**__(NOTE: because the AST-parsing complexities introduced in recent Go versions
+and I have not enough spare time to study the complexities deeply,
+this project is poorly maintained now. The `golds` tool might crash or show
+incomplete information when analyzing some Go projects.)__**
+
 **Golds** is a **Go** **l**ocal **d**ocs **s**erver, a Go docs generator, and a Go code reader.
 It tries to extract as much information as possible from Go code to help gophers understand, study and use Go packages.
 

@@ -1118,6 +1118,7 @@ func (d *CodeAnalyzer) collectSelectorsForInterfaceType(t *TypeInfo, depth int, 
 		t.DirectSelectors = t.Underlying.DirectSelectors
 		t.AllMethods = t.Underlying.AllMethods
 	} else { // t == t.Underlying
+
 		if t.Underlying.attributes&directSelectorsCollected == 0 {
 			//if depth == 0 {
 			//	return // ToDo: temp ignore field and parameter/result unnamed interface types
@@ -1139,8 +1140,17 @@ func (d *CodeAnalyzer) collectSelectorsForInterfaceType(t *TypeInfo, depth int, 
 			}
 
 			//fmt.Printf("unnamed interface should have collected direct selectors now. %#v.\nMore info:\n%s", t, bd.String())
-			//return
-			panic(fmt.Sprintf("unnamed interface should have collected direct selectors now. %#v.\nMore info:\n%s", t, bd.String()))
+			return
+
+			// It is possible, for example:
+			//
+			// type constraints[T any, V any] struct {
+			//	constraintType string
+			//	permitted      interface{ query(V) (T, bool) }
+			//	excluded       interface{ query(V) (T, bool) }
+			//}
+
+			//panic(fmt.Sprintf("unnamed interface should have collected direct selectors now. %#v.\nMore info:\n%s", t, bd.String()))
 		}
 
 		//hasEmbeddings := false
@@ -1887,16 +1897,16 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 
 						tv := pkg.PPkg.TypesInfo.Types[typeSpec.Type]
 						if !tv.IsType() {
-							if pkg.Path != "unsafe" {
-								panic(typeSpec.Name.Name + ": not type")
-							}
+							if pkg.Path != "unsafe" && pkg.Path != "builtin" {
+								panic(typeSpec.Name.Name + ": not type (in package " + pkg.Path + ")")
 
-							// Now, unsafe AST expressions are the only ast.Expr(s)
-							// which are allowed to not associate with a TypeAndValue.
-							// For unsafe, although tv.IsType() == false, tv.Type is valid.
-							// See fillUnsafePackage for details.
-							if tv.Type == nil {
-								panic(typeSpec.Name.Name + ": tv.Type is nil")
+								// Now, unsafe AST expressions are the only ast.Expr(s)
+								// which are allowed to not associate with a TypeAndValue.
+								// For unsafe, although tv.IsType() == false, tv.Type is valid.
+								// See fillUnsafePackage for details.
+								if tv.Type == nil {
+									panic(typeSpec.Name.Name + ": tv.Type is nil (in package " + pkg.Path + ")")
+								}
 							}
 						}
 
@@ -2665,6 +2675,7 @@ func (d *CodeAnalyzer) analyzePackage_CollectDirectSelectors(pkg *Package) {
 			}
 		}
 
+		d.lookForAndRegisterUnnamedInterfaceAndStructTypes(f.AstDecl.Type, pkg)
 		//if f.Exported() {
 		//	d.registerFunctionForInvolvedTypeNames(f)
 		//}

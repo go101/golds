@@ -273,15 +273,6 @@ func (ds *docServer) analyze(args []string, options PageOutputOptions, toolchain
 	setPageOutputOptions(options, forTesting)
 	ds.initSettings(options.PreferredLang)
 
-	// ...
-	//{
-	//	output, err := util.RunShell(time.Second*5, "", nil, "go", "env", "GOMODCACHE")
-	//	if err != nil {
-	//		log.Printf("go env GOMODCACHE: %s (%s)", err, output)
-	//	} else {
-	//		ds.modCacheDirectory = string(bytes.TrimSpace(output))
-	//	}
-	//}
 	ds.initialWorkingDirectory = util.WorkingDirectory()
 	ds.analyzer = &code.CodeAnalyzer{}
 
