@@ -1898,15 +1898,17 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 						tv := pkg.PPkg.TypesInfo.Types[typeSpec.Type]
 						if !tv.IsType() {
 							if pkg.Path != "unsafe" && pkg.Path != "builtin" {
-								panic(typeSpec.Name.Name + ": not type (in package " + pkg.Path + ")")
-
-								// Now, unsafe AST expressions are the only ast.Expr(s)
-								// which are allowed to not associate with a TypeAndValue.
-								// For unsafe, although tv.IsType() == false, tv.Type is valid.
-								// See fillUnsafePackage for details.
-								if tv.Type == nil {
-									panic(typeSpec.Name.Name + ": tv.Type is nil (in package " + pkg.Path + ")")
-								}
+								log.Print(typeSpec.Name.Name + ": not type (in package " + pkg.Path + ")");
+								continue;
+								// panic(typeSpec.Name.Name + ": not type (in package " + pkg.Path + ")")
+								// 
+								// // Now, unsafe AST expressions are the only ast.Expr(s)
+								// // which are allowed to not associate with a TypeAndValue.
+								// // For unsafe, although tv.IsType() == false, tv.Type is valid.
+								// // See fillUnsafePackage for details.
+								// if tv.Type == nil {
+								// 	panic(typeSpec.Name.Name + ": tv.Type is nil (in package " + pkg.Path + ")")
+								// }
 							}
 						}
 
