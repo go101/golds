@@ -1898,10 +1898,10 @@ func (d *CodeAnalyzer) analyzePackage_CollectDeclarations(pkg *Package) {
 						tv := pkg.PPkg.TypesInfo.Types[typeSpec.Type]
 						if !tv.IsType() {
 							if pkg.Path != "unsafe" && pkg.Path != "builtin" {
-								log.Print(typeSpec.Name.Name + ": not type (in package " + pkg.Path + ")");
-								continue;
+								log.Print(typeSpec.Name.Name + ": not type (in package " + pkg.Path + ")")
+								continue
 								// panic(typeSpec.Name.Name + ": not type (in package " + pkg.Path + ")")
-								// 
+								//
 								// // Now, unsafe AST expressions are the only ast.Expr(s)
 								// // which are allowed to not associate with a TypeAndValue.
 								// // For unsafe, although tv.IsType() == false, tv.Type is valid.
