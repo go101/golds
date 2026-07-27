@@ -1,5 +1,7 @@
-//go:build go1.18
-// +build go1.18
+//go:build go1.23
+// +build go1.23
+
+// types.Origin requres 1.23 since 1.27 toolchain testing?
 
 package server
 

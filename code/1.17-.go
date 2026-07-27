@@ -1,6 +1,8 @@
 //go:build !go1.18
 // +build !go1.18
 
+// The file is useless now.
+
 package code
 
 import (
