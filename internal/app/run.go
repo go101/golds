@@ -128,7 +128,7 @@ func run() {
 		if gr := os.Getenv("GOROOT"); gr != "" {
 			return gr
 		}
-		output, err := util.RunShellCommand(time.Second*5, "", nil, "go", "env", "GOROOT")
+		output, err := util.RunShellCommand(time.Second*30, "", nil, "go", "env", "GOROOT")
 		if err != nil {
 			log.Fatalf("Run: go env GOROOT error: %s", err)
 			//return
