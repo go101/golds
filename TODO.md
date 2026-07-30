@@ -224,7 +224,7 @@
 
 * one-page doc for private packages: https://github.com/go101/golds/issues/19
 
-* seperate comment and code in reading: https://github.com/go101/golds/issues/21
+* separate comment and code in reading: https://github.com/go101/golds/issues/21
 
 * pkg details page: show values by file/position order (only for javascript on)
 * search ids on pkg details/overview pages
@@ -388,7 +388,7 @@
 
 
 * overview page: show std pkgages only
-  * need maintain a seperated depHeight/depDepth for std module internally.
+  * need maintain a separated depHeight/depDepth for std module internally.
 
 * search (non-semantic search, pure word searching)
   * ref: https://github.com/g-harel/gothrough
