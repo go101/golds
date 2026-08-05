@@ -1125,18 +1125,20 @@ func (d *CodeAnalyzer) collectSelectorsForInterfaceType(t *TypeInfo, depth int, 
 			//}
 			//log.Printf("!!! %v:", t.TT)
 			//log.Printf("!!! %v:", t.Underlying)
-			itt := t.TT.(*types.Interface)
-			var bd strings.Builder
-			bd.Grow(2048)
-			//fmt.Fprintf(&bd, "  IsMethodSet(): %v\n", itt.IsMethodSet())
-			//fmt.Fprintf(&bd, "  IsImplicit(): %v\n", itt.IsImplicit())
-			//fmt.Fprintf(&bd, "  NumEmbeddeds(): %v\n", itt.NumEmbeddeds())
-			for i := 0; i < itt.NumEmbeddeds(); i++ {
-				fmt.Fprintf(&bd, "    EmbeddedType(%v): %v\n", i, itt.EmbeddedType(i))
-			}
-			fmt.Fprintf(&bd, "  NumMethods(): %v\n", itt.NumMethods())
-			for i := 0; i < itt.NumMethods(); i++ {
-				fmt.Fprintf(&bd, "    Method(%v): %v\n", i, itt.Method(i))
+			itt, ok := t.TT.(*types.Interface)
+			if ok { // for https://github.com/go101/golds/issues/64
+				var bd strings.Builder
+				bd.Grow(2048)
+				//fmt.Fprintf(&bd, "  IsMethodSet(): %v\n", itt.IsMethodSet())
+				//fmt.Fprintf(&bd, "  IsImplicit(): %v\n", itt.IsImplicit())
+				//fmt.Fprintf(&bd, "  NumEmbeddeds(): %v\n", itt.NumEmbeddeds())
+				for i := 0; i < itt.NumEmbeddeds(); i++ {
+					fmt.Fprintf(&bd, "    EmbeddedType(%v): %v\n", i, itt.EmbeddedType(i))
+				}
+				fmt.Fprintf(&bd, "  NumMethods(): %v\n", itt.NumMethods())
+				for i := 0; i < itt.NumMethods(); i++ {
+					fmt.Fprintf(&bd, "    Method(%v): %v\n", i, itt.Method(i))
+				}
 			}
 
 			//fmt.Printf("unnamed interface should have collected direct selectors now. %#v.\nMore info:\n%s", t, bd.String())
