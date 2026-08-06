@@ -128,12 +128,21 @@ func run() {
 		if gr := os.Getenv("GOROOT"); gr != "" {
 			return gr
 		}
-		output, err := util.RunShellCommand(time.Second*30, "", nil, "go", "env", "GOROOT")
-		if err != nil {
-			log.Fatalf("Run: go env GOROOT error: %s", err)
-			//return
+
+		var n = 3
+		for {
+			n -= 1
+
+			output, err := util.RunShellCommand(time.Second*30, "", nil, "go", "env", "GOROOT")
+			if err != nil {
+				if n == 0 {
+					log.Fatalf("Run: go env GOROOT error: %s", err)
+					//return
+				}
+				continue
+			}
+			return string(bytes.TrimSpace(output))
 		}
-		return string(bytes.TrimSpace(output))
 	}()
 	if goroot != "" {
 		build.Default.GOROOT = goroot // the initial value is the value of releaser machine

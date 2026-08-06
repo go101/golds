@@ -61,9 +61,9 @@ func collectPPackages(ppkgs []*packages.Package) map[string]*packages.Package {
 }
 
 func getMatchedPackages(arg string, jsonFormat bool) ([][]byte, error) {
-	var n = 3;
+	var n = 3
 	for {
-	    n -= 1;
+		n -= 1
 
 		var output []byte
 		var err error
@@ -76,7 +76,7 @@ func getMatchedPackages(arg string, jsonFormat bool) ([][]byte, error) {
 			if n == 0 {
 				return nil, fmt.Errorf("go list %s error: %w", arg, err)
 			}
-			continue;
+			continue
 		}
 		output = bytes.TrimSpace(output)
 		//if bytes.HasPrefix(output, []byte("go: ")) {
