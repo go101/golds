@@ -390,10 +390,10 @@ func transformTypeArgs(source TypeExpr, typeArgs []TypeExpr) (*Package, TypeExpr
 	// ToDo: handle it.
 	n := len(source.Type.Instantiated.TypeArgs)
 	if n != len(source.Type.TypeName.TypeParams) {
-		println(n, len(source.Type.TypeName.TypeParams))
-		log.Println(n, len(source.Type.TypeName.TypeParams))
-		log.Printf("source = %#v", source)
-		log.Printf("typeArgs = %#v", typeArgs)
+		//println(n, len(source.Type.TypeName.TypeParams))
+		//log.Println(n, len(source.Type.TypeName.TypeParams))
+		//log.Printf("source = %#v", source)
+		//log.Printf("typeArgs = %#v", typeArgs)
 		return nil, source, typeArgs // means unable to handle now
 	}
 

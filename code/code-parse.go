@@ -61,30 +61,38 @@ func collectPPackages(ppkgs []*packages.Package) map[string]*packages.Package {
 }
 
 func getMatchedPackages(arg string, jsonFormat bool) ([][]byte, error) {
-	var output []byte
-	var err error
-	if jsonFormat {
-		output, err = util.RunShell(time.Minute*3, "", nil, "go", "list", "-find", "-json", arg)
-	} else {
-		output, err = util.RunShell(time.Minute*3, "", nil, "go", "list", "-find", arg)
-	}
-	if err != nil {
-		return nil, fmt.Errorf("go list %s error: %w", arg, err)
-	}
-	output = bytes.TrimSpace(output)
-	//if bytes.HasPrefix(output, []byte("go: ")) {
-	//	return nil, fmt.Errorf("go list %s error: %s", arg, output)
-	//}
-	if bytes.HasPrefix(output, []byte("no required module provides package")) {
-		return nil, fmt.Errorf("go list %s error: %s", arg, output)
-	}
-	if jsonFormat {
-		if !bytes.HasPrefix(output, []byte("{")) {
-			return nil, fmt.Errorf("go list %s error: %s", arg, output)
-		}
-	}
+	var n = 3;
+	for {
+	    n -= 1;
 
-	return bytes.Fields(output), nil
+		var output []byte
+		var err error
+		if jsonFormat {
+			output, err = util.RunShell(time.Minute*3, "", nil, "go", "list", "-find", "-json", arg)
+		} else {
+			output, err = util.RunShell(time.Minute*3, "", nil, "go", "list", "-find", arg)
+		}
+		if err != nil {
+			if n == 0 {
+				return nil, fmt.Errorf("go list %s error: %w", arg, err)
+			}
+			continue;
+		}
+		output = bytes.TrimSpace(output)
+		//if bytes.HasPrefix(output, []byte("go: ")) {
+		//	return nil, fmt.Errorf("go list %s error: %s", arg, output)
+		//}
+		if bytes.HasPrefix(output, []byte("no required module provides package")) {
+			return nil, fmt.Errorf("getMatchedPackages %s failed: %s", arg, output)
+		}
+		if jsonFormat {
+			if !bytes.HasPrefix(output, []byte("{")) {
+				return nil, fmt.Errorf("go list -json %s error: %s", arg, output)
+			}
+		}
+
+		return bytes.Fields(output), nil
+	}
 }
 
 func hasMatchedPackages(arg string) bool {
